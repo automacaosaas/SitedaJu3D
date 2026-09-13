@@ -1,12 +1,14 @@
 const products = {
-  'capa-01': {number:'01',title:'Capa para retinoscópio',subtitle:'Modelo 01',image:'pillar-amber.png',description:'A primeira das duas capas para retinoscópio da Ju imprime pra mim.'},
-  'capa-02': {number:'02',title:'Capa para retinoscópio',subtitle:'Modelo 02',image:'pillar-cyan.png',description:'A segunda das duas capas para retinoscópio da Ju imprime pra mim.'},
-  'aviao-magnetico': {number:'03',title:'Avião magnético',subtitle:'Para régua de grau',image:'pillar-blue.png',description:'Um avião magnético que se encaixa na régua de grau.'}
+  'borboletoscopio': {number:'01',title:'Borboletoscópio',subtitle:'Capa para retinoscópio',image:'borboletoscopio.png',description:'Asas verde-menta, detalhes amarelos e um rostinho sorridente. Uma capa em formato de borboleta, feita em impressão 3D para encaixar no retinoscópio.'},
+  'dinossauroscopio': {number:'02',title:'Dinossauroscópio',subtitle:'Capa para retinoscópio',image:'dinossauroscopio.png',description:'Um pequeno dinossauro azul, com espinhos e detalhes verde-menta. Uma capa feita em impressão 3D para encaixar no retinoscópio.'},
+  'aviaoscopia': {number:'03',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia.png',description:'Um avião azul com estrelas vermelhas e motores amarelos. A peça impressa em 3D se encaixa magneticamente na régua de grau.'}
 };
+const legacyProducts = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 const dialog = document.querySelector('#product-dialog');
 let activeProduct = null;
 function syncProduct() {
-  const key = location.hash.replace('#produto/', '');
+  const hashKey = location.hash.replace('#produto/', '');
+  const key = legacyProducts[hashKey] || hashKey;
   const product = products[key];
   if (!product) { if (dialog.open) dialog.close(); document.title = 'Ju imprime pra mim • Coleção 3D'; return; }
   activeProduct = key;
@@ -15,6 +17,7 @@ function syncProduct() {
   document.querySelector('#dialog-subtitle').textContent = product.subtitle;
   document.querySelector('#dialog-description').textContent = product.description;
   document.querySelector('#dialog-image').src = `assets/${product.image}`;
+  document.querySelector('#dialog-image').alt = `${product.title} sobre uma pilastra branca — imagem de apresentação`;
   document.title = `${product.title} · ${product.subtitle} | Ju imprime pra mim`;
   if (!dialog.open) dialog.showModal();
   document.body.style.overflow = 'hidden';
