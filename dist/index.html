@@ -8,6 +8,8 @@
   <title>Ju imprime pra mim • Coleção 3D</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="carousel.css">
+  <script type="module" src="carousel.js"></script>
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
   <script type="module" src="controller.js"></script>
 </head>
@@ -19,7 +21,8 @@
     </header>
     <main>
       <div class="intro"><p class="eyebrow">UM TOQUE DE IMAGINAÇÃO NO SEU CONSULTÓRIO</p><h1>Mais cor na consulta.<br><span>Mais encanto em cada olhar.</span></h1><p class="invitation">Peças lúdicas, feitas em 3D. Com as cores que você escolher.</p></div>
-      <section class="collection" aria-label="Nossos três produtos">
+      <div class="showcase" role="region" aria-roledescription="carrossel" aria-label="Coleção de três produtos">
+      <section class="collection" aria-label="Nossos três produtos" aria-describedby="gallery-help">
         <a class="product product-mint" href="#produto/borboletoscopio" data-product="borboletoscopio" aria-label="Conhecer Borboletoscópio, capa para retinoscópio">
           <div class="visual"><div class="halo"></div><img src="assets/borboletoscopio.png" alt="Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca" width="1024" height="1024" fetchpriority="high"><span class="explore" aria-hidden="true">Conhecer <span>↗</span></span></div>
           <div class="product-caption"><span class="number">01</span><div><h2>Borboletoscópio</h2><p>Para retinoscópio</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
@@ -33,7 +36,9 @@
           <div class="product-caption"><span class="number">03</span><div><h2>Aviãoscopia</h2><p>Para régua de grau</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
         </a>
       </section>
-      <div class="mobile-gallery-cue"><button class="gallery-arrow gallery-prev" type="button" aria-label="Ver produto anterior">‹</button><p class="swipe-hint">Deslize para conhecer <strong>01 — 03</strong></p><button class="gallery-arrow gallery-next" type="button" aria-label="Ver próximo produto">›</button></div>
+      <div class="gallery-controls"><button class="gallery-arrow gallery-prev" type="button" aria-label="Ver produto anterior">‹</button><p id="gallery-help"><span class="touch-help">Deslize para conhecer</span><span class="desktop-help">Explore a coleção</span> <strong class="gallery-count">01 — 03</strong></p><button class="gallery-arrow gallery-next" type="button" aria-label="Ver próximo produto">›</button></div>
+      <p class="sr-only" id="gallery-status" aria-live="polite" aria-atomic="true"></p>
+      </div>
     </main>
     <footer><span class="signature">feito com carinho, pela Ju.</span><span class="prototype">Cor e criatividade em cada camada.</span></footer>
   </div>
