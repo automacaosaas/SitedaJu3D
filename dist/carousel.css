@@ -1,4 +1,5 @@
 .showcase { position:relative; max-width:1200px; margin:24px auto 0; }
+.showcase .collection { background:var(--bg); }
 .showcase .collection { --card-width:440px; --orbit-radius:320px; --orbit-rise:70px; display:block; position:relative; width:100%; max-width:none; height:590px; margin:0; padding:0; overflow:clip; isolation:isolate; touch-action:pan-y pinch-zoom; user-select:none; -webkit-user-select:none; cursor:grab; }
 .showcase .collection.is-dragging { cursor:grabbing; }
 .showcase .product { position:absolute; top:50px; left:50%; width:var(--card-width); margin-left:calc(var(--card-width) / -2); transform-origin:50% 50%; animation:none; transition:none; mix-blend-mode:multiply; will-change:transform; }

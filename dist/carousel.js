@@ -87,7 +87,11 @@ function finish(e,cancelled=false){
 }
 stage.addEventListener('pointerup',e=>finish(e));
 stage.addEventListener('pointercancel',e=>finish(e,true));
-stage.addEventListener('lostpointercapture',e=>{if(gesture)finish(e,true);});
+// Touch starts with implicit capture on the link. Transferring it to the stage
+// emits lostpointercapture on that link; that bubbling event is not a cancel.
+stage.addEventListener('lostpointercapture',e=>{
+  if(gesture && e.target===stage && !stage.hasPointerCapture(e.pointerId))finish(e,true);
+});
 stage.addEventListener('click',e=>{
   const card=e.target.closest('.product');
   if(performance.now()<suppressUntil){e.preventDefault();e.stopImmediatePropagation();return;}

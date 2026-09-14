@@ -24,8 +24,26 @@ export class ProductViewer{
   }
   show(key,colors,title){if(this.key!==key){if(this.model){this.scene.remove(this.model.group);this.model.dispose();}this.model=createModel(key,colors);this.scene.add(this.model.group);this.key=key;this.reset();}else this.model.setColors(colors);this.renderer.domElement.setAttribute('aria-label',`Prévia 3D ilustrativa de ${title}`);this.active=true;this.resize();this.render();this.loop();}
   update(colors){this.model?.setColors(colors);this.render();}
-  resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.render();}
-  reset(){this.camera.position.set(1.35,.8,8.3);this.controls.target.set(0,.08,0);this.controls.update();this.render();}
+  resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;const changed=w!==this.width||h!==this.height;this.width=w;this.height=h;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();if(changed)this.fit();this.render();}
+  fit(){
+    if(!this.model)return;
+    const bounds=new T.Box3().setFromObject(this.model.group);bounds.union(new T.Box3().setFromObject(this.pedestal));
+    const center=bounds.getCenter(new T.Vector3());
+    const vertical=T.MathUtils.degToRad(this.camera.fov/2),horizontal=Math.atan(Math.tan(vertical)*this.camera.aspect);
+    const direction=this.camera.position.clone().sub(this.controls.target).normalize();
+    if(!direction.lengthSq())direction.set(.1,.07,1).normalize();
+    const right=new T.Vector3().crossVectors(this.camera.up,direction).normalize(),up=new T.Vector3().crossVectors(direction,right);
+    let distance=0;
+    // Fit the actual projected bounds, including the pedestal, with a safe margin.
+    for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
+      const p=new T.Vector3(x,y,z).sub(center);
+      distance=Math.max(distance,p.dot(direction)+1.1*Math.max(Math.abs(p.dot(right))/Math.tan(horizontal),Math.abs(p.dot(up))/Math.tan(vertical)));
+    }
+    this.controls.target.copy(center);this.camera.position.copy(center).addScaledVector(direction,distance);
+    this.controls.minDistance=distance*.65;this.controls.maxDistance=distance*2;
+    this.camera.far=Math.max(50,distance*4);this.camera.updateProjectionMatrix();this.controls.update();
+  }
+  reset(){this.controls.target.set(0,0,0);this.camera.position.set(1.1,.65,8.3);this.fit();this.controls.update();this.render();}
   rotate(direction){const relative=this.camera.position.clone().sub(this.controls.target);relative.applyAxisAngle(new T.Vector3(0,1,0),direction*Math.PI/8);this.camera.position.copy(relative.add(this.controls.target));this.controls.update();this.render();}
   zoom(direction){this.camera.position.sub(this.controls.target).multiplyScalar(direction>0?.87:1.15).add(this.controls.target);this.controls.update();this.render();}
   render(){if(this.active&&!document.hidden)this.renderer.render(this.scene,this.camera);}
