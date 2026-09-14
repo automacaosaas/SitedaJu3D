@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#f2f2f7">
+  <meta name="theme-color" content="#fff7f5">
   <meta name="description" content="Conheça a primeira coleção da Ju imprime pra mim. Peças feitas em impressão 3D.">
   <title>Ju imprime pra mim • Coleção 3D</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="theme.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="module" src="controller.js"></script>
 </head>
 <body>
   <div class="page">
     <header class="header">
-      <a class="brand" href="#" aria-label="Ju imprime pra mim — início"><span class="brand-mark">ju<span>.</span></span><span class="brand-name">imprime<br>pra mim</span></a>
-      <span class="edition">OBJETOS EM 3D <span class="edition-line"></span> COLEÇÃO 01</span>
+      <a class="brand" href="#" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="112" height="112" alt="Ju, imprime pra mim? Criatividade em 3D"></a>
+      <span class="edition">CRIATIVIDADE EM 3D <span class="edition-line"></span> FEITO PARA ENCANTAR</span>
     </header>
     <main>
-      <div class="intro"><p class="eyebrow">FEITO CAMADA POR CAMADA</p><h1>Pequenas peças.<br><span>Grandes possibilidades.</span></h1><p class="invitation">Escolha uma peça. Conheça de perto.</p></div>
+      <div class="intro"><p class="eyebrow">UM TOQUE DE IMAGINAÇÃO NO SEU CONSULTÓRIO</p><h1>Mais cor na consulta.<br><span>Mais encanto em cada olhar.</span></h1><p class="invitation">Peças lúdicas, feitas em 3D. Com as cores que você escolher.</p></div>
       <section class="collection" aria-label="Nossos três produtos">
         <a class="product product-mint" href="#produto/borboletoscopio" data-product="borboletoscopio" aria-label="Conhecer Borboletoscópio, capa para retinoscópio">
           <div class="visual"><div class="halo"></div><img src="assets/borboletoscopio.png" alt="Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca" width="1024" height="1024" fetchpriority="high"><span class="explore" aria-hidden="true">Conhecer <span>↗</span></span></div>
@@ -33,12 +34,25 @@
         </a>
       </section>
     </main>
-    <footer><span>Uma ideia. Infinitas camadas.</span><span class="prototype">Imagens de apresentação baseadas nas peças reais</span></footer>
+    <footer><span class="signature">feito com carinho, pela Ju.</span><span class="prototype">Cor e criatividade em cada camada.</span></footer>
   </div>
   <dialog id="product-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
     <button class="close" aria-label="Fechar produto">×</button>
-    <div class="detail-visual"><img id="dialog-image" src="assets/borboletoscopio.png" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"><span>IMAGEM DE APRESENTAÇÃO</span></div>
-    <div class="detail-copy"><p class="eyebrow" id="dialog-number"></p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p><div class="detail-rule"></div><p id="dialog-description"></p><button class="back">Voltar à coleção <span aria-hidden="true">↗</span></button></div>
+    <div class="detail-visual">
+      <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Imagem</button><button type="button" data-view="model" aria-pressed="false">Prévia 3D</button></div>
+      <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.png" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
+      <div id="viewer-host" hidden></div>
+      <div class="viewer-message" role="status" hidden></div>
+      <div class="viewer-tools" hidden role="group" aria-label="Controles do modelo 3D"><button data-camera="left" aria-label="Girar para a esquerda">↶</button><button data-camera="auto" aria-label="Girar automaticamente" aria-pressed="false">Girar</button><button data-camera="right" aria-label="Girar para a direita">↷</button><span></span><button data-camera="in" aria-label="Aproximar">+</button><button data-camera="out" aria-label="Afastar">−</button><button data-camera="reset" aria-label="Voltar à vista inicial">Início</button></div>
+      <p class="view-note">Imagem de apresentação baseada na peça real.</p>
+    </div>
+    <div class="detail-copy">
+      <p class="eyebrow" id="dialog-number"></p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p>
+      <section id="product-info"><div class="detail-rule"></div><p id="dialog-description"></p><p class="personalize-intro">Um toque seu, em cada detalhe.</p><button type="button" class="primary" id="personalize">PERSONALIZE O SEU! <span aria-hidden="true">↗</span></button><button type="button" class="text-button back">Voltar à coleção</button></section>
+      <section id="customizer" hidden aria-label="Personalizar cores"><div class="custom-heading"><h3>Do seu jeito.</h3><button type="button" class="text-button" id="back-info">Voltar</button></div><p class="step-label">1. Escolha a parte</p><div id="part-tabs" role="group" aria-label="Parte do produto"></div><div class="palette-heading"><p class="step-label">2. Escolha a cor</p><span id="selected-color"></span></div><div id="palette" role="group" aria-label="Paleta de cores"></div><p class="part-hint" id="part-hint"></p><p class="fixed-note" id="fixed-note"></p><div class="custom-actions"><button type="button" class="text-button" id="reset-colors">Restaurar cores</button><span>Paleta inicial</span></div><button type="button" class="primary" id="finish">Concluir personalização <span aria-hidden="true">✓</span></button><p class="color-note">Cores ilustrativas; podem variar conforme a tela e o filamento.</p></section>
+      <section id="combination" hidden aria-label="Resumo da personalização"><div class="custom-heading"><h3>Sua combinação.</h3></div><ul id="combination-list"></ul><p class="saved-note" role="status"></p><button type="button" class="primary" id="edit-colors">Continuar personalizando <span aria-hidden="true">↗</span></button><button type="button" class="text-button" id="copy-combination">Copiar combinação</button><p class="color-note">Esta etapa prepara suas escolhas. Nenhum pedido foi enviado.</p></section>
+      <p class="sr-only" aria-live="polite" id="color-announcement"></p>
+    </div>
   </dialog>
 </body>
 </html>
