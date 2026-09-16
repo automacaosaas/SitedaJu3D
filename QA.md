@@ -5,6 +5,10 @@ O teste usa o controlador real com eventos simulados e cobre o ciclo infinito,
 arraste nos dois sentidos, cancelamento, limiar mínimo, prevenção de clique,
 seleção lateral, setas, teclado e movimento reduzido.
 
+Execute também `node tests/plane-geometry.mjs` ao alterar o Aviãoscopia. O
+teste confirma as 16 aberturas atravessando o suporte, a ordem dos graus,
+o canal retangular aberto para a haste plana e o contraste da numeração.
+
 ## Regressão de toque
 
 Um toque tem captura implícita no elemento inicial. Ao transferir a captura
@@ -41,6 +45,8 @@ natural, inclusive começando sobre a imagem e sobre a legenda.
 - Texto de anúncio acessível não pode aumentar a área rolável do modal.
 - Regras de cores permanecem em `dist/products.js`; modelos em `dist/models.js`.
 - Não substituir as imagens nem redesenhar os produtos para corrigir layout.
+- O Aviãoscopia usa duas colunas de oito aberturas, numeradas na ordem definida
+  em `dist/models.js`, e um rasgo inferior retangular que atravessa a base.
 - Confirmar o commit publicado na Vercel e testar a URL de produção.
 
 ## Limites da validação desta correção

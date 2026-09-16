@@ -5,6 +5,7 @@ import * as T from 'three';
 export function createModel(key,colors){
   const group=new T.Group(); group.name=key;
   const materials={};
+  const degreeMaterials=[];
   const material=(name,hex)=>materials[name]??=(new T.MeshStandardMaterial({color:hex,roughness:.42,metalness:0}));
   material('body',colors.body);material('details',colors.details);material('engines',colors.engines||'#efcf59');
   material('black','#11151c');material('peach','#f0bea0');material('white','#fffaf7');material('silver','#bfc8d2').metalness=.55;
@@ -36,9 +37,28 @@ export function createModel(key,colors){
     curve([[-.4,1.11,.32],[-.23,1.025,.386],[0,.99,.402],[.23,1.025,.386],[.4,1.11,.32]],'body',.025);
     for(const x of [-.26,-.09,.09,.26])patch([[x-.07,1.025],[x,.9],[x+.07,1.025]],'body',.38);
   }else{
-    // The central slot continues through the lower rail, making a real passage
-    // for the ruler's handle. This is not a dark mark painted on the plinth.
-    const s=new T.Shape();s.moveTo(-.1,-1.84);s.lineTo(-.43,-1.84);s.quadraticCurveTo(-.68,-1.84,-.68,-1.57);s.lineTo(-.68,.95);s.bezierCurveTo(-.68,2.2,.68,2.2,.68,.95);s.lineTo(.68,-1.57);s.quadraticCurveTo(.68,-1.84,.43,-1.84);s.lineTo(.1,-1.84);s.lineTo(.1,-1.6);s.lineTo(.36,-1.6);s.quadraticCurveTo(.44,-1.6,.44,-1.48);s.lineTo(.44,.91);s.quadraticCurveTo(.44,1.08,.27,1.08);s.lineTo(-.27,1.08);s.quadraticCurveTo(-.44,1.08,-.44,.91);s.lineTo(-.44,-1.48);s.quadraticCurveTo(-.44,-1.6,-.36,-1.6);s.lineTo(-.1,-1.6);s.closePath();solid(s,'body',.34,-.17,.038);
+    // A flat, wide stem passage continues through the underside of the frame.
+    const s=new T.Shape();s.moveTo(-.21,-1.84);s.lineTo(-.43,-1.84);s.quadraticCurveTo(-.68,-1.84,-.68,-1.57);s.lineTo(-.68,.95);s.bezierCurveTo(-.68,2.2,.68,2.2,.68,.95);s.lineTo(.68,-1.57);s.quadraticCurveTo(.68,-1.84,.43,-1.84);s.lineTo(.21,-1.84);s.lineTo(.21,-1.6);s.lineTo(.36,-1.6);s.quadraticCurveTo(.44,-1.6,.44,-1.48);s.lineTo(.44,.91);s.quadraticCurveTo(.44,1.08,.27,1.08);s.lineTo(-.27,1.08);s.quadraticCurveTo(-.44,1.08,-.44,.91);s.lineTo(-.44,-1.48);s.quadraticCurveTo(-.44,-1.6,-.36,-1.6);s.lineTo(-.21,-1.6);s.closePath();solid(s,'body',.34,-.17,.022);
+    // Front/back lips outline the rectangular mouth without filling the vertical channel.
+    for(const z of [-.15,.15]){const lip=mesh(new T.BoxGeometry(.42,.065,.085),'body',[0,-1.8075,z]);lip.name='stem-slot-lip';}
+    const shoulder=mesh(new T.BoxGeometry(.42,.08,.34),'body',[0,-1.6,0]);shoulder.name='stem-slot-top';
+    const rack=rounded(-.437,-1.57,.874,2.65,.08);
+    const powers=[['0.5','1','1.5','2','2.5','3','3.5','4'],['5','6','7','8','9','10','12','15']];
+    material('lens-rim','#52575e').metalness=.65;
+    materials.lens=new T.MeshPhysicalMaterial({color:'#edf6fa',roughness:.08,metalness:0,transparent:true,opacity:.46,side:T.DoubleSide,depthWrite:false});
+    for(let column=0;column<2;column++)for(let row=0;row<8;row++){
+      const x=column===0?-.177:.177,y=.88-row*.315,r=.127;
+      const hole=new T.Path();hole.absarc(x,y,r,0,Math.PI*2,true);rack.holes.push(hole);
+      const rim=mesh(new T.TorusGeometry(r+.003,.008,8,40),'lens-rim',[x,y,.045]);rim.name=`lens-rim-${column}-${row}`;
+      const lens=mesh(new T.CircleGeometry(r-.008,40),'lens',[x,y,.027]);lens.name=`lens-${column}-${row}`;lens.castShadow=false; lens.userData.diopters=Number(powers[column][row]);
+      const canvas=document.createElement('canvas');canvas.width=128;canvas.height=64;
+      const ctx=canvas.getContext('2d');ctx.font='600 48px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText(powers[column][row],64,34);
+      const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+      const name=`degree-${column}-${row}`;
+      materials[name]=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false});degreeMaterials.push(materials[name]);
+      const label=mesh(new T.PlaneGeometry(.15,.105),name,[column===0?-.36:.36,y,.054]);label.name=name;label.castShadow=false;label.receiveShadow=false;
+    }
+    const insert=solid(rack,'body',.075,-.045,.005);insert.name='sixteen-aperture-rack';
     for(const side of [-1,1]){
       const wing=new T.Shape();wing.moveTo(.63,.33);wing.bezierCurveTo(.99,.06,1.43,-.22,1.43,-.51);wing.quadraticCurveTo(1.4,-.7,.66,-.66);wing.closePath();solid(wing,'body',.14,-.08).scale.x=side;
       const tail=new T.Shape();tail.moveTo(.64,-1.05);tail.quadraticCurveTo(1.18,-1.6,1.04,-1.69);tail.quadraticCurveTo(.89,-1.75,.6,-1.57);tail.closePath();solid(tail,'body',.12,-.1).scale.x=side;
@@ -49,5 +69,7 @@ export function createModel(key,colors){
     const cap=new T.Shape();cap.moveTo(-.36,1.88);cap.quadraticCurveTo(0,2.12,.36,1.88);cap.quadraticCurveTo(0,1.96,-.36,1.88);solid(cap,'details',.3,-.15,.025);
   }
   group.traverse(node=>{if(node.isMesh){node.geometry.computeVertexNormals();}});
-  return {group,materials,setColors(next){for(const [part,hex] of Object.entries(next))materials[part]?.color.set(hex);},dispose(){group.traverse(n=>n.geometry?.dispose());Object.values(materials).forEach(m=>m.dispose());}};
+  function setColors(next){for(const [part,hex] of Object.entries(next))materials[part]?.color.set(hex);const c=materials.body.color,luminance=.2126*c.r+.7152*c.g+.0722*c.b;degreeMaterials.forEach(m=>m.color.set(luminance>.4?'#26303c':'#f5f5ef'));}
+  setColors(colors);
+  return {group,materials,setColors,dispose(){group.traverse(n=>n.geometry?.dispose());Object.values(materials).forEach(m=>{m.map?.dispose();m.dispose();});}};
 }
