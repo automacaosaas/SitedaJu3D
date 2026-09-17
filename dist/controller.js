@@ -1,4 +1,5 @@
 import {PRODUCTS,PALETTE,ALIASES,defaults,color,validSelection} from './products.js';
+import {setupCartBridge} from './cart-bridge.js';
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
@@ -28,4 +29,5 @@ $('#reset-colors').addEventListener('click',()=>{selections[activeProduct]=defau
 $('#copy-combination').addEventListener('click',async()=>{const p=PRODUCTS[activeProduct],text=`${p.title} — minha combinação\n`+p.parts.map(part=>`${part.name}: ${color(selections[activeProduct][part.id]).name}`).join('\n');try{await navigator.clipboard.writeText(text);$('.saved-note').textContent='Combinação copiada!';}catch{$('.saved-note').textContent='Não foi possível copiar automaticamente. As cores estão listadas acima.';}});
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
+setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);personalize();}});
 

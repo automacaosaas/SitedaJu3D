@@ -50,6 +50,16 @@ export class ProductViewer{
   setAuto(value){this.auto=value;this.controls.autoRotate=value;this.stop();this.loop();}
   loop(){if(!this.active||!this.auto||document.hidden||this.frame)return;this.last=performance.now();const tick=now=>{this.frame=0;if(!this.active||!this.auto||document.hidden)return;this.controls.update(Math.min((now-this.last)/1000,.1));this.last=now;this.render();this.frame=requestAnimationFrame(tick);};this.frame=requestAnimationFrame(tick);}
   stop(){if(this.frame)cancelAnimationFrame(this.frame);this.frame=0;}
+  snapshot(){
+    if(!this.active||!this.model)return null;
+    // A dedicated square camera keeps the cart thumbnail legible at every viewport.
+    const bounds=new T.Box3().setFromObject(this.model.group);bounds.union(new T.Box3().setFromObject(this.pedestal));
+    const center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()),extent=Math.max(size.x,size.y,size.z)*.6;
+    const camera=new T.OrthographicCamera(-extent,extent,extent,-extent,.1,50);
+    camera.position.copy(center).add(new T.Vector3(.55,.4,12));camera.lookAt(center);
+    try{this.renderer.setSize(320,320,false);this.renderer.render(this.scene,camera);return this.renderer.domElement.toDataURL('image/png');}
+    finally{this.renderer.setSize(this.width,this.height,false);this.render();}
+  }
   hide(){this.active=false;this.stop();}
   dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
