@@ -2,6 +2,15 @@ import {PRODUCTS, validSelection} from './products.js';
 import {COMMERCE} from './commerce-config.js';
 export const CART_KEY = 'ju.cart.demo.v1';
 export const EDIT_KEY = 'ju.cart.edit.v1';
+export const DIRECT_KEY = 'ju.direct.demo.v1';
+export function selectedItems(items, ids) { return items.filter(item => ids.has(item.id)); }
+export function removePurchased(items, purchased) {
+  return items.flatMap(item => {
+    const bought = purchased.find(p => p.id === item.id && signature(p.productId,p.selection) === signature(item.productId,item.selection));
+    if (!bought) return [item];
+    return item.quantity > bought.quantity ? [{...item, quantity:item.quantity-bought.quantity}] : [];
+  });
+}
 export const signature = (productId, selection) => productId + ':' + PRODUCTS[productId].parts.map(p => selection[p.id]).join(':');
 const uid = () => globalThis.crypto?.randomUUID?.() || `item-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 export function normalizeCart(value) {

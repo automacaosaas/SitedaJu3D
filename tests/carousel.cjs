@@ -34,5 +34,18 @@ prev.emit('click');flush();assert.equal(active(),names[2]);next.emit('click');fl
 region.emit('keydown',{key:'ArrowLeft'});flush();assert.equal(active(),names[2]);
 reduced.matches=true;next.emit('click');assert.equal(frames.size,0);assert.equal(active(),names[0]);
 assert.equal(count.textContent,'01 — 03');
-console.log('PASS: touch swipes, two loops, reverse loop, vertical scroll, cancellation, small drags, click suppression, center/rear tap, arrows, keyboard and reduced motion.');
+now+=1000;
+assert.ok(region.emit('wheel',{deltaX:0,deltaY:40,deltaMode:0}).prevented);
+assert.equal(active(),names[1],'vertical wheel brings next product');
+region.emit('wheel',{deltaX:0,deltaY:100,deltaMode:0});
+assert.equal(active(),names[1],'one gesture does not skip products');
+now+=700; region.emit('wheel',{deltaX:-40,deltaY:0,deltaMode:0});
+assert.equal(active(),names[0],'horizontal trackpad reverses carousel');
+now+=700;
+assert.ok(!region.emit('wheel',{deltaY:100,deltaX:0,ctrlKey:true}).prevented,'pinch zoom remains native');
+region.emit('wheel',{deltaY:1,deltaX:0,deltaMode:1});
+assert.equal(active(),names[0],'small wheel delta accumulates');
+region.emit('wheel',{deltaY:2,deltaX:0,deltaMode:1});
+assert.equal(active(),names[1],'line wheel units are normalized');
+console.log('PASS: touch swipes, two loops, reverse loop, vertical scroll, cancellation, small drags, click suppression, center/rear tap, arrows, keyboard, reduced motion, wheel and trackpad.');
 

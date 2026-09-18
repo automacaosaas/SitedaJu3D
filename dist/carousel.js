@@ -38,6 +38,13 @@ function report(){
   const i=mod(Math.round(target));
   count.textContent=`${String(i+1).padStart(2,'0')} — ${String(total).padStart(2,'0')}`;
   status.textContent=`${labels[i]}, produto ${i+1} de ${total}.`;
+  const title=document.querySelector('#featured-name');
+  if(title){
+    title.textContent=labels[i];
+    document.querySelector('#featured-number').textContent=String(i+1).padStart(2,'0');
+    document.querySelector('#featured-subtitle').textContent=cards[i].querySelector('.product-caption p').textContent;
+    document.querySelector('#featured-product').setAttribute('href',cards[i].getAttribute('href'));
+  }
 }
 function stop(){cancelAnimationFrame(frame);frame=0;}
 function settle(next){
@@ -106,6 +113,18 @@ stage.addEventListener('click',e=>{
 region.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();move(e.key==='ArrowRight'?1:-1);}
 });
+// Wheel/trackpad navigate the showroom; native touch retains pan-y.
+let wheelTotal=0,wheelAt=-Infinity,wheelMovedAt=-Infinity;
+region.addEventListener('wheel',e=>{
+  if(e.ctrlKey||gesture)return;
+  const delta=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)*(e.deltaMode===1?16:e.deltaMode===2?stage.clientWidth:1);
+  if(!delta)return;
+  const now=performance.now();e.preventDefault();
+  if(now-wheelAt>180)wheelTotal=0;
+  wheelAt=now;if(now-wheelMovedAt<650)return;
+  wheelTotal+=delta;
+  if(Math.abs(wheelTotal)>=35){move(wheelTotal>0?1:-1);wheelTotal=0;wheelMovedAt=now;}
+},{passive:false});
 // Keep the correct item centered when opening a deep link or returning from its card.
 function fromRoute(){const key=location.hash.replace('#produto/',''),i=cards.findIndex(c=>c.dataset.product===key);if(i>=0){stop();position=target=i;render();report();}}
 addEventListener('hashchange',fromRoute);

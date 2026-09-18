@@ -1,12 +1,12 @@
 import {PRODUCTS} from './products.js';
-import {readCart, writeCart, putItem, EDIT_KEY, CART_KEY} from './cart-store.js';
+import {readCart, writeCart, putItem, EDIT_KEY, DIRECT_KEY} from './cart-store.js';
 import {COMMERCE, money} from './commerce-config.js';
+import {icon} from './icons.js';
 
 export function setupCartBridge({getProduct, getSelection, capture, restore}) {
-  const button = document.createElement('button');
-  button.type = 'button'; button.className = 'primary'; button.id = 'add-to-cart';
-  const status = document.createElement('p'); status.className = 'color-note'; status.setAttribute('role', 'status');
-  document.querySelector('#combination').append(status, button);
+  const panel = document.querySelector('#purchase-panel'), button = document.querySelector('#add-to-cart');
+  const buy = document.querySelector('#buy-now'), status = document.querySelector('#purchase-status');
+  const dialog = document.querySelector('#product-dialog');
   let edit = null, busy = false;
   try { edit = JSON.parse(sessionStorage.getItem(EDIT_KEY)); } catch {}
   if (edit) {
@@ -15,30 +15,41 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
     else edit = null;
   }
   function refresh() {
-    const count = readCart().reduce((sum, i) => sum + i.quantity, 0);
-    document.querySelector('#cart-count').textContent = count;
-    document.querySelector('#cart-link').setAttribute('aria-label', `Ver carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`);
+    panel.hidden = dialog.dataset.mode !== 'summary';
     const key = getProduct();
     if (key && PRODUCTS[key]) {
-      button.textContent = `${edit ? 'Salvar no carrinho' : 'Adicionar ao carrinho'} · ${money(COMMERCE.prices[key])}`;
-      status.textContent = 'Preço de demonstração. Nenhuma cobrança será realizada.';
+      button.innerHTML = `${edit ? 'Salvar no carrinho' : 'Adicionar ao carrinho'} ${icon('cart')}`;
+      document.querySelector('#product-price').textContent = money(COMMERCE.prices[key]);
     }
   }
   button.addEventListener('click', () => {
     if (busy) return;
     busy = true; button.disabled = true;
     try {
-      const key = getProduct(), selection = getSelection();
-      writeCart(putItem(readCart(), key, selection, capture(), edit?.id || null));
+      writeCart(putItem(readCart(), getProduct(), getSelection(), capture(), edit?.id || null));
+      const edited = !!edit; edit = null;
       try { sessionStorage.removeItem(EDIT_KEY); } catch {}
-      location.assign('checkout.html');
-    } catch (error) { status.textContent = error.message; busy = false; button.disabled = false; }
+      window.dispatchEvent(new Event('ju:cart'));
+      status.replaceChildren(document.createTextNode(edited ? 'Combinação atualizada. ' : 'Peça adicionada! '));
+      const link = document.createElement('a'); link.href = 'checkout.html'; link.textContent = 'Ver carrinho →';
+      status.append(link); button.innerHTML = `Adicionado ${icon('check')}`;
+    } catch (error) { status.textContent = error.message; }
+    finally { setTimeout(() => { busy = false; button.disabled = false; refresh(); }, 900); }
   });
-  const clearEdit = () => {edit = null; try {sessionStorage.removeItem(EDIT_KEY);} catch {} refresh();};
+  buy.addEventListener('click', () => {
+    if (busy) return;
+    busy = true; buy.disabled = true;
+    try {
+      sessionStorage.setItem(DIRECT_KEY, JSON.stringify(putItem([], getProduct(), getSelection(), capture())));
+      edit = null;
+      try { sessionStorage.removeItem(EDIT_KEY); } catch {}
+      location.assign('comprar-agora.html');
+    } catch { status.textContent = 'Não foi possível preparar a compra. Verifique o armazenamento do navegador.'; busy = false; buy.disabled = false; }
+  });
+  const clearEdit = () => { edit = null; status.textContent = ''; try { sessionStorage.removeItem(EDIT_KEY); } catch {} refresh(); };
   window.addEventListener('hashchange', clearEdit);
-  document.querySelector('#product-dialog').addEventListener('close', clearEdit);
-  window.addEventListener('storage', e => { if (e.key === CART_KEY) refresh(); });
-  window.addEventListener('pageshow', () => {busy = false; button.disabled = false; refresh();});
-  new MutationObserver(refresh).observe(document.querySelector('#product-dialog'), {attributes: true, attributeFilter: ['data-mode']});
+  dialog.addEventListener('close', clearEdit);
+  window.addEventListener('pageshow', () => { busy = false; button.disabled = buy.disabled = false; refresh(); });
+  new MutationObserver(() => {status.textContent='';refresh();}).observe(dialog, {attributes:true,attributeFilter:['data-mode']});
   refresh();
 }

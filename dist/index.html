@@ -11,6 +11,9 @@
   <link rel="stylesheet" href="carousel.css">
   <link rel="stylesheet" href="mobile-modal.css">
   <link rel="stylesheet" href="commerce.css">
+  <link rel="stylesheet" href="shopping.css">
+  <script type="module" src="site-shell.js"></script>
+  <script type="module" src="catalog.js"></script>
   <script type="module" src="carousel.js"></script>
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
   <script type="module" src="controller.js"></script>
@@ -20,10 +23,10 @@
     <header class="header">
       <a class="brand" href="#" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="112" height="112" alt="Ju, imprime pra mim? Criatividade em 3D"></a>
       <span class="edition">CRIATIVIDADE EM 3D <span class="edition-line"></span> FEITO PARA ENCANTAR</span>
-      <a class="cart-link" id="cart-link" href="checkout.html" aria-label="Ver carrinho">Sua sacola <span id="cart-count">0</span></a>
+      <nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav>
     </header>
     <main>
-      <div class="intro"><p class="eyebrow">UM TOQUE DE IMAGINAÇÃO NO SEU CONSULTÓRIO</p><h1>Mais cor na consulta.<br><span>Mais encanto em cada olhar.</span></h1><p class="invitation">Peças lúdicas, feitas em 3D. Com as cores que você escolher.</p></div>
+      <div class="intro"><p class="eyebrow">UM TOQUE DE IMAGINAÇÃO NO SEU CONSULTÓRIO</p><h1>Mais cor na consulta.<br><span>Mais encanto em cada olhar.</span></h1><a class="featured-label" id="featured-product" href="#produto/borboletoscopio"><span class="number" id="featured-number">01</span><span><strong id="featured-name">Borboletoscópio</strong><small id="featured-subtitle">Para retinoscópio</small></span><span aria-hidden="true">↗</span></a></div>
       <div class="showcase" role="region" aria-roledescription="carrossel" aria-label="Coleção de três produtos">
       <section class="collection" aria-label="Nossos três produtos" aria-describedby="gallery-help">
         <a class="product product-mint" href="#produto/borboletoscopio" data-product="borboletoscopio" aria-label="Conhecer Borboletoscópio, capa para retinoscópio">
@@ -39,9 +42,10 @@
           <div class="product-caption"><span class="number">03</span><div><h2>Aviãoscopia</h2><p>Para régua de grau</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
         </a>
       </section>
-      <div class="gallery-controls"><button class="gallery-arrow gallery-prev" type="button" aria-label="Ver produto anterior">‹</button><p id="gallery-help"><span class="touch-help">Deslize para conhecer</span><span class="desktop-help">Explore a coleção</span> <strong class="gallery-count">01 — 03</strong></p><button class="gallery-arrow gallery-next" type="button" aria-label="Ver próximo produto">›</button></div>
+      <div class="gallery-controls"><button class="gallery-arrow gallery-prev" type="button" aria-label="Ver produto anterior">‹</button><p id="gallery-help"><strong class="gallery-count">01 — 03</strong></p><button class="gallery-arrow gallery-next" type="button" aria-label="Ver próximo produto">›</button></div>
       <p class="sr-only" id="gallery-status" aria-live="polite" aria-atomic="true"></p>
       </div>
+      <section class="catalog" id="produtos" aria-labelledby="catalog-title"><div class="catalog-heading"><div><p class="eyebrow">NOSSA COLEÇÃO</p><h2 id="catalog-title">Pequenas peças.<br>Grandes encantos.</h2></div><p>Encontre a sua favorita.<br>A combinação de cores é toda sua.</p></div><div class="catalog-grid"></div><p class="catalog-note">Preços ilustrativos para validação da experiência de compra.</p></section>
     </main>
     <footer><span class="signature">feito com carinho, pela Ju.</span><span class="prototype">Cor e criatividade em cada camada.</span></footer>
   </div>
@@ -59,10 +63,10 @@
       <p class="eyebrow" id="dialog-number"></p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p>
       <section id="product-info"><div class="detail-rule"></div><p id="dialog-description"></p><p class="personalize-intro">Um toque seu, em cada detalhe.</p><button type="button" class="text-button back">Voltar à coleção</button></section>
       <section id="customizer" hidden aria-label="Personalizar cores"><div class="custom-heading"><h3>Do seu jeito.</h3><button type="button" class="text-button" id="back-info">Voltar</button></div><p class="step-label">1. Escolha a parte</p><div id="part-tabs" role="group" aria-label="Parte do produto"></div><div class="palette-heading"><p class="step-label">2. Escolha a cor</p><span id="selected-color"></span></div><div id="palette" role="group" aria-label="Paleta de cores"></div><p class="part-hint" id="part-hint"></p><p class="fixed-note" id="fixed-note"></p><div class="custom-actions"><button type="button" class="text-button" id="reset-colors">Restaurar cores</button><span>Paleta inicial</span></div><p class="color-note">Cores ilustrativas; podem variar conforme a tela e o filamento.</p></section>
-      <section id="combination" hidden aria-label="Resumo da personalização"><div class="custom-heading"><h3>Sua combinação.</h3></div><ul id="combination-list"></ul><p class="saved-note" role="status"></p><button type="button" class="text-button" id="copy-combination">Copiar combinação</button><p class="color-note">Esta etapa prepara suas escolhas. Nenhum pedido foi enviado.</p></section>
+      <section id="combination" hidden aria-label="Resumo da personalização"><div class="custom-heading"><h3>Sua combinação.</h3></div><ul id="combination-list"></ul><p class="saved-note" role="status"></p><button type="button" class="text-button" id="copy-combination">Copiar combinação</button><button type="button" class="text-button" id="edit-colors" hidden>Continuar personalizando ↗</button><p class="color-note">Feito do seu jeito. Confira as cores antes de continuar.</p></section>
       <p class="sr-only" aria-live="polite" id="color-announcement"></p>
     </div>
-    <div class="modal-actions"><button type="button" class="primary" id="personalize">PERSONALIZE O SEU! <span aria-hidden="true">↗</span></button><button type="button" class="primary" id="finish">Concluir personalização <span aria-hidden="true">✓</span></button><button type="button" class="primary" id="edit-colors">Continuar personalizando <span aria-hidden="true">↗</span></button></div>
+    <div class="modal-actions"><button type="button" class="primary" id="personalize">PERSONALIZE O SEU! <span aria-hidden="true">↗</span></button><button type="button" class="primary" id="finish">Concluir personalização <span aria-hidden="true">✓</span></button><div id="purchase-panel" hidden><div class="purchase-price"><strong id="product-price"></strong><small>Valor ilustrativo<br>Sem cobrança nesta prévia</small></div><p id="purchase-status" class="purchase-status" role="status"></p><div class="purchase-actions"><button type="button" class="primary" id="add-to-cart"></button><button type="button" class="primary buy-now" id="buy-now">Comprar agora <span aria-hidden="true">↗</span></button></div></div></div>
   </dialog>
 </body>
 </html>

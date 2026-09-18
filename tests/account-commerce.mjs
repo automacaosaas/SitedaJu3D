@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {webcrypto} from 'node:crypto';
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
+const modules = {};
+for (const file of ['products.js','commerce-config.js','cart-store.js','auth-service.js']) {
+  let source = await readFile(new URL('../dist/'+file,import.meta.url),'utf8');
+  for (const [name,url] of Object.entries(modules)) source=source.replaceAll(`'./${name}'`,JSON.stringify(url));
+  modules[file]='data:text/javascript;base64,'+Buffer.from(source).toString('base64');
+}
+const {putItem,selectedItems,removePurchased,totals} = await import(modules['cart-store.js']);
+const {createDemoAuth,acceptSession,getSession,signOut,saveDemoOrder,readDemoOrders} = await import(modules['auth-service.js']);
+const values = new Map();
+globalThis.sessionStorage = {getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+
+let cart=putItem([],'borboletoscopio',{body:'pink',details:'yellow'});
+cart=putItem(cart,'aviaoscopia',{body:'blue',details:'red',engines:'yellow'});
+const selected=new Set([cart[0].id]);
+const chosen=selectedItems(cart,selected);
+assert.equal(chosen.length,1); assert.equal(totals(chosen).total,14700);
+assert.equal(selectedItems(cart,new Set()).length,0);
+assert.deepEqual(removePurchased(cart,chosen),[cart[1]],'unselected products survive checkout');
+assert.equal(removePurchased([{...cart[0],quantity:3}],chosen)[0].quantity,2,'extra units added during payment survive');
+const changed={...cart[0],selection:{body:'mint',details:'yellow'}};
+assert.deepEqual(removePurchased([changed],chosen),[changed],'changed colors are not removed by an old order');
+assert.equal(cart.length,2,'filtering and reconciliation do not mutate the cart');
+saveDemoOrder({id:'DEMO-TEST',method:'card',items:chosen,amounts:totals(chosen),email:'not-saved@example.com'});
+assert.equal(readDemoOrders()[0].total,14700,'order history includes delivery');
+assert.equal(JSON.stringify(readDemoOrders()).includes('not-saved@example.com'),false,'delivery PII is not saved');
+
+let now=1000, serial=100000;
+const demo=createDemoAuth({now:()=>now,makeCode:()=>String(++serial)});
+const person={name:'Teste local',email:' TESTE@example.com ',password:'Ficticia-123'};
+let challenge=await demo.register(person);
+assert.equal(challenge.email,'teste@example.com');
+await assert.rejects(demo.login(person),/não conferem/,'unverified registration cannot sign in');
+await assert.rejects(demo.verify({code:'000000'}),/não confere/);
+await assert.rejects(demo.resend(),/30 segundos/);
+now+=30000;
+const oldCode=challenge.demoCode; challenge=await demo.resend();
+assert.notEqual(challenge.demoCode,oldCode);
+await assert.rejects(demo.verify({code:oldCode}),/não confere/);
+const verified=await demo.verify({code:challenge.demoCode});
+assert.equal(verified.user.email,'teste@example.com');
+assert.equal(getSession(),null,'verification alone does not persist a UI session');
+await acceptSession(verified.user); assert.equal(getSession().demo,true);
+assert.equal(JSON.stringify([...values.values()]).includes(person.password),false);
+await signOut(); assert.equal(getSession(),null);
+assert.equal((await demo.login(person)).email,'teste@example.com');
+await assert.rejects(demo.verify({code:challenge.demoCode}),/novo código/,'codes are single use');
+await assert.rejects(demo.register(person),/já foi cadastrado/);
+now+=30000; challenge=await demo.forgot({email:person.email});
+for(let i=0;i<5;i++) await assert.rejects(demo.verify({code:'000000'}),/não confere/);
+await assert.rejects(demo.verify({code:challenge.demoCode}),/Limite/);
+now+=30000; challenge=await demo.resend(); now=challenge.expiresAt;
+await assert.rejects(demo.verify({code:challenge.demoCode}),/expirou/);
+challenge=await demo.resend();
+assert.equal((await demo.verify({code:challenge.demoCode})).resetAllowed,true);
+const isolated=createDemoAuth();
+await assert.rejects(isolated.login(person),/não conferem/,'demo accounts are isolated to one page instance');
+// Final password entry/submission remains a manual browser validation.
+console.log('PASS: selected checkout, quantity/color reconciliation, totals, public demo sessions, no saved password/PII, OTP verification, resend, attempt limit, expiry, single use and reset-code gate.');
