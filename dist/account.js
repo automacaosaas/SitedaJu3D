@@ -1,0 +1,70 @@
+import {auth, getSession, acceptSession, signOut, readDemoOrders} from './auth-service.js';
+import {icon} from './icons.js';
+import {money} from './commerce-config.js';
+const host=document.querySelector('#account-content'), feedback=document.querySelector('#account-feedback');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let screen=getSession()?'profile':'login', email='', name='', challenge=null, busy=false, countdown=null;
+const input=(key,label,{type='text',autocomplete='',placeholder='',hint=''}={})=>`<label class="auth-field"><span>${label}</span><span class="auth-input"><input name="${key}" type="${type}" ${type==='password'?'data-secret minlength="8" maxlength="128"':'maxlength="180"'} autocomplete="${autocomplete}" placeholder="${placeholder}" value="${key==='email'?esc(email):key==='name'?esc(name):''}" required>${type==='password'?`<button class="password-toggle" type="button" aria-label="Mostrar ${label.toLowerCase()}" aria-pressed="false">${icon('eye')}</button>`:''}</span>${hint?`<small class="password-help">${hint}</small>`:''}</label>`;
+const submit=text=>`<button class="primary account-submit" type="submit">${text} ${icon('arrow')}</button>`;
+const back=text=>`<button type="button" class="back-auth" data-screen="login">← ${text}</button>`;
+const title=(kicker,title,description)=>`<p class="eyebrow">${kicker}</p><h2 id="account-title" tabindex="-1">${title}</h2><p class="account-lead">${description}</p>`;
+function render(focus=true) {
+  clearInterval(countdown); feedback.textContent=''; host.dataset.screen=screen;
+  document.title=(screen==='orders'?'Meus pedidos':'Seu cantinho')+' · Ju imprime pra mim';
+  const tabs=`<div class="account-tabs" role="group" aria-label="Acesso à conta"><button type="button" data-screen="login" aria-pressed="${screen==='login'}">Entrar</button><button type="button" data-screen="signup" aria-pressed="${screen==='signup'}">Criar conta</button></div>`;
+  if(screen==='login') host.innerHTML=title('BEM-VINDA DE VOLTA','Que bom ter<br>você por aqui.','Entre para acompanhar seus pedidos e trazer mais cor para a sua rotina.')+tabs+`<form id="login-form">${input('email','E-mail',{type:'email',autocomplete:'email',placeholder:'Seu e-mail'})}${input('password','Senha',{type:'password',autocomplete:'current-password',placeholder:'Sua senha'})}<div class="auth-links"><button type="button" data-screen="forgot">Esqueci minha senha</button></div>${submit('Entrar na minha conta')}</form><p class="account-switch">Chegando agora? <button data-screen="signup">Crie seu cantinho</button></p>`;
+  if(screen==='signup') host.innerHTML=title('VAMOS NOS CONHECER?','Seu toque.<br>Seu cantinho.','Crie sua conta para acompanhar cada escolha, da primeira cor à chegada da sua peça.')+tabs+`<form id="signup-form">${input('name','Como podemos chamar você?',{autocomplete:'given-name',placeholder:'Seu nome'})}${input('email','E-mail',{type:'email',autocomplete:'email',placeholder:'Seu e-mail'})}${input('password','Crie uma senha',{type:'password',autocomplete:'new-password',placeholder:'Pelo menos 8 caracteres',hint:'Na prévia, use uma senha fictícia, diferente das suas senhas pessoais.'})}${submit('Criar minha conta')}</form><p class="account-switch">Já tem uma conta? <button data-screen="login">Entrar</button></p>`;
+  if(screen==='forgot') host.innerHTML=`<div class="verify-icon">${icon('mail')}</div>`+title('A GENTE AJUDA VOCÊ','Esqueceu a senha?','Acontece! Informe seu e-mail para iniciar a recuperação com um código de seis números.')+`<form id="forgot-form">${input('email','E-mail da sua conta',{type:'email',autocomplete:'email',placeholder:'Seu e-mail'})}${submit('Receber código')}</form>${back('Voltar para entrar')}`;
+  if(screen==='verify') {
+    host.innerHTML=`<div class="verify-icon">${icon('mail')}</div>`+title('SÓ MAIS UM PASSINHO','Confira seu e-mail.',`Na versão conectada, o código chegará a <strong>${esc(email)}</strong>. Nesta prévia, consulte o código de teste abaixo.`)+`<form id="verify-form"><label class="auth-field code-input"><span>Código de verificação</span><input name="code" inputmode="numeric" autocomplete="one-time-code" type="text" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="000000" aria-describedby="code-help" required></label><p class="password-help" id="code-help">Digite os seis números. O código vale por 10 minutos.</p>${submit(challenge.purpose==='reset'?'Verificar código':'Confirmar meu e-mail')}</form><div class="resend-row"><span>Não recebeu?</span><button id="resend-code" type="button">Reenviar código</button></div><button class="back-auth" data-screen="${challenge.purpose==='reset'?'forgot':'signup'}">← Alterar e-mail</button>`;
+    const tick=()=>{const b=document.querySelector('#resend-code');if(!b)return;const seconds=Math.max(0,Math.ceil((challenge.resendAt-Date.now())/1000));b.disabled=busy||seconds>0;b.textContent=seconds?`Reenviar em ${seconds}s`:'Reenviar código';}; tick();countdown=setInterval(tick,1000);
+  }
+  if(screen==='reset') host.innerHTML=`<div class="verify-icon">${icon('check')}</div>`+title('CÓDIGO CONFERIDO','Um novo começo.','Escolha uma nova senha para voltar ao seu cantinho.')+`<form id="reset-form">${input('password','Nova senha',{type:'password',autocomplete:'new-password',placeholder:'Pelo menos 8 caracteres'})}${input('confirm','Confirme a nova senha',{type:'password',autocomplete:'new-password',placeholder:'Digite a senha novamente'})}${submit('Salvar nova senha')}</form>`;
+  if(screen==='reset-done') host.innerHTML=`<div class="verify-icon">${icon('check')}</div>`+title('TUDO PRONTO','Senha renovada.','Sua senha de teste foi atualizada. Você já pode entrar de novo nesta página.')+`<button class="primary account-submit" data-screen="login">Voltar para entrar ${icon('arrow')}</button>`;
+  if(screen==='profile') {
+    const user=getSession();
+    if(!user){screen='login';return render(focus);}
+    host.innerHTML=title('SEU CANTINHO',`Olá, ${esc(user.name.split(' ')[0])}.`,'Que bom compartilhar esse mundo de cor com você.')+`<div class="account-empty">${icon('profile')}<h3>${esc(user.name)}</h3><p>${esc(user.email)}</p><small>Sessão demonstrativa nesta aba</small></div><button class="primary account-submit" data-screen="orders">Meus pedidos ${icon('bag')}</button><a class="primary account-submit buy-now" href="index.html#produtos">Explorar os produtos ${icon('arrow')}</a><button class="text-button" id="signout">Sair da minha conta</button>`;
+  }
+  if(screen==='orders') {
+    const orders=readDemoOrders();
+    host.innerHTML=title('CADA ESCOLHA CONTA','Meus pedidos.','Acompanhe os pedidos demonstrativos feitos nesta aba.')+(orders.length?orders.map(o=>`<article class="order-preview"><h3>Pedido ${esc(o.id)}</h3><small>Pagamento simulado · nenhuma cobrança</small><p>${o.items.map(i=>`${Number(i.quantity)||1} × ${esc(i.title)}`).join('<br>')}</p><strong>${money(Number.isFinite(o.total)?o.total:o.items.reduce((s,i)=>s+(Number(i.unitPrice)||0)*(Number(i.quantity)||1),0))}</strong><p>${Number.isFinite(o.total)?'Total com entrega demonstrativa':'Produtos · entrega no resumo original'}</p></article>`).join(''):`<div class="account-empty">${icon('bag')}<h3>Seu primeiro encanto<br>está por vir.</h3><p>Quando você finalizar um pedido de teste, ele aparecerá aqui.</p><a class="primary account-submit" href="index.html#produtos">Conhecer os produtos ${icon('arrow')}</a></div>`)+`<button class="back-auth" data-screen="${getSession()?'profile':'login'}">← Voltar à minha conta</button>`;
+  }
+  if(focus)host.querySelector('h2')?.focus({preventScroll:true});
+}
+function showCode() {
+  const inbox=document.querySelector('#demo-inbox');
+  inbox.innerHTML=`<div class="demo-code">Código de teste — não enviado por e-mail<strong>${esc(challenge.demoCode)}</strong><small>Use apenas para testar esta prévia.</small></div>`;
+  document.querySelector('.preview-details').open=true;
+}
+host.addEventListener('click',async e=>{
+  const toggle=e.target.closest('.password-toggle');
+  if(toggle){const field=toggle.previousElementSibling,show=field.type==='password';field.type=show?'text':'password';toggle.setAttribute('aria-pressed',String(show));toggle.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha');return;}
+  if(busy)return;
+  const navigation=e.target.closest('[data-screen]');
+  if(navigation&&navigation!==host){screen=navigation.dataset.screen;render();return;}
+  if(e.target.closest('#signout')){await signOut();screen='login';render();}
+  if(e.target.closest('#resend-code')){
+    busy=true;try{challenge=await auth.resend();render(false);showCode();feedback.textContent='Novo código de teste gerado.';}catch(error){feedback.textContent=error.message;}finally{busy=false;}
+  }
+});
+host.addEventListener('input',e=>{if(e.target.name==='email')email=e.target.value;if(e.target.name==='name')name=e.target.value;if(e.target.name==='code')e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);});
+host.addEventListener('submit',async e=>{
+  e.preventDefault();if(busy)return;
+  const form=e.target;if(!form.reportValidity())return;
+  const values=Object.fromEntries(new FormData(form)),button=form.querySelector('[type=submit]');
+  busy=true;button.disabled=true;feedback.textContent='';
+  try{
+    if(form.id==='login-form'){await acceptSession(await auth.login(values));screen=location.hash==='#pedidos'?'orders':'profile';}
+    if(form.id==='signup-form'){challenge=await auth.register(values);email=challenge.email;screen='verify';}
+    if(form.id==='forgot-form'){challenge=await auth.forgot(values);email=challenge.email;screen='verify';}
+    if(form.id==='verify-form'){const result=await auth.verify(values);if(result.user){await acceptSession(result.user);screen=location.hash==='#pedidos'?'orders':'profile';}else screen='reset';}
+    if(form.id==='reset-form'){if(values.password!==values.confirm)throw Error('As senhas precisam ser iguais.');await auth.reset(values);screen='reset-done';}
+    form.reset();render();if(screen==='verify')showCode();else document.querySelector('#demo-inbox').replaceChildren();
+  }catch(error){feedback.textContent=error.message;form.querySelector('input[name=code]')?.setAttribute('aria-invalid','true');}
+  finally{busy=false;button.disabled=false;}
+});
+const motion=document.querySelector('.motion-toggle');
+motion.addEventListener('click',()=>{const paused=document.querySelector('.ju-scene').classList.toggle('is-paused');motion.setAttribute('aria-pressed',String(paused));motion.textContent=paused?'Retomar animação':'Pausar animação';});
+function route(){if(location.hash==='#pedidos')screen=getSession()?'orders':'login';render(false);}
+window.addEventListener('hashchange',route);route();
