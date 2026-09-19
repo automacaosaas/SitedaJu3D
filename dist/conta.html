@@ -1,14 +1,53 @@
 <!doctype html>
 <html lang="pt-BR">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fff7f5"><meta name="robots" content="noindex,nofollow"><title>Seu cantinho · Ju imprime pra mim</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="shopping.css"><link rel="stylesheet" href="account.css"><script type="module" src="account.js"></script></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fff7f5">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Seu cantinho · Ju imprime pra mim</title>
+  <link rel="icon" href="favicon.svg">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="shopping.css">
+  <link rel="stylesheet" href="account.css">
+  <script type="module" src="account.js"></script>
+</head>
 <body class="account-page">
-  <header class="account-header"><a href="index.html" class="back-collection">← Voltar à coleção</a><a class="brand account-logo" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="90" height="90" alt="Ju imprime pra mim"></a><span>FEITO PARA ENCANTAR</span></header>
-  <main class="account-card">
-    <section class="ju-scene" aria-label="Julia dá as boas-vindas"><div class="ju-halo"></div><p class="scene-greeting" id="scene-greeting" aria-live="polite" hidden></p>
-      <img class="julia-character" src="assets/julia-3d.png" width="1186" height="1326" alt="Julia, de jaleco branco e roupa lilás, sorri segurando o Borboletoscópio">
-      <svg class="float-butterfly" viewBox="0 0 100 100" aria-hidden="true"><g fill="#f3c3d4" stroke="#b64c68" stroke-width="3"><path class="wing-left" d="M49 53C-4 7 2 81 43 60 0 96 55 111 49 53Z"/><path class="wing-right" d="M51 53C104 7 98 81 57 60 100 96 45 111 51 53Z"/><path fill="none" d="m46 41 4 20 4-20"/></g></svg>
-      <svg class="float-heart" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 80S13 57 13 31a19 19 0 0 1 37-3 19 19 0 0 1 37 3C87 57 50 80 50 80Z" fill="#f7d3dc" stroke="#b64c68" stroke-width="3"/></svg>
+  <a class="auth-skip" href="#account-title">Ir para o formulário</a>
+  <header class="account-header">
+    <a href="index.html" class="back-collection">← <span>Voltar à coleção</span></a>
+    <a class="brand account-logo" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="90" height="90" alt="Ju imprime pra mim"></a>
+    <span>FEITO PARA ENCANTAR</span>
+  </header>
+  <main class="auth-composition">
+    <div class="auth-decoration" aria-hidden="true">
+      <div class="auth-blob"></div>
+      <p class="auth-note auth-note-left">Criatividade,<br>carinho e<br>detalhes que<br>encantam <span>♡</span></p>
+      <p class="auth-note auth-note-right">O 3D nas suas<br>consultas<br>e em muitos<br>momentos <span>♡</span></p>
+      <svg class="auth-leaves auth-leaves-left" viewBox="0 0 200 360" fill="none"><path d="M105 354C132 244 70 135 89 34" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><path d="M109 299C33 282 16 252 9 214c57 1 99 36 100 85Z"/><path d="M114 254c64-20 82-51 78-87-47 12-73 41-78 87Z"/><path d="M94 209C23 185 9 139 15 103c44 10 80 61 79 106Z"/><path d="M102 175c54-22 62-60 51-96-32 20-53 48-51 96Z"/><path d="M88 114C51 83 54 39 76 5c27 22 40 63 12 109Z"/></g></svg>
+      <svg class="auth-leaves auth-leaves-right" viewBox="0 0 200 360" fill="none"><path d="M105 354C132 244 70 135 89 34" stroke="currentColor" stroke-width="2"/><g fill="currentColor"><path d="M109 299C33 282 16 252 9 214c57 1 99 36 100 85Z"/><path d="M114 254c64-20 82-51 78-87-47 12-73 41-78 87Z"/><path d="M94 209C23 185 9 139 15 103c44 10 80 61 79 106Z"/><path d="M102 175c54-22 62-60 51-96-32 20-53 48-51 96Z"/><path d="M88 114C51 83 54 39 76 5c27 22 40 63 12 109Z"/></g></svg>
+      <svg class="auth-flourish" viewBox="0 0 240 250" fill="none"><path d="M246 5C85 87 91 202 180 212c53 7 71-49 34-55-35-6-66 103-211 83" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M143 147s-31-19-25-35c5-14 19-9 22 2 13-25 31-14 24 1-5 12-21 32-21 32Z" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="auth-heart">♡</span>
+    </div>
+    <div class="ju-scene">
+      <img class="julia-character" src="assets/julia-auth.png" width="1536" height="1024" fetchpriority="high" alt="Julia sorri com o rosto apoiado na mão, de jaleco branco e roupa roxa, segurando uma borboleta ilustrada.">
+    </div>
+    <section class="account-card account-panel" aria-labelledby="account-title">
+      <p class="scene-greeting" id="scene-greeting" hidden></p>
+      <div id="account-content"></div>
+      <p id="account-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+      <details class="preview-details">
+        <summary>Prévia interativa · sem envio de e-mail</summary>
+        <p>Use dados fictícios. As contas de teste e suas senhas derivadas ficam apenas na memória desta página e são apagadas ao recarregar. A sessão visual dura nesta aba; não dá acesso a dados reais.</p>
+        <p>O código aparece aqui para testar o layout. A integração com o banco e o serviço de e-mail será conectada depois.</p>
+        <div id="demo-inbox"></div>
+      </details>
     </section>
-    <section class="account-panel" aria-labelledby="account-title"><div id="account-content"></div><p id="account-feedback" role="status" aria-live="polite"></p><details class="preview-details"><summary>Prévia interativa · sem envio de e-mail</summary><p>Use dados fictícios. As contas de teste e suas senhas derivadas ficam apenas na memória desta página e são apagadas ao recarregar. A sessão visual dura nesta aba; não dá acesso a dados reais.</p><p>O código aparece aqui para testar o layout. A integração com o banco e o serviço de e-mail será conectada depois.</p><div id="demo-inbox"></div></details></section>
-  </main><footer class="account-footer"><span>Cor e criatividade em cada camada.</span><a href="produtos.html">Conheça a coleção ↗</a></footer>
-</body></html>
+  </main>
+  <footer class="account-footer">
+    <p>CRIATIVIDADE E CUIDADO<br>PARA UMA ROTINA MAIS LEVE</p>
+    <span aria-hidden="true">♡</span>
+    <a href="produtos.html">Explore as criações da Ju ↗</a>
+  </footer>
+</body>
+</html>
