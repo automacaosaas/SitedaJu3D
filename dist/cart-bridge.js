@@ -16,9 +16,11 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
   }
   function refresh() {
     panel.hidden = dialog.dataset.mode !== 'summary';
+    buy.hidden = !!edit;
+    dialog.toggleAttribute('data-cart-edit', !!edit);
     const key = getProduct();
     if (key && PRODUCTS[key]) {
-      button.innerHTML = `${edit ? 'Salvar no carrinho' : 'Adicionar ao carrinho'} ${icon('cart')}`;
+      button.innerHTML = `${edit ? 'Salvar e voltar ao carrinho' : 'Adicionar ao carrinho'} ${icon(edit ? 'arrow' : 'cart')}`;
       document.querySelector('#product-price').textContent = money(COMMERCE.prices[key]);
     }
   }
@@ -30,14 +32,19 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
       const edited = !!edit; edit = null;
       try { sessionStorage.removeItem(EDIT_KEY); } catch {}
       window.dispatchEvent(new Event('ju:cart'));
-      status.replaceChildren(document.createTextNode(edited ? 'Combinação atualizada. ' : 'Peça adicionada! '));
+      if (edited) {
+        button.innerHTML = `Salvo ${icon('check')}`;
+        location.replace('checkout.html');
+        return;
+      }
+      status.replaceChildren(document.createTextNode('Peça adicionada! '));
       const link = document.createElement('a'); link.href = 'checkout.html'; link.textContent = 'Ver carrinho →';
       status.append(link); button.innerHTML = `Adicionado ${icon('check')}`;
     } catch (error) { status.textContent = error.message; }
     finally { setTimeout(() => { busy = false; button.disabled = false; refresh(); }, 900); }
   });
   buy.addEventListener('click', () => {
-    if (busy) return;
+    if (busy || edit) return;
     busy = true; buy.disabled = true;
     try {
       sessionStorage.setItem(DIRECT_KEY, JSON.stringify(putItem([], getProduct(), getSelection(), capture())));
@@ -48,7 +55,11 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
   });
   const clearEdit = () => { edit = null; status.textContent = ''; try { sessionStorage.removeItem(EDIT_KEY); } catch {} refresh(); };
   window.addEventListener('hashchange', clearEdit);
-  dialog.addEventListener('close', clearEdit);
+  dialog.addEventListener('close', () => {
+    const returnToCart = !!edit;
+    clearEdit();
+    if (returnToCart) location.replace('checkout.html');
+  });
   window.addEventListener('pageshow', () => { busy = false; button.disabled = buy.disabled = false; refresh(); });
   new MutationObserver(() => {status.textContent='';refresh();}).observe(dialog, {attributes:true,attributeFilter:['data-mode']});
   refresh();
