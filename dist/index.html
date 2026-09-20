@@ -19,36 +19,32 @@
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
   <script type="module" src="controller.js"></script>
 </head>
-<body>
+<body class="home">
   <div class="page">
-    <header class="header">
-      <a class="brand" href="#" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="112" height="112" alt="Ju, imprime pra mim? Criatividade em 3D"></a>
-      <span class="edition">CRIATIVIDADE EM 3D <span class="edition-line"></span> FEITO PARA ENCANTAR</span>
-      <nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav>
-    </header>
-    <main>
-      <div class="intro"><p class="eyebrow">UM TOQUE DE IMAGINAÇÃO NO SEU CONSULTÓRIO</p><h1>Mais cor na consulta.<br><span>Mais encanto em cada olhar.</span></h1><a class="featured-label" id="featured-product" href="#produto/borboletoscopio"><span class="number" id="featured-number">01</span><span><strong id="featured-name">Borboletoscópio</strong><small id="featured-subtitle">Para retinoscópio</small></span><span aria-hidden="true">↗</span></a></div>
-      <div class="showcase" role="region" aria-roledescription="carrossel" aria-label="Coleção de três produtos">
-      <section class="collection" aria-label="Nossos três produtos" aria-describedby="gallery-help">
-        <a class="product product-mint" href="#produto/borboletoscopio" data-product="borboletoscopio" aria-label="Conhecer Borboletoscópio, capa para retinoscópio">
-          <div class="visual"><div class="halo"></div><img src="assets/borboletoscopio.png" alt="Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca" width="1024" height="1024" fetchpriority="high"><span class="explore" aria-hidden="true">Conhecer <span>↗</span></span></div>
-          <div class="product-caption"><span class="number">01</span><div><h2>Borboletoscópio</h2><p>Para retinoscópio</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
-        </a>
-        <a class="product product-cyan" href="#produto/dinossauroscopio" data-product="dinossauroscopio" aria-label="Conhecer Dinossauroscópio, capa para retinoscópio">
-          <div class="visual"><div class="halo"></div><img src="assets/dinossauroscopio.png" alt="Dinossauroscópio azul com espinhos verde-menta sobre uma pilastra branca" width="1024" height="1024" fetchpriority="high"><span class="explore" aria-hidden="true">Conhecer <span>↗</span></span></div>
-          <div class="product-caption"><span class="number">02</span><div><h2>Dinossauroscópio</h2><p>Para retinoscópio</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
-        </a>
-        <a class="product product-blue" href="#produto/aviaoscopia" data-product="aviaoscopia" aria-label="Conhecer Aviãoscopia, avião magnético para régua de grau">
-          <div class="visual"><div class="halo"></div><img src="assets/aviaoscopia-regua.png" alt="Aviãoscopia sobre pilastra branca, com 16 aberturas numeradas e rasgo retangular para a haste da régua" width="1024" height="1024" fetchpriority="high"><span class="explore" aria-hidden="true">Conhecer <span>↗</span></span></div>
-          <div class="product-caption"><span class="number">03</span><div><h2>Aviãoscopia</h2><p>Para régua de grau</p></div><span class="caption-arrow" aria-hidden="true">↗</span></div>
-        </a>
+    <div class="hero-bg" data-hero-bg aria-hidden="true"></div>
+    <div class="hero-shell">
+      <div class="hero-band" data-hero-band aria-hidden="true"></div>
+      <header class="header">
+        <a class="brand" href="#" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="112" height="112" alt="Ju, imprime pra mim? Criatividade em 3D"></a>
+        <span class="edition">CRIATIVIDADE EM 3D <span class="edition-line"></span> FEITO PARA ENCANTAR</span>
+        <nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav>
+      </header>
+      <section class="showcase" role="region" aria-roledescription="carrossel" aria-label="Coleção de produtos">
+        <h1 class="sr-only">Mais cor na consulta. Mais encanto em cada olhar.</h1>
+        <div class="hero-copy" data-hero-copy></div>
+        <div class="hero-stage" data-hero-stage></div>
+        <div class="hero-palette" data-hero-palette></div>
+        <button class="hero-arrow hero-prev" type="button" aria-label="Produto anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+        <button class="hero-arrow hero-next" type="button" aria-label="Próximo produto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+        <p class="sr-only" id="gallery-status" aria-live="polite" aria-atomic="true"></p>
       </section>
-      <div class="gallery-controls"><button class="gallery-arrow gallery-prev" type="button" aria-label="Ver produto anterior">‹</button><p id="gallery-help"><strong class="gallery-count">01 — 03</strong></p><button class="gallery-arrow gallery-next" type="button" aria-label="Ver próximo produto">›</button></div>
-      <p class="sr-only" id="gallery-status" aria-live="polite" aria-atomic="true"></p>
-      </div>
+    </div>
+    <div class="page-inner">
+    <main>
       <section class="catalog catalog-home" id="produtos" aria-labelledby="catalog-title"><div class="catalog-heading"><div><p class="eyebrow">NOSSA COLEÇÃO</p><h2 id="catalog-title">Pequenas peças.<br>Grandes encantos.</h2></div><p>Escolha uma peça para personalizar ou adicione-a direto ao carrinho.</p></div><div class="product-carousel" data-product-carousel data-category="oftalmologia" aria-label="Produtos de oftalmologia"></div><div class="catalog-footer"><a class="catalog-all" href="produtos.html">Ver catálogo completo <span aria-hidden="true">↗</span></a><p class="catalog-note">Preços ilustrativos para validação da experiência de compra.</p></div></section>
     </main>
-    <footer><span class="signature">feito com carinho, pela Ju.</span><span class="prototype">Cor e criatividade em cada camada.</span></footer>
+    <footer class="site-footer"><span class="signature">feito com carinho, pela Ju.</span><div class="footer-meta"><p class="footer-copy">© 2026 Ju, imprime pra mim? Todos os direitos reservados.</p><a class="footer-social" href="https://www.instagram.com/juimprimepramim/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Ju, imprime pra mim? (abre em uma nova aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg></a></div></footer>
+    </div>
   </div>
   <dialog id="product-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
     <button class="close" aria-label="Fechar produto">×</button>

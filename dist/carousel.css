@@ -1,37 +1,170 @@
-.showcase { position:relative; max-width:1200px; margin:24px auto 0; }
-.showcase .collection { background:var(--bg); }
-.showcase .collection { --card-width:440px; --orbit-radius:320px; --orbit-rise:70px; display:block; position:relative; width:100%; max-width:none; height:590px; margin:0; padding:0; overflow:clip; isolation:isolate; touch-action:pan-y pinch-zoom; user-select:none; -webkit-user-select:none; cursor:grab; }
-.showcase .collection.is-dragging { cursor:grabbing; }
-.showcase .product { position:absolute; top:50px; left:50%; width:var(--card-width); margin-left:calc(var(--card-width) / -2); transform-origin:50% 50%; animation:none; transition:none; mix-blend-mode:multiply; will-change:transform; }
-.showcase .visual { aspect-ratio:1; }
-.showcase .product .visual img { transform:none; transition:filter .2s; -webkit-user-drag:none; }
-.showcase .product-caption { margin:0 12px; padding:14px 0; transition:opacity .2s; }
-.showcase .product:not([data-front=true]) .product-caption { opacity:0; visibility:hidden; }
-.showcase .product-caption h2 { font-size:20px; }
-.showcase .product-caption p { font-size:14px; }
-.showcase .product:not([data-front=true]) .explore { display:none; }
-.showcase .product .halo { display:none; }
-.showcase .product:focus-visible { outline-offset:-4px; }
-.gallery-controls { display:flex; justify-content:center; align-items:center; gap:18px; padding:8px 0 14px; }
-.gallery-controls p { display:flex; gap:14px; align-items:center; margin:0; font-size:14px; color:var(--muted); }
-.gallery-count { color:var(--rose); font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.gallery-arrow { display:grid; place-items:center; width:44px; height:44px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--rose); font-size:30px; line-height:1; transition:background .2s; }
-.touch-help { display:none; }
-@media (hover:hover) { .gallery-arrow:hover { background:#f6e3e8; } .showcase .product[data-front=true]:hover .visual img { filter:brightness(1.075); } }
-@media (min-width:801px) { .gallery-arrow { position:absolute; top:245px; z-index:10; } .gallery-prev { left:0; } .gallery-next { right:0; } }
-@media (max-width:1100px) and (min-width:601px) { .showcase .collection { --card-width:350px; --orbit-radius:260px; height:480px; } }
-@media (max-width:600px) {
-  .showcase { margin:14px -22px 0; }
-  .showcase .collection { --card-width:62vw; --orbit-radius:45vw; --orbit-rise:36px; height:calc(62vw + 146px); }
-  .showcase .product { top:32px; }
-  .showcase .product-caption { margin:0; gap:7px; padding:12px 0; }
-  .showcase .product-caption h2 { font-size:clamp(15px,4.2vw,20px); overflow-wrap:anywhere; }
-  .showcase .product-caption p { font-size:13px; margin-top:4px; }
-  .showcase .caption-arrow { font-size:20px; }
-  .showcase .number { font-size:12px; }
-  .showcase .explore { display:none; }
-  .gallery-controls { gap:10px; padding:0 10px 10px; }
-  .gallery-controls p { font-size:12px; gap:9px; }
-  .touch-help { display:inline; } .desktop-help { display:none; }
+/* Vitrine principal — banner temático (só a home). As cores de fundo, header e texto vêm de
+   SHOWCASE em products.js; aqui ficam layout, pilastra e movimento. O resto do site não muda. */
+/* A home usa largura total no topo; catalogo e rodape voltam ao mesmo contêiner de antes. */
+.home .page { position: relative; isolation: isolate; max-width: none; padding: 0; --hero-h: 720px; --fade-in: clamp(48px, 6vw, 96px); --tail: clamp(380px, 48vw, 700px); --ramp-1: calc(var(--fade-in) + var(--tail)); --foot-ramp: clamp(240px, 26vw, 380px); }
+.home .page-inner { max-width: 1560px; margin: 0 auto; padding: 0 5.5vw; }
+@media (max-width: 600px) { .home .page-inner { padding: 0 22px; } }
+
+/* Faixa de tema em tela cheia: header + banner formam uma peça só. */
+.hero-shell { --u: min(100vw, 1560px); --inset: max(5.5vw, calc((100% - 1560px) / 2 + 5.5vw)); --hero-inset: max(5.5vw, calc((100% - 1560px) / 2 + 85.8px)); position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+.hero-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero-bg::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: var(--hero-h); background: #d9f0e4; }
+.hero-band { grid-area: 1 / 1; position: relative; z-index: -1; }
+/* Header e banner formam um degradê só: a faixa do header desce 72 px sobre o banner e some em curva suave. */
+.hero-band .hero-layer { bottom: -72px; -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) calc(100% - 110px), rgba(0, 0, 0, 0.972) calc(100% - 99px), rgba(0, 0, 0, 0.896) calc(100% - 88px), rgba(0, 0, 0, 0.784) calc(100% - 77px), rgba(0, 0, 0, 0.648) calc(100% - 66px), rgba(0, 0, 0, 0.5) calc(100% - 55px), rgba(0, 0, 0, 0.352) calc(100% - 44px), rgba(0, 0, 0, 0.216) calc(100% - 33px), rgba(0, 0, 0, 0.104) calc(100% - 22px), rgba(0, 0, 0, 0.028) calc(100% - 11px), rgba(0, 0, 0, 0) 100%); mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) calc(100% - 110px), rgba(0, 0, 0, 0.972) calc(100% - 99px), rgba(0, 0, 0, 0.896) calc(100% - 88px), rgba(0, 0, 0, 0.784) calc(100% - 77px), rgba(0, 0, 0, 0.648) calc(100% - 66px), rgba(0, 0, 0, 0.5) calc(100% - 55px), rgba(0, 0, 0, 0.352) calc(100% - 44px), rgba(0, 0, 0, 0.216) calc(100% - 33px), rgba(0, 0, 0, 0.104) calc(100% - 22px), rgba(0, 0, 0, 0.028) calc(100% - 11px), rgba(0, 0, 0, 0) 100%); }
+.hero-layer { position: absolute; inset: 0; opacity: 0; will-change: opacity; pointer-events: none; }
+/* Uma faixa de cor por tema cobre a página inteira: o degradê do banner desce por trás da seção seguinte,
+   assenta num tom claro do tema (em vez de sumir no rosa) e volta a aprofundar suavemente no rodapé.
+   --hero-h (altura do banner, medida no JS) mantém a geometria do degradê idêntica à do banner.
+   As nuvens ficam presas ao banner e o catálogo desenha por cima. */
+.hero-bg .hero-layer { background: radial-gradient(90% calc(var(--hero-h) * .75) at 52% calc(var(--hero-h) * .42), var(--stops)); }
+/* As nuvens esmaecem antes do limite do banner, para o corte não virar uma linha. */
+.clouds { position: absolute; top: 0; left: 0; right: 0; height: var(--hero-h); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 110px), transparent 100%); mask-image: linear-gradient(to bottom, #000 calc(100% - 110px), transparent 100%); }
+/* Véu na cor do site (#fff7f5 = --bg): 0% no fim do banner, 56% no miolo da seção, 20% no rodapé (mais tema).
+   A rampa do rodapé começa em max(fim da primeira rampa, fim da página − --foot-ramp): nunca se sobrepõem. */
+.hero-bg::after { content: ''; position: absolute; left: 0; right: 0; top: calc(var(--hero-h) - var(--fade-in)); bottom: 0; z-index: 5; pointer-events: none; background: linear-gradient(to bottom, rgba(255, 247, 245, 0) calc(var(--ramp-1) * 0), rgba(255, 247, 245, 0.016) calc(var(--ramp-1) * 0.1), rgba(255, 247, 245, 0.058) calc(var(--ramp-1) * 0.2), rgba(255, 247, 245, 0.121) calc(var(--ramp-1) * 0.3), rgba(255, 247, 245, 0.197) calc(var(--ramp-1) * 0.4), rgba(255, 247, 245, 0.28) calc(var(--ramp-1) * 0.5), rgba(255, 247, 245, 0.363) calc(var(--ramp-1) * 0.6), rgba(255, 247, 245, 0.439) calc(var(--ramp-1) * 0.7), rgba(255, 247, 245, 0.502) calc(var(--ramp-1) * 0.8), rgba(255, 247, 245, 0.544) calc(var(--ramp-1) * 0.9), rgba(255, 247, 245, 0.56) calc(var(--ramp-1) * 1), rgba(255, 247, 245, 0.56) max(var(--ramp-1), calc(100% - var(--foot-ramp))), rgba(255, 247, 245, 0.55) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.1), rgba(255, 247, 245, 0.523) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.2), rgba(255, 247, 245, 0.482) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.3), rgba(255, 247, 245, 0.433) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.4), rgba(255, 247, 245, 0.38) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.5), rgba(255, 247, 245, 0.327) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.6), rgba(255, 247, 245, 0.278) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.7), rgba(255, 247, 245, 0.237) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.8), rgba(255, 247, 245, 0.21) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.9), rgba(255, 247, 245, 0.2) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 1)); }
+.home .page-inner { position: relative; z-index: 1; }
+/* Abaixo do banner seguem o tema do produto ativo: título/apoio, link do catálogo, rodapé e SÓ os dois
+   botões do card (Personalize o seu e carrinho). O resto dos cards não é tocado. Sem JS: cores originais. */
+.home .catalog-heading .eyebrow, .home .catalog-all, .home footer .signature { color: var(--theme-accent, var(--rose)); }
+.home .catalog-heading h2 { color: var(--theme-text, var(--ink)); }
+.home .catalog-heading > p, .home .catalog-note, .home footer .footer-copy { color: var(--theme-muted, var(--muted)); }
+.home footer .footer-social { color: var(--theme-accent, var(--rose)); }
+/* Categoria dos cards, valor "Categoria" e pontinhos do carrossel também seguem o tema. */
+.home .product-rail-category, .home .product-rail-active-details strong { color: var(--theme-accent, var(--rose)); }
+.home .product-carousel-dots button::after { background: var(--theme-soft, #e8d6da); }
+.home .product-carousel-dots button[aria-selected=true]::after { background: var(--theme-accent, var(--rose)); }
+/* Card central limpo: a sombra do palco era cortada pela borda dele e desenhava retângulos. Agora o palco só
+   recorta na horizontal e a sombra é curta, suave e no tom do tema. Borda e faixa superior no tom do tema. */
+@supports (overflow: clip) { .home .product-carousel-stage { overflow-x: clip; overflow-y: visible; } }
+.home .product-rail-card { box-shadow: 0 20px 38px -28px var(--theme-glow, #65364914); }
+.home .product-rail-card.is-active { border-color: var(--theme-soft, #eadde1); box-shadow: 0 30px 46px -32px var(--theme-glow, #65364925); }
+.home .product-rail-card.is-active .product-rail-art { background: linear-gradient(to bottom, var(--theme-wash, #fff) 0%, #fff 82%); }
+.home .catalog-home .product-customize, .home .catalog-home .product-cart { background: var(--theme-accent, var(--rose)); box-shadow: 0 6px 15px var(--theme-glow, #b64c6824); }
+.home .catalog-home .product-customize:hover, .home .catalog-home .product-cart:hover { background: var(--theme-accent-strong, #9e3e59); box-shadow: 0 10px 18px var(--theme-glow, #b64c6833); }
+/* "Escolha sua cor" leva ao card do produto e este botão pulsa até a pessoa interagir. */
+.home .product-customize.is-pulsing { animation: cta-pulse 1.5s ease-out 5; }
+@keyframes cta-pulse {
+  0% { box-shadow: 0 0 0 0 var(--theme-pulse, rgba(182, 76, 104, .55)); transform: scale(1); }
+  65% { box-shadow: 0 0 0 16px var(--theme-pulse-off, rgba(182, 76, 104, 0)); transform: scale(1.045); }
+  100% { box-shadow: 0 0 0 0 var(--theme-pulse-off, rgba(182, 76, 104, 0)); transform: scale(1); }
 }
-@media (prefers-reduced-motion:reduce) { .showcase *, .showcase *::before { animation:none!important; transition:none!important; } }
+/* Desktop: cards um pouco menores para o carrossel caber inteiro na tela ao chegar pelo "Escolha sua cor". */
+@media (min-width: 901px) {
+  .home .product-carousel-stage { height: 526px; }
+  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 336px + var(--drag)), 22px) scale(.91); }
+  .home .product-rail-card.is-active { width: min(352px, 37vw); min-height: 440px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
+  .home .product-rail-art { height: 196px; }
+  .home .product-rail-card.is-active .product-rail-art { height: 212px; }
+  .home .product-rail-copy { padding: 14px 20px 16px; }
+  .home .product-rail-copy h3 { font-size: 26px; }
+  .home .product-rail-active-details > div { min-height: 33px; }
+  .home .product-rail-bottom, .home .product-rail-actions { margin-top: 12px; }
+}
+.cloud { position: absolute; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 38% 30%, rgba(255, 255, 255, .94) 0%, rgba(255, 255, 255, .64) 46%, rgba(255, 255, 255, .32) 78%, rgba(255, 255, 255, .14) 100%); }
+.c1 { left: -7vw; bottom: -10vw; width: 25vw; }
+.c2 { left: 9vw; bottom: -14vw; width: 21vw; }
+.c3 { right: -8vw; bottom: -12vw; width: 26vw; }
+.c4 { right: 15vw; bottom: -16vw; width: 20vw; }
+.c5 { left: -12vw; top: 7vw; width: 17vw; }
+.c6 { right: -10vw; top: 4vw; width: 15vw; }
+
+/* Header da home: mesma estrutura, fundo transparente sobre a faixa de tema. */
+.home .site-header { grid-area: 1 / 1; position: relative; z-index: 2; padding-inline: var(--inset); background: transparent; border-bottom: 0; }
+.home .site-header .brand img { mix-blend-mode: normal; }
+
+/* Banner */
+.showcase {
+  --ped-w: clamp(290px, calc(var(--u) * 0.27), 500px);
+  grid-area: 2 / 1; position: relative; z-index: 1; display: grid; align-items: center;
+  grid-template-columns: minmax(0, 37fr) minmax(0, 30fr) minmax(0, 33fr);
+  min-height: clamp(540px, calc(var(--u) * 0.46), 800px); padding: clamp(20px, calc(var(--u) * 0.026), 48px) var(--hero-inset) clamp(36px, calc(var(--u) * 0.042), 72px); overflow-x: clip;
+  touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; cursor: grab;
+}
+.showcase.is-dragging { cursor: grabbing; }
+.hero-copy, .hero-palette { position: relative; z-index: 3; display: grid; }
+.hero-copy { grid-column: 1; grid-row: 1; justify-items: start; padding-left: clamp(0px, calc(var(--u) * 0.042), 78px); }
+.hero-palette { grid-column: 3; grid-row: 1; justify-items: center; }
+.hero-stage { grid-column: 2; grid-row: 1; position: relative; z-index: 2; height: calc(var(--ped-w) * 1.3); }
+
+/* Textos e paleta do produto ativo (um bloco por produto, empilhados na mesma célula) */
+.copy, .palette { grid-area: 1 / 1; will-change: transform, opacity; }
+.copy-category { margin: 0; font: 650 clamp(11px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
+.copy-sub { margin: 0; max-width: 15em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', sans-serif; color: var(--muted); }
+.palette { display: grid; justify-items: center; gap: clamp(12px, calc(var(--u) * 0.014), 22px); padding: 14px 18px; border-radius: 22px; text-align: center; }
+.palette-dots { display: flex; justify-content: center; gap: clamp(10px, calc(var(--u) * 0.013), 20px); }
+.palette-dots i { width: clamp(28px, calc(var(--u) * 0.031), 48px); height: clamp(28px, calc(var(--u) * 0.031), 48px); border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 clamp(3px, calc(var(--u) * 0.0035), 5px) #fff, 0 6px 14px rgba(30, 50, 70, .16); transition: transform .25s ease; }
+.copy[inert], .palette[inert] { pointer-events: none; }
+.palette-button { display: inline-flex; align-items: center; gap: .6em; min-height: 44px; padding: .78em 1.35em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(14px, calc(var(--u) * 0.0125), 19px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; cursor: pointer; box-shadow: 0 10px 24px var(--glow); transition: background-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+.palette-button svg { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.palette-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+/* A seta dentro do botão pulsa de leve, sem exagero. */
+.palette-button svg { animation: chevron-nudge 1.9s ease-in-out infinite; }
+@keyframes chevron-nudge { 0%, 100% { transform: translateY(-1.5px); opacity: .78; } 50% { transform: translateY(2.5px); opacity: 1; } }
+.slot[data-front=true] { cursor: pointer; }
+
+/* Produto + pilastra: um bloco só; a escala nasce na base para a pilastra não sair do chão. */
+.slot {
+  --ry: calc(var(--ped-w) * .08); --piece-h: calc(var(--ped-w) * .86); --img: calc(var(--piece-h) / var(--art-h));
+  position: absolute; bottom: 0; left: 50%; display: block; width: var(--ped-w); height: calc(var(--ped-w) * 1.3); margin-left: calc(var(--ped-w) / -2);
+  transform-origin: 50% 100%; will-change: transform, opacity; -webkit-user-drag: none; border-radius: 24px;
+}
+.slot:not([data-front=true]) { pointer-events: none; }
+.ped { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--ped-w) * .54); }
+.ped-ground { position: absolute; left: -10%; right: -10%; bottom: calc(var(--ped-w) * -.07); height: calc(var(--ped-w) * .2); background: radial-gradient(closest-side, rgba(40, 62, 90, .26), rgba(40, 62, 90, .1) 58%, transparent 100%); }
+.ped-body {
+  position: absolute; left: 0; right: 0; top: var(--ry); bottom: 0; border-radius: 0 0 50% 50% / 0 0 var(--ry) var(--ry);
+  background: linear-gradient(180deg, transparent 62%, rgba(150, 168, 190, .2) 100%), linear-gradient(90deg, #cbd3dd 0%, #edf0f4 12%, #fff 30%, #fdfefe 58%, #e8ecf1 86%, #cad2dc 100%);
+}
+.ped-top { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--ry) * 2); border-radius: 50%; background: radial-gradient(ellipse at 50% 42%, #fff 0%, #fff 55%, #eef1f5 100%); box-shadow: inset 0 -3px 8px rgba(110, 130, 155, .16), 0 0 0 1px rgba(255, 255, 255, .7); }
+.piece { position: absolute; left: 50%; width: var(--img); height: var(--img); margin-left: calc(var(--img) / -2); bottom: calc(var(--ped-w) * .44 - var(--art-bottom) * var(--img)); }
+.piece-shadow { position: absolute; left: 50%; width: calc(var(--art-foot) * var(--img) * 1.02); height: calc(var(--ped-w) * .07); margin-left: calc(var(--art-foot) * var(--img) * -.51); bottom: calc(var(--art-bottom) * var(--img) - var(--ped-w) * .035); background: radial-gradient(closest-side, rgba(30, 45, 70, .32), transparent); }
+.piece img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .4s ease, transform .5s cubic-bezier(.22, 1, .36, 1); }
+.piece img.is-loaded { opacity: 1; }
+.slot:focus-visible { outline: 2px solid var(--rose); outline-offset: 6px; }
+
+.hero-arrow {
+  position: absolute; top: 50%; z-index: 6; translate: 0 -50%; display: grid; place-items: center; width: clamp(44px, 4.1vw, 68px); height: clamp(44px, 4.1vw, 68px); padding: 0;
+  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); transition: background .2s, scale .2s;
+}
+.hero-arrow svg { width: 34%; height: 34%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.hero-prev { left: clamp(14px, 2.4vw, 44px); }
+.hero-next { right: clamp(14px, 2.4vw, 44px); }
+.hero-arrow:active { scale: .95; }
+@media (hover: hover) {
+  .hero-arrow:hover { background: #fff; scale: 1.05; }
+  .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
+  .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px var(--glow); }
+  .slot[data-front=true]:hover .piece img { transform: translateY(-8px); }
+  .palette:hover .palette-dots i { transform: translateY(-3px); }
+}
+
+/* Tablet e celular: tudo empilhado — título, peça, cores, setas. */
+@media (max-width: 900px) {
+  .showcase {
+    --ped-w: clamp(210px, 60vw, 340px);
+    grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto auto; align-items: start; min-height: 0; padding: clamp(16px, 4vw, 34px) var(--hero-inset) clamp(30px, 8vw, 52px);
+  }
+  .hero-copy { grid-column: 1 / -1; grid-row: 1; justify-items: center; padding: 0; text-align: center; }
+  .copy { justify-items: center; }
+  .copy-category { letter-spacing: .26em; }
+  .copy-name { font-size: clamp(32px, 9.4vw, 52px); }
+  .copy-sub { font-size: clamp(14px, 4vw, 19px); max-width: 17em; }
+  .hero-stage { grid-column: 1 / -1; grid-row: 2; margin-top: clamp(14px, 3vw, 26px); }
+  .hero-palette { grid-column: 2; grid-row: 3; align-self: center; margin-top: clamp(20px, 6vw, 34px); }
+  .palette { gap: 10px; padding: 8px 10px; }
+  .palette-button { font-size: clamp(13px, 3.7vw, 16px); padding: .7em 1.1em; }
+  .palette-dots i { width: clamp(28px, 7.4vw, 38px); height: clamp(28px, 7.4vw, 38px); }
+  .hero-arrow { position: static; translate: none; grid-row: 3; align-self: center; width: 48px; height: 48px; margin-top: clamp(20px, 6vw, 34px); }
+  .hero-prev { grid-column: 1; margin-left: clamp(12px, 3vw, 24px); }
+  .hero-next { grid-column: 3; margin-right: clamp(12px, 3vw, 24px); }
+}
+@media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
+@media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
+@media (prefers-reduced-motion: reduce) {
+  .piece img, .hero-arrow, .palette-dots i, .palette-button { transition: none; }
+  .palette-button svg { animation: none; }
+  .home .product-customize.is-pulsing { animation: none; outline: 3px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
+  .slot[data-front=true]:hover .piece img { transform: none; }
+}
