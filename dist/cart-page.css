@@ -19,7 +19,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-product.is-unselected { border-style: dashed; background: #fff9f7; }
 .cart-product .cart-select { position: static; width: 44px; margin-left: -6px; min-height: 44px; height: 44px; grid-column: 1; grid-row: 1 / 3; align-self: start; }
 .cart-product-art { position: relative; grid-column: 2; grid-row: 1 / 3; align-self: start; min-width: 0; border-radius: 10px; background: #fbf0f1; }
-.cart-product-art img { display: block; width: 100%; height: 156px; object-fit: contain; border-radius: inherit; }
+.cart-product-art img { display: block; width: 100%; height: 156px; object-fit: contain; border-radius: inherit; filter: drop-shadow(0 7px 7px #65364926); }
 .cart-customize { position: absolute; top: 4px; right: 4px; border: 0; width: 44px; height: 44px; display: grid; place-items: center; padding: 8px; border-radius: 50%; background: transparent; color: white; }
 .cart-customize::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--rose); box-shadow: 0 3px 10px #65364920; }
 .cart-customize .icon { position: relative; width: 17px; height: 17px; }

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prévia do e-mail · Ju imprime pra mim</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:28px 16px;background:#f7ebec;color:#282326;font:14px/1.5 'DM Sans',Arial,sans-serif}.intro{max-width:600px;margin:0 auto 18px;text-align:center}.intro h1{margin:0;font:500 26px/1.2 Georgia,serif}.intro p{margin:7px 0 0;color:#7b7076}.email-frame{display:block;width:100%;max-width:632px;height:850px;margin:0 auto;border:0;border-radius:24px;background:#fff;box-shadow:0 18px 45px #65364924}@media(max-width:620px){body{padding:18px 8px}.email-frame{height:830px;border-radius:16px}}
+  </style>
+</head>
+<body>
+  <main class="intro"><h1>Prévia do e-mail</h1><p>Exemplo visual local; o código mostrado não é válido.</p></main>
+  <iframe class="email-frame" title="Prévia do e-mail de verificação"></iframe>
+  <script>
+    fetch('email/verification-code.html').then(function(response){return response.text()}).then(function(template){
+      var preview = template.replaceAll('{{PREHEADER}}','Seu código Ju imprime pra mim está pronto.')
+        .replaceAll('{{FIRST_NAME}}','Luiz')
+        .replaceAll('{{MESSAGE}}','Use o código abaixo para confirmar seu acesso.')
+        .replaceAll('{{CODE}}','929 417')
+        .replaceAll('{{EXPIRY_MINUTES}}','10');
+      document.querySelector('iframe').srcdoc = preview;
+    });
+  </script>
+</body>
+</html>
