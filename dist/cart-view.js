@@ -28,7 +28,10 @@ function orderSummary(chosen) {
   const amount = totals(chosen), units = chosen.reduce((sum, item) => sum + item.quantity, 0);
   return `<aside class="cart-order-summary" aria-labelledby="cart-summary-title"><h2 id="cart-summary-title">Resumo do pedido</h2><p class="cart-selection-note">${units} ${units === 1 ? 'peça selecionada' : 'peças selecionadas'}</p>
     <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div><div><dt>Entrega${COMMERCE.mode === 'demo' ? ' <small>(exemplo)</small>' : ''}</dt><dd>${money(amount.shipping)}</dd></div><div class="grand-total"><dt>Total</dt><dd>${money(amount.total)}</dd></div></dl>
-    <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
+    <div class="cart-checkout-bar" role="group" aria-label="Resumo da compra e finalização">
+      <a class="cart-checkout-total" href="#cart-summary-title"><span>Total <span aria-hidden="true">⌃</span></span><strong>${money(amount.total)}</strong><small>${chosen.length ? 'Ver resumo' : 'Selecione uma peça'}</small></a>
+      <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
+    </div>
     ${!chosen.length ? '<p class="cart-selection-help">Selecione uma peça para continuar.</p>' : ''}
     <div class="cart-reassurance"><div>${icon('lock')}<p><strong>Compra segura</strong><span>Seus dados protegidos</span></p></div><div>${icon('truck')}<p><strong>Produção sob demanda</strong><span>${esc(COMMERCE.productionLabel)}</span></p></div></div>
     <div class="accepted-methods" aria-label="Meios de pagamento${COMMERCE.mode === 'demo' ? ' em demonstração' : ''}"><span>${icon('pix')} Pix</span><span>${icon('card')} Cartão</span></div>
