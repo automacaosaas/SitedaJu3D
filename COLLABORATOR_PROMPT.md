@@ -22,13 +22,17 @@ use um modelo mais econômico para texto, ajustes simples e operações de Git.
 
 ## Objetivo e direção do produto
 
-A primeira impressão do site é uma vitrine circular com três peças sobre
-pilastras brancas. A experiência deve ser delicada, profissional, lúdica e
-confiável para um público formado principalmente por profissionais da
-oftalmologia. O texto principal é:
+A primeira impressão do site é um banner temático: uma peça por vez, sobre uma
+pilastra branca, com o fundo, o header e a seção seguinte na cor do produto
+ativo. A experiência deve ser delicada, profissional, lúdica e confiável para um
+público formado principalmente por profissionais da oftalmologia. O texto
+principal é:
 
 > Mais cor na consulta.  
 > Mais encanto em cada olhar.
+
+Na home ele permanece como `h1` oculto (leitores de tela); o banner mostra
+categoria, nome e subtítulo do produto ativo.
 
 Texto de apoio: “Peças lúdicas, feitas em 3D. Com as cores que você escolher.”
 Não transforme a página em uma loja genérica, infantilizada demais ou carregada
@@ -52,22 +56,46 @@ Use bastante respiro, hierarquia editorial, bordas suaves e animações discreta
 Preserve contraste, legibilidade, áreas de toque de pelo menos 44 px e estados
 de foco. Não altere a identidade rosa sem solicitação explícita.
 
+Exceção pedida e aprovada: na home, cada produto tem um tema (`SHOWCASE` em
+`products.js`) que colore o banner, a faixa do header, o fundo até o fim da
+página e, abaixo do banner, só o que foi combinado (título e apoio da seção,
+botões Personalize o seu/carrinho, categoria, valor “Categoria” e pontinhos do
+carrossel do catálogo, link “Ver catálogo completo” e o rodapé). O resto do site
+(modal, carrinho, Produtos e demais páginas) continua rosa. Todo tema precisa
+manter contraste (texto ≥ 7:1; subtítulo e destaque ≥ 4,5:1), garantido por
+`tests/carousel.cjs`. Um produto novo sem tema usa `DEFAULT_SHOWCASE`.
+
 ## Arquitetura atual
 
 O projeto é um site estático, sem etapa de build obrigatória. Os arquivos
 publicados ficam em `dist/`:
 
-- `index.html`: estrutura da vitrine e do modal.
-- `theme.css`: identidade geral, tipografia, modal e elementos básicos.
-- `carousel.css` e `carousel.js`: vitrine circular responsiva.
+- `index.html`: estrutura do banner (`.hero-shell`), do catálogo e do modal.
+- `theme.css`: identidade geral, tipografia, modal, elementos básicos e o rodapé
+  compartilhado (`.site-footer`).
+- `carousel.css` e `carousel.js`: banner temático de um produto por vez, fundo e
+  header em degradê, pilastra em CSS, e os ajustes de cor/tamanho do catálogo
+  restritos à home (prefixo `.home`).
+- `hero-motion.js`: matemática pura do banner (pose, mistura de camadas e de
+  cores, limiar de gesto, easing), testável em Node.
 - `mobile-modal.css`: experiência própria do modal no celular.
-- `products.js`: catálogo, paleta, textos e regras das partes personalizáveis.
+- `products.js`: catálogo, paleta, textos, regras das partes personalizáveis e
+  `SHOWCASE` (enquadramento do recorte e tema de cada produto).
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
 - `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
 - `vendor/`: Three.js e OrbitControls locais.
 - `assets/`: logo e imagens de apresentação.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
+
+O rodapé (Home, Produtos, Sobre e Contato) traz “© 2026 Ju, imprime pra mim?
+Todos os direitos reservados.”, o ícone do Instagram
+(`https://www.instagram.com/juimprimepramim/`, nova aba com
+`rel="noopener noreferrer"`) e “feito com carinho, pela Ju.” em script, como
+assinatura. Mantenha os quatro iguais.
+
+`HERO-BANNER-QA.md` documenta o banner (decisões, verificações e limites); leia-o
+antes de mexer na vitrine.
 
 Os modelos 3D atuais são prévias procedurais ilustrativas. Os STLs finais ainda
 serão fornecidos. Quando chegarem, preserve os grupos de cor e adapte a câmera ao
@@ -116,27 +144,56 @@ base. Ele representa a régua encaixada:
 - A parte inferior usa um rasgo retangular horizontal, largo e baixo, que
   atravessa a base para acomodar a haste plana da régua. Nunca desenhe uma
   bolinha, tubo ou ponto pintado nesse local.
-- A imagem principal correta é `dist/assets/aviaoscopia-regua.png`.
+- A imagem principal do modal é `dist/assets/aviaoscopia-regua.png`; o banner e o
+  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.png`.
 - O teste estrutural é `node tests/plane-geometry.mjs`.
 
-## Vitrine circular
+## Vitrine principal (banner temático)
 
-A vitrine usa o mesmo conceito no celular e no computador: uma peça central
-grande e nítida, com as outras duas visíveis ao fundo nas laterais, menores,
-transparentes e levemente desfocadas. O ciclo é infinito nos dois sentidos.
+O banner mostra um produto por vez: categoria, nome, subtítulo, a peça sobre uma
+pilastra branca e o botão “Escolha sua cor” com as cores originais logo abaixo.
+A troca é uma passagem lateral: peça e pilastra saem juntas, a próxima entra pelo
+lado oposto, e fundo, header, textos e paleta trocam na mesma transição
+(780 ms, `cubic-bezier(.22, 1, .36, 1)`). Um único valor contínuo (`position`,
+em `carousel.js`) comanda tudo; a matemática pura fica em `hero-motion.js`. O
+ciclo é infinito nos dois sentidos e **não há autoplay**.
 
-No celular, um dedo deve arrastar diretamente sobre os produtos. O movimento
-acompanha o dedo e conclui ou retorna conforme o limiar. A rolagem vertical da
-página continua natural. Um arraste nunca abre o modal; um toque simples na peça
-central abre; tocar na lateral apenas a traz ao centro. As setas permanecem como
-pista visual. O tratamento de `lostpointercapture` é intencional: ao transferir
-a captura implícita do toque do link para a vitrine, o evento propagado pelo link
-não pode cancelar o gesto.
+A peça usa o recorte com transparência já cadastrado (`catalogImage`), sem
+recolorir nem redimensionar; a pilastra é CSS (uma só para todos os produtos).
+Não use `mix-blend-mode` nem fotos com fundo dentro do banner. `art` em
+`SHOWCASE` (altura, folga inferior e base do recorte) assenta cada peça na
+pilastra; não escreva lógica por produto no JS.
 
-No computador, setas, clique nas laterais, teclado e trackpad funcionam. Respeite
-`prefers-reduced-motion`. As imagens devem se integrar ao fundo rosa por
-composição e `mix-blend-mode`, mantendo as pilastras brancas e sem quadrados
-brancos aparentes.
+Gestos: o dedo arrasta a peça 1:1 e conclui ou retorna conforme o limiar (40 px
+ou 18% do curso). A rolagem vertical continua natural (`touch-action: pan-y
+pinch-zoom`); a roda do mouse só navega no gesto horizontal do trackpad. Um
+arraste nunca abre o modal; um toque simples na peça abre o produto. Setas,
+teclado e arraste com mouse funcionam. O tratamento de `lostpointercapture` é
+intencional: ao transferir a captura implícita do toque do link para a vitrine,
+o evento propagado pelo link não pode cancelar o gesto. Respeite
+`prefers-reduced-motion` (só crossfade, sem translação nem escala, e o botão do
+card ganha um contorno estático em vez de pulsar).
+
+Fundo e tema: uma faixa de cor por tema (`data-hero-bg`) cobre a página inteira,
+atrás do banner e do catálogo; o degradê do banner continua por baixo dele e um
+véu na cor do site regula a intensidade (0% no fim do banner, 56% no miolo da
+seção, 20% no rodapé). A faixa do header desce sobre o banner e some por máscara,
+então **não há linha nem cantos entre header, banner e seção**. O palco do
+carrossel do catálogo só recorta na horizontal, para a sombra dos cards não virar
+retângulo. `--hero-h` (altura do banner) é medida no JS. As cores abaixo do banner
+vêm de variáveis `--theme-*` atualizadas quadro a quadro; sem JS valem as cores
+originais do site. Não altere `catalog.css` nem `catalog.js` para isso: os
+ajustes ficam em `carousel.css`, sempre com o prefixo `.home`, e a página
+Produtos não muda.
+
+“Escolha sua cor” leva ao card do produto ativo no carrossel do catálogo (clique
+programático no card, o mesmo caminho do toque em um card lateral), rola até ele
+e faz pulsar o botão “Personalize o seu” até a pessoa interagir. Isso depende de
+`data-product-id` nos cards.
+
+Desktop (≥ 901 px): os cards do catálogo da home são um pouco menores
+(ativo 352 px) para o carrossel caber inteiro ao chegar pelo botão. O celular usa
+a coluna única, com o botão logo abaixo da pilastra.
 
 ## Modal e configurador
 
@@ -170,6 +227,7 @@ Antes de publicar, execute:
 node tests/carousel.cjs
 node tests/plane-geometry.mjs
 node --check dist/carousel.js
+node --check dist/hero-motion.js
 node --check dist/controller.js
 node --check dist/models.js
 node --check dist/viewer.js
@@ -179,7 +237,9 @@ Faça a matriz visual descrita em `QA.md` em 360 × 800, 390 × 844 e 430 × 932
 além de notebook e desktop amplo. Valide os três produtos, os três estados do
 modal, imagem e 3D, todas as partes, cores, resumo, fechamento, rolagem interna,
 carrossel nos dois sentidos e ausência de erros no console. Para mudanças no
-Aviãoscopia, confira visualmente os 16 furos, os 16 números e o rasgo retangular.
+banner, siga também a matriz de `HERO-BANNER-QA.md` (1920 a 360, gestos,
+movimento reduzido e o fluxo “Escolha sua cor”). Para mudanças no Aviãoscopia,
+confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 
 ## Processo de colaboração e Git
 
