@@ -1,5 +1,6 @@
 import {AUTH_MODE, auth, getSession, acceptSession, signOut, readDemoOrders} from './auth-service.js';
 import {icon} from './icons.js';
+import './i18n.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
 const host = document.querySelector('#account-content'), feedback = document.querySelector('#account-feedback');
@@ -36,6 +37,7 @@ function render(focus = true) {
     const orders = readDemoOrders();
     host.innerHTML = title('CADA ESCOLHA CONTA', 'Meus pedidos.', 'Pedidos demonstrativos feitos nesta aba.') + (orders.length ? orders.map(o => `<article class="order-preview"><h3>Pedido ${esc(o.id)}</h3><small>Pagamento simulado · nenhuma cobrança</small><p>${o.items.map(i => `${Number(i.quantity)||1} × ${esc(i.title)}`).join('<br>')}</p><strong>${money(o.total || 0)}</strong></article>`).join('') : `<div class="account-empty">${icon('bag')}<h3>Seu primeiro encanto<br>está por vir.</h3><a class="primary account-submit" href="produtos.html">Conhecer as peças ${icon('arrow')}</a></div>`) + action('Voltar à minha conta', 'profile');
   }
+  if (screen === 'profile') host.querySelector('#account-title')?.setAttribute('translate', 'no');
   showCode();
   if (focus) host.querySelector('h2')?.focus({preventScroll:true});
 }
@@ -86,6 +88,13 @@ host.addEventListener('submit', event => {
     form.reset();
   });
 });
-window.addEventListener('hashchange', () => { if (!busy) {screen = location.hash === '#pedidos' && getSession() ? 'orders' : getSession() ? 'profile' : 'email'; render();} });
-if (location.hash === '#pedidos' && getSession()) screen = 'orders';
-render(false);
+function route(focus = false) {
+  if (busy) return;
+  screen = location.hash === '#pedidos' && getSession() ? 'orders' : getSession() ? 'profile' : 'email';
+  if (location.hash === '#verificar' && challenge) screen = 'verify';
+  render(focus);
+  if (location.hash === '#verificar' && !challenge && !getSession()) feedback.textContent = 'Para verificar sua conta nesta prévia, informe seu e-mail e solicite um novo código. O envio real de e-mail ainda não está conectado.';
+  if (location.hash === '#verificar' && challenge) host.querySelector('[name="code"]')?.focus();
+}
+window.addEventListener('hashchange', () => route(true));
+route();

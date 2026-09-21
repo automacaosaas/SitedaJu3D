@@ -1,4 +1,5 @@
 import {icon} from './icons.js';
+import './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
