@@ -1,8 +1,8 @@
 # QA — idiomas, e-mail de verificação e telas de progresso
 
 Base: `0fefa63` (`feat: add storefront translations and email verification link`).
-Backup antes de publicar: tag `backup/antes-idioma-email-<data>` (criada na
-publicação). Como reverter: `git revert` dos commits desta entrega; nunca `reset`
+Backup antes de publicar: tag `backup/antes-idioma-email-2026-09-21` (aponta para
+a `main` anterior, `0fefa63`). Como reverter: `git revert` dos commits desta entrega; nunca `reset`
 nem force push.
 
 ## O que mudou

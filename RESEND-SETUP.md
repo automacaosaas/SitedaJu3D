@@ -32,14 +32,23 @@ basta para **testar**; para clientes reais é preciso o passo 3.
 
 ## 2. Testar no site publicado (Vercel)
 
-**Opção A — integração oficial (recomendada, a chave nunca passa pelas suas mãos):**
-Resend → **Settings** → **Integrations** → **Vercel** → **Go to Vercel
-Integration** → escolha o projeto do site. A integração cria a variável
-`RESEND_API_KEY` sozinha. `AUTH_SECRET` é opcional: sem ela, o servidor deriva a
-assinatura dos códigos da própria `RESEND_API_KEY`.
+**Opção A — integração oficial (só com domínio verificado):** Resend →
+**Settings** → **Integrations** → **Vercel** → **Go to Vercel Integration** →
+escolha o projeto do site. Ela cria a variável `RESEND_API_KEY` sozinha, mas o
+Resend exige escolher um domínio para gerar a chave (sem domínio aparece “No
+domains found”) e o campo do valor é somente leitura. Por isso, enquanto não houver
+domínio, use a opção B.
 
-**Opção B — manual:** Vercel → projeto → **Settings** → **Environment Variables**
-→ crie `RESEND_API_KEY` para **Production** e **Preview**.
+**Opção B — manual (a usada nos testes de 21/09/2026):** Vercel → projeto →
+**Settings** → **Environment Variables** → **Add** → nome `RESEND_API_KEY`, tipo
+**Secret**, cole a chave. **Enquanto não houver domínio verificado, marque só
+Preview.** Sem domínio o Resend recusa qualquer e-mail que não seja o da sua conta
+(erro 403), então, com a chave em Produção, o cadastro daria erro para todos os
+outros visitantes; sem a chave lá, o site mantém o código de teste. Depois de
+verificar o domínio, acrescente Production (⋯ → Edit → Environments).
+
+`AUTH_SECRET` é opcional: sem ela, o servidor deriva a assinatura dos códigos da
+própria `RESEND_API_KEY`.
 
 Depois disso é preciso **um novo deploy** (variáveis só valem para deploys novos),
 e o código desta entrega precisa estar publicado. Confira:
