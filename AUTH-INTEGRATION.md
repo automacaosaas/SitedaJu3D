@@ -1,14 +1,19 @@
 # Conta: prévia e integração futura
 
-Esta entrega é uma **interface demonstrativa local**, conforme a orientação de
-integrar o banco quando estiver pronto. Não é autenticação de produção.
-Nenhum código é enviado por e-mail, nenhuma senha real deve ser usada e nenhuma
+Contas, senhas e sessões continuam sendo uma **interface demonstrativa local**,
+conforme a orientação de integrar o banco quando estiver pronto. Não é
+autenticação de produção. O envio do código por e-mail já é real quando o serviço
+está configurado (`RESEND-SETUP.md`, `EMAIL-TEMPLATE.md`); sem a configuração, a
+prévia mostra um código de teste. Nenhuma senha real deve ser usada e nenhuma
 aprovação de pagamento local autoriza produção ou envio.
 
 ## Arquivos e contrato
 
 - `conta.html`, `account.css`, `account.js`: apresentação, formulários e estados.
-- `auth-service.js`: adaptador demonstrativo que deverá ser substituído.
+- `auth-service.js`: adaptador demonstrativo (contas em memória) que deverá ser
+  substituído. `createMailer` conversa com o servidor.
+- `api/auth/send-code.js` e `api/auth/verify-code.js`: funções da Vercel que geram,
+  enviam (Resend) e conferem o código de verificação.
 - `site-shell.js`: perfil, entrada, pedidos e saída no cabeçalho.
 
 Métodos assíncronos atualmente usados pela interface:
@@ -60,6 +65,11 @@ ao servidor, ser curta, de uso único e vinculada ao desafio verificado.
    botão de aprovação local do fluxo real.
 7. Atualizar textos da prévia e confirmar entrega real do e-mail, expiração,
    reenvio, proteção contra abuso e isolamento entre usuários.
+8. Guardar o estado dos desafios (contador de tentativas, uso único do código e
+   limite de envio) em armazenamento durável. Os limites atuais são em memória; ver
+   `EMAIL-TEMPLATE.md`.
 
 Não basta mudar `AUTH_MODE` para transformar esta demonstração em autenticação.
-Backend e e-mail não foram configurados ou acessados nesta tarefa.
+O envio de e-mail foi implementado e testado com um Resend simulado; o envio real
+depende da configuração descrita em `RESEND-SETUP.md`. O banco de dados continua
+pendente.

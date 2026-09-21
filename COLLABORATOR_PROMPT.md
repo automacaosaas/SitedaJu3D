@@ -85,7 +85,13 @@ publicados ficam em `dist/`:
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
 - `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
 - `vendor/`: Three.js e OrbitControls locais.
-- `assets/`: logo e imagens de apresentação.
+- `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
+  usado no e-mail).
+- `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
+  sugestão de idioma na primeira visita.
+- `account.js` e `auth-service.js`: conta, telas de progresso e verificação.
+- `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
+- `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
 
 O rodapé (Home, Produtos, Sobre e Contato) traz “© 2026 Ju, imprime pra mim?
@@ -96,6 +102,29 @@ assinatura. Mantenha os quatro iguais.
 
 `HERO-BANNER-QA.md` documenta o banner (decisões, verificações e limites); leia-o
 antes de mexer na vitrine.
+
+## Idiomas e e-mail
+
+- **Português é a fonte.** Todo texto visível novo (HTML, JavaScript, `aria-label`,
+  `alt`, `title`, `placeholder`, título da aba) precisa de uma linha `PT|EN|ES` em
+  `translations.js` ou de uma regra em `i18n-core.js`. Nomes de produto, marca,
+  preços e “Pix” não são traduzidos. `node tests/i18n.mjs` varre as páginas
+  estáticas e reprova texto sem tradução em inglês.
+- O **seletor de idioma** é um botão com menu (não um `<select>`). No desktop fica
+  ao lado do carrinho, só com a sigla (PT, EN, ES); no celular fica ao lado do
+  botão de menu, com o globo. É criado por `mountLanguagePicker()`, chamado em
+  `site-shell.js` e `account.js`. Na primeira visita, se o navegador estiver em
+  inglês ou espanhol, uma faixa oferece a tradução (uma vez só).
+- **Nunca commite marcadores de conflito** (`<<<<<<<`, `=======`, `>>>>>>>`). Um
+  deles já chegou à produção em `theme.css` e derrubou o CSS do seletor e do
+  rodapé; o teste de i18n agora procura por eles.
+- **E-mail (Resend):** o servidor fica em `api/` (CommonJS). Segredos só em
+  variáveis de ambiente da Vercel, nunca no repositório. O visual do e-mail está em
+  `api/_lib/email-template.js`. Sem `RESEND_API_KEY`/`AUTH_SECRET` o site continua
+  funcionando e mostra o código de teste. Leia `EMAIL-TEMPLATE.md` (fluxo,
+  segurança e limites) e `RESEND-SETUP.md` (ativação). `LANGUAGE-EMAIL-QA.md`
+  registra base, verificações e como reverter.
+- Teste localmente com `node tools/dev-server.cjs` (porta 8844).
 
 Os modelos 3D atuais são prévias procedurais ilustrativas. Os STLs finais ainda
 serão fornecidos. Quando chegarem, preserve os grupos de cor e adapte a câmera ao
@@ -226,6 +255,11 @@ Antes de publicar, execute:
 ```text
 node tests/carousel.cjs
 node tests/plane-geometry.mjs
+node tests/i18n.mjs
+node tests/email-auth.mjs
+node tests/account-commerce.mjs
+node --check dist/i18n.js
+node --check dist/account.js
 node --check dist/carousel.js
 node --check dist/hero-motion.js
 node --check dist/controller.js
