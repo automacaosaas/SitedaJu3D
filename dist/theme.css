@@ -13,9 +13,17 @@
 @media(max-width:600px){dialog:is([data-mode="custom"],[data-mode="summary"]){height:95dvh;display:flex;flex-direction:column;overflow:hidden}dialog:is([data-mode="custom"],[data-mode="summary"]) .detail-visual{flex:0 0 270px;min-height:270px;height:270px}dialog:is([data-mode="custom"],[data-mode="summary"]) .detail-copy{overflow:auto;min-height:0;padding-top:20px}dialog:is([data-mode="custom"],[data-mode="summary"]) .detail-copy h2{font-size:27px}dialog:is([data-mode="custom"],[data-mode="summary"]) .eyebrow{margin-bottom:8px}dialog:is([data-mode="custom"],[data-mode="summary"]) .custom-heading{margin:17px 0 15px;padding-top:15px}}
 .swatch{font-size:12px}.swatch span{overflow-wrap:anywhere}.brand img{border-radius:50%}
 .site-header .brand img{mix-blend-mode:multiply}.mobile-drawer .drawer-top img{mix-blend-mode:normal}
+<<<<<<< HEAD
 /* Rodapé: assinatura em script, direitos reservados e Instagram. */
 .site-footer{flex-wrap:wrap;row-gap:10px}.footer-meta{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px 14px}.footer-copy{margin:0;font-size:12px;line-height:1.5}
 .footer-social{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--rose);transition:background-color .2s ease,transform .2s ease}.footer-social svg{width:22px;height:22px}.footer-social:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
 @media(hover:hover){.footer-social:hover{background:#fbe9ee;transform:translateY(-2px)}}
 @media(max-width:600px){.site-footer .footer-meta{order:-1;flex-direction:column-reverse;justify-content:center;text-align:center;gap:0}.site-footer .signature{order:2}}
 @media(prefers-reduced-motion:reduce){.footer-social{transition:none}.footer-social:hover{transform:none}}
+=======
+.language-picker{position:absolute;right:0;top:2px;display:flex;align-items:center;gap:5px;color:var(--rose);z-index:3;font:500 12px/1.2 'DM Sans',Arial,sans-serif}
+.language-picker select{min-height:32px;max-width:112px;border:1px solid var(--line);border-radius:16px;padding:4px 7px;background:var(--panel);color:var(--rose);font:inherit;cursor:pointer}
+.language-picker select:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.account-header{position:relative;padding-top:34px}
+@media(max-width:800px){.site-header{height:120px;min-height:120px;padding-top:26px}.language-picker{top:1px;gap:4px}.language-picker select{min-height:32px}.account-header .language-picker{display:flex}}
+>>>>>>> b8878e8 (feat: add storefront translations and email verification link)

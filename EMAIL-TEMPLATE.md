@@ -12,6 +12,11 @@ logotipo oficial e a paleta da Ju.
   também escapada para HTML.
 - {{CODE}}: código numérico de uso único.
 - {{EXPIRY_MINUTES}}: prazo real configurado pelo servidor.
+- {{VERIFY_URL}}: URL HTTPS absoluta da página de verificação da conta, no domínio da loja. Escapar para atributo HTML e validar a origem no servidor. Nunca incluir senha ou o código numérico na URL. No fluxo atual, usar https://siteda-ju3-d.vercel.app/conta.html#verificar. A prévia usa a conta no mesmo ambiente.
+
+O botão “Verificar conta”, abaixo da validade, volta ao site para digitar o código;
+o clique sozinho não valida a conta. Na integração futura, essa rota deve recuperar
+o desafio de verificação de forma segura, inclusive quando aberta em outro dispositivo.
 
 O código não deve ser criado, guardado ou validado no navegador. Na integração
 real, o servidor envia a versão já preenchida, define expiração, limite de

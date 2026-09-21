@@ -1,5 +1,6 @@
 import {AUTH_MODE, auth, getSession, acceptSession, signOut, readDemoOrders} from './auth-service.js';
 import {icon} from './icons.js';
+import './i18n.js';
 import {money} from './commerce-config.js';
 const host=document.querySelector('#account-content'), feedback=document.querySelector('#account-feedback'), sceneGreeting=document.querySelector('#scene-greeting');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -36,6 +37,7 @@ function render(focus=true) {
     const orders=readDemoOrders();
     host.innerHTML=title('CADA ESCOLHA CONTA','Meus pedidos.','Acompanhe os pedidos demonstrativos feitos nesta aba.')+(orders.length?orders.map(o=>`<article class="order-preview"><h3>Pedido ${esc(o.id)}</h3><small>Pagamento simulado · nenhuma cobrança</small><p>${o.items.map(i=>`${Number(i.quantity)||1} × ${esc(i.title)}`).join('<br>')}</p><strong>${money(Number.isFinite(o.total)?o.total:o.items.reduce((s,i)=>s+(Number(i.unitPrice)||0)*(Number(i.quantity)||1),0))}</strong><p>${Number.isFinite(o.total)?'Total com entrega demonstrativa':'Produtos · entrega no resumo original'}</p></article>`).join(''):`<div class="account-empty">${icon('bag')}<h3>Seu primeiro encanto<br>está por vir.</h3><p>Quando você finalizar um pedido de teste, ele aparecerá aqui.</p><a class="primary account-submit" href="produtos.html">Conhecer os produtos ${icon('arrow')}</a></div>`)+`<button class="back-auth" data-screen="${getSession()?'profile':'login'}">← Voltar à minha conta</button>`;
   }
+  if(screen==='profile') host.querySelector('.account-empty h3')?.setAttribute('translate','no');
   // Keep the selector node so its highlight can slide between the two states.
   if(existingTabs&&host.querySelector('.account-tabs')) {
     host.querySelector('.account-tabs').replaceWith(existingTabs);
@@ -84,5 +86,11 @@ host.addEventListener('submit',async e=>{
   }catch(error){feedback.textContent=error.message;form.querySelector('input[name=code]')?.setAttribute('aria-invalid','true');}
   finally{busy=false;button.disabled=false;button.innerHTML=buttonContent;form.removeAttribute('aria-busy');}
 });
-function route(){if(location.hash==='#pedidos')screen=getSession()?'orders':'login';render(false);}
+function route(){
+  if(location.hash==='#pedidos')screen=getSession()?'orders':'login';
+  if(location.hash==='#verificar' && challenge) screen='verify';
+  render(false);
+  if(location.hash==='#verificar' && !challenge && !getSession()) feedback.textContent='Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.';
+  if(location.hash==='#verificar' && challenge) host.querySelector('[name="code"]')?.focus();
+}
 window.addEventListener('hashchange',route);route();
