@@ -12,7 +12,7 @@ function createHandler({env = process.env} = {}) {
     const query = new URL(req.url, 'http://local').searchParams;
     const purpose = PURPOSES.includes(query.get('purpose')) ? query.get('purpose') : 'signup', lang = LANGUAGES.includes(query.get('lang')) ? query.get('lang') : 'pt-BR';
     const name = (query.get('name') ?? 'Maria').slice(0, 60), code = '482916';
-    const message = renderVerificationEmail({lang, purpose, name, code, siteUrl: settings.siteUrl, url: verificationUrl({siteUrl: settings.siteUrl, token: 'exemplo-de-desafio.assinado', code})});
+    const message = renderVerificationEmail({lang, purpose, name, code, siteUrl: settings.siteUrl, assetUrl: settings.assetUrl, url: verificationUrl({siteUrl: settings.siteUrl, token: 'exemplo-de-desafio.assinado', code})});
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');

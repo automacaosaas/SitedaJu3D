@@ -55,9 +55,9 @@ function verificationUrl({siteUrl, token, code}) {
   return `${siteUrl.replace(/\/+$/, '')}/conta.html#verificar?c=${encodeURIComponent(token)}&k=${encodeURIComponent(code)}`;
 }
 
-function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '', code, url, siteUrl, expiryMinutes = 10, year = new Date().getFullYear()}) {
+function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '', code, url, siteUrl, assetUrl = siteUrl, expiryMinutes = 10, year = new Date().getFullYear()}) {
   const copy = COPY[lang] || COPY['pt-BR'], p = copy.purposes[purpose] || copy.purposes.signup;
-  const logo = `${siteUrl.replace(/\/+$/, '')}/assets/logo-ju-email.png`;
+  const logo = `${assetUrl.replace(/\/+$/, '')}/assets/logo-ju-email.png`;
   const instagram = 'https://www.instagram.com/juimprimepramim/';
   const hello = copy.hello(String(name || '').trim());
   const html = `<!doctype html>

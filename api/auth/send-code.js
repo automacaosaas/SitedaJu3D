@@ -29,7 +29,7 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     }
 
     const {code, token, payload} = issue({secret: settings.secret, email, name, purpose, now: now()});
-    const message = renderVerificationEmail({lang, purpose, name, code, siteUrl: settings.siteUrl, expiryMinutes: CODE_TTL_MS / 60000, url: verificationUrl({siteUrl: settings.siteUrl, token, code})});
+    const message = renderVerificationEmail({lang, purpose, name, code, siteUrl: settings.siteUrl, assetUrl: settings.assetUrl, expiryMinutes: CODE_TTL_MS / 60000, url: verificationUrl({siteUrl: settings.siteUrl, token, code})});
     try {
       await sendMail({settings, to: email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `${purpose}-${payload.r}`, fetchImpl, outbox: outbox && (mail => outbox({...mail, code, token, purpose, url: verificationUrl({siteUrl: settings.siteUrl, token, code})}))});
     } catch (error) {

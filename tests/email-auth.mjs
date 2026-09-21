@@ -68,6 +68,8 @@ const ENV = {SITE_URL: SITE, AUTH_SECRET: SECRET, RESEND_API_KEY: 're_test_key_1
   assert(renderVerificationEmail({lang: 'xx', purpose: 'nope', code: '1', url, siteUrl: SITE}).html.includes('lang="xx"') === true);
   assert(renderVerificationEmail({lang: 'xx', purpose: 'nope', code: '1', url, siteUrl: SITE}).subject === COPY['pt-BR'].purposes.signup.subject, 'unknown language/purpose fall back to Portuguese sign-up');
   assert(renderVerificationEmail({lang: 'en', purpose: 'reset', name: '', code: '1', url, siteUrl: SITE}).text.includes('Hello!'));
+  const split = renderVerificationEmail({lang: 'pt-BR', purpose: 'signup', code: '1', url, siteUrl: 'https://preview.test', assetUrl: 'https://public.test/'});
+  assert(split.html.includes('src="https://public.test/assets/logo-ju-email.png"'), 'assetUrl decides where the logo is loaded from');
 }
 
 // ── helpers for handler tests ─────────────────────────────────────────
@@ -188,6 +190,20 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
   assert.equal(withReply.calls[0].body.reply_to, 'ju@site.test');
   assert(withReply.calls[0].body.from.includes('onboarding@resend.dev'), 'default sender is Resend\'s test address until a domain is verified');
   assert.equal(config({}).siteUrl, 'https://siteda-ju3-d.vercel.app');
+  // the logo comes from the public site even when the e-mail is sent by a login-protected preview
+  assert.equal(config({VERCEL_URL: 'x-git-branch.vercel.app'}).assetUrl, 'https://siteda-ju3-d.vercel.app', 'previews load the logo from the public site');
+  assert.equal(config({VERCEL_URL: 'x-git-branch.vercel.app'}).siteUrl, 'https://x-git-branch.vercel.app', 'but the button still points at the preview');
+  assert.equal(config({SITE_URL: 'https://loja.example/'}).assetUrl, 'https://loja.example', 'a custom domain serves both');
+  {
+    const previewEnv = {RESEND_API_KEY: 're_test_key_123', VERCEL_ENV: 'preview', VERCEL_URL: 'x-git-y.vercel.app'};
+    const viaPreview = fakeResend();
+    const sent = await call(sendCode.create({env: previewEnv, fetchImpl: viaPreview.fetchImpl}), {origin: 'https://x-git-y.vercel.app', body: {email: 'a@b.co', purpose: 'signup'}});
+    assert.equal(sent.statusCode, 200);
+    const html = viaPreview.calls[0].body.html;
+    assert(html.includes('src="https://siteda-ju3-d.vercel.app/assets/logo-ju-email.png"'), 'logo from the public site');
+    assert(html.includes('href="https://x-git-y.vercel.app/conta.html#verificar?c='), 'button opens the deployment that sent the e-mail');
+    assert(!html.includes('x-git-y.vercel.app/assets/'), 'no image is served from the protected preview');
+  }
   assert.equal(config({VERCEL_URL: 'x-git-branch.vercel.app'}).siteUrl, 'https://x-git-branch.vercel.app', 'previews link to themselves');
   assert.equal(config({VERCEL_URL: 'x.vercel.app', VERCEL_ENV: 'production'}).siteUrl, 'https://siteda-ju3-d.vercel.app', 'production never links to a preview host');
   assert.equal(sameOrigin({headers: {origin: 'https://x-git-branch.vercel.app'}}, {VERCEL_BRANCH_URL: 'x-git-branch.vercel.app', VERCEL_ENV: 'preview'}), true);

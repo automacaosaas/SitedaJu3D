@@ -15,8 +15,11 @@ function config(env = process.env) {
   const apiKey = String(env.RESEND_API_KEY || '').trim();
   const explicit = String(env.AUTH_SECRET || '').length >= MIN_SECRET ? env.AUTH_SECRET : '';
   const siteUrl = (env.SITE_URL || (production || !env.VERCEL_URL ? DEFAULT_SITE : 'https://' + env.VERCEL_URL)).replace(/\/+$/, '');
+  // Images in e-mails must be publicly reachable. Preview deployments sit behind a login, so the logo always comes
+  // from the public site (or SITE_URL when set) while the button keeps pointing at the deployment that sent the e-mail.
+  const assetUrl = (env.SITE_URL || DEFAULT_SITE).replace(/\/+$/, '');
   return {
-    production, siteUrl,
+    production, siteUrl, assetUrl,
     secret: explicit || (apiKey ? deriveSecret(apiKey) : ''),
     secretFrom: explicit ? 'AUTH_SECRET' : apiKey ? 'RESEND_API_KEY' : null,
     apiKey,
