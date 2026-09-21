@@ -40,7 +40,7 @@ function orderSummary(chosen) {
 
 export function renderCart(cart, selected) {
   const chosen = selectedItems(cart, selected);
-  const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
+  const introduction = `<div class="shop-heading cart-heading"><button type="button" class="cart-back" data-action="return" aria-label="Voltar à página anterior">${icon('arrow')}</button><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
   if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
     <div class="cart-select-tools"><label class="select-label"><input type="checkbox" id="select-all" aria-label="Selecionar todos os produtos" ${chosen.length === cart.length ? 'checked' : ''}>Selecionar todos (${cart.length})</label><button type="button" class="remove-selected" data-action="remove-selected" aria-label="Remover produtos selecionados" ${chosen.length ? '' : 'disabled'}>${icon('trash')}<span>Remover selecionados</span></button></div>

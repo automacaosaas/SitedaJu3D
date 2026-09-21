@@ -4,7 +4,7 @@ export const AUTH_MODE = 'demo';
 const SESSION_KEY = 'ju.account.preview.v1';
 export const ORDERS_KEY = 'ju.orders.preview.v1';
 let previewSession = null;
-const publicUser = user => ({name:user.name, email:user.email, demo:true});
+const publicUser = user => ({name:user.name, email:user.email, marketingOptIn:user.marketingOptIn === true, demo:true});
 export function getSession() {
   try {
     const value = JSON.parse(sessionStorage.getItem(SESSION_KEY));
@@ -20,19 +20,41 @@ export async function signOut() { previewSession = null; try { sessionStorage.re
 
 export function createDemoAuth({now = () => Date.now(), makeCode = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6,'0')} = {}) {
   const accounts = new Map();
-  let challenge = null, resetGrant = null;
+  let challenge = null, resetGrant = null, registrationGrant = null;
+  const sentAtByEmail = new Map();
   const normalize = value => String(value || '').trim().toLowerCase();
   const checkPassword = value => { if (typeof value !== 'string' || value.length < 8 || value.length > 128) throw Error('Use uma senha com 8 a 128 caracteres.'); };
   async function digest(value) {
     return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(n=>n.toString(16).padStart(2,'0')).join('');
   }
   function issue(email, purpose, pending) {
-    if (challenge && now()-challenge.sentAt < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
+    if (now() - (sentAtByEmail.get(email) ?? -Infinity) < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
+    sentAtByEmail.set(email, now());
     resetGrant = null;
+    registrationGrant = null;
     challenge = {email, purpose, pending, code:makeCode(), expiresAt:now()+600000, sentAt:now(), attempts:0};
     return {email, purpose, expiresAt:challenge.expiresAt, resendAt:challenge.sentAt+30000, demoCode:challenge.code};
   }
   return {
+    // Same response before verification, regardless of account existence.
+    async begin({email}) {
+      email = normalize(email);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180) throw Error('Informe um e-mail válido.');
+      return issue(email, 'access');
+    },
+    async completeRegistration({name,password,marketingOptIn=false}) {
+      name = String(name || '').trim();
+      if (!registrationGrant || now() >= registrationGrant.expiresAt) throw Error('Confirme seu e-mail com um novo código.');
+      if (!name || name.length > 100) throw Error('Informe seu nome (até 100 caracteres).');
+      checkPassword(password);
+      const grant = registrationGrant;
+      const passwordHash = await digest(password);
+      if (registrationGrant !== grant || now() >= grant.expiresAt || accounts.has(grant.email)) throw Error('Confirme seu e-mail com um novo código.');
+      const account = {name, email:grant.email, passwordHash, marketingOptIn:marketingOptIn === true, consentAt:marketingOptIn === true ? now() : null};
+      accounts.set(account.email, account); registrationGrant = null;
+      return publicUser(account);
+    },
+    cancel() { challenge = null; registrationGrant = null; resetGrant = null; },
     async register({name,email,password}) {
       email=normalize(email); name=String(name||'').trim();
       if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Error('Preencha seu nome e um e-mail válido.');
@@ -61,6 +83,12 @@ export function createDemoAuth({now = () => Date.now(), makeCode = () => String(
       challenge.attempts++;
       if(!/^\d{6}$/.test(code) || code!==challenge.code) throw Error('O código não confere. Verifique os seis números.');
       const valid=challenge; challenge=null;
+      if (valid.purpose === 'access') {
+        const account = accounts.get(valid.email);
+        if (account) return {user:publicUser(account)};
+        registrationGrant = {email:valid.email, expiresAt:now()+600000};
+        return {registrationAllowed:true};
+      }
       if(valid.purpose==='signup') {accounts.set(valid.email,valid.pending);return {user:publicUser(valid.pending)};}
       resetGrant={email:valid.email,expiresAt:now()+600000};
       return {resetAllowed:true};

@@ -168,3 +168,17 @@
   .home .product-customize.is-pulsing { animation: none; outline: 3px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
   .slot[data-front=true]:hover .piece img { transform: none; }
 }
+
+/* Peripheral petal and fern clouds dissolve into the active theme. */
+.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
+.hero-scenery svg { position:absolute; width:clamp(240px,32vw,510px); }
+.hero-scenery .scenery-left { left:-10%; bottom:-90px; transform:rotate(-18deg); }
+.hero-scenery .scenery-right { right:-10%; bottom:-125px; transform:scaleX(-1) rotate(-24deg); opacity:.82; }
+.scenery-ferns .scenery-left { left:-9%; bottom:-105px; transform:rotate(18deg); }
+.scenery-ferns .scenery-right { right:-11%; bottom:-120px; transform:scaleX(-1) rotate(25deg); }
+@media(max-width:900px) {
+  .hero-scenery .scenery-left { width:61vw; left:-26%; bottom:-40px; }
+  .hero-scenery .scenery-right { width:57vw; right:-25%; bottom:-50px; }
+  .scenery-ferns .scenery-left { left:-25%; bottom:-36px; }
+  .scenery-ferns .scenery-right { right:-26%; bottom:-28px; }
+}
