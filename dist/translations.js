@@ -61,7 +61,6 @@ Simular cartão recusado|Simulate declined card|Simular tarjeta rechazada
 WhatsApp da Ju · em breve|Ju’s WhatsApp · coming soon|WhatsApp de Ju · próximamente
 O contato será habilitado quando o número da loja for definido.|Contact will be enabled once the store’s number is set.|El contacto se habilitará cuando se defina el número de la tienda.
 Suas cores.|Your colors.|Tus colores.
-Um novo começo.|A new beginning.|Un nuevo comienzo.
 Pagamento aprovado na demonstração. Nenhuma cobrança ou produção foi iniciada.|Payment approved in the demo. No charge or production has started.|Pago aprobado en la demostración. No se ha iniciado ningún cobro ni producción.
 Seu pedido ganhou vida.|Your order has come to life.|Tu pedido cobró vida.
 Na loja final, a confirmação chega por aqui e a Ju recebe todos os detalhes para preparar suas peças.|In the final store, confirmation appears here and Ju receives all the details to prepare your pieces.|En la tienda final, la confirmación aparece aquí y Ju recibe todos los detalles para preparar tus piezas.
@@ -389,4 +388,53 @@ Limite de tentativas atingido. Solicite outro código.|Attempt limit reached. Re
 O código não confere. Verifique os seis números.|The code does not match. Check the six digits.|El código no coincide. Revisa los seis dígitos.
 Verifique um novo código para redefinir a senha.|Verify a new code to reset your password.|Verifica un nuevo código para restablecer la contraseña.
 Não existe uma conta de teste nesta página. Comece por Criar conta.|There is no test account on this page. Start with Create account.|No hay una cuenta de prueba en esta página. Empieza por Crear cuenta.
+Ju imprime pra mim — início|Ju imprime pra mim — home|Ju imprime pra mim — inicio
+Ju, imprime pra mim? Criatividade em 3D|Ju, imprime pra mim? Creativity in 3D|Ju, imprime pra mim? Creatividad en 3D
+CRIATIVIDADE EM 3D|CREATIVITY IN 3D|CREATIVIDAD EN 3D
+Mais cor na consulta. Mais encanto em cada olhar.|More color at every appointment. More wonder in every glance.|Más color en cada consulta. Más encanto en cada mirada.
+Escolha sua cor|Choose your color|Elige tu color
+Produto anterior|Previous product|Producto anterior
+Próximo produto|Next product|Siguiente producto
+© 2026 Ju, imprime pra mim? Todos os direitos reservados.|© 2026 Ju, imprime pra mim? All rights reserved.|© 2026 Ju, imprime pra mim? Todos los derechos reservados.
+Instagram da Ju, imprime pra mim? (abre em uma nova aba)|Ju, imprime pra mim? on Instagram (opens in a new tab)|Ju, imprime pra mim? en Instagram (se abre en una pestaña nueva)
+Voltar à coleção da Ju|Back to Ju’s collection|Volver a la colección de Ju
+← Voltar à coleção|← Back to collection|← Volver a la colección
+Uma escolha sua. Um mundo de cor.|Your choice. A world of color.|Tu elección. Un mundo de color.
+Julia sorri com o rosto apoiado na mão, de jaleco branco e roupa roxa, segurando uma borboleta ilustrada.|Julia smiles with a hand under the chin, in a white coat and purple outfit, holding an illustrated butterfly.|Julia sonríe con la mano bajo la barbilla, con bata blanca y ropa morada, sosteniendo una mariposa ilustrada.
+ENTRANDO|SIGNING IN|INICIANDO SESIÓN
+Abrindo o seu cantinho.|Opening your space.|Abriendo tu espacio.
+Conferindo os seus dados|Checking your details|Revisando tus datos
+Preparando a sua conta|Preparing your account|Preparando tu cuenta
+Tudo certo!|All set!|¡Todo listo!
+CADASTRO EM ANDAMENTO|SIGN-UP IN PROGRESS|REGISTRO EN CURSO
+Preparando o seu cantinho.|Getting your space ready.|Preparando tu espacio.
+Criando o seu cadastro na loja da Ju|Creating your account at Ju’s shop|Creando tu cuenta en la tienda de Ju
+Enviando o código para o seu e-mail|Sending the code to your email|Enviando el código a tu correo
+Cadastro criado!|Account created!|¡Cuenta creada!
+Código enviado!|Code sent!|¡Código enviado!
+Código gerado!|Code generated!|¡Código generado!
+RECUPERAÇÃO|RECOVERY|RECUPERACIÓN
+Enviando o seu código.|Sending your code.|Enviando tu código.
+Conferindo o seu e-mail|Checking your email|Revisando tu correo
+CONFIRMAÇÃO|CONFIRMATION|CONFIRMACIÓN
+Conferindo o seu código.|Checking your code.|Revisando tu código.
+Confirmando o seu e-mail.|Confirming your email.|Confirmando tu correo.
+Conferindo o código|Checking the code|Revisando el código
+Finalizando o seu cadastro|Finishing your sign-up|Terminando tu registro
+Cadastro confirmado!|Sign-up confirmed!|¡Registro confirmado!
+Código conferido!|Code verified!|¡Código verificado!
+Leva só alguns segundos.|It only takes a few seconds.|Solo tarda unos segundos.
+Enviamos um código de seis números para|We sent a six-digit code to|Enviamos un código de seis dígitos a
+. Abra o e-mail e toque no botão, ou digite o código abaixo.|. Open the email and tap the button, or type the code below.|. Abre el correo y toca el botón, o escribe el código abajo.
+Enviamos um novo código para o seu e-mail.|We sent a new code to your email.|Enviamos un nuevo código a tu correo.
+Para verificar sua conta, crie uma conta ou peça um novo código.|To verify your account, create an account or request a new code.|Para verificar tu cuenta, crea una cuenta o pide un nuevo código.
+Prévia interativa · contas de teste|Interactive preview · test accounts|Vista previa interactiva · cuentas de prueba
+O código de verificação é enviado por e-mail. Se o envio não estiver disponível, um código de teste aparece aqui. Guardar as contas depende da integração com o banco de dados, que será conectada depois.|The verification code is sent by email. If sending is unavailable, a test code appears here. Saving accounts depends on the database integration, which will be connected later.|El código de verificación se envía por correo. Si el envío no está disponible, aquí aparece un código de prueba. Guardar las cuentas depende de la integración con la base de datos, que se conectará después.
+Sem conexão. Verifique sua internet e tente de novo.|No connection. Check your internet and try again.|Sin conexión. Revisa tu internet e inténtalo de nuevo.
+Muitas tentativas. Aguarde um instante e tente de novo.|Too many attempts. Wait a moment and try again.|Demasiados intentos. Espera un momento e inténtalo de nuevo.
+Não foi possível enviar o e-mail agora. Tente novamente em instantes.|We could not send the email right now. Please try again shortly.|No pudimos enviar el correo ahora. Inténtalo de nuevo en unos instantes.
+Não foi possível conferir o código agora. Tente novamente em instantes.|We could not check the code right now. Please try again shortly.|No pudimos revisar el código ahora. Inténtalo de nuevo en unos instantes.
+Este link não é mais válido. Entre ou crie sua conta para receber um novo código.|This link is no longer valid. Sign in or create your account to get a new code.|Este enlace ya no es válido. Inicia sesión o crea tu cuenta para recibir un nuevo código.
+Seu pedido|Your order|Tu pedido
+Coleção de produtos|Product collection|Colección de productos
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

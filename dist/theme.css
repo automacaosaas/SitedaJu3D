@@ -19,8 +19,20 @@
 @media(hover:hover){.footer-social:hover{background:#fbe9ee;transform:translateY(-2px)}}
 @media(max-width:600px){.site-footer .footer-meta{order:-1;flex-direction:column-reverse;justify-content:center;text-align:center;gap:0}.site-footer .signature{order:2}}
 @media(prefers-reduced-motion:reduce){.footer-social{transition:none}.footer-social:hover{transform:none}}
-.language-picker{position:absolute;right:0;top:2px;display:flex;align-items:center;gap:5px;color:var(--rose);z-index:3;font:500 12px/1.2 'DM Sans',Arial,sans-serif}
-.language-picker select{min-height:32px;max-width:112px;border:1px solid var(--line);border-radius:16px;padding:4px 7px;background:var(--panel);color:var(--rose);font:inherit;cursor:pointer}
-.language-picker select:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
-.account-header{position:relative;padding-top:34px}
-@media(max-width:800px){.site-header{height:120px;min-height:120px;padding-top:26px}.language-picker{top:1px;gap:4px}.language-picker select{min-height:32px}.account-header .language-picker{display:flex}}
+/* Seletor de idioma: só a sigla no desktop; globo + sigla no celular. */
+.language-picker{position:relative;flex:none;color:var(--ink);font:600 13px/1 'DM Sans',Arial,sans-serif}
+.language-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:46px;height:46px;padding:0 15px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:inherit;font:inherit;letter-spacing:.08em;cursor:pointer;transition:background-color .2s ease,color .2s ease}
+.language-button svg{flex:none;width:18px;height:18px}.language-button .language-globe{display:none}.language-button .language-caret{width:10px;height:10px;opacity:.6;transition:transform .2s ease}.language-button[aria-expanded=true] .language-caret{transform:rotate(180deg)}
+.language-button:hover,.language-button[aria-expanded=true]{background:#fbe6eb;color:var(--rose)}.language-button:focus-visible,.language-option:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.language-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:130;display:grid;gap:2px;min-width:184px;padding:8px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:0 12px 35px #65364918}
+.language-option{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;padding:8px 12px;border:0;border-radius:10px;background:none;color:var(--ink);font:500 14px/1.2 'DM Sans',Arial,sans-serif;text-align:left;cursor:pointer}.language-option b{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.1em}
+.language-option:hover,.language-option:focus-visible{background:var(--bg)}.language-option[aria-checked=true],.language-option[aria-checked=true] b{color:var(--rose)}.language-option[aria-checked=true]{background:#fbe9ee}
+.site-header .language-button{height:48px;background:#fffaf9b8;box-shadow:0 4px 14px #6536490a}
+@media(max-width:800px){.language-button{height:44px;min-width:44px;padding:0 9px;gap:5px}.language-button .language-globe{display:block}.language-button .language-caret{display:none}.site-header{justify-content:flex-start}.site-header .language-button{height:44px;background:#fffaf980}.site-header .language-menu{right:auto;left:0}}
+@media(max-width:340px){.language-button .language-globe{display:none}}
+@media(prefers-reduced-motion:reduce){.language-button,.language-button .language-caret{transition:none}}
+.language-suggest{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 12px;padding:8px 44px 8px 16px;position:relative;background:#fbedf1;border-bottom:1px solid var(--line);color:var(--ink);font:500 14px/1.4 'DM Sans',Arial,sans-serif;text-align:center}.language-suggest p{margin:0}
+.language-suggest button{min-height:44px;padding:0 16px;border:1px solid var(--rose);border-radius:999px;background:transparent;color:var(--rose);font:600 13px/1 'DM Sans',Arial,sans-serif;cursor:pointer;transition:background-color .2s ease}.language-suggest button:hover{background:#f7dbe4}.language-suggest [data-accept]{background:var(--rose);color:#fff}.language-suggest [data-accept]:hover{background:#a04360}
+.language-suggest .suggest-close{position:absolute;top:50%;right:6px;min-width:44px;padding:0;transform:translateY(-50%);border-color:transparent;color:var(--muted);font-size:24px;line-height:1}.language-suggest button:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+@media(max-width:600px){.language-suggest{padding:10px 40px 10px 12px;font-size:13px}.language-suggest p{flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){.language-suggest button{transition:none}}

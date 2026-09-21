@@ -1,64 +1,12 @@
-import {translations} from './translations.js';
+import {SUPPORTED as supported, translate as translateText} from './i18n-core.js';
 
 const KEY = 'ju.language';
-const supported = ['pt-BR', 'en', 'es'];
 let language = 'pt-BR';
 try { const saved = localStorage.getItem(KEY); if (supported.includes(saved)) language = saved; } catch {}
 const originals = new WeakMap();
 const attributes = ['aria-label', 'aria-roledescription', 'placeholder', 'title', 'alt'];
 const ignored = 'script,style,[translate="no"],.language-picker';
-const dynamic = [
-  [/^COLEÇÃO 01 \/ PEÇA (\d+)$/, 'COLLECTION 01 / PIECE $1', 'COLECCIÓN 01 / PIEZA $1'],
-  [/^(.+), produto (\d+) de (\d+)\.$/, '$1, product $2 of $3.', '$1, producto $2 de $3.'],
-  [/^Conhecer (.+)$/, 'Discover $1', 'Conocer $1'],
-  [/^Trazer ao centro (.+)$/, 'Bring $1 to center', 'Centrar $1'],
-  [/^Olá, (.+)\.$/, 'Hello, $1.', 'Hola, $1.'],
-  [/^Reenviar em (\d+)s$/, 'Resend in $1s', 'Reenviar en $1s'],
-  [/^Selecionar todos \((\d+)\)$/, 'Select all ($1)', 'Seleccionar todos ($1)'],
-  [/^(\d+) peça selecionada$/, '$1 selected item', '$1 pieza seleccionada'],
-  [/^(\d+) peças selecionadas\.?$/, '$1 selected items', '$1 piezas seleccionadas'],
-  [/^Carrinho, (\d+) itens?$/, 'Cart, $1 items', 'Carrito, $1 artículos'],
-  [/^(.+), (\d+) de (\d+)\.$/, '$1, $2 of $3.', '$1, $2 de $3.'],
-  [/^Pedido (.+)$/, 'Order $1', 'Pedido $1'],
-  [/^PEDIDO (.+)$/, 'ORDER $1', 'PEDIDO $1'],
-  [/^Produção: (.+)$/, 'Production: $1', 'Producción: $1'],
-  [/^(\d+) peça · (.+)$/, '$1 item · $2', '$1 pieza · $2'],
-  [/^(\d+) peças · (.+)$/, '$1 items · $2', '$1 piezas · $2'],
-  [/^Adicionar (.+) ao carrinho$/, 'Add $1 to cart', 'Añadir $1 al carrito'],
-  [/^Personalizar (.+)$/, 'Customize $1', 'Personalizar $1'],
-  [/^Mostrar (.+)$/, 'Show $1', 'Mostrar $1'],
-  [/^Selecionar (.+)$/, 'Select $1', 'Seleccionar $1'],
-  [/^Remover (.+)$/, 'Remove $1', 'Eliminar $1'],
-  [/^Quantidade de (.+)$/, 'Quantity of $1', 'Cantidad de $1'],
-  [/^Aumentar quantidade de (.+)$/, 'Increase quantity of $1', 'Aumentar cantidad de $1'],
-  [/^Diminuir quantidade de (.+)$/, 'Decrease quantity of $1', 'Reducir cantidad de $1'],
-  [/^Editar personalização de (.+)$/, 'Edit customization of $1', 'Editar personalización de $1'],
-  [/^Cores escolhidas para (.+)$/, 'Selected colors for $1', 'Colores elegidos para $1'],
-  [/^(.+) — imagem nas cores originais$/, '$1 — original colors', '$1 — colores originales'],
-  [/^(.+) nas cores originais$/, '$1 in original colors', '$1 en colores originales'],
-  [/^(.+) — prévia 3D da combinação$/, '$1 — 3D combination preview', '$1 — vista previa 3D de la combinación'],
-  [/^(.+) sobre uma pilastra branca — imagem de apresentação$/, '$1 on a white pedestal — presentation image', '$1 sobre un pedestal blanco — imagen de presentación'],
-  [/^Preço de (.+)$/, 'Price for $1', 'Precio de $1']
-];
-export function translate(value, locale = language) {
-  if (locale === 'pt-BR') return value;
-  const index = locale === 'es' ? 1 : 0;
-  const source = value.trim().replace(/\s+/g, ' ');
-  let result = translations[source]?.[index];
-  if (!result && source.startsWith('Produção: ')) result = (index ? 'Producción: ' : 'Production: ') + translate(source.slice(10), locale);
-  if (!result) {
-    for (const [pattern, en, es] of dynamic) {
-      if (pattern.test(source)) { result = source.replace(pattern, index ? es : en); break; }
-    }
-  }
-  // Keep punctuation, currency, product names and user data unchanged.
-  if (!result && /[·:]/.test(source)) {
-    const segments = source.split(/(\s*[·:]\s*)/);
-    result = segments.map(segment => translations[segment]?.[index] || segment).join('');
-  }
-  if (!result) return value;
-  return value.slice(0, value.length - value.trimStart().length) + result + value.slice(value.trimEnd().length);
-}
+export function translate(value, locale = language) { return translateText(value, locale); }
 function update(node, key, read, write) {
   let state = originals.get(node);
   if (!state) { state = new Map(); originals.set(node, state); }
@@ -91,27 +39,124 @@ function apply() {
   observer.disconnect();
   document.documentElement.lang = language;
   visit(document.documentElement);
-  document.querySelectorAll('.language-picker select').forEach(select => { select.value = language; });
+  syncPickers();
   observe();
 }
 export function setLanguage(locale) {
   if (!supported.includes(locale)) return;
   language = locale;
   try { localStorage.setItem(KEY, language); } catch {}
+  document.querySelector('.language-suggest')?.remove();
   apply();
   window.dispatchEvent(new CustomEvent('ju:language', {detail:language}));
 }
-export function mountLanguagePicker() {
-  const header = document.querySelector('.header, .account-header, .intro');
-  if (!header || header.querySelector('.language-picker')) return;
-  const label = document.createElement('label');
-  label.className = 'language-picker';
-  label.setAttribute('translate', 'no');
-  label.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg><select aria-label="Idioma / Language / Idioma"><option value="pt-BR">Português</option><option value="en">English</option><option value="es">Español</option></select>';
-  label.querySelector('select').value = language;
-  label.addEventListener('change', event => setLanguage(event.target.value));
-  header.append(label);
+export const LANGUAGES = [
+  {code:'pt-BR', short:'PT', name:'Português'},
+  {code:'en', short:'EN', name:'English'},
+  {code:'es', short:'ES', name:'Español'}
+];
+const PICKER_TEXT = {
+  'pt-BR': {button:name => `Idioma: ${name}. Mudar idioma`, menu:'Escolher idioma'},
+  en: {button:name => `Language: ${name}. Change language`, menu:'Choose language'},
+  es: {button:name => `Idioma: ${name}. Cambiar idioma`, menu:'Elegir idioma'}
+};
+const GLOBE = '<svg class="language-globe" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6.5h14M5 17.5h14"/></svg>';
+const CARET = '<svg class="language-caret" viewBox="0 0 12 12" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>';
+export function getLanguage() { return language; }
+function syncPickers() {
+  const current = LANGUAGES.find(item => item.code === language) || LANGUAGES[0];
+  const text = PICKER_TEXT[current.code];
+  document.querySelectorAll('.language-picker').forEach(picker => {
+    const button = picker.querySelector('.language-button');
+    button.querySelector('.language-code').textContent = current.short;
+    button.setAttribute('aria-label', text.button(current.name));
+    picker.querySelector('.language-menu').setAttribute('aria-label', text.menu);
+    picker.querySelectorAll('.language-option').forEach(option => option.setAttribute('aria-checked', String(option.dataset.language === language)));
+  });
 }
-function init() { mountLanguagePicker(); apply(); }
+function createLanguagePicker() {
+  const picker = document.createElement('div');
+  picker.className = 'language-picker';
+  picker.setAttribute('translate', 'no');
+  picker.innerHTML = `<button type="button" class="language-button" aria-haspopup="menu" aria-expanded="false" aria-controls="language-menu">${GLOBE}<span class="language-code"></span>${CARET}</button><div class="language-menu" id="language-menu" role="menu" hidden>${LANGUAGES.map(item => `<button type="button" class="language-option" role="menuitemradio" data-language="${item.code}" lang="${item.code}" aria-checked="false"><span>${item.name}</span><b aria-hidden="true">${item.short}</b></button>`).join('')}</div>`;
+  const button = picker.querySelector('.language-button'), menu = picker.querySelector('.language-menu');
+  const options = () => [...menu.querySelectorAll('.language-option')];
+  const isOpen = () => !menu.hidden;
+  const close = ({restoreFocus = false} = {}) => {
+    if (!isOpen()) return;
+    menu.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) button.focus();
+  };
+  const open = (from = 'selected') => {
+    menu.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    const list = options();
+    (from === 'last' ? list.at(-1) : list.find(option => option.dataset.language === language) || list[0]).focus();
+  };
+  button.addEventListener('click', () => isOpen() ? close() : open());
+  button.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); open(event.key === 'ArrowUp' ? 'last' : 'selected'); }
+  });
+  menu.addEventListener('click', event => {
+    const option = event.target.closest('.language-option');
+    if (!option) return;
+    setLanguage(option.dataset.language);
+    close({restoreFocus:true});
+  });
+  menu.addEventListener('keydown', event => {
+    const list = options(), index = list.indexOf(document.activeElement);
+    const move = next => { event.preventDefault(); list[(next + list.length) % list.length].focus(); };
+    if (event.key === 'ArrowDown') move(index + 1);
+    else if (event.key === 'ArrowUp') move(index - 1);
+    else if (event.key === 'Home') move(0);
+    else if (event.key === 'End') move(list.length - 1);
+    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close({restoreFocus:true}); }
+    else if (event.key === 'Tab') close();
+  });
+  document.addEventListener('pointerdown', event => { if (isOpen() && !picker.contains(event.target)) close(); });
+  return picker;
+}
+// Desktop: sits beside the cart. The header markup decides where it goes; see site-shell.js and account.js.
+export function mountLanguagePicker(container, before = null) {
+  if (!container || document.querySelector('.language-picker')) return null;
+  const picker = createLanguagePicker();
+  container.insertBefore(picker, before && before.parentNode === container ? before : null);
+  syncPickers();
+  return picker;
+}
+// First visit: if the browser is set to English or Spanish, offer our own translation once (like the browser's
+// translate bar, but with the site's reviewed copy). Shown in the language being offered.
+const PROMPTED = 'ju.language.prompted';
+const SUGGESTIONS = {
+  en: {label:'Language suggestion', message:'This site is also available in English.', accept:'Switch to English', keep:'Keep Portuguese', close:'Close'},
+  es: {label:'Sugerencia de idioma', message:'Este sitio también está disponible en español.', accept:'Cambiar a español', keep:'Seguir en portugués', close:'Cerrar'}
+};
+function suggestLanguage() {
+  try { if (localStorage.getItem(KEY) || localStorage.getItem(PROMPTED)) return; } catch { return; }
+  if (document.querySelector('.language-suggest')) return;
+  const preferred = String(navigator.languages?.[0] || navigator.language || '').toLowerCase();
+  const code = preferred.startsWith('en') ? 'en' : preferred.startsWith('es') ? 'es' : null;
+  if (!code) return;
+  const text = SUGGESTIONS[code], bar = document.createElement('div');
+  bar.className = 'language-suggest';
+  bar.lang = code;
+  bar.setAttribute('translate', 'no');
+  bar.setAttribute('role', 'region');
+  bar.setAttribute('aria-label', text.label);
+  bar.innerHTML = `<p>${text.message}</p><button type="button" data-accept>${text.accept}</button><button type="button" data-keep>${text.keep}</button><button type="button" class="suggest-close" aria-label="${text.close}">×</button>`;
+  bar.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    if (button.hasAttribute('data-accept')) setLanguage(code);
+    dismissSuggestion();
+  });
+  document.body.prepend(bar);
+}
+function dismissSuggestion() {
+  try { localStorage.setItem(PROMPTED, '1'); } catch {}
+  document.querySelector('.language-suggest')?.remove();
+}
+function init() { apply(); suggestLanguage(); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();
 window.addEventListener('storage', event => { if (event.key === KEY) { language = supported.includes(event.newValue) ? event.newValue : 'pt-BR'; apply(); } });

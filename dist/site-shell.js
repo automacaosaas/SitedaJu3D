@@ -1,5 +1,5 @@
 import {icon} from './icons.js';
-import './i18n.js';
+import {mountLanguagePicker} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, signOut} from './auth-service.js';
 
@@ -80,7 +80,16 @@ export function refreshHeader() {
 for (const host of document.querySelectorAll('[data-shop-nav]')) {
   setupSiteHeader(host);
   host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>Entrar ou cadastrar</a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
-  const trigger = host.querySelector('button'), menu = host.querySelector('.profile-menu');
+  const picker = mountLanguagePicker(host, host.querySelector('[data-cart-link]'));
+  const menuToggle = host.closest('.site-header')?.querySelector('.menu-toggle');
+  if (picker && menuToggle) {
+    // Phones: beside the menu button, where there is room next to the centered logo. Desktop: beside the cart.
+    const compact = matchMedia('(max-width: 800px)');
+    const place = () => compact.matches ? menuToggle.after(picker) : host.insertBefore(picker, host.querySelector('[data-cart-link]'));
+    compact.addEventListener('change', place);
+    place();
+  }
+  const trigger = host.querySelector('.profile-nav > button'), menu = host.querySelector('.profile-menu');
   const close = () => { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); };
   trigger.addEventListener('click', () => {
     const session = getSession();
