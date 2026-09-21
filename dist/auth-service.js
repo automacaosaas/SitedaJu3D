@@ -5,16 +5,22 @@ export const AUTH_MODE = 'demo';
 const SESSION_KEY = 'ju.account.preview.v1';
 export const ORDERS_KEY = 'ju.orders.preview.v1';
 let previewSession = null;
-const publicUser = user => ({name:user.name, email:user.email, demo:true});
+const publicUser = user => {
+  const visible = {name:user.name, email:user.email, demo:true};
+  // Keep the opt-in available to the account screen without exposing a new
+  // enumerable field in existing preview-session and integration responses.
+  Object.defineProperty(visible, 'marketingOptIn', {value:user.marketingOptIn === true, enumerable:false});
+  return visible;
+};
 export function getSession() {
   try {
     const value = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    return value?.demo === true && typeof value.name === 'string' && typeof value.email === 'string' ? value : previewSession;
+    return value?.demo === true && typeof value.name === 'string' && typeof value.email === 'string' ? publicUser(value) : previewSession;
   } catch { return previewSession; }
 }
 function setSession(user) {
   previewSession = publicUser(user);
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(previewSession)); } catch {}
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({...previewSession, marketingOptIn:previewSession.marketingOptIn})); } catch {}
   return previewSession;
 }
 export async function signOut() { previewSession = null; try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
@@ -63,24 +69,31 @@ export function createMailer({fetchImpl = (...args) => fetch(...args), language 
 
 export function createDemoAuth({now = () => Date.now(), makeCode = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6,'0'), mailer = null} = {}) {
   const accounts = new Map();
-  let challenge = null, resetGrant = null;
+  let challenge = null, resetGrant = null, registrationGrant = null;
+  const sentAtByEmail = new Map();
   const normalize = value => String(value || '').trim().toLowerCase();
   const checkPassword = value => { if (typeof value !== 'string' || value.length < 8 || value.length > 128) throw Error('Use uma senha com 8 a 128 caracteres.'); };
   async function digest(value) {
     return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(n=>n.toString(16).padStart(2,'0')).join('');
   }
-  function issue(email, purpose, pending) {
+  function authorizeIssue(email) {
     if (challenge && now()-challenge.sentAt < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
-    resetGrant = null;
+    if (now()-(sentAtByEmail.get(email) ?? -Infinity) < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
+  }
+  function issueReady(email, purpose, pending) {
+    sentAtByEmail.set(email, now());
+    resetGrant = null; registrationGrant = null;
     challenge = {email, purpose, pending, code:makeCode(), expiresAt:now()+600000, sentAt:now(), attempts:0};
     return {email, purpose, expiresAt:challenge.expiresAt, resendAt:challenge.sentAt+30000, demoCode:challenge.code};
   }
+  function issue(email, purpose, pending) { authorizeIssue(email); return issueReady(email, purpose, pending); }
   // E-mailed code when the service is available; otherwise the preview code above.
   async function issueByEmail(email, purpose, pending, name = '') {
-    if (challenge && now()-challenge.sentAt < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
+    authorizeIssue(email);
     const sent = mailer ? await mailer.send({email, name:pending?.name || name, purpose}) : null;
-    if (!sent) return issue(email, purpose, pending);
-    resetGrant = null;
+    if (!sent) return issueReady(email, purpose, pending);
+    sentAtByEmail.set(email, now());
+    resetGrant = null; registrationGrant = null;
     challenge = {email, purpose, pending, name:pending?.name || name, server:sent, expiresAt:sent.expiresAt, sentAt:now(), attempts:0};
     return {email, purpose, expiresAt:sent.expiresAt, resendAt:sent.resendAt};
   }
@@ -88,7 +101,13 @@ export function createDemoAuth({now = () => Date.now(), makeCode = () => String(
   function complete(valid, proof) {
     challenge = null;
     const email = proof?.email || valid.email;
-    if (valid.purpose === 'signup' || valid.purpose === 'access') {
+    if (valid.purpose === 'access') {
+      const account = accounts.get(email);
+      if (account) return {user:publicUser(account)};
+      registrationGrant = {email, expiresAt:now()+600000};
+      return {registrationAllowed:true};
+    }
+    if (valid.purpose === 'signup') {
       const pending = valid.pending ? {...valid.pending, email} : {name:proof?.name || email.split('@')[0], email, passwordHash:null};
       accounts.set(email, pending);
       return {user:publicUser(pending)};
@@ -97,6 +116,26 @@ export function createDemoAuth({now = () => Date.now(), makeCode = () => String(
     return {resetAllowed:true};
   }
   return {
+    // The current account page starts with just an e-mail. It uses the same
+    // signed code as registration, then asks for the remaining details only
+    // when this address has no local preview account yet.
+    async begin({email}) {
+      email = normalize(email);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180) throw Error('Informe um e-mail válido.');
+      return issueByEmail(email, 'access');
+    },
+    async completeRegistration({name, password, marketingOptIn = false}) {
+      name = String(name || '').trim();
+      if (!registrationGrant || now() >= registrationGrant.expiresAt) throw Error('Confirme seu e-mail com um novo código.');
+      if (!name || name.length > 100) throw Error('Informe seu nome (até 100 caracteres).');
+      checkPassword(password);
+      const grant = registrationGrant;
+      const account = {name, email:grant.email, passwordHash:await digest(password), marketingOptIn:marketingOptIn === true, consentAt:marketingOptIn === true ? now() : null};
+      if (registrationGrant !== grant || now() >= grant.expiresAt || accounts.has(grant.email)) throw Error('Confirme seu e-mail com um novo código.');
+      accounts.set(account.email, account); registrationGrant = null;
+      return publicUser(account);
+    },
+    cancel() { challenge = null; registrationGrant = null; resetGrant = null; },
     async register({name,email,password}, {onStage = () => {}} = {}) {
       email=normalize(email); name=String(name||'').trim();
       if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Error('Preencha seu nome e um e-mail válido.');

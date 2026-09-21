@@ -8,6 +8,7 @@
   <title>Seu cantinho · Ju imprime pra mim</title>
   <link rel="icon" href="favicon.svg">
   <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="experience.css">
   <link rel="stylesheet" href="shopping.css">
   <link rel="stylesheet" href="account.css">
   <script type="module" src="account.js"></script>
@@ -16,7 +17,7 @@
   <a class="auth-skip" href="#account-title">Ir para o formulário</a>
   <header class="account-header">
     <a href="index.html" class="back-collection">← <span>Voltar à coleção</span></a>
-    <a class="brand account-logo" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.png" width="90" height="90" alt="Ju imprime pra mim"></a>
+    <a class="brand account-logo" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.webp" width="90" height="90" alt="Ju imprime pra mim"></a>
     <div class="account-tools"><span>FEITO PARA ENCANTAR</span></div>
   </header>
   <main class="auth-composition">
@@ -34,13 +35,12 @@
     </div>
     <section class="account-card account-panel" aria-labelledby="account-title">
       <p class="scene-greeting" id="scene-greeting" hidden></p>
-      <div id="account-content"></div>
+      <div id="account-content"><p class="eyebrow">UM CANTINHO SÓ SEU</p><h2 id="account-title">Tudo começa<br>com seu e-mail.</h2><p class="account-lead">Preparando seu acesso…</p></div><div id="demo-inbox"></div>
       <p id="account-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
       <details class="preview-details">
         <summary>Prévia interativa · contas de teste</summary>
         <p>Use dados fictícios. As contas de teste e suas senhas derivadas ficam apenas na memória desta página e são apagadas ao recarregar. A sessão visual dura nesta aba; não dá acesso a dados reais.</p>
         <p>O código de verificação é enviado por e-mail. Se o envio não estiver disponível, um código de teste aparece aqui. Guardar as contas depende da integração com o banco de dados, que será conectada depois.</p>
-        <div id="demo-inbox"></div>
       </details>
     </section>
   </main>

@@ -1,3 +1,4 @@
+import {goToCart} from './shopping-navigation.js';
 import {PRODUCTS} from './products.js';
 import {readCart, writeCart, putItem, EDIT_KEY, DIRECT_KEY} from './cart-store.js';
 import {COMMERCE, money} from './commerce-config.js';
@@ -24,7 +25,7 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
       document.querySelector('#product-price').textContent = money(COMMERCE.prices[key]);
     }
   }
-  button.addEventListener('click', () => {
+  button.addEventListener('click', async () => {
     if (busy) return;
     busy = true; button.disabled = true;
     try {
@@ -34,12 +35,14 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
       window.dispatchEvent(new Event('ju:cart'));
       if (edited) {
         button.innerHTML = `Salvo ${icon('check')}`;
-        location.replace('checkout.html');
+        dialog.querySelector('.close').click();
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await goToCart({replace:true, saved:true});
         return;
       }
-      status.replaceChildren(document.createTextNode('Peça adicionada! '));
-      const link = document.createElement('a'); link.href = 'checkout.html'; link.textContent = 'Ver carrinho →';
-      status.append(link); button.innerHTML = `Adicionado ${icon('check')}`;
+      dialog.querySelector('.close').click();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await goToCart();
     } catch (error) { status.textContent = error.message; }
     finally { setTimeout(() => { busy = false; button.disabled = false; refresh(); }, 900); }
   });

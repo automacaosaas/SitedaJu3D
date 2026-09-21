@@ -1,10 +1,11 @@
+import {returnFromCart} from './shopping-navigation.js';
 import {PRODUCTS, color} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {readCart, writeCart, totals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, selectedItems, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 
 import {icon} from './icons.js';
-import {saveDemoOrder} from './auth-service.js';
+import {saveDemoOrder, getSession} from './auth-service.js';
 import {refreshHeader} from './site-shell.js';
 import {renderCart} from './cart-view.js';
 
@@ -12,7 +13,7 @@ const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
 const main = document.querySelector('#shop-main'), live = document.querySelector('#shop-live');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {}, timer = null, busy = false, noticeTimer = null;
+let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || ''}, timer = null, busy = false, noticeTimer = null;
 let selected = new Set(cart.map(i=>i.id));
 const purchaseItems = () => selectedItems(cart, selected);
 const count = items => items.reduce((n, i) => n + i.quantity, 0);
@@ -86,6 +87,7 @@ main.addEventListener('click',async e=>{
   const button=e.target.closest('[data-action]');if(!button||busy)return;
   const action=button.dataset.action,id=button.dataset.id,item=cart.find(i=>i.id===id);
   try {
+    if(action==='return'){returnFromCart();return;}
     if(['plus','minus','remove'].includes(action)&&item){const next=cart.map(i=>({...i}));if(action==='remove')persist(next.filter(i=>i.id!==id));else{next.find(i=>i.id===id).quantity=Math.max(1,Math.min(99,item.quantity+(action==='plus'?1:-1)));persist(next);}render(false);const target=[...main.querySelectorAll('[data-action]')].find(b=>b.dataset.id===id&&b.dataset.action===action&&!b.disabled);(target||main.querySelector('h1')).focus({preventScroll:true});announce(action==='remove'?'Peça removida do carrinho.':'Quantidade atualizada.');}
     if(action==='edit'&&item){sessionStorage.setItem(EDIT_KEY,JSON.stringify({id:item.id}));location.assign(`index.html#produto/${item.productId}`);}
     if(action==='checkout'&&purchaseItems().length){stage='delivery';render();}

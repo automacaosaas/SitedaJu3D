@@ -437,4 +437,78 @@ Não foi possível conferir o código agora. Tente novamente em instantes.|We co
 Este link não é mais válido. Entre ou crie sua conta para receber um novo código.|This link is no longer valid. Sign in or create your account to get a new code.|Este enlace ya no es válido. Inicia sesión o crea tu cuenta para recibir un nuevo código.
 Seu pedido|Your order|Tu pedido
 Coleção de produtos|Product collection|Colección de productos
+UM CANTINHO SÓ SEU|A SPACE THAT IS YOURS|UN RINCÓN SOLO TUYO
+Tudo começa|It all starts|Todo empieza
+com seu e-mail.|with your email.|con tu correo.
+Preparando seu acesso…|Preparing your access…|Preparando tu acceso…
+Carregando produtos|Loading products|Cargando productos
+Preparando um pouco de encanto…|Preparing a little enchantment…|Preparando un poco de encanto…
+Ative o JavaScript para explorar e personalizar as peças.|Enable JavaScript to explore and personalize the pieces.|Activa JavaScript para explorar y personalizar las piezas.
+Prévia: use dados fictícios. Quando o envio não estiver disponível, um código de teste aparece nesta página.|Preview: use fictional details. When sending is unavailable, a test code appears on this page.|Vista previa: usa datos ficticios. Cuando el envío no esté disponible, aparece un código de prueba en esta página.
+Enviamos um código de seis números para o seu e-mail. Toque no botão da mensagem ou digite o código abaixo.|We sent a six-digit code to your email. Tap the button in the message or type the code below.|Enviamos un código de seis dígitos a tu correo. Toca el botón del mensaje o escribe el código abajo.
+Enviando outro código…|Sending another code…|Enviando otro código…
+Voltar à página anterior|Back to the previous page|Volver a la página anterior
+Peça adicionada. Indo para o carrinho…|Item added. Taking you to your cart…|Pieza añadida. Te llevamos al carrito…
+Cores salvas. Voltando ao carrinho…|Colors saved. Returning to your cart…|Colores guardados. Volviendo al carrito…
+Entre ou crie sua conta para acompanhar cada detalhe das suas escolhas.|Sign in or create your account to follow every detail of your choices.|Inicia sesión o crea tu cuenta para seguir cada detalle de tus elecciones.
+Continuar|Continue|Continuar
+Seu e-mail, com cuidado.|Your email, handled with care.|Tu correo, con cuidado.
+Para acessar seu perfil e acompanhar pedidos. Novidades e ofertas, só se você escolher.|To access your profile and track orders. News and offers only if you choose.|Para acceder a tu perfil y seguir tus pedidos. Novedades y ofertas, solo si tú lo eliges.
+Um instante de cuidado.|A moment of care.|Un momento de cuidado.
+Seu acesso,|Your access,|Tu acceso,
+com cuidado.|with care.|con cuidado.
+Alterar|Change|Cambiar
+Código de 6 números|6-digit code|Código de 6 dígitos
+O código vale por 10 minutos.|The code is valid for 10 minutes.|El código es válido durante 10 minutos.
+Confirmar e continuar|Confirm and continue|Confirmar y continuar
+Precisa de outro código?|Need another code?|¿Necesitas otro código?
+Usar minha senha|Use my password|Usar mi contraseña
+Use a senha que criou no seu primeiro cadastro.|Use the password you created when you first signed up.|Usa la contraseña que creaste en tu primer registro.
+Digite sua senha|Enter your password|Escribe tu contraseña
+Usar código de acesso|Use an access code|Usar un código de acceso
+Conferindo seu código…|Checking your code…|Revisando tu código…
+E-mail confirmado.|Email confirmed.|Correo confirmado.
+E-MAIL CONFIRMADO|EMAIL CONFIRMED|CORREO CONFIRMADO
+Vamos nos|Let’s get|Vamos a
+conhecer?|to know each other?|conocernos?
+Só mais dois detalhes para criar seu cantinho.|Just two more details to create your space.|Solo dos detalles más para crear tu espacio.
+Crie sua senha|Create your password|Crea tu contraseña
+Quero receber novidades e ofertas da Ju por e-mail.|I would like to receive news and offers from Ju by email.|Quiero recibir novedades y ofertas de Ju por correo.
+Opcional. Você pode mudar de ideia.|Optional. You can change your mind.|Opcional. Puedes cambiar de opinión.
+Criando sua conta de teste…|Creating your test account…|Creando tu cuenta de prueba…
+Preparando seu cantinho…|Getting your space ready…|Preparando tu espacio…
+Conta de teste criada!|Test account created!|¡Cuenta de prueba creada!
+Conta criada!|Account created!|¡Cuenta creada!
+Acesso de teste confirmado!|Test access confirmed!|¡Acceso de prueba confirmado!
+Acesso confirmado!|Access confirmed!|¡Acceso confirmado!
+Conferindo seu acesso…|Checking your access…|Revisando tu acceso…
+Tudo pronto para continuar.|Everything is ready to continue.|Todo listo para continuar.
+Suas escolhas e seus próximos encantos, bem pertinho.|Your choices and your next little wonders, close by.|Tus elecciones y tus próximos encantos, muy cerca.
+E-mail confirmado na prévia|Email confirmed in the preview|Correo confirmado en la vista previa
+Novidades por e-mail: você escolheu receber.|News by email: you chose to receive.|Novedades por correo: elegiste recibir.
+Novidades por e-mail: não autorizadas.|News by email: not authorized.|Novedades por correo: no autorizadas.
+O endereço é informado na etapa de entrega.|The address is provided at the delivery step.|La dirección se indica en el paso de entrega.
+Voltar ao carrinho|Back to cart|Volver al carrito
+Sair da conta|Sign out|Cerrar sesión
+Pedidos demonstrativos feitos nesta aba.|Demo orders placed in this tab.|Pedidos de demostración hechos en esta pestaña.
+Voltar à minha conta|Back to my account|Volver a mi cuenta
+Digite o código de teste abaixo para experimentar a confirmação do e-mail.|Enter the test code below to try the email confirmation.|Escribe el código de prueba de abajo para probar la confirmación del correo.
+Código de teste · não enviado|Test code · not sent|Código de prueba · no enviado
+Para verificar sua conta, informe seu e-mail e solicite um novo código.|To verify your account, enter your email and request a new code.|Para verificar tu cuenta, introduce tu correo y solicita un nuevo código.
+CÓDIGO CONFIRMADO|CODE CONFIRMED|CÓDIGO CONFIRMADO
+Escolha uma nova senha para acessar seu cantinho.|Choose a new password to access your space.|Elige una nueva contraseña para acceder a tu espacio.
+Não foi possível continuar. Tente novamente.|We could not continue. Please try again.|No pudimos continuar. Inténtalo de nuevo.
+Preparando a recuperação de acesso…|Preparing account recovery…|Preparando la recuperación de acceso…
+Atualizando sua senha de teste…|Updating your test password…|Actualizando tu contraseña de prueba…
+Senha de teste atualizada!|Test password updated!|¡Contraseña de prueba actualizada!
+Este link não é mais válido. Solicite um novo código.|This link is no longer valid. Request a new code.|Este enlace ya no es válido. Solicita un nuevo código.
+Confirme seu e-mail com um novo código.|Confirm your email with a new code.|Confirma tu correo con un nuevo código.
+Informe seu nome (até 100 caracteres).|Enter your name (up to 100 characters).|Introduce tu nombre (hasta 100 caracteres).
+Imagem indisponível.|Image unavailable.|Imagen no disponible.
+Imagem indisponível|Image unavailable|Imagen no disponible
+Conheça as cores da peça.|See the piece’s colors.|Conoce los colores de la pieza.
+use Personalize o seu para escolher as cores.|use Customize yours to choose the colors.|usa Personaliza el tuyo para elegir los colores.
+Falar com a Ju no WhatsApp ↗|Talk to Ju on WhatsApp ↗|Hablar con Ju por WhatsApp ↗
+Informe um WhatsApp com DDD, por exemplo (11) 99999-9999.|Enter a WhatsApp number with area code, for example (11) 99999-9999.|Introduce un WhatsApp con código de área, por ejemplo (11) 99999-9999.
+Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.|Demo approved, but the cart could not be updated in this browser.|Demostración aprobada, pero no se pudo actualizar el carrito en este navegador.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

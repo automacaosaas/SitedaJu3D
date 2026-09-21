@@ -1,7 +1,9 @@
+import {goToCart} from './shopping-navigation.js';
 import {PRODUCTS, PRODUCT_CATEGORIES, color, defaults} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
+import {imageReady} from './loading-ui.js';
 
 const entries = Object.entries(PRODUCTS).map(([id, product]) => ({id, product}));
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -26,6 +28,21 @@ class ProductCarousel {
     host.innerHTML = `<div class="product-carousel-stage" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="${host.getAttribute('aria-label') || 'Produtos'}"><div class="product-carousel-track"></div><button class="product-carousel-arrow product-carousel-prev" type="button" aria-label="Ver produto anterior">${icon('arrow')}</button><button class="product-carousel-arrow product-carousel-next" type="button" aria-label="Ver próximo produto">${icon('arrow')}</button></div><div class="product-carousel-dots" role="tablist" aria-label="Escolher produto"></div><p class="sr-only" aria-live="polite" aria-atomic="true"></p>`;
     this.stage = host.querySelector('.product-carousel-stage'); this.track = host.querySelector('.product-carousel-track'); this.dots = host.querySelector('.product-carousel-dots'); this.live = host.querySelector('[aria-live]');
     this.track.innerHTML = items.map(productCard).join(''); this.cards = [...this.track.children];
+    this.cards.forEach(card => {
+      card.classList.add('is-loading'); card.setAttribute('aria-busy', 'true');
+      const img = card.querySelector('img');
+      // Lazy images start when approaching the viewport, not on a global timeout.
+      const begin = async () => {
+        img.loading = 'eager';
+        const ok = await imageReady(img);
+        if (!ok) {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');}
+        card.classList.remove('is-loading'); card.setAttribute('aria-busy', 'false');
+      };
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {if(entries.some(entry => entry.isIntersecting)){observer.disconnect();begin();}}, {rootMargin:'240px'});
+        observer.observe(card);
+      } else begin();
+    });
     this.dots.innerHTML = items.map(({product}, index) => `<button type="button" role="tab" aria-label="Mostrar ${product.title}" aria-selected="${index === 0}" data-dot="${index}"><span class="sr-only">${product.title}</span></button>`).join('');
     this.bind(); this.render(false);
   }
@@ -70,4 +87,6 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
   tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
   tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel]'); host.dataset.category = button.dataset.catalogFilter; mountCarousel(host, button.dataset.catalogFilter); });
 }
-document.addEventListener('click', event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); location.assign('checkout.html'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
+document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await goToCart(); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
+
+window.addEventListener('pageshow', () => document.querySelectorAll('[data-add-product]').forEach(button => {button.disabled = false; button.classList.remove('is-loading');}));

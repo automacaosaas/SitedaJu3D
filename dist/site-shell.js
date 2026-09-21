@@ -2,6 +2,8 @@ import {icon} from './icons.js';
 import {mountLanguagePicker} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, signOut} from './auth-service.js';
+import {setupScrollHeader} from './header-scroll.js';
+import './shopping-navigation.js';
 
 const MAIN_NAVIGATION = [
   {label:'Início', href:'index.html', active:() => /(?:\/|\/index\.html)$/.test(location.pathname)},
@@ -23,7 +25,7 @@ function setupSiteHeader(host) {
 
 function setupMobileDrawer() {
   if (!document.querySelector('.menu-toggle') || document.querySelector('#mobile-drawer')) return;
-  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju.png" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav></aside></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju.webp" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav></aside></div>`);
   const layer = document.querySelector('.mobile-drawer-layer'), drawer = layer.querySelector('.mobile-drawer');
   let opener = null, closingTimer = null, openingFrame = null;
   const headerToggles = () => [...document.querySelectorAll('.menu-toggle')];
@@ -103,6 +105,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { close(); trigger.focus(); } });
 }
 setupMobileDrawer();
+setupScrollHeader(document.querySelector('.site-header'));
 window.addEventListener('hashchange', () => {
   document.querySelectorAll('.primary-nav a, .drawer-links a').forEach(link => {
     const item = MAIN_NAVIGATION.find(item => item.href === link.getAttribute('href'));

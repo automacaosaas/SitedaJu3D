@@ -1,6 +1,8 @@
 // Vitrine principal: um produto por vez, apoiado na pilastra, com fundo e header temáticos.
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
 import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, originalColors, showcase} from './products.js';
+import {scenery} from './hero-scenery.js';
+import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
 
 const region = document.querySelector('.showcase');
@@ -38,8 +40,7 @@ function init() {
   const initial = Math.max(0, fromHash());
 
   // ── Estrutura ────────────────────────────────────────────────────────────────
-  const clouds = '<i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i><i class="cloud c4"></i><i class="cloud c5"></i><i class="cloud c6"></i>';
-  bgHost.innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}"><div class="clouds">${clouds}</div></div>`).join('');
+  bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
   region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme}) =>
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p></div>`).join('');
@@ -53,10 +54,21 @@ function init() {
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
   const bgLayers = [...bgHost.querySelectorAll('.hero-layer')], bandLayers = [...shell.querySelectorAll('[data-hero-band] .hero-layer')];
   const images = slots.map(slot => slot.querySelector('img'));
-  images.forEach(img => {
-    const done = () => img.classList.add('is-loaded');
-    img.addEventListener('load', done);
-    if (img.complete && img.naturalWidth) done();
+  const stage = region.querySelector('[data-hero-stage]');
+  stage.setAttribute('aria-busy', 'true');
+  const ready = images.map(img => {
+    // Offscreen images start observing only when their source is requested.
+    if (!img.hasAttribute('src')) return null;
+    return prepareImage(img);
+  });
+  async function prepareImage(img) {
+    const ok = await imageReady(img, 6500);
+    if (ok) img.classList.add('is-loaded');
+    else {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend','<span class="image-unavailable">Imagem indisponível.<br>Conheça as cores da peça.</span>');}
+  }
+  Promise.all([ready[initial], Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 1600))])]).then(() => {
+    stage.setAttribute('aria-busy', 'false');
+    window.finishJuOpening?.();
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
   if (total < 2) { prevButton.hidden = nextButton.hidden = true; }
@@ -64,7 +76,7 @@ function init() {
   // ── Pré-carregamento: anterior, atual e próximo ──────────────────────────────
   function load(index) {
     const img = images[mod(index, total)];
-    if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
+    if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; prepareImage(img); }
   }
   const preloadAround = index => { load(index - 1); load(index); load(index + 1); };
 

@@ -181,27 +181,46 @@
   .account-page *, .account-page *::before, .account-page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
-/* Progress screens: login, sign-up, e-mail verification and recovery */
-.account-card { position: relative; }
-.auth-progress { position: absolute; inset: 0; z-index: 4; display: grid; align-content: center; justify-items: center; padding: 30px clamp(22px, 6vw, 54px); border-radius: inherit; background: linear-gradient(150deg, #ffffff, #fff9fb); text-align: center; animation: progress-in 320ms ease-out 120ms both; }
-.auth-progress .eyebrow { margin: 0 0 10px; }
-.auth-progress h2.progress-title { margin: 0; font-size: clamp(27px, 3vw, 34px); letter-spacing: -1px; }
-.progress-art { width: 96px; height: 96px; margin-bottom: 16px; overflow: visible; }
-.heart-ghost { fill: none; stroke: var(--auth-rose); stroke-opacity: .25; stroke-width: 2.5; stroke-linejoin: round; }
-.heart-solid { fill: #f7dbe5; stroke: var(--auth-rose); stroke-width: 2.5; stroke-linejoin: round; }
-.heart-layers { fill: none; stroke: var(--auth-rose); stroke-opacity: .3; stroke-width: 1.4; stroke-linecap: round; }
-.progress-reveal { animation: progress-print 2.6s cubic-bezier(.45, .05, .3, 1) infinite; }
-.auth-progress.is-done .progress-reveal { animation: none; transform: none; }
-.progress-steps { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 12px; width: min(100%, 340px); text-align: left; }
-.progress-steps li { display: flex; align-items: center; gap: 12px; color: #9a8d9c; font-size: 14px; line-height: 1.35; transition: color .3s ease; }
-.progress-steps li::before { content: ''; flex: none; box-sizing: border-box; width: 22px; height: 22px; border: 2px solid var(--auth-line); border-radius: 50%; background-color: #fff; transition: border-color .3s ease, background-color .3s ease; }
-.progress-steps li[data-state="active"], .progress-steps li[data-state="done"] { color: #2a2030; }
-.progress-steps li[data-state="active"]::before { border-color: #ecc9d5; border-top-color: var(--auth-rose); animation: auth-spin 800ms linear infinite; }
-.progress-steps li[data-state="done"]::before { border-color: var(--auth-rose); background: var(--auth-rose) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.4 6.3l2.4 2.4 4.8-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
-.progress-note { margin: 22px 0 0; font-size: 12px; color: var(--auth-muted); }
-.auth-progress.is-done .progress-note { visibility: hidden; }
-.auth-progress .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-@keyframes progress-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes progress-print { 0% { transform: translateY(96px); } 68%, 100% { transform: translateY(0); } }
-@media (max-width: 600px) { .auth-progress { align-content: start; padding-top: 64px; } .progress-art { width: 80px; height: 80px; margin-bottom: 10px; } .progress-steps { margin-top: 18px; gap: 10px; } }
-@media (prefers-reduced-motion: reduce) { .auth-progress, .progress-reveal { animation: none; } .progress-steps li[data-state="active"]::before { animation: none; border-top-color: var(--auth-rose); } }
+/* Email-first account: a small illustration, one decision per screen. */
+.account-page .ju-scene { width:190px; margin-bottom:-16px; }
+.account-page .auth-note { font-size:25px; }
+.account-panel .account-lead { max-width:340px; }
+.email-stamp { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:6px 12px; font-size:13px; margin:-4px 0 14px; }
+.email-stamp > span { overflow-wrap:anywhere; color:var(--auth-muted); }
+.email-stamp .back-auth { margin:0; text-decoration:underline; text-underline-offset:3px; }
+.auth-alternative { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:48px; border:1px solid var(--auth-line); background:transparent; border-radius:14px; font:600 13px 'DM Sans',sans-serif; color:var(--auth-rose); margin-top:12px; }
+.auth-alternative:hover { background:#fbf0f3; }
+.auth-reassurance { display:flex; gap:12px; border-top:1px solid var(--auth-line); padding-top:18px; margin-top:22px; color:var(--auth-muted); font-size:12px; line-height:1.6; }
+.auth-reassurance > svg { flex-shrink:0; width:21px; height:21px; color:var(--auth-rose); }
+.auth-reassurance strong { color:#68516a; font-weight:600; }
+.auth-reassurance p { margin:4px 0 0; }
+.auth-demo-note { font-size:10px; line-height:1.5; color:var(--auth-muted); margin:13px 0 0; }
+.auth-optin { display:flex; align-items:flex-start; gap:10px; padding:9px 0; cursor:pointer; font-size:12px; line-height:1.55; }
+.auth-optin input { width:19px; height:19px; flex:0 0 19px; margin:2px 0; accent-color:var(--auth-rose); }
+.auth-optin small { display:block; color:var(--auth-muted); font-size:11px; }
+.profile-summary { padding:20px; margin:18px 0; border:1px solid var(--auth-line); background:#fff8fa; border-radius:18px; overflow-wrap:anywhere; }
+.profile-summary > span { display:flex; align-items:center; gap:7px; font-size:11px; color:#41755e; margin-bottom:14px; }
+.profile-summary > strong { font-size:16px; }
+.profile-summary p { font-size:13px; color:var(--auth-muted); }
+.profile-summary small { display:block; margin-top:9px; font-size:11px; color:var(--auth-muted); }
+.signout { float:right; }
+#demo-inbox:empty { display:none; }
+.account-card > #demo-inbox { margin:14px 0 8px; }
+.account-card > #demo-inbox .demo-code { padding:9px 13px; font-size:10px; }
+.account-card > #demo-inbox .demo-code strong { font-size:19px; margin:3px 0 0; }
+@media(min-width:821px) {
+  .account-page .ju-scene { width:180px; }
+  .account-page .auth-composition { margin-top:0; }
+  .account-page .account-card { padding:26px 34px 12px; }
+  .account-page .account-header { min-height:62px; }
+  .account-page .auth-leaves { opacity:.6; }
+  .account-page .auth-heart { top:6%; }
+}
+@media(max-width:600px) {
+  .account-page .ju-scene { width:155px; margin-bottom:-13px; }
+  .account-page .account-card { padding:24px 22px 12px; }
+  .account-page .account-panel h2 { font-size:32px; }
+  .account-page .account-lead { margin-bottom:18px; }
+  .auth-reassurance { margin-top:18px; padding-top:15px; }
+  .account-page .account-footer { margin-top:18px; }
+}

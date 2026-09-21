@@ -20,13 +20,22 @@ Métodos assíncronos atualmente usados pela interface:
 
 | Método | Entrada | Resultado esperado |
 |---|---|---|
-| register | name, email, password | desafio de confirmação |
+| begin | email | desafio de acesso (mesma resposta para conta nova ou existente) |
+| completeRegistration | name, password, marketingOptIn | usuário público, após código confirmado |
 | login | email, password | usuário público (name, email) |
 | forgot | email | desafio de recuperação, mensagem não reveladora |
 | resend | desafio atual | novo prazo de validade e reenvio |
-| verify | code | usuário confirmado OU permissão temporária de redefinição |
+| verify | code | usuário confirmado OU permissão temporária de cadastro/redefinição |
 | reset | password | confirmação de alteração |
 | signOut | sessão atual | sessão encerrada |
+| cancel | desafio atual | descarta desafio e permissões temporárias |
+
+O fluxo começa por e-mail e confirmação do código. Se a conta já existe, entra;
+se é nova, pede somente nome e senha. A opção de usar senha permanece na etapa de
+código. O consentimento promocional começa desmarcado. Não há cadastro de pessoa
+jurídica. Nome/e-mail da sessão demonstrativa preenchem a entrega; localização,
+endereço e telefone ainda não são persistidos. `register` existe apenas para
+compatibilidade com testes do adaptador anterior.
 
 O desafio da prévia inclui `email`, `purpose`, `expiresAt`, `resendAt` e
 `demoCode`. **Nunca retornar um código real para o navegador.** Na integração,
@@ -40,7 +49,8 @@ ao servidor, ser curta, de uso único e vinculada ao desafio verificado.
   ou navegar para outro documento descarta as credenciais de teste.
 - O hash simples do protótipo não é uma estratégia de armazenamento de senhas
   para produção.
-- `ju.account.preview.v1` em sessionStorage é apenas nome/e-mail e uma marca de
+- `ju.account.preview.v1` em sessionStorage é apenas nome/e-mail, preferência
+  promocional e uma marca de
   interface. Não prova identidade, não autoriza acesso e pode ser alterado pelo
   próprio navegador.
 - Códigos têm seis dígitos, validade de dez minutos, cinco tentativas e intervalo
