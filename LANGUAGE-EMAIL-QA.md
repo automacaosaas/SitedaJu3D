@@ -50,11 +50,12 @@ nem force push.
 ## Limites (declarados)
 
 - **Sem domínio verificado no Resend** só é possível enviar ao e-mail da própria
-  conta. Falta configurar a chave (e, para clientes, o domínio); ver
-  `RESEND-SETUP.md`. O envio de um e-mail de verdade não foi exercitado: os testes
-  usam um Resend simulado. Só o caminho HTTPS até `api.resend.com` foi provado, com
-  uma chave inválida de propósito (resposta `401 API key is invalid`, registrada
-  no terminal, 502 para o site e sem vazar a chave).
+  conta, e a chave está só em Preview (ver `RESEND-SETUP.md`). Envio real conferido em
+  21/09/2026 numa prévia da Vercel: cadastro, primeiro acesso e recuperação (em
+  português) chegaram a `powershop.bras@gmail.com` com status *Delivered* no Resend, e
+  o botão do e-mail abriu a prévia, preencheu o código e confirmou sozinho. Não foi
+  conferido como cada cliente de e-mail (Gmail, Outlook, Apple Mail) desenha o
+  layout, nem as versões em inglês e espanhol na caixa de entrada.
 - Não sei se o projeto da Vercel usa a raiz do repositório ou `dist/` como
   “Root Directory”. Se `/api/health` responder 404 na primeira prévia, mover `api/`
   para `dist/api/`.
