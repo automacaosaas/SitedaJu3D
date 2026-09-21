@@ -1,7 +1,8 @@
 # Fluidez, navegação e acesso por e-mail — 20/09/2026
 
-Base: main ca1e706, incorporada antes das alterações locais. Entrega disponível
-na prévia local; publicação não realizada nesta etapa.
+Base: main ca1e706, incorporada antes das alterações locais. Este trabalho ficou
+só no computador (a publicação foi interrompida) e foi integrado à `main` em
+21/09/2026 junto com idiomas e e-mail; ver “Integração” no fim.
 
 ## Comportamento entregue
 
@@ -50,12 +51,40 @@ As páginas e o catálogo usam as cópias WebP; não há novas dependências de 
 
 ## Limites
 
-Autenticação continua demonstrativa: contas e hashes em memória, códigos
-exibidos na própria prévia, sessão pública de interface na aba. Não há backend,
-entrega de e-mails, localização persistida ou histórico protegido por usuário.
+Autenticação continua demonstrativa: contas e hashes em memória e sessão pública
+de interface na aba. O código é enviado por e-mail quando o servidor está
+configurado (`RESEND-SETUP.md`); sem isso, é exibido na própria prévia. Não há
+banco de dados, localização persistida nem histórico protegido por usuário.
 Nome/e-mail da prévia preenchem o formulário de entrega; endereço permanece
 apenas no formulário. Ver AUTH-INTEGRATION.md antes de habilitar contas reais.
 
 Responsividade foi inspecionada no navegador integrado, não em Safari ou
 aparelhos Android/iPhone físicos. Não foi feita medição de Core Web Vitals
 em produção ou sob rede móvel real.
+
+## Integração com idiomas e e-mail (21/09/2026)
+
+O trabalho acima (commits `052319e`, `ff2571a`, `7b186f0`) foi mesclado à `main` `44c86c5`.
+Só cinco arquivos tiveram conflito; o resto entrou sem alterações.
+
+- **theme.css:** união do bloco do seletor de idioma e da faixa de sugestão com o CSS
+  de fluidez do Codex. Cinco linhas antigas do seletor (`<select>` posicionado de
+  forma absoluta) ficaram de fora porque quebrariam o cabeçalho.
+- **account.css / conta.html:** redesenho do Codex mantido; voltou o contêiner
+  `.account-tools` (onde mora o seletor de idioma) e o texto da caixa de prévia foi
+  corrigido, já que o e-mail agora pode ser real.
+- **account.js / auth-service.js:** fluxo “e-mail primeiro” do Codex com o envio real
+  por baixo: `begin` envia o e-mail de primeiro acesso, o botão do e-mail (`#verificar?c=&k=`)
+  preenche e confirma sozinho, e o serviço cai no código de teste quando não há servidor.
+  A tela de progresso própria foi descartada em favor da janela de carregamento do Codex.
+- **Correções feitas na integração:** a caixa “código de teste” e o texto da tela do
+  código dependiam de `AUTH_MODE` (sempre “demo”); agora dependem de o código ter sido
+  realmente enviado. O intervalo de 30 s por endereço só começa depois que o código foi
+  emitido (um envio que falha não bloqueia a nova tentativa). A escolha de novidades por
+  e-mail agora sobrevive à troca de página.
+- **Traduções:** 74 frases novas (fluxo de conta, carregamento, avisos, imagem indisponível).
+- **Verificação:** testes automatizados (`experience`, `header-scroll`, `account-commerce`,
+  `email-auth`, `i18n` e os demais); no Chrome real: 14 páginas × largura, cabeçalho
+  flutuante com o menu de idioma (320 a 430 px), animação do carrinho, fluxo de conta com
+  e-mail (simulado localmente) e sem servidor, link do botão, e a gravação de todos os textos
+  exibidos para conferir a tradução.

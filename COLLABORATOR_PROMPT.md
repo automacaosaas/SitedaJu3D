@@ -89,7 +89,13 @@ publicados ficam em `dist/`:
   usado no e-mail).
 - `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
   sugestão de idioma na primeira visita.
-- `account.js` e `auth-service.js`: conta, telas de progresso e verificação.
+- `account.js` e `auth-service.js`: conta em fluxo “e-mail primeiro” (e-mail → código →
+  nome/senha só para conta nova) e verificação por e-mail.
+- `loading-ui.js` (janela de carregamento por etapas e decodificação de imagens),
+  `page-entry.js` (abertura com logo da home), `header-scroll.js` (cabeçalho compacto que
+  some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
+  catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
+  em WebP ao lado dos PNG originais. Detalhes em `EXPERIENCE-QA.md`.
 - `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
@@ -258,6 +264,8 @@ node tests/plane-geometry.mjs
 node tests/i18n.mjs
 node tests/email-auth.mjs
 node tests/account-commerce.mjs
+node tests/experience.mjs
+node tests/header-scroll.mjs
 node --check dist/i18n.js
 node --check dist/account.js
 node --check dist/carousel.js

@@ -47,7 +47,12 @@ assert.equal(t('Prévia 3D ilustrativa de Aviãoscopia', 'es'), 'Vista previa 3D
 assert.equal(t('Olá, Maria.', 'en'), 'Hello, Maria.');
 assert.equal(t('Escolha sua cor', 'en'), 'Choose your color');
 // account flow copy added with the e-mail service
-for (const text of ['Enviamos um código de seis números para', 'Código enviado!', 'Cadastro confirmado!', 'Este link não é mais válido. Entre ou crie sua conta para receber um novo código.', 'Sem conexão. Verifique sua internet e tente de novo.', 'Muitas tentativas. Aguarde um instante e tente de novo.']) {
+for (const text of ['Enviamos um código de seis números para', 'Código enviado!', 'Cadastro confirmado!', 'Este link não é mais válido. Entre ou crie sua conta para receber um novo código.', 'Sem conexão. Verifique sua internet e tente de novo.', 'Muitas tentativas. Aguarde um instante e tente de novo.',
+  // storefront experience: loading dialog, e-mail-first sign-in, cart notice, image states
+  'Um instante de cuidado.', 'Tudo pronto para continuar.', 'Preparando seu acesso…', 'Conferindo seu código…', 'Confirmar e continuar', 'Usar minha senha',
+  'Vamos nos', 'conhecer?', 'Quero receber novidades e ofertas da Ju por e-mail.', 'Conta de teste criada!', 'Novidades por e-mail: você escolheu receber.',
+  'Novidades por e-mail: não autorizadas.', 'Peça adicionada. Indo para o carrinho…', 'Cores salvas. Voltando ao carrinho…', 'Imagem indisponível',
+  'Voltar à página anterior', 'Confirme seu e-mail com um novo código.', 'Enviamos um novo código para o seu e-mail.']) {
   assert.notEqual(t(text, 'en'), text, `missing EN: ${text}`);
   assert.notEqual(t(text, 'es'), text, `missing ES: ${text}`);
 }

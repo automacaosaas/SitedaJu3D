@@ -9,7 +9,8 @@ aprovação de pagamento local autoriza produção ou envio.
 
 ## Arquivos e contrato
 
-- `conta.html`, `account.css`, `account.js`: apresentação, formulários e estados.
+- `conta.html`, `account.css`, `account.js`: apresentação, formulários e estados. A
+  janela de carregamento por etapas é `loading-ui.js` (`createBusyDialog`).
 - `auth-service.js`: adaptador demonstrativo (contas em memória) que deverá ser
   substituído. `createMailer` conversa com o servidor.
 - `api/auth/send-code.js` e `api/auth/verify-code.js`: funções da Vercel que geram,
@@ -20,7 +21,7 @@ Métodos assíncronos atualmente usados pela interface:
 
 | Método | Entrada | Resultado esperado |
 |---|---|---|
-| begin | email | desafio de acesso (mesma resposta para conta nova ou existente) |
+| begin | email | desafio de acesso (mesma resposta para conta nova ou existente); o e-mail enviado é o de “Primeiro acesso” |
 | completeRegistration | name, password, marketingOptIn | usuário público, após código confirmado |
 | login | email, password | usuário público (name, email) |
 | forgot | email | desafio de recuperação, mensagem não reveladora |
@@ -80,6 +81,6 @@ ao servidor, ser curta, de uso único e vinculada ao desafio verificado.
    `EMAIL-TEMPLATE.md`.
 
 Não basta mudar `AUTH_MODE` para transformar esta demonstração em autenticação.
-O envio de e-mail foi implementado e testado com um Resend simulado; o envio real
-depende da configuração descrita em `RESEND-SETUP.md`. O banco de dados continua
-pendente.
+O envio real de e-mail foi conferido em uma prévia da Vercel (ver
+`LANGUAGE-EMAIL-QA.md`); em produção ele depende da configuração descrita em
+`RESEND-SETUP.md` e do domínio verificado. O banco de dados continua pendente.

@@ -1,6 +1,7 @@
 // E-mail verification: challenge, template, /api handlers (with a fake Resend) and the browser adapter.
 // Run: node tests/email-auth.mjs — no network, no keys.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -12,7 +13,7 @@ const {renderVerificationEmail, verificationUrl, COPY} = require('../api/_lib/em
 const {createLimiter, sameOrigin} = require('../api/_lib/http');
 const {config} = require('../api/_lib/mail');
 const sendCode = require('../api/auth/send-code'), verifyCode = require('../api/auth/verify-code'), health = require('../api/health'), preview = require('../api/email-preview');
-const {createMailer, createDemoAuth} = await import(pathToFileURL(path.join(root, 'dist/auth-service.js')).href);
+const {createMailer, createDemoAuth, acceptSession, getSession, signOut} = await import(pathToFileURL(path.join(root, 'dist/auth-service.js')).href);
 
 const SECRET = 'a-long-test-secret-that-has-more-than-32-chars';
 const SITE = 'https://site.test';
@@ -298,7 +299,8 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
   assert.equal((await auth.login({email: 'maria@b.co', password: 'senha-forte-1'})).name, 'Maria', 'the password chosen at sign-up still works after verification');
   await assert.rejects(auth.verify({code: store.code}), /Solicite um novo código/, 'single use');
 
-  // recovery, and resend through the service once the 30-second cooldown has passed
+  // recovery, and resend through the service once the 30-second cooldown (per address) has passed
+  t += 31_000;
   await auth.forgot({email: 'maria@b.co'});
   t += 5000; await assert.rejects(auth.resend(), /Aguarde 30 segundos/);
   t += 31_000; await auth.resend();
@@ -331,4 +333,73 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
   assert.equal((await liar.verify({code: '123456'})).user.email, 'real@b.co');
 }
 
-console.log('PASS: challenge signing/expiry/tampering, e-mail template (3 languages x 3 purposes, escaping), send/verify handlers with a fake Resend (origin, validation, cooldown and volume limits, no key leaks, 502/503), health/preview, browser adapter and account flow including the e-mail link.');
+// ── the e-mail-first account flow: begin → code → name and password only for a new address ──────────
+{
+  const sent = [];
+  const mailer = {
+    async send(payload) { const {code, token, payload: p} = issue({secret: SECRET, email: payload.email, name: payload.name, purpose: payload.purpose}); sent.push({...payload, code}); return {token, expiresAt: p.x, resendAt: p.s + RESEND_AFTER_MS}; },
+    async verify({token, code}) { const r = verify({secret: SECRET, token, code}); if (!r.ok) throw Error('O código não confere. Verifique os seis números.'); return {email: r.email, name: r.name, purpose: r.purpose}; },
+    peek: createMailer().peek
+  };
+  let t = 20_000_000;
+  const auth = createDemoAuth({mailer, now: () => t});
+  const started = await auth.begin({email: 'Nova@B.co'});
+  assert.equal(started.purpose, 'access');
+  assert(!('demoCode' in started), 'a real e-mailed code is never exposed to the page');
+  assert.equal(sent.at(-1).purpose, 'access', 'the "primeiro acesso" e-mail is the one sent');
+  assert.deepEqual(await auth.verify({code: sent.at(-1).code}), {registrationAllowed: true}, 'a new address goes on to name and password');
+  await assert.rejects(auth.completeRegistration({name: 'Nova', password: 'curta'}), /8 a 128/);
+  const user = await auth.completeRegistration({name: 'Nova', password: 'senha-da-nova-1', marketingOptIn: true});
+  assert.deepEqual(Object.keys(user), ['name', 'email', 'demo'], 'the public user keeps its shape');
+  assert.equal(user.email, 'nova@b.co'); assert.equal(user.marketingOptIn, true);
+  // an address that already has an account is signed in by the code alone
+  t += 31_000;
+  await auth.begin({email: 'nova@b.co'});
+  assert.equal((await auth.verify({code: sent.at(-1).code})).user.email, 'nova@b.co');
+  await assert.rejects(auth.completeRegistration({name: 'Outra', password: 'senha-da-outra-1'}), /Confirme seu e-mail/, 'no registration without a fresh verified code');
+  // the e-mail link opens the same flow in a page that knows nothing about the request
+  const fresh = issue({secret: SECRET, email: 'link@b.co', purpose: 'access'});
+  const page = createDemoAuth({mailer, now: () => t});
+  assert.equal(page.adopt(fresh.token).purpose, 'access');
+  assert.deepEqual(await page.verify({code: fresh.code}), {registrationAllowed: true});
+}
+
+// the 30-second interval only starts once a code was really issued
+{
+  let failing = true, calls = 0;
+  const mailer = {async send({email, purpose}) { calls++; if (failing) throw Error('Não foi possível enviar o e-mail agora. Tente novamente em instantes.'); const {token, payload: p} = issue({secret: SECRET, email, purpose}); return {token, expiresAt: p.x, resendAt: p.s + RESEND_AFTER_MS}; }, verify: async () => ({}), peek: () => null};
+  let t = 30_000_000; const auth = createDemoAuth({mailer, now: () => t});
+  await assert.rejects(auth.begin({email: 'x@b.co'}), /Não foi possível enviar/);
+  failing = false;
+  assert.equal((await auth.begin({email: 'x@b.co'})).email, 'x@b.co', 'no penalty after a failed send');
+  assert.equal(calls, 2);
+  t += 5000; await assert.rejects(auth.begin({email: 'x@b.co'}), /Aguarde 30 segundos/, 'once sent, the interval applies');
+}
+
+// the newsletter choice survives page changes inside the tab (sessionStorage) without changing the public user shape
+{
+  const store = new Map();
+  globalThis.sessionStorage = {getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key)};
+  try {
+    await acceptSession({name: 'Ana', email: 'ana@b.co', marketingOptIn: true});
+    assert.equal(JSON.parse(store.get('ju.account.preview.v1')).marketingOptIn, true, 'stored with the session');
+    assert.equal(getSession().marketingOptIn, true, 'read back after a page change');
+    assert.deepEqual(Object.keys(getSession()), ['name', 'email', 'demo']);
+    await signOut();
+    assert.equal(store.size, 0);
+  } finally { delete globalThis.sessionStorage; }
+}
+
+// ── account page guards (source level; the browser flows are checked by hand in HERO/EXPERIENCE QA) ──────────
+{
+  const account = fs.readFileSync(path.join(root, 'dist/account.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert(/challenge\?\.demoCode && screen === 'verify'/.test(account), 'the test-code box exists only when the code was not e-mailed');
+  assert(/challenge\?\.demoCode \? 'Digite o código de teste/.test(account) && /Enviamos um código de seis números para o seu e-mail/.test(account), 'the verify screen tells the truth about where the code went');
+  assert(/auth\.adopt\(token\)/.test(account) && /history\.replaceState\(null, '', location\.pathname \+ location\.search \+ '#verificar'\)/.test(account), 'the e-mail link is adopted and its secrets are removed from the address');
+  assert(/mountLanguagePicker\(document\.querySelector\('\.account-tools'\)\)/.test(account), 'language picker in the account header');
+  assert(/createBusyDialog/.test(account) && !/openProgress/.test(account), 'one loading UI: the shared busy dialog');
+  const service = fs.readFileSync(path.join(root, 'dist/auth-service.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert(/const sent = mailer \? await mailer\.send/.test(service) && !/authorizeIssue\(email\);\n    sentAtByEmail\.set/.test(service), 'the per-address interval starts only after a code was issued');
+}
+
+console.log('PASS: challenge signing/expiry/tampering, e-mail template (3 languages x 3 purposes, escaping), send/verify handlers with a fake Resend (origin, validation, cooldown and volume limits, no key leaks, 502/503), health/preview, browser adapter and account flow including the e-mail link, the e-mail-first sign-in (begin/verify/completeRegistration), the failed-send interval and the stored newsletter choice.');
