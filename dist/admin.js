@@ -3,14 +3,46 @@ import {readOrders, setStatus, listByStatus, dailyTotals, ordersForDay, summary,
 import {PRODUCTS, color} from './products.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
+import {icon} from './icons.js';
 
 const content = document.querySelector('#admin-content'), tools = document.querySelector('#admin-tools'), live = document.querySelector('#admin-live');
 const busyDialog = createBusyDialog();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const announce = message => { live.textContent = message; };
 
+// A real confirmation step before recusar: one accidental click can never reject a paid order.
+const declineDialog = document.createElement('dialog');
+declineDialog.className = 'admin-confirm';
+declineDialog.setAttribute('aria-labelledby', 'decline-title');
+declineDialog.innerHTML = `<form method="dialog">
+  <p class="admin-confirm-icon" aria-hidden="true">⚠️</p>
+  <h2 id="decline-title">Recusar este pedido?</h2>
+  <p class="admin-confirm-ref"></p>
+  <p class="admin-confirm-warn">O pedido vai para a aba Recusados. Se for engano, dá para reabrir depois.</p>
+  <label class="admin-field"><span>Motivo (opcional, só a Ju vê)</span><textarea name="reason" maxlength="300" placeholder="Ex.: sem estoque da cor escolhida"></textarea></label>
+  <div class="admin-confirm-actions"><button type="button" data-action="cancel-decline">Cancelar</button><button type="button" class="btn-decline" data-action="confirm-decline">Sim, recusar pedido</button></div>
+</form>`;
+document.body.append(declineDialog);
+function openDeclineDialog(order) {
+  declineDialog.dataset.orderId = order.id;
+  declineDialog.querySelector('.admin-confirm-ref').textContent = `${order.reference} · ${money(order.totalCents)}`;
+  declineDialog.querySelector('textarea').value = '';
+  declineDialog.showModal();
+  declineDialog.querySelector('textarea').focus();
+}
+declineDialog.addEventListener('click', event => {
+  if (event.target.closest('[data-action="cancel-decline"]')) declineDialog.close();
+  if (event.target.closest('[data-action="confirm-decline"]')) {
+    const reason = declineDialog.querySelector('textarea').value;
+    setStatus(declineDialog.dataset.orderId, 'recusado', {reason});
+    declineDialog.close();
+    announce('Pedido recusado.');
+    render(false);
+  }
+});
+
 let screen = 'loading', session = null, busy = false, feedback = '';
-let tab = 'pendente', decliningId = null;
+let tab = 'pendente';
 const now = new Date();
 let calendar = {year: now.getFullYear(), month: now.getMonth()}, selectedDay = dayKey(now.toISOString());
 
@@ -32,15 +64,18 @@ function orderCard(o) {
   const phoneDigits = String(o.customer.phone || '').replace(/\D/g, '');
   const whatsapp = /^\d{10,13}$/.test(phoneDigits) ? `<a href="https://wa.me/55${phoneDigits}" target="_blank" rel="noopener">${esc(formatPhone(phoneDigits))}</a>` : esc(o.customer.phone || '—');
   const cep = o.address.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+  const payLabel = o.method === 'pix' ? 'Pago via Pix' : 'Pago no cartão';
+  // The payment method rides a colored corner badge (icon only) instead of a text tag — quicker to scan, and its
+  // color always matches the order's own status (yellow/green/red), never an extra color to learn.
+  const payBadge = `<span class="admin-pay-badge status-${o.status}" title="${esc(payLabel)}">${icon(o.method === 'pix' ? 'pix' : 'card')}<span class="sr-only">${esc(payLabel)}</span></span>`;
   const actions = o.status === 'pendente'
-    ? `<button type="button" class="primary" data-action="complete" data-id="${o.id}">Marcar como concluído</button><button type="button" class="danger" data-action="decline" data-id="${o.id}">Recusar pedido</button>`
-    : `<span class="admin-decision-note">${o.status === 'concluido' ? 'Concluído' : 'Recusado'} em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span><button type="button" data-action="reopen" data-id="${o.id}">Reabrir</button>`;
-  const declineBox = decliningId === o.id ? `<div class="admin-decline-box"><label class="admin-field"><span>Motivo (opcional, só a Ju vê)</span><textarea name="reason" maxlength="300" placeholder="Ex.: sem estoque da cor escolhida"></textarea></label><div class="admin-decline-actions"><button type="button" data-action="cancel-decline">Cancelar</button><button type="button" class="danger" data-action="confirm-decline" data-id="${o.id}">Confirmar recusa</button></div></div>` : '';
-  return `<article class="admin-order" data-order="${o.id}">
+    ? `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="complete" data-id="${o.id}">Marcar como concluído</button><button type="button" class="btn-decline" data-action="decline" data-id="${o.id}">Recusar pedido</button></div>`
+    : `<div class="admin-order-actions"><span class="admin-decision-note">${o.status === 'concluido' ? 'Concluído' : 'Recusado'} em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span><button type="button" class="btn-reopen" data-action="reopen" data-id="${o.id}">Reabrir</button></div>`;
+  return `<article class="admin-order status-${o.status}" data-order="${o.id}">
+    ${payBadge}
     <div class="admin-order-head">
       <span class="admin-order-ref">${esc(o.reference)}</span>
       <span class="admin-tag source-${o.source}">${esc(SOURCE_LABEL[o.source] || o.source)}</span>
-      <span class="admin-tag">${o.method === 'pix' ? 'Pix' : 'Cartão'}</span>
       <span class="admin-order-when">${esc(formatWhen(o.paidAt))}</span>
     </div>
     <ul class="admin-order-items">${o.items.map(itemLine).join('')}</ul>
@@ -49,7 +84,6 @@ function orderCard(o) {
       <div><strong>Entrega</strong>${esc(o.address.street)}, ${esc(o.address.number)}${o.address.complement ? ' — ' + esc(o.address.complement) : ''}<br>${esc(o.address.district)} · ${esc(o.address.city)}/${esc(o.address.state)} · CEP ${esc(cep)}</div>
     </div>
     ${o.notes ? `<p class="admin-order-notes">${esc(o.notes)}</p>` : ''}
-    ${declineBox}
     <div class="admin-order-foot"><span class="admin-order-total">${esc(money(o.totalCents))}</span>${actions}</div>
   </article>`;
 }
@@ -167,7 +201,7 @@ content.addEventListener('submit', event => {
 
 content.addEventListener('click', event => {
   const tabBtn = event.target.closest('[data-tab]');
-  if (tabBtn) { tab = tabBtn.dataset.tab; decliningId = null; render(false); return; }
+  if (tabBtn) { tab = tabBtn.dataset.tab; render(false); return; }
 
   const calBtn = event.target.closest('[data-cal]');
   if (calBtn) { let {year, month} = calendar; month += calBtn.dataset.cal === 'next' ? 1 : -1; if (month < 0) { month = 11; year--; } if (month > 11) { month = 0; year++; } calendar = {year, month}; render(false); return; }
@@ -180,9 +214,7 @@ content.addEventListener('click', event => {
     const id = action.dataset.id;
     if (action.dataset.action === 'complete') { setStatus(id, 'concluido'); announce('Pedido marcado como concluído.'); render(false); }
     if (action.dataset.action === 'reopen') { setStatus(id, 'pendente'); announce('Pedido reaberto como pendente.'); render(false); }
-    if (action.dataset.action === 'decline') { decliningId = id; render(false); content.querySelector('.admin-decline-box textarea')?.focus(); }
-    if (action.dataset.action === 'cancel-decline') { decliningId = null; render(false); }
-    if (action.dataset.action === 'confirm-decline') { const reason = content.querySelector(`[data-order="${id}"] textarea`)?.value || ''; setStatus(id, 'recusado', {reason}); decliningId = null; announce('Pedido recusado.'); render(false); }
+    if (action.dataset.action === 'decline') { const order = readOrders().find(o => o.id === id); if (order) openDeclineDialog(order); }
   }
 });
 
