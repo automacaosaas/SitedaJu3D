@@ -11,15 +11,15 @@ function json(res, status, body, headers = {}) {
   res.end(JSON.stringify(body));
 }
 
-async function readJson(req) {
+async function readJson(req, limit = MAX_BODY) {
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
   let text = typeof req.body === 'string' ? req.body : '';
   if (!text) {
     const chunks = []; let size = 0;
-    for await (const chunk of req) { size += chunk.length; if (size > MAX_BODY) throw Object.assign(new Error('body too large'), {status: 413}); chunks.push(chunk); }
+    for await (const chunk of req) { size += chunk.length; if (size > limit) throw Object.assign(new Error('body too large'), {status: 413}); chunks.push(chunk); }
     text = Buffer.concat(chunks).toString('utf8');
   }
-  if (text.length > MAX_BODY) throw Object.assign(new Error('body too large'), {status: 413});
+  if (text.length > limit) throw Object.assign(new Error('body too large'), {status: 413});
   try { const value = JSON.parse(text || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
   catch { throw Object.assign(new Error('invalid json'), {status: 400}); }
 }

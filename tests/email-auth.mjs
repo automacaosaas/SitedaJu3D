@@ -233,7 +233,7 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
   assert.equal((await call(checker, {body: proof})).statusCode, 200);
   assert.equal((await call(verifyCode.create({env: {...onlyKey, RESEND_API_KEY: 're_other_key_456'}}), {body: proof})).statusCode, 400, 'another key cannot verify it');
   const healthRes = makeRes(); health.create({env: onlyKey})({}, healthRes);
-  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test'});
+  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false});
 }
 
 // limiter
@@ -247,7 +247,7 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
 // health and preview never expose values
 {
   const res = makeRes(); health.create({env: ENV})({}, res);
-  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom'});
+  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
   const off = makeRes(); health.create({env: {}})({}, off);
   assert.equal(off.json().mail, 'off');

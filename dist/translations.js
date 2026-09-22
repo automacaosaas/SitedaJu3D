@@ -511,4 +511,61 @@ use Personalize o seu para escolher as cores.|use Customize yours to choose the 
 Falar com a Ju no WhatsApp ↗|Talk to Ju on WhatsApp ↗|Hablar con Ju por WhatsApp ↗
 Informe um WhatsApp com DDD, por exemplo (11) 99999-9999.|Enter a WhatsApp number with area code, for example (11) 99999-9999.|Introduce un WhatsApp con código de área, por ejemplo (11) 99999-9999.
 Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.|Demo approved, but the cart could not be updated in this browser.|Demostración aprobada, pero no se pudo actualizar el carrito en este navegador.
+AMBIENTE DE TESTE|TEST ENVIRONMENT|ENTORNO DE PRUEBA
+Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado|Mercado Pago test payments · no real money is charged|Pagos de prueba de Mercado Pago · no se cobra ningún valor real
+Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.|In the next step you choose between Pix, credit card or debit card. Payment is handled securely by Mercado Pago.|En el siguiente paso eliges entre Pix, tarjeta de crédito o tarjeta de débito. El pago se realiza de forma segura con Mercado Pago.
+Ambiente de teste: use dados de teste. Eles servem só para criar o pedido de teste; nenhum valor real é cobrado.|Test environment: use test details. They are only used to create the test order; no real money is charged.|Entorno de prueba: usa datos de prueba. Solo sirven para crear el pedido de prueba; no se cobra ningún valor real.
+Usamos estes dados só para entregar o seu pedido.|We only use these details to deliver your order.|Usamos estos datos solo para entregar tu pedido.
+Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.|Test payment approved. No real money was charged and no piece will be made.|Pago de prueba aprobado. No se cobró ningún valor real y no se producirá ninguna pieza.
+Pagamento confirmado. A Ju já recebeu o seu pedido.|Payment confirmed. Ju has received your order.|Pago confirmado. Ju ya recibió tu pedido.
+A Ju recebeu todos os detalhes do seu pedido para preparar suas peças.|Ju received every detail of your order to prepare your pieces.|Ju recibió todos los detalles de tu pedido para preparar tus piezas.
+Como testar neste ambiente|How to test in this environment|Cómo probar en este entorno
+Cartão de teste (Mastercard)|Test card (Mastercard)|Tarjeta de prueba (Mastercard)
+Validade|Expiry|Vencimiento
+Código de segurança|Security code|Código de seguridad
+Nome do titular (aprova o pagamento)|Cardholder name (approves the payment)|Nombre del titular (aprueba el pago)
+CPF|CPF|CPF
+No campo de e-mail do pagamento, use um endereço diferente do da sua conta do Mercado Pago. O Pix de teste fica sempre pendente.|In the payment e-mail field, use an address different from your Mercado Pago account's. The test Pix always stays pending.|En el campo de correo del pago, usa una dirección distinta a la de tu cuenta de Mercado Pago. El Pix de prueba siempre queda pendiente.
+Pix de teste do Mercado Pago. Nenhum valor real será cobrado.|Mercado Pago test Pix. No real money will be charged.|Pix de prueba de Mercado Pago. No se cobrará ningún valor real.
+Pague com o Pix e o pedido é confirmado na hora.|Pay with Pix and your order is confirmed right away.|Paga con Pix y el pedido se confirma al instante.
+No celular, copie o código. Em outro dispositivo, use o QR Code.|On your phone, copy the code. On another device, use the QR Code.|En el celular, copia el código. En otro dispositivo, usa el código QR.
+No ambiente de teste o Pix fica pendente: não existe pagamento real para confirmar. Para ver um pedido aprovado, use um cartão de teste.|In the test environment the Pix stays pending: there is no real payment to confirm. To see an approved order, use a test card.|En el entorno de prueba el Pix queda pendiente: no hay un pago real que confirmar. Para ver un pedido aprobado, usa una tarjeta de prueba.
+Gerar novo código Pix|Generate new Pix code|Generar nuevo código Pix
+Já paguei · verificar agora|I have paid · check now|Ya pagué · verificar ahora
+QR Code do Pix|Pix QR Code|Código QR de Pix
+Pagamento por Pix|Payment by Pix|Pago con Pix
+Estamos|We are|Estamos
+confirmando.|confirming.|confirmando.
+O pagamento está em análise. Costuma levar poucos minutos.|Your payment is under review. It usually takes a few minutes.|El pago está en revisión. Suele tardar pocos minutos.
+Em análise|Under review|En revisión
+Só mais um instante.|Just one more moment.|Solo un momento más.
+Você não precisa fazer nada. Quando o pagamento for confirmado, esta página avança sozinha.|You do not need to do anything. When the payment is confirmed, this page moves on by itself.|No necesitas hacer nada. Cuando se confirme el pago, esta página avanza sola.
+Verificar agora|Check now|Verificar ahora
+Pagamento em análise|Payment under review|Pago en revisión
+PAGAMENTO|PAYMENT|PAGO
+Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.|Mercado Pago test environment. No real money will be charged.|Entorno de prueba de Mercado Pago. No se cobrará ningún valor real.
+Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.|Choose how you would like to pay. Mercado Pago handles everything securely.|Elige cómo prefieres pagar. Mercado Pago procesa todo de forma segura.
+Carregando as formas de pagamento…|Loading payment options…|Cargando las formas de pago…
+Confira os dados de entrega e tente novamente.|Check your delivery details and try again.|Revisa los datos de entrega e inténtalo de nuevo.
+Não foi possível conferir os itens do pedido. Volte ao carrinho e tente novamente.|We could not check the items in your order. Go back to the cart and try again.|No pudimos verificar los artículos del pedido. Vuelve al carrito e inténtalo de nuevo.
+Confira os dados do cartão e tente novamente.|Check your card details and try again.|Revisa los datos de la tarjeta e inténtalo de nuevo.
+Esta forma de pagamento não está disponível. Escolha Pix ou cartão.|This payment method is not available. Choose Pix or card.|Esta forma de pago no está disponible. Elige Pix o tarjeta.
+Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.|Too many attempts in a row. Wait a few minutes and try again.|Demasiados intentos seguidos. Espera unos minutos e inténtalo de nuevo.
+O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.|The payment was not accepted. Check the details or try another payment method.|No se aceptó el pago. Revisa los datos o prueba otra forma de pago.
+Os pagamentos ainda não estão disponíveis. Tente novamente mais tarde.|Payments are not available yet. Please try again later.|Los pagos aún no están disponibles. Inténtalo de nuevo más tarde.
+Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.|We could not confirm the payment right now. If you are sure you were not charged, try again.|No pudimos confirmar el pago ahora. Si estás seguro de que no hubo cobro, inténtalo de nuevo.
+O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.|The payment was not approved. Check your card details or choose another payment method.|El pago no fue aprobado. Revisa los datos de la tarjeta o elige otra forma de pago.
+Não foi possível carregar o pagamento. Recarregue a página e tente de novo.|Payment could not be loaded. Reload the page and try again.|No se pudo cargar el pago. Recarga la página e inténtalo de nuevo.
+Não foi possível carregar as formas de pagamento. Verifique sua conexão e tente de novo.|Payment options could not be loaded. Check your connection and try again.|No se pudieron cargar las formas de pago. Revisa tu conexión e inténtalo de nuevo.
+Tentar novamente|Try again|Intentar de nuevo
+Pix gerado. Pague com o código ou o QR Code.|Pix created. Pay with the code or the QR Code.|Pix generado. Paga con el código o el código QR.
+Pagamento em análise.|Payment under review.|Pago en revisión.
+Pagamento aprovado, mas não foi possível atualizar o carrinho neste navegador.|Payment approved, but the cart could not be updated in this browser.|Pago aprobado, pero no se pudo actualizar el carrito en este navegador.
+Pagamento de teste aprovado. Nenhum valor real foi cobrado.|Test payment approved. No real money was charged.|Pago de prueba aprobado. No se cobró ningún valor real.
+Pagamento confirmado.|Payment confirmed.|Pago confirmado.
+O Pix expirou. Gere um novo código para continuar.|The Pix expired. Generate a new code to continue.|El Pix caducó. Genera un nuevo código para continuar.
+Não foi possível verificar agora. Tente de novo em instantes.|We could not check right now. Try again in a moment.|No pudimos verificar ahora. Inténtalo de nuevo en unos instantes.
+Verificando…|Checking…|Verificando…
+Código Pix copiado.|Pix code copied.|Código Pix copiado.
+Selecione e copie o código Pix.|Select and copy the Pix code.|Selecciona y copia el código Pix.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
