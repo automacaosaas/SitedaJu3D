@@ -61,6 +61,9 @@ async function main() {
   }
   if (fakeMp) { env.MP_ACCESS_TOKEN = 'TEST-fake-access-token-local'; env.MP_PUBLIC_KEY = 'TEST-fake-public-key-local'; env.MP_WEBHOOK_SECRET = 'fake-webhook-secret-local'; env.ORDER_NOTIFY_EMAIL = env.ORDER_NOTIFY_EMAIL || 'ju@exemplo.test'; }
   env.AUTH_SECRET = env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
+  // The admin panel (dist/admin.html) always works locally, with a fixed local-only login unless you set your own.
+  env.ADMIN_EMAIL = env.ADMIN_EMAIL || 'ju@exemplo.test';
+  env.ADMIN_PASSWORD = env.ADMIN_PASSWORD || '12345678';
   if (!env.RESEND_API_KEY && !env.MAIL_TRANSPORT) env.MAIL_TRANSPORT = 'console';
 
   const outboxDir = path.join(os.tmpdir(), 'ju-mail-outbox');
@@ -94,7 +97,9 @@ async function main() {
     '/api/payments/config': require('../api/payments/config').create({env}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed}),
-    '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox})
+    '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
+    '/api/admin/login': require('../api/admin/login').create({env}),
+    '/api/admin/session': require('../api/admin/session').create({env})
   };
   if (fakeMp) {
     // When the simulated customer "pays" a Pix, deliver a properly signed notification to our own webhook, like Mercado Pago would.
@@ -129,6 +134,7 @@ async function main() {
   }).listen(PORT, () => {
     const real = env.MAIL_TRANSPORT !== 'console';
     console.log(`Pagamentos: ${fakeMp ? `SIMULADOS (Mercado Pago e Brick de mentira). Para "pagar" um Pix aberto: http://localhost:${PORT}/__fake-mp/pay?id=<código do pedido>` : env.MP_ACCESS_TOKEN ? 'Mercado Pago de TESTE (credenciais informadas)' : 'desligados (o checkout usa a demonstração)'}`);
+    console.log(`Painel da Ju: http://localhost:${PORT}/admin.html  (e-mail ${env.ADMIN_EMAIL} · senha ${env.ADMIN_PASSWORD})`);
     console.log(`\nSite + API em http://localhost:${PORT}  (e-mails: ${real ? 'enviados de verdade pelo Resend' : 'gravados em ' + outboxDir})`);
     if (real) console.log(`Abra http://localhost:${PORT}/conta.html, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
   });

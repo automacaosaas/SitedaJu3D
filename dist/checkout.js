@@ -4,6 +4,7 @@ import {COMMERCE, money} from './commerce-config.js';
 import {readCart, writeCart, totals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, selectedItems, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 import {loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {recordOrder} from './admin-store.js';
 
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession} from './auth-service.js';
@@ -125,10 +126,24 @@ function submitFromBrick(data) {
     }
   });
 }
+// Ju's admin panel and the customer's "my orders" list are separate stores on purpose: one is what Ju needs to
+// produce and ship, the other is what the customer sees about their own account. Same underlying order, two audiences.
+function saveAdminOrder(o, source) {
+  try {
+    recordOrder({
+      reference: o.id, source, method: o.method,
+      items: o.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitPrice, selection: i.selection})),
+      totalCents: o.amounts.total, customer: {name: draft.name, email: draft.email, phone: draft.phone},
+      address: {cep: draft.cep, street: draft.street, number: draft.number, district: draft.district, city: draft.city, state: draft.state, complement: draft.complement || ''},
+      notes: draft.notes || ''
+    });
+  } catch { /* the admin queue is a bonus view; a paid order is never lost over it */ }
+}
 function finishPaid() {
   try { if (direct) sessionStorage.removeItem(DIRECT_KEY); else persist(removePurchased(readCart(), order.items)); refreshHeader(); }
   catch { announce('Pagamento aprovado, mas não foi possível atualizar o carrinho neste navegador.'); }
   if (order.mode !== 'live') saveDemoOrder(order);
+  saveAdminOrder(order, order.mode);
   stage = 'confirmation'; render(); announce(order.mode === 'test' ? 'Pagamento de teste aprovado. Nenhum valor real foi cobrado.' : 'Pagamento confirmado.');
 }
 function applyState(state) {
@@ -239,6 +254,7 @@ main.addEventListener('click',async e=>{
       if(order!==pendingOrder){busy=false;return;}
       order=approveDemo(order);
       saveDemoOrder(order);
+      saveAdminOrder(order,'demo');
       try { if(direct){sessionStorage.removeItem(DIRECT_KEY);}else{persist(removePurchased(readCart(),order.items));} refreshHeader(); }
       catch {announce('Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.');}
       busy=false;stage='confirmation';render();announce('Pagamento confirmado na demonstração. Nenhum valor foi cobrado.');

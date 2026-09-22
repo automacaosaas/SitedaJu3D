@@ -68,7 +68,8 @@ const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal
 const entities = {'&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&copy;': '©', '&larr;': '←', '&rarr;': '→', '&middot;': '·', '&hearts;': '♥'};
 const decode = text => text.replace(/&#?\w+;/g, entity => entities[entity] ?? entity);
 const missing = [];
-for (const file of fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWith('.html') && name !== 'email-preview.html')) {
+// admin.html is Ju's own internal tool (never shown to a shopper) and is deliberately Portuguese-only.
+for (const file of fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWith('.html') && !['email-preview.html', 'admin.html'].includes(name))) {
   const html = read('dist/' + file).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '');
   const strings = [...html.matchAll(/(?:aria-label|alt|placeholder|title)="([^"]+)"/g)].map(match => match[1]);
   strings.push(...html.replace(/<[^>]+>/g, '\n').split('\n'));
