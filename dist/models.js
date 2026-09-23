@@ -35,7 +35,7 @@ export function createModel(key,colors){
     }
     for(const [y,z,angle,size] of [[1.96,-.12,0,.26],[1.72,-.42,.6,.25],[1.34,-.53,1,.23]]){const m=mesh(new T.ConeGeometry(size*.5,size*1.7,24,1), 'details',[0,y,z]);m.rotation.x=-angle;}
     curve([[-.4,1.11,.32],[-.23,1.025,.386],[0,.99,.402],[.23,1.025,.386],[.4,1.11,.32]],'body',.025);
-    for(const x of [-.26,-.09,.09,.26])patch([[x-.07,1.025],[x,.9],[x+.07,1.025]],'body',.38);
+    for(const x of [-.26,-.09,.09,.26])patch([[x-.07,1.025],[x,.9],[x+.07,1.025]],'white',.38);
   }else{
     // A flat, wide stem passage continues through the underside of the frame.
     const s=new T.Shape();s.moveTo(-.21,-1.84);s.lineTo(-.43,-1.84);s.quadraticCurveTo(-.68,-1.84,-.68,-1.57);s.lineTo(-.68,.95);s.bezierCurveTo(-.68,2.2,.68,2.2,.68,.95);s.lineTo(.68,-1.57);s.quadraticCurveTo(.68,-1.84,.43,-1.84);s.lineTo(.21,-1.84);s.lineTo(.21,-1.6);s.lineTo(.36,-1.6);s.quadraticCurveTo(.44,-1.6,.44,-1.48);s.lineTo(.44,.91);s.quadraticCurveTo(.44,1.08,.27,1.08);s.lineTo(-.27,1.08);s.quadraticCurveTo(-.44,1.08,-.44,.91);s.lineTo(-.44,-1.48);s.quadraticCurveTo(-.44,-1.6,-.36,-1.6);s.lineTo(-.21,-1.6);s.closePath();solid(s,'body',.34,-.17,.022);

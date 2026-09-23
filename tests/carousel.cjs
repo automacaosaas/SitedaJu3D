@@ -111,7 +111,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   }
   assert.deepEqual(originalColors('aviaoscopia').map(c => c.id), ['blue', 'red', 'yellow']);
   assert.deepEqual(originalColors('borboletoscopio').map(c => c.id), ['mint', 'yellow']);
-  assert.deepEqual(originalColors('dinossauroscopio').map(c => c.id), ['sky', 'mint']);
+  assert.deepEqual(originalColors('dinossauroscopio').map(c => c.id), ['moss', 'cream']);
   assert.deepEqual(Object.keys(showcase('produto-novo').theme), Object.keys(DEFAULT_SHOWCASE.theme), 'produto sem entrada usa o tema padrão');
 
   // ── regras do pedido, direto no código ──────────────────────────────────────────

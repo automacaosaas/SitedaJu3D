@@ -2,6 +2,10 @@
 export const translations = Object.fromEntries(`
 Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.|To verify your account in this preview, create an account or request a new code. Real email delivery is not connected yet.|Para verificar tu cuenta en esta vista previa, crea una cuenta o solicita un nuevo código. El envío real de correo aún no está conectado.
 ← Voltar à vitrine|← Back to showcase|← Volver a la vitrina
+Voltar à vitrine|Back to showcase|Volver a la vitrina
+Retinoscópio|Retinoscope|Retinoscopio
+Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
+Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
 Categorias de produtos|Product categories|Categorías de productos
@@ -84,7 +88,7 @@ Meios de pagamento|Payment methods|Medios de pago
 Coleção de três produtos|Three-product collection|Colección de tres productos
 Nossos três produtos|Our three products|Nuestros tres productos
 Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca|Mint-green Borboletoscópio with yellow details on a white pedestal|Borboletoscópio verde menta con detalles amarillos sobre un pedestal blanco
-Dinossauroscópio azul com espinhos verde-menta sobre uma pilastra branca|Blue Dinossauroscópio with mint-green spikes on a white pedestal|Dinossauroscópio azul con cresta verde menta sobre un pedestal blanco
+Dinossauroscópio verde-musgo com espinhos amarelo-claros sobre uma pilastra branca|Moss-green Dinossauroscópio with light-yellow spikes on a white pedestal|Dinossauroscópio verde musgo con cresta amarillo claro sobre un pedestal blanco
 Aviãoscopia sobre pilastra branca, com 16 aberturas numeradas e rasgo retangular para a haste da régua|Aviãoscopia on a white pedestal, with 16 numbered openings and a rectangular slot for the lens rack handle|Aviãoscopia sobre un pedestal blanco, con 16 aberturas numeradas y una ranura rectangular para el mango de la regla
 Início|Home|Inicio
 Produtos|Products|Productos
@@ -349,6 +353,8 @@ Comprar agora|Buy now|Comprar ahora
 Adicionar ao carrinho|Add to cart|Añadir al carrito
 Salvar alterações|Save changes|Guardar cambios
 Verde-menta|Mint green|Verde menta
+Verde-musgo|Moss green|Verde musgo
+Amarelo-claro|Light yellow|Amarillo claro
 Azul-céu|Sky blue|Azul cielo
 Azul-royal|Royal blue|Azul real
 Rosa Ju|Ju pink|Rosa Ju
@@ -367,6 +373,7 @@ Cabeça e corpo do dinossauro|Dinosaur head and body|Cabeza y cuerpo del dinosau
 Crista e bolinhas|Spikes and dots|Cresta y puntos
 A mesma cor nas duas partes|The same color for both parts|El mismo color en ambas partes
 Os olhos permanecem sempre pretos.|The eyes always stay black.|Los ojos siempre son negros.
+Os olhos permanecem pretos e os dentes, brancos.|The eyes stay black and the teeth white.|Los ojos siguen negros y los dientes, blancos.
 Fuselagem, asas e cauda|Fuselage, wings and tail|Fuselaje, alas y cola
 Estrelas e topo|Stars and top|Estrellas y parte superior
 A mesma cor nos dois detalhes|The same color for both details|El mismo color en ambos detalles

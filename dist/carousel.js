@@ -3,7 +3,8 @@
 import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, originalColors, showcase} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
+import {createHeroDemo} from './hero-demo.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
@@ -24,17 +25,17 @@ function init() {
   const lower = text => text.charAt(0).toLowerCase() + text.slice(1);
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
-    const product = PRODUCTS[key], {art, theme} = showcase(key), colors = originalColors(key);
+    const product = PRODUCTS[key], {art, theme, demo} = showcase(key), colors = originalColors(key);
     // wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo.
     const wash = mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3);
-    return {key, product, art, theme, colors, wash, category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    return {key, product, art, theme, demo, colors, wash, category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
-  let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0;
+  let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false;
   let travel = 600, rise = 12;
 
   function fromHash() {
-    const raw = location.hash.replace('#produto/', ''), index = keys.indexOf(ALIASES[raw] || raw);
+    const raw = location.hash.replace('#produto/', '').split('/')[0], index = keys.indexOf(ALIASES[raw] || raw);
     return index;
   }
   const initial = Math.max(0, fromHash());
@@ -55,6 +56,8 @@ function init() {
   const bgLayers = [...bgHost.querySelectorAll('.hero-layer')], bandLayers = [...shell.querySelectorAll('[data-hero-band] .hero-layer')];
   const images = slots.map(slot => slot.querySelector('img'));
   const stage = region.querySelector('[data-hero-stage]');
+  // Produto com `demo` em SHOWCASE: o clique na peça vira a demonstração na própria vitrine (hero-demo.js).
+  const demo = createHeroDemo({region, shell, entries, slots, bgLayers, status, reduced, onLock: value => { locked = value; if (!value) report(); }});
   stage.setAttribute('aria-busy', 'true');
   const ready = images.map(img => {
     // Offscreen images start observing only when their source is requested.
@@ -69,6 +72,8 @@ function init() {
   Promise.all([ready[initial], Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 1600))])]).then(() => {
     stage.setAttribute('aria-busy', 'false');
     window.finishJuOpening?.();
+    // Pré-monta a demonstração num momento ocioso (no máximo 1,5 s depois), para as imagens já estarem prontas no clique.
+    if (window.requestIdleCallback) requestIdleCallback(() => demo.prepare(active), {timeout: 1500}); else setTimeout(() => demo.prepare(active), 300);
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
   if (total < 2) { prevButton.hidden = nextButton.hidden = true; }
@@ -89,6 +94,7 @@ function init() {
     copies.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     palettes.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     clearPulse();
+    if (stage.getAttribute('aria-busy') === 'false') demo.prepare(active);
     if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]')).focus({preventScroll: true});
   }
 
@@ -146,7 +152,7 @@ function init() {
     frame = requestAnimationFrame(tick);
   }
   function move(direction) {
-    if (gesture || total < 2 || Math.abs(target - position) >= 2) return;
+    if (locked || gesture || total < 2 || Math.abs(target - position) >= 2) return;
     settle(target + direction);
   }
   prevButton.addEventListener('click', () => move(-1));
@@ -181,10 +187,26 @@ function init() {
   }
   region.addEventListener('click', e => { if (e.target.closest('[data-go-card]')) goToCard(); });
 
+  // ── Hover: a peça ativa inclina até ~2,5° seguindo o cursor (só mouse; o CSS aplica em :hover) ──
+  let tiltFrame = 0, tiltAt = null;
+  function drawTilt() {
+    tiltFrame = 0;
+    const piece = slots[active].querySelector('.piece'), box = piece.getBoundingClientRect();
+    const nx = clamp((tiltAt.x - box.left) / box.width * 2 - 1, -1, 1), ny = clamp((tiltAt.y - box.top) / box.height * 2 - 1, -1, 1);
+    piece.style.setProperty('--tilt-x', `${(-ny * 2.2).toFixed(2)}deg`);
+    piece.style.setProperty('--tilt-y', `${(nx * 2.6).toFixed(2)}deg`);
+  }
+  region.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || locked || gesture || reduced.matches || !e.target.closest('.slot[data-front=true]')) return;
+    tiltAt = {x: e.clientX, y: e.clientY};
+    tiltFrame ||= requestAnimationFrame(drawTilt);
+  });
+  slots.forEach(slot => slot.addEventListener('pointerleave', () => { const piece = slot.querySelector('.piece'); piece.style.removeProperty('--tilt-x'); piece.style.removeProperty('--tilt-y'); }));
+
   // ── Gestos: o dedo acompanha a peça 1:1; rolagem vertical continua nativa ───
   region.addEventListener('dragstart', e => e.preventDefault());
   region.addEventListener('pointerdown', e => {
-    if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || gesture || total < 2 || e.target.closest('.hero-arrow')) return;
+    if (locked || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || gesture || total < 2 || e.target.closest('.hero-arrow')) return;
     suppressUntil = 0;
     gesture = {id: e.pointerId, x: e.clientX, y: e.clientY, base: position, anchor: target, horizontal: false, vertical: false, moved: false};
   });
@@ -216,16 +238,19 @@ function init() {
     if (gesture && e.target === region && !region.hasPointerCapture(e.pointerId)) finish(e, true);
   });
   // Depois de um arraste (ou no meio da transição) o clique sintético não pode abrir o produto.
+  // Um toque/clique de verdade na peça de um produto com demonstração abre a demonstração no lugar do popup.
   region.addEventListener('click', e => {
-    if (performance.now() < suppressUntil || (frame && e.target.closest('[data-role]'))) { e.preventDefault(); e.stopImmediatePropagation(); }
+    if (performance.now() < suppressUntil || (frame && e.target.closest('[data-role]'))) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+    const index = slots.indexOf(e.target.closest('.slot'));
+    if (index >= 0 && demo.has(index)) { e.preventDefault(); e.stopImmediatePropagation(); demo.open(index); }
   }, true);
   region.addEventListener('keydown', e => {
-    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); move(e.key === 'ArrowRight' ? 1 : -1); }
+    if (!locked && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); move(e.key === 'ArrowRight' ? 1 : -1); }
   });
   // Só gesto horizontal do trackpad/roda navega; a rolagem vertical da página fica livre.
   let wheelTotal = 0, wheelAt = -Infinity, wheelMovedAt = -Infinity;
   region.addEventListener('wheel', e => {
-    if (e.ctrlKey || gesture || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    if (locked || e.ctrlKey || gesture || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
     const delta = e.deltaX * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? region.clientWidth : 1), now = performance.now();
     if (!delta) return;
     e.preventDefault();
@@ -239,7 +264,7 @@ function init() {
   // ── Rota, ciclo de vida ──────────────────────────────────────────────────────
   function fromRoute() {
     const index = fromHash();
-    if (index >= 0 && index !== mod(Math.round(target), total)) { stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
+    if (index >= 0 && index !== mod(Math.round(target), total)) { demo.close({immediate: true}); stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
   }
   addEventListener('hashchange', fromRoute);
   addEventListener('resize', measure);
