@@ -7,8 +7,8 @@ const MAX_LINES = 60, MAX_QUANTITY = 99;
 
 // Color and part names in the three site languages (same wording as dist/translations.js).
 const COLORS = Object.freeze({
-  mint: ['Verde-menta', 'Mint green', 'Verde menta'], sky: ['Azul-céu', 'Sky blue', 'Azul cielo'], blue: ['Azul-royal', 'Royal blue', 'Azul real'],
-  pink: ['Rosa Ju', 'Ju pink', 'Rosa Ju'], lilac: ['Lilás', 'Lilac', 'Lila'], yellow: ['Amarelo', 'Yellow', 'Amarillo'],
+  mint: ['Verde-menta', 'Mint green', 'Verde menta'], moss: ['Verde-musgo', 'Moss green', 'Verde musgo'], sky: ['Azul-céu', 'Sky blue', 'Azul cielo'], blue: ['Azul-royal', 'Royal blue', 'Azul real'],
+  pink: ['Rosa Ju', 'Ju pink', 'Rosa Ju'], lilac: ['Lilás', 'Lilac', 'Lila'], yellow: ['Amarelo', 'Yellow', 'Amarillo'], cream: ['Amarelo-claro', 'Light yellow', 'Amarillo claro'],
   red: ['Vermelho', 'Red', 'Rojo'], orange: ['Laranja', 'Orange', 'Naranja'], white: ['Branco', 'White', 'Blanco'], black: ['Preto', 'Black', 'Negro']
 });
 const PARTS = Object.freeze({
@@ -21,7 +21,7 @@ const PARTS = Object.freeze({
 // The part ids below are the site's own ("body", "details", "engines"); `names` says which wording each product uses.
 const PRODUCTS = Object.freeze({
   borboletoscopio: {title: 'Borboletoscópio', price: 12900, parts: [{id: 'body', names: PARTS.body, default: 'mint'}, {id: 'details', names: PARTS.wings, default: 'yellow'}]},
-  dinossauroscopio: {title: 'Dinossauroscópio', price: 13900, parts: [{id: 'body', names: PARTS.body, default: 'sky'}, {id: 'details', names: PARTS.spikes, default: 'mint'}]},
+  dinossauroscopio: {title: 'Dinossauroscópio', price: 13900, parts: [{id: 'body', names: PARTS.body, default: 'moss'}, {id: 'details', names: PARTS.spikes, default: 'cream'}]},
   aviaoscopia: {title: 'Aviãoscopia', price: 15900, parts: [{id: 'body', names: PARTS.body, default: 'blue'}, {id: 'details', names: PARTS.stars, default: 'red'}, {id: 'engines', names: PARTS.engines, default: 'yellow'}]}
 });
 const LANG_INDEX = {'pt-BR': 0, en: 1, es: 2};
