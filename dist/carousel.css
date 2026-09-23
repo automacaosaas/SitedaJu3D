@@ -124,7 +124,9 @@
 }
 .ped-top { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--ry) * 2); border-radius: 50%; background: radial-gradient(ellipse at 50% 42%, #fff 0%, #fff 55%, #eef1f5 100%); box-shadow: inset 0 -3px 8px rgba(110, 130, 155, .16), 0 0 0 1px rgba(255, 255, 255, .7); }
 .piece { position: absolute; left: 50%; width: var(--img); height: var(--img); margin-left: calc(var(--img) / -2); bottom: calc(var(--ped-w) * .44 - var(--art-bottom) * var(--img)); }
-.piece-shadow { position: absolute; left: 50%; width: calc(var(--art-foot) * var(--img) * 1.02); height: calc(var(--ped-w) * .07); margin-left: calc(var(--art-foot) * var(--img) * -.51); bottom: calc(var(--art-bottom) * var(--img) - var(--ped-w) * .035); background: radial-gradient(closest-side, rgba(30, 45, 70, .32), transparent); }
+.piece-shadow { position: absolute; left: 50%; width: calc(var(--art-foot) * var(--img) * 1.02); height: calc(var(--ped-w) * .07); margin-left: calc(var(--art-foot) * var(--img) * -.51); bottom: calc(var(--art-bottom) * var(--img) - var(--ped-w) * .035); background: radial-gradient(closest-side, rgba(30, 45, 70, .32), transparent); transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .5s ease; }
+/* Profundidade para a leve inclinação do hover (a peça acompanha o cursor, --tilt-x/--tilt-y vêm do JS). */
+.slot[data-front=true] .piece { perspective: 1100px; }
 .piece img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .4s ease, transform .5s cubic-bezier(.22, 1, .36, 1); }
 .piece img.is-loaded { opacity: 1; }
 .slot:focus-visible { outline: 2px solid var(--rose); outline-offset: 6px; }
@@ -141,7 +143,8 @@
   .hero-arrow:hover { background: #fff; scale: 1.05; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
   .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px var(--glow); }
-  .slot[data-front=true]:hover .piece img { transform: translateY(-8px); }
+  .slot[data-front=true]:hover .piece img { transform: translateY(-8px) scale(1.012) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
+  .slot[data-front=true]:hover .piece-shadow { transform: scale(.94); opacity: .8; }
   .palette:hover .palette-dots i { transform: translateY(-3px); }
 }
 
@@ -168,10 +171,10 @@
 @media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
-  .piece img, .hero-arrow, .palette-dots i, .palette-button { transition: none; }
+  .piece img, .piece-shadow, .hero-arrow, .palette-dots i, .palette-button { transition: none; }
   .palette-button svg { animation: none; }
   .home .product-customize.is-pulsing { animation: none; outline: 3px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
-  .slot[data-front=true]:hover .piece img { transform: none; }
+  .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
 
 /* Peripheral petal and fern clouds dissolve into the active theme. */

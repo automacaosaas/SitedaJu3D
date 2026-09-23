@@ -1,0 +1,87 @@
+/* Demonstração na vitrine (hero-demo.js): a própria vitrine vira a apresentação do produto, sem modal.
+   Três camadas do tamanho da vitrine, todas contêineres (a peça é dimensionada pela vitrine em cqw/cqh e fica nítida
+   no tamanho final — a animação só a reduz no começo): .demo-backdrop (luz, atrás da pilastra), .hero-demo (peça +
+   equipamento, à frente) e .demo-controls (voltar, ficha técnica e convite). A vinheta cobre header + banner. */
+.showcase.is-demo { cursor: default; }
+.demo-backdrop, .hero-demo, .demo-controls { position: absolute; inset: 0; pointer-events: none; container-type: size; --size: calc(min(37cqw, 76cqh) * var(--demo-zoom, 1)); --cy: 45%; }
+.demo-backdrop { z-index: 1; }
+.hero-demo { z-index: 4; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent); }
+.demo-controls { z-index: 7; }
+/* Luz macia centrada na área do encaixe (um pouco acima do centro da peça), com queda longa, sem faixas. */
+.demo-glow { position: absolute; left: calc(50% - var(--size) * 1.15); top: calc(var(--cy) - var(--size) * 1.2); width: calc(var(--size) * 2.3); height: calc(var(--size) * 2.3); border-radius: 50%; opacity: 0;
+  background:
+    radial-gradient(circle at 59% 37%, var(--demo-accent) 0, transparent 16%),
+    radial-gradient(closest-side at 50% 46%, var(--demo-core) 0%, rgba(255, 255, 255, .62) 16%, rgba(255, 255, 255, .3) 32%, rgba(255, 255, 255, .1) 50%, transparent 72%),
+    radial-gradient(closest-side, var(--demo-halo) 0%, var(--demo-halo-soft) 46%, transparent 100%); }
+
+.demo-rig { position: absolute; left: calc(50% - var(--size) / 2); top: calc(var(--cy) - var(--size) / 2); width: var(--size); height: var(--size); transform-origin: 50% 50%; }
+.demo-tilt, .demo-turn, .demo-float, .demo-sleeve, .demo-cast { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.demo-drop, .demo-back, .demo-shade, .demo-cover { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+.demo-drop { opacity: 0; filter: brightness(0) blur(calc(var(--size) * .028)); }
+/* Camada de trás renderizada junto com a frente (data-back="rendered", depth 0): entra como veio, sem ajustes.
+   Recortada de outra imagem (data-back="recessed"): vira a parede traseira — recuada em direção ao centro (depth), um
+   pouco abaixo e na sombra, mostrada só em volta da abertura, que é o que aparece pelas frestas ao lado do equipamento. */
+.hero-demo[data-back="recessed"] .demo-back { opacity: 0; scale: calc(1 - var(--back-depth, 0)) 1; object-position: 0 calc(var(--size) * var(--back-shift, 0)); filter: brightness(.55) saturate(1.15);
+  -webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 38.5%, #000 61.5%, transparent 65%), linear-gradient(transparent 30%, #000 33%, #000 93%, transparent 96%); -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent 35%, #000 38.5%, #000 61.5%, transparent 65%), linear-gradient(transparent 30%, #000 33%, #000 93%, transparent 96%); mask-composite: intersect; }
+.demo-tool, .demo-cast-image { position: absolute; left: calc((1 - var(--tool-w)) * 50% + var(--tool-shift, 0) * 100%); top: calc(var(--tool-top) * 100%); width: calc(var(--tool-w) * 100%); aspect-ratio: var(--tool-ratio); rotate: y var(--tool-turn, 0deg); }
+/* Profundidade para o giro do equipamento quando a peça foi fotografada levemente de lado (tool.turn). */
+.demo-float, .demo-cast { perspective: 900px; }
+.hero-demo[data-turned] .demo-tool { -webkit-mask-clip: no-clip; mask-clip: no-clip; }
+.hero-demo[data-turned] .demo-tool img { filter: drop-shadow(var(--tool-side) 0 0 #4a5058) drop-shadow(var(--tool-side) 0 0 #2c3036); }
+.demo-tool { -webkit-mask-image: linear-gradient(#000 calc(var(--tool-fade-a) * 100%), transparent calc(var(--tool-fade-b) * 100%)); mask-image: linear-gradient(#000 calc(var(--tool-fade-a) * 100%), transparent calc(var(--tool-fade-b) * 100%)); }
+.demo-tool img { display: block; width: 100%; height: 100%; -webkit-user-drag: none; user-select: none; }
+/* Reflexo verde das asas nas laterais do equipamento: os dois parecem estar sob a mesma luz. */
+.demo-tool::after { content: ''; position: absolute; inset: 0; opacity: .75; mix-blend-mode: soft-light; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, var(--tool-dim-l, 0)) 0%, transparent 40%, transparent 60%, rgba(0, 0, 0, var(--tool-dim-r, 0)) 100%),
+    linear-gradient(90deg, var(--demo-bounce) 0%, transparent 22%, transparent 78%, var(--demo-bounce) 100%), linear-gradient(transparent 55%, var(--demo-bounce));
+  -webkit-mask: var(--tool-src) 0 0 / 100% 100% no-repeat; mask: var(--tool-src) 0 0 / 100% 100% no-repeat; }
+/* Sombra do equipamento nas paredes internas da abertura (recortada pela camada de trás da peça). */
+.demo-cast { opacity: .5; -webkit-mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; }
+.demo-cast-image { display: block; height: auto; filter: brightness(0) blur(calc(var(--size) * .012)); translate: calc(var(--size) * .008) calc(var(--size) * .012); }
+/* Sombra da peça sobre o equipamento: a própria silhueta dela, desfocada e um pouco abaixo, recortada pelo
+   equipamento na posição final — escurece só o equipamento, rente às bordas da abertura e sob o rostinho. */
+.demo-shade { opacity: 0; filter: brightness(0) blur(calc(var(--size) * .011)); object-position: 0 calc(var(--size) * .01);
+  -webkit-mask: var(--tool-src) calc(var(--size) * ((1 - var(--tool-w)) / 2 + var(--tool-shift, 0))) calc(var(--size) * var(--tool-top)) / calc(var(--size) * var(--tool-w)) auto no-repeat;
+  mask: var(--tool-src) calc(var(--size) * ((1 - var(--tool-w)) / 2 + var(--tool-shift, 0))) calc(var(--size) * var(--tool-top)) / calc(var(--size) * var(--tool-w)) auto no-repeat; }
+
+.demo-atmosphere { position: absolute; inset: 0; z-index: 0; pointer-events: none; -webkit-mask-image: linear-gradient(#000 62%, transparent); mask-image: linear-gradient(#000 62%, transparent); }
+.demo-vignette { position: absolute; inset: 0; opacity: 0; background: radial-gradient(120% 92% at 50% 50%, transparent 55%, var(--demo-vignette) 100%); }
+
+/* Ficha técnica: linha de 1 px com ponto na âncora e rótulo em versalete espaçado. As coordenadas vêm dos dados do
+   produto, no mesmo espaço da peça, então as chamadas acompanham o tamanho dela em qualquer tela. */
+.demo-callouts, .demo-callout { position: absolute; inset: 0; }
+.demo-callout[data-layout="compact"] { display: none; }
+.demo-callout-line { position: absolute; left: calc(50% - var(--size) / 2); top: calc(var(--cy) - var(--size) / 2); width: var(--size); height: var(--size); overflow: visible; }
+.demo-callout-line path { fill: none; stroke: var(--theme-muted, #356650); stroke-opacity: .7; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.demo-callout-halo { fill: rgba(255, 255, 255, .85); }
+.demo-callout-dot { fill: var(--theme-accent, #25664c); }
+.demo-callout-label { position: absolute; left: calc(50% + (var(--x) - .5) * var(--size)); top: calc(var(--cy) + (var(--y) - .5) * var(--size)); white-space: nowrap;
+  font: 600 clamp(10.5px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
+.demo-callout[data-align="left"] .demo-callout-label { transform: translate(calc(-100% - 12px), -50%); }
+.demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
+
+/* Controles: "voltar" no mesmo desenho das setas; o convite à direita da peça (no celular, abaixo). */
+.demo-close { position: absolute; top: clamp(10px, calc(var(--u) * .018), 28px); right: max(16px, calc(var(--hero-inset) - 24px)); display: grid; place-items: center; width: clamp(44px, 3.6vw, 56px); height: clamp(44px, 3.6vw, 56px); padding: 0;
+  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); cursor: pointer; pointer-events: auto; transition: background .2s, transform .2s; }
+.demo-close svg { width: 36%; height: 36%; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
+.demo-close:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
+.demo-close:active { transform: scale(.95); }
+.demo-cta { --accent: var(--theme-accent, #25664c); --strong: var(--theme-accent-strong, #1e523d); --glow: var(--theme-glow, rgba(37, 102, 76, .32)); --text: var(--theme-text, #10281e);
+  position: absolute; left: calc(50% + var(--size) * .5 + clamp(28px, 5cqw, 96px)); top: var(--cy); margin-top: -1.28em; box-shadow: 0 8px 18px var(--glow); pointer-events: auto; }
+.demo-cta svg { animation: demo-nudge 1.9s ease-in-out infinite; }
+@keyframes demo-nudge { 0%, 100% { transform: translateX(-1px); opacity: .8; } 50% { transform: translateX(2px); opacity: 1; } }
+@media (hover: hover) { .demo-close:hover { background: #fff; transform: scale(1.05); } }
+
+@media (max-width: 900px) {
+  .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom, 1)); --cy: 40%; }
+  .demo-callout[data-layout="wide"] { display: none; }
+  .demo-callout[data-layout="compact"] { display: block; }
+  .demo-callout-label { letter-spacing: .16em; }
+  .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * .78); width: fit-content; margin: 0 auto; }
+  .demo-close { top: 8px; right: 14px; width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-cta svg { animation: none; }
+  .demo-close { transition: none; }
+}
