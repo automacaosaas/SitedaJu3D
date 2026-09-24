@@ -16,7 +16,7 @@ const {createFakeMercadoPago} = require('./fake-mercadopago.cjs');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
-const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2'};
+const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary'};
 
 // Reads a secret without echoing it. Pasting works. Falls back to a plain line when stdin is not a terminal.
 function askHidden(question) {

@@ -15,7 +15,26 @@ function lockPage(){if(lockedScroll!==null)return;lockedScroll=window.scrollY;do
 function unlockPage(){if(lockedScroll===null)return;const y=lockedScroll;lockedScroll=null;document.documentElement.classList.remove('modal-open');Object.assign(document.body.style,{position:'',top:'',width:'',overflow:''});window.scrollTo(0,y);}
 function closeProduct(){history.replaceState(null,'',location.pathname+location.search);dialog.close();document.title='Ju imprime pra mim • Coleção 3D';}
 function viewerError(){const msg=$('.viewer-message');msg.hidden=false;msg.textContent='A prévia 3D não está disponível neste navegador. Você pode continuar escolhendo as cores e consultar a imagem do produto.';$('.viewer-tools').hidden=true;viewer?.dispose();viewer=null;}
-async function setView(next){view=next;const id=++request;document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));$('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';$('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;$('.view-note').textContent=next==='photo'?'Imagem de apresentação • cores originais.':'Arraste para girar · Prévia 3D ilustrativa, aguardando os modelos finais.';if(next==='photo'){viewer?.hide();return;}$('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';try{viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;if(id!==request||!dialog.open||view!=='model')return;viewer??=new ProductViewer($('#viewer-host'),viewerError);viewer.show(activeProduct,hexColors(),PRODUCTS[activeProduct].title);$('.viewer-message').hidden=true;$('.viewer-tools').hidden=false;}catch(error){console.error('Visualização 3D indisponível:',error);if(id===request)viewerError();}}
+async function setView(next){
+  view=next;const id=++request;
+  document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
+  $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
+  $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
+  $('.view-note').textContent=next==='photo'?'Imagem de apresentação • cores originais.':'Arraste para girar · Personalize as cores do modelo 3D.';
+  if(next==='photo'){viewer?.hide();return;}
+  $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
+  try{
+    viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;
+    if(id!==request||!dialog.open||view!=='model')return;
+    viewer??=new ProductViewer($('#viewer-host'),viewerError);
+    const shown=await viewer.show(activeProduct,hexColors(),PRODUCTS[activeProduct].title);
+    if(!shown||id!==request||!dialog.open||view!=='model')return;
+    $('.viewer-message').hidden=true;$('.viewer-tools').hidden=false;
+  }catch(error){
+    if(error.name==='AbortError'||id!==request)return;
+    console.error('Visualização 3D indisponível:',error);viewerError();
+  }
+}
 function renderControls(){const p=PRODUCTS[activeProduct];$('#part-tabs').replaceChildren(...p.parts.map(part=>{const b=document.createElement('button');b.type='button';b.dataset.part=part.id;b.innerHTML='<span class="part-dot" aria-hidden="true"></span><span></span>';b.lastElementChild.textContent=part.name;return b;}));$('#palette').replaceChildren(...PALETTE.map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;b.style.setProperty('--swatch',value.hex);b.style.setProperty('--check',['yellow','mint','white'].includes(value.id)?'#332b32':'#fff');b.setAttribute('aria-label',value.name);const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');const label=document.createElement('span');label.textContent=value.name;b.append(swatch,label);return b;}));updateControls();}
 function updateControls(){const s=selections[activeProduct],p=PRODUCTS[activeProduct];document.querySelectorAll('[data-part]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.part===selectedPart));b.querySelector('.part-dot').style.background=color(s[b.dataset.part]).hex;});document.querySelectorAll('[data-color]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.color===s[selectedPart])));$('#selected-color').textContent=color(s[selectedPart]).name;$('#part-hint').textContent=p.parts.find(part=>part.id===selectedPart).hint;viewer?.update(hexColors());}
 function personalize(){setMode('custom');renderControls();setView('model');}
@@ -30,4 +49,3 @@ $('#copy-combination').addEventListener('click',async()=>{const p=PRODUCTS[activ
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);personalize();}});
-

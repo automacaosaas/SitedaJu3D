@@ -13,6 +13,7 @@ Adicionado|Added|Añadido
 Não foi possível preparar a compra. Verifique o armazenamento do navegador.|Unable to prepare your purchase. Check browser storage.|No se pudo preparar la compra. Comprueba el almacenamiento del navegador.
 Imagem de apresentação • cores originais.|Presentation image • original colors.|Imagen de presentación • colores originales.
 Arraste para girar · Prévia 3D ilustrativa, aguardando os modelos finais.|Drag to rotate · Illustrative 3D preview, awaiting final models.|Arrastra para girar · Vista previa 3D ilustrativa, a la espera de los modelos finales.
+Arraste para girar · Personalize as cores do modelo 3D.|Drag to rotate · Customize the 3D model colors.|Arrastra para girar · Personaliza los colores del modelo 3D.
 Preparando sua prévia 3D…|Preparing your 3D preview…|Preparando tu vista previa 3D…
 A prévia 3D não está disponível neste navegador. Você pode continuar escolhendo as cores e consultar a imagem do produto.|3D preview is unavailable in this browser. You can still choose colors and view the product image.|La vista previa 3D no está disponible en este navegador. Puedes seguir eligiendo colores y consultar la imagen del producto.
 Suas cores estão salvas neste navegador.|Your colors are saved in this browser.|Tus colores están guardados en este navegador.
@@ -371,6 +372,7 @@ Fuselagem, asas e cauda|Fuselage, wings and tail|Fuselaje, alas y cola
 Estrelas e topo|Stars and top|Estrellas y parte superior
 A mesma cor nos dois detalhes|The same color for both details|El mismo color en ambos detalles
 Motores|Engines|Motores
+As janelas da cabine mantêm a cor original.|The cabin windows keep their original color.|Las ventanas de la cabina mantienen su color original.
 As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre las alas
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
 Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.|A butterfly to bring color and imagination to every appointment. 3D printed, with an open slot for the retinoscope.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D, con el espacio para encajar el retinoscopio libre.
