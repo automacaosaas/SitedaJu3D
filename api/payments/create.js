@@ -93,6 +93,9 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
       console.error('payments/create: Mercado Pago answered', error.status || '', error.code || '', error.message);
       const refused = [400, 402, 409, 422].includes(error.status);   // the order itself was turned down; everything else is on our side or theirs
       await store.orders.addEvent(order.id, refused ? 'payment_rejected' : 'provider_error', String(error.code || error.status || ''), 'checkout').catch(() => {});
+      // A refused card ends this attempt (the next click is a new attempt and a new order). A provider error leaves it
+      // open: the charge may still have gone through, and the webhook or a status check will settle it.
+      if (refused) await store.orders.transition(order.id, ['aguardando_pagamento'], {status: 'cancelado', paymentState: 'refused'}).catch(() => {});
       return json(res, refused ? 422 : 502, {error: refused ? 'payment_rejected' : 'provider_unavailable', code: error.code || null, ...(settings.mode === 'test' ? {detail: String(error.message).slice(0, 300)} : {})});
     }
   };

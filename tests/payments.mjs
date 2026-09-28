@@ -312,8 +312,15 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(refused.json().state, 'refused'); assert.equal((await store.orders.findByReference(refused.json().reference)).status, 'cancelado');
     assert(!errors.lines.join('\n').includes('aaaaaaaa'), 'the card token is never logged');
 
-    const refuse = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store}), {body: request(), ...as(ana)});
+    const refusedBody = request(), refuse = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store}), {body: refusedBody, ...as(ana)});
     assert.equal(refuse.statusCode, 422); assert.equal(refuse.json().error, 'payment_rejected'); assert.equal(refuse.json().code, 'invalid_payer'); assert(refuse.json().detail, 'test mode shows Mercado Pago\'s reason');
+    assert.equal((await store.orders.findByReference(mp.referenceFor(refusedBody.attempt))).status, 'cancelado', 'a refused card ends the attempt instead of "waiting for payment"');
+    const declinedBody = request(), declined = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 402}).fetchImpl, store}), {body: declinedBody, ...as(ana)});
+    assert.equal(declined.statusCode, 422, 'Mercado Pago 402 ("the following transactions failed") is a refusal');
+    assert.equal((await store.orders.findByReference(mp.referenceFor(declinedBody.attempt))).status, 'cancelado');
+    const caio = await signedInBuyer(store, {email: 'caio@example.com'}), openBody = request();
+    assert.equal((await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 500}).fetchImpl, store}), {body: openBody, ...as(caio)})).statusCode, 502);
+    assert.equal((await store.orders.findByReference(mp.referenceFor(openBody.attempt))).status, 'aguardando_pagamento', 'a provider error leaves the order open: the charge may have gone through');
     const liveStore = createMemoryStore(), liveAna = await signedInBuyer(liveStore, {env: LIVE});
     const live = await call(createHandler.create({env: LIVE, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store: liveStore}), {body: request(), ...as(liveAna)});
     assert.equal(live.statusCode, 422); assert(!('detail' in live.json()), 'live mode never leaks the provider message (it can quote the customer\'s data)');
