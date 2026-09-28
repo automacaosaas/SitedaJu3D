@@ -1,59 +1,85 @@
 # Painel da Ju
 
-Um painel interno para a Ju acompanhar os pedidos, sem precisar mexer em código. Protótipo de layout: por enquanto
-não existe um banco de dados — os pedidos ficam guardados no navegador que fez a compra (ver "Limitação" abaixo).
+Painel interno para a equipe acompanhar os pedidos pagos, em `/admin.html`. Os pedidos vêm do banco de dados (MySQL na
+Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 
 ## O que ele faz
 
-- **Login** com e-mail e senha (conferidos no servidor; a senha nunca aparece no código do site).
-- **Pedidos pendentes** (tela inicial): toda compra aprovada — de teste ou real — entra aqui automaticamente.
-- Em cada pedido: peças, cores escolhidas, cliente, WhatsApp, endereço de entrega e observações.
-- **Marcar como concluído** ou **Recusar pedido** (com motivo opcional, visível só para a Ju). Pedidos concluídos e
-  recusados ficam em abas separadas, com um botão para reabrir se for engano.
-- **Gráfico** do faturamento dos últimos 14 dias.
-- **Calendário**: clique num dia para ver os pedidos e o total daquele dia.
-- Cada pedido mostra uma etiqueta de origem — **Demonstração**, **Teste Mercado Pago** ou **Pedido real** — para
-  nunca confundir um teste com uma venda de verdade.
+- **Pedidos pendentes** (tela inicial): todo pedido pago, de teste ou real, entra aqui sozinho, o mais antigo primeiro.
+- Em cada pedido: peças e cores, quem recebe, WhatsApp, endereço de entrega, observações e os dados da **nota fiscal**
+  (nome e CPF mascarado, ou razão social, CNPJ e inscrição estadual).
+- **Marcar como concluído** ou **Recusar pedido** (motivo opcional, visto só pela equipe). Concluídos e recusados ficam em
+  abas separadas, com **Reabrir** para desfazer um engano. Recusar não estorna: o estorno é feito no Mercado Pago.
+- **Gráfico** dos últimos 14 dias e **calendário** com os pedidos de cada dia. O faturamento não conta os recusados.
+- Etiqueta de origem em cada pedido: **Teste Mercado Pago** ou **Pedido real**.
+- Pedidos aguardando pagamento ou cancelados não aparecem, e a equipe não consegue mudar o status deles.
 
-## Como entrar
+## Como entrar: senha e código do celular
 
-**Local:** `node tools/dev-server.cjs` (com ou sem `--fake-mp`) já libera `http://localhost:8844/admin.html` com um
-acesso fixo: e-mail `ju@exemplo.test`, senha `12345678` (aparece no terminal ao iniciar). Para usar outro e-mail/senha
-localmente, defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` antes de rodar.
+1. E-mail e senha.
+2. Um código de 6 dígitos do **app autenticador** no celular (Google Authenticator, Microsoft Authenticator ou similar).
 
-**Nas prévias e no site publicado:** crie duas variáveis de ambiente na Vercel (mesmo caminho das outras: projeto
-`siteda-ju3-d` → Settings → Environment Variables), marcando **Preview** (e Production só quando quiser):
+No **primeiro acesso**, o painel mostra um **QR Code**: no app, toque em adicionar e leia o código (ou digite a chave que
+aparece em "Não consegue ler o QR Code?"). Depois digite o código de 6 dígitos que o app mostrar. A partir daí, todo login
+pede a senha e o código do app. A sessão dura 12 horas.
 
-| Nome | Valor | Sensível? |
+Guarde bem o celular com o app. Se ele se perder, veja "Perdi o celular" abaixo.
+
+## Configurar (Hostinger)
+
+hPanel → o site → **Variáveis de ambiente**:
+
+| Nome | Valor | Secreta |
 |---|---|---|
-| `ADMIN_EMAIL` | o e-mail que a Ju vai usar para entrar | não |
-| `ADMIN_PASSWORD` | a senha dela | **sim** |
+| `ADMIN_EMAIL` | `powershop.bras@gmail.com` (o e-mail da equipe) | não |
+| `ADMIN_PASSWORD` | uma senha forte, com **12 caracteres ou mais** | **sim** |
 
-Nenhuma outra configuração é necessária — o painel reaproveita a mesma chave de assinatura já usada para os códigos
-de verificação por e-mail (`AUTH_SECRET` ou, na falta dela, a derivada de `RESEND_API_KEY`).
+Essas duas variáveis só criam a **primeira** pessoa do painel, no primeiro login, e só enquanto não existe ninguém no
+banco. Depois disso quem vale é o banco: a senha fica guardada com scrypt (não dá para ler de volta) e trocar
+`ADMIN_PASSWORD` no painel da Hostinger não muda nada. Uma senha com menos de 12 caracteres é recusada, e
+`/api/health` mostra `"admin":"waiting"`.
 
-## Como a segurança funciona (sem banco de dados)
+O painel também precisa do banco e das chaves do site (`DB_*`, `DATA_KEY`, `AUTH_SECRET`), as mesmas das contas: o segredo
+do app autenticador fica criptografado com a `DATA_KEY`.
 
-- O e-mail e a senha ficam só nas variáveis de ambiente do servidor — nunca no código, nunca no GitHub.
-- Ao entrar, o servidor devolve um token assinado (do mesmo jeito que os códigos de verificação por e-mail), válido
-  por 12 horas. O navegador guarda só esse token; a senha nunca volta a aparecer.
-- Todo login errado é limitado (tentativas por IP e por e-mail), para dificultar tentativas repetidas.
+`/api/health` mostra o estado do painel, sem nenhum valor:
 
-## Limitação combinada com a proposta ("layout antes do banco de dados")
+| `admin` | Quer dizer |
+|---|---|
+| `off` | sem banco (em produção) |
+| `waiting` | ninguém cadastrado e `ADMIN_EMAIL`/`ADMIN_PASSWORD` ausentes ou senha curta |
+| `bootstrap` | pronto para o primeiro login |
+| `ready` | já existe quem administre |
 
-Os pedidos ficam no armazenamento do navegador (`localStorage`), exatamente como o carrinho de demonstração. Isso
-quer dizer:
+**Local:** `node tools/dev-server.cjs` (com ou sem `--fake-mp`) libera `http://localhost:8844/admin.html` com um acesso só
+de teste (e-mail e senha aparecem no terminal). O QR Code aparece igual; os dados somem quando o servidor para.
 
-- Um pedido só aparece no painel se for aberto **no mesmo navegador/computador** onde a compra foi feita.
-- Limpar os dados do navegador apaga o histórico de pedidos do painel.
-- Pedidos de demonstração, de teste e reais convivem no mesmo painel (por isso a etiqueta de origem em cada um).
+## Segurança
 
-Quando um banco de dados de verdade for conectado, só o arquivo `dist/admin-store.js` muda — o resto do painel
-(tela, gráfico, calendário, ações) continua igual.
+- A senha é conferida só no servidor. O navegador guarda apenas um cookie `__Host-ju_admin` (HttpOnly, Secure,
+  SameSite=Strict), que os scripts da página não conseguem ler. No banco fica só o SHA-256 do token.
+- Depois da senha, a sessão só serve para digitar o código: dura 10 minutos e aceita 5 códigos errados. Com o código
+  certo, o servidor emite um **token novo** para a sessão completa.
+- Cada código vale uma vez só (o mesmo código não entra duas vezes) e aceita 30 segundos de diferença no relógio do celular.
+- Limites: 8 tentativas de senha por e-mail e 15 por endereço de internet a cada 10 minutos; 10 códigos a cada 15 minutos.
+- Tudo fica registrado na tabela `admin_audit`: logins, tentativas erradas, ativação do app, saídas e cada mudança de
+  status (quem fez, o quê e quando). A mudança também entra no histórico do próprio pedido (`order_events`).
+- Tabelas: `admin_users`, `admin_sessions` e `admin_audit` (`db/migrations/003_painel.sql`), criadas sozinhas quando o
+  app liga.
+
+## Perdi o celular / preciso trocar a senha
+
+Por enquanto, pelo phpMyAdmin da Hostinger (tabela `admin_users`):
+
+- **Trocar o celular:** apague o conteúdo de `totp_secret_enc` e `totp_enabled_at` da linha da pessoa. No próximo login
+  aparece um QR Code novo.
+- **Trocar a senha:** apague a linha da pessoa. No próximo login, `ADMIN_EMAIL` e `ADMIN_PASSWORD` criam o acesso de novo,
+  com a senha que estiver no painel da Hostinger (e um QR Code novo).
+
+Uma tela para trocar senha e celular pelo próprio painel fica para uma próxima etapa.
 
 ## Testes
 
-`node tests/admin.mjs` cobre o login/sessão no servidor (senha, limites, token assinado) e a "loja" de pedidos no
-navegador (gravação sem duplicar, mudança de status, totais por dia). O fluxo completo (entrar, receber um pedido de
-teste, concluir, recusar, ver o gráfico e o calendário) foi conferido no navegador; veja `MERCADOPAGO-SETUP.md` para
-como simular uma compra localmente.
+`node tests/admin.mjs` cobre o código do app (vetores oficiais da RFC 6238), a criação da primeira pessoa, senha e código
+com as duas sessões, limites, auditoria, os endpoints (cookie, origem, só pedidos pagos, mudanças registradas) e o QR Code.
+`node tests/store-contract.mjs` confere as tabelas do painel na memória e, com `TEST_DB_*`, no MySQL.

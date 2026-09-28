@@ -14,14 +14,14 @@ A aplicação no painel do Mercado Pago precisa ser do tipo **Checkout Transpare
 
 ## Como funciona
 
-1. O cliente monta o carrinho e preenche a entrega (igual ao protótipo).
+1. O cliente monta o carrinho, entra na conta, confirma a identificação (nome, sobrenome, CPF e telefone, para a nota fiscal e a etiqueta) e preenche a entrega.
 2. No passo de pagamento aparece o **Payment Brick** do Mercado Pago (Pix, crédito, débito).
 3. Ao pagar, o navegador manda ao nosso servidor `POST /api/payments/create` só **o que foi escolhido** (peças, quantidades, cores), os dados de entrega e o resultado do Brick (um token do cartão, nunca o número).
-4. O servidor **recalcula os preços** (`api/_lib/catalog.js`), cria a order no Mercado Pago e responde com o estado: aprovado, Pix aguardando (com QR Code e copia-e-cola), em análise ou recusado.
-5. O Mercado Pago avisa por **webhook** (`POST /api/payments/webhook`). O servidor confere a assinatura, **lê o pedido de volta no Mercado Pago** e, se estiver pago, manda um e-mail para a Ju (o que produzir, cores, endereço, contato) e outro para o cliente (comprovante no idioma dele).
+4. O servidor confere a sessão e a identificação, **recalcula os preços** (`api/_lib/catalog.js`), **grava o pedido no banco** e só então cria a order no Mercado Pago e responde com o estado: aprovado, Pix aguardando (com QR Code e copia-e-cola), em análise ou recusado.
+5. O Mercado Pago avisa por **webhook** (`POST /api/payments/webhook`). O servidor confere a assinatura, **lê o pedido de volta no Mercado Pago** confere se a referência e o valor batem com o pedido gravado e, se estiver pago, marca o pedido como pago no banco e manda um e-mail para a Ju (o que produzir, cores, endereço, contato) e outro para o cliente (comprovante no idioma dele).
 6. Enquanto um Pix espera, a página consulta `GET /api/payments/status` a cada 5 segundos e avança sozinha quando o pagamento cai.
 
-Não há banco de dados: o próprio Mercado Pago guarda o pedido (as cores vão na descrição de cada item, o endereço em `shipment`, o idioma e a observação na descrição da order). Um banco de pedidos é o próximo passo natural (ver "Depois").
+Os pedidos ficam no banco (MySQL: `orders`, `order_items` e `order_events`, em `db/migrations/002_pedidos.sql`), com um retrato do comprador e da entrega no momento da compra; CPF e telefone vão criptografados. A resposta do pagamento, o webhook e a consulta do Pix atualizam o mesmo pedido, e quem chega primeiro faz a mudança: o pedido é marcado como pago uma vez só e cada e-mail sai uma vez só. O cliente vê os pedidos em "Meus pedidos" (conta) e a Ju no painel `/admin.html` (ver `ADMIN-SETUP.md`). Se a conta for excluída, o pedido continua guardado para a nota fiscal, sem o vínculo com a conta.
 
 ## Ligar em modo de teste (passo a passo)
 
@@ -91,7 +91,7 @@ O terminal pede a Access Token e a Public Key (a digitação fica oculta). Local
 
 ## Testes automáticos
 
-`node tests/payments.mjs` cobre: catálogo do servidor igual ao da loja, preços sempre recalculados no servidor, modos de operação, conversão do Brick para a API de Orders, assinatura do webhook (válida, adulterada, chave errada), os três endpoints com um Mercado Pago e um Resend falsos (validação, idempotência, limites, erros, e-mails) e os e-mails em três idiomas. As demais suítes continuam em `tests/`.
+`node tests/payments.mjs` cobre: catálogo do servidor igual ao da loja, preços sempre recalculados no servidor, modos de operação, conversão do Brick para a API de Orders, assinatura do webhook (válida, adulterada, chave errada), os três endpoints com um Mercado Pago e um Resend falsos e o banco em memória (comprador logado e identificado, pedido gravado, pago uma vez e e-mails uma vez, valor diferente recusado, consulta só pelo dono do pedido, validação, idempotência, limites, erros) e os e-mails em três idiomas. As demais suítes continuam em `tests/`.
 
 ## Antes de cobrar de verdade
 
@@ -103,7 +103,7 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 - [ ] **Políticas**: privacidade, troca e devolução, prazos de produção sob encomenda.
 - [ ] **Domínio verificado no Resend**, para o cliente receber o comprovante (hoje o Resend só entrega para o dono da conta).
 - [ ] **3D Secure** para cartões (`config.online.transaction_security` na API de Orders) e regras de **parcelamento** (hoje até 12x).
-- [ ] Um **banco de pedidos** (histórico, painel, rastreio, nota fiscal, reenvio de e-mails).
+- [x] **Banco de pedidos** com histórico, painel da Ju e "Meus pedidos". Faltam rastreio, nota fiscal e reenvio de e-mails pelo painel.
 - [ ] Conferir as **taxas** vigentes no Mercado Pago.
 - [ ] Só então salvar as credenciais de produção **e** `MP_MODE=live` na Production, e fazer uma compra real de valor baixo com estorno.
 
@@ -112,7 +112,8 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 - O Access Token e o segredo do webhook só existem no servidor; o navegador recebe apenas a Public Key.
 - O navegador não decide preço: o servidor recalcula tudo e recusa carrinho inválido.
 - O número do cartão nunca passa pelo nosso servidor; o token do cartão não é registrado em log nem devolvido ao navegador.
-- Cada clique em pagar gera um identificador; repetir o pedido (duplo clique, falha de rede) cai na mesma order em vez de cobrar duas vezes.
+- Cada clique em pagar gera um identificador; repetir o pedido (duplo clique, falha de rede) cai no mesmo pedido e na mesma order em vez de cobrar duas vezes.
+- Um pedido só vira "pago" se a referência e o valor informados pelo Mercado Pago baterem com o que foi gravado no banco.
 - O webhook só age depois de conferir a assinatura e de ler o pedido no Mercado Pago; e-mails repetidos são descartados pela chave de idempotência do Resend.
 - Sem chaves (ou na Production sem `MP_MODE`) tudo volta ao protótipo de demonstração.
 
@@ -126,11 +127,10 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 | Pagou o cartão mas não chegou e-mail | Webhook não chegou (prévia com login, URL errada, `MP_WEBHOOK_SECRET` diferente) ou `ORDER_NOTIFY_EMAIL`/`RESEND_API_KEY` ausentes. O log da função na Vercel diz qual. |
 | E-mail chegou para a Ju mas não para o cliente | Sem domínio verificado o Resend só entrega ao dono da conta. |
 | Pix parado em "aguardando" no teste | É o esperado no ambiente de teste. |
-| "Muitas tentativas seguidas" | Limite de segurança por endereço e por e-mail (20 e 8 em 10 minutos); espere um pouco. |
+| "Muitas tentativas seguidas" | Limite de segurança por endereço de internet e por conta (20 e 8 em 10 minutos); espere um pouco. |
 
 ## Depois
 
-- Banco de pedidos (Vercel Marketplace: Neon Postgres ou Upstash Redis) para histórico, painel e status de produção.
 - Rastreamento e nota fiscal por e-mail (os modelos de e-mail já existem; faltam os gatilhos).
 - Estorno e cancelamento pelo painel da Ju.
-- Migração do limite de tentativas (hoje em memória) para armazenamento durável.
+- Frete com o Melhor Envio (PAC), nota fiscal e rastreio por e-mail e no site.

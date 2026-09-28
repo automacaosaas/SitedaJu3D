@@ -89,11 +89,18 @@ Com `APP_ENV=preview`, o Mercado Pago roda sempre em **modo de teste**: só as c
 | `MP_ACCESS_TOKEN` | Access Token **de teste** | **sim** |
 | `MP_WEBHOOK_SECRET` | assinatura secreta do webhook | **sim** |
 | `ORDER_NOTIFY_EMAIL` | e-mail da Ju que recebe os pedidos pagos (precisa do Resend para sair) | não |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | entrada do painel `/admin.html` | a senha, **sim** |
+| `ADMIN_EMAIL` | e-mail da equipe que entra no painel `/admin.html` | não |
+| `ADMIN_PASSWORD` | senha do painel, com **12 caracteres ou mais** | **sim** |
 
 Webhook no painel do Mercado Pago (modo de teste): `https://<endereço temporário>/api/payments/webhook`, evento **Order**.
 Diferente das prévias da Vercel, o site da Hostinger é público, então o webhook chega. Conferir: `/api/health` mostra
 `"payments":"test"` e `"mp":{"token":true,"publicKey":true,"webhookSecret":true}`.
+
+Os pedidos ficam no banco (tabelas `orders`, `order_items` e `order_events`, criadas sozinhas quando o app liga) e só
+quem está logado com a identificação completa consegue pagar. `ADMIN_EMAIL` e `ADMIN_PASSWORD` criam a primeira pessoa
+do painel no primeiro login; nesse login aparece um QR Code para o app autenticador do celular, e dali em diante todo
+login pede a senha e o código do app. `/api/health` mostra `"admin":"bootstrap"` antes do primeiro login e `"ready"`
+depois. Detalhes, e o que fazer se o celular se perder, em `ADMIN-SETUP.md`.
 
 No checkout, a prevenção de fraude avançada do SDK fica desligada enquanto for teste: ela injeta um script embutido que a
 política de segurança do site não permite. Antes de cobrar de verdade, enviar o identificador do aparelho do jeito documentado
@@ -106,6 +113,8 @@ pelo Mercado Pago (`security.js` + cabeçalho `X-meli-session-id` no servidor), 
 - No computador, com Node instalado: `node tools/smoke-accounts.mjs https://<endereço temporário>` percorre o cadastro,
   a sessão, a identificação e a entrada com senha, e diz o que falhou. Ele cria uma conta de teste `@exemplo.com`.
 - A home abre, a prévia 3D dos três produtos carrega e o console do navegador fica sem erros.
+- Com o Mercado Pago de teste (seção 4.1): uma compra com o cartão de teste aparece em "Meus pedidos" (conta) e no painel
+  `/admin.html` como pendente; concluir, recusar e reabrir funcionam, e recarregar a página mantém tudo.
 - `curl -I https://<endereço temporário>/` mostra `x-frame-options: SAMEORIGIN`, `nosniff` e `x-robots-tag: noindex, nofollow`.
 - A CDN da Hostinger (`server: hcdn`) troca o cabeçalho `content-security-policy` por `upgrade-insecure-requests`. Por isso a
   política completa também vai numa tag `<meta http-equiv="Content-Security-Policy">` em cada página (sem `frame-ancestors`,
@@ -135,3 +144,6 @@ substitui o anterior. O banco e as contas continuam; migrações novas são apli
 | Site abre, mas criar conta dá erro | `SITE_URL` ausente ou diferente do endereço aberto (com ou sem `www`, `http` x `https`). |
 | Prévia 3D não carrega | Veja o console: um bloqueio de CSP aparece como erro "Content Security Policy". |
 | `/api/health` responde 404 | O `.zip` foi gerado sem a pasta `api/`. |
+| `/api/health` mostra `"admin":"waiting"` | Falta `ADMIN_EMAIL` ou `ADMIN_PASSWORD`, ou a senha tem menos de 12 caracteres. |
+| Painel diz "O tempo para digitar o código acabou" | Passaram 10 minutos entre a senha e o código, ou foram 5 códigos errados. Entre com a senha de novo. |
+| Código do app sempre "incorreto" | Relógio do celular errado: ative a data e hora automáticas. Um código também não serve duas vezes. |
