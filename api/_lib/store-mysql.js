@@ -4,7 +4,7 @@
 const COLUMNS = {
   id: 'id', email: 'email', emailVerifiedAt: 'email_verified_at', displayName: 'display_name', firstName: 'first_name', lastName: 'last_name',
   passwordHash: 'password_hash', cpfEnc: 'cpf_enc', cpfIndex: 'cpf_index', phoneEnc: 'phone_enc', companyCnpj: 'company_cnpj', companyName: 'company_name',
-  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', createdAt: 'created_at'
+  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
 
 function toCustomer(row) {
@@ -18,7 +18,7 @@ const ORDER_COLUMNS = {
   id: 'id', reference: 'reference', customerId: 'customer_id', source: 'source', status: 'status', paymentState: 'payment_state', method: 'method',
   installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
   buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
-  decidedAt: 'decided_at', declineReason: 'decline_reason', ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at'
+  decidedAt: 'decided_at', declineReason: 'decline_reason', ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
 const JSON_FIELDS = new Set(['buyer', 'shipTo']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };

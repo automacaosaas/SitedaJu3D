@@ -1,7 +1,7 @@
 'use strict';
 // POST /api/payments/create
 //   {attempt, items:[{productId, quantity, selection}], customer:{name,email,phone}, address:{cep,street,number,district,city,state,complement},
-//    notes, lang, payment:{selectedPaymentMethod, formData}}
+//    notes, lang, acceptTerms: true, payment:{selectedPaymentMethod, formData}}
 // Needs a signed-in buyer with a complete identification (invoice and shipping label). Validates the cart, recomputes
 // every price on the server, records the order in the database, then creates it at Mercado Pago and answers with a small
 // status object (and, for Pix, the QR code). Card data never comes through here: the Payment Brick turns it into a token.
@@ -65,10 +65,11 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     const reference = mp.referenceFor(attempt);
     const orders = createOrders({store, env, now});
     let order;
-    try { order = await orders.open({customer: buyer, reference, source: settings.mode, priced, recipient: form.customer, address: form.address, notes: form.notes, lang}); }
+    try { order = await orders.open({customer: buyer, reference, source: settings.mode, priced, recipient: form.customer, address: form.address, notes: form.notes, lang, termsAccepted: body.acceptTerms === true}); }
     catch (error) {
       if (error.code === 'profile_incomplete') return json(res, 400, {error: 'profile_incomplete'});
       if (error.code === 'conflict') return json(res, 409, {error: 'invalid_request', field: 'attempt'});
+      if (error.field === 'terms') return json(res, 400, {error: 'invalid_request', field: 'terms'});
       throw error;
     }
 

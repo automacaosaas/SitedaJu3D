@@ -8,6 +8,7 @@
 // the account being deleted (fiscal record).
 const crypto = require('node:crypto');
 const fields = require('./fields');
+const {TERMS_VERSION} = require('./legal');
 const {config, mailReady, sendMail} = require('./mail');
 const {renderOwnerEmail, renderCustomerEmail, renderDecisionEmail} = require('./order-email');
 
@@ -22,15 +23,16 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   const decrypt = blob => { try { return blob ? fields.decrypt(env, blob) : ''; } catch { return ''; } };
 
   // The buyer must be signed in with a complete identification: the invoice and the shipping label need it.
-  async function open({customer, reference, source, priced, recipient, address, notes = '', lang = 'pt-BR'}) {
+  async function open({customer, reference, source, priced, recipient, address, notes = '', lang = 'pt-BR', termsAccepted = false}) {
     if (!customer.firstName || !customer.lastName || !customer.cpfEnc || !customer.phoneEnc) throw fail('profile_incomplete');
+    if (termsAccepted !== true) throw fail('invalid_request', {field: 'terms'});
     const company = customer.companyCnpj ? {cnpj: customer.companyCnpj, name: customer.companyName || '', stateRegistration: customer.companyIe || ''} : null;
     const draft = {
       id: crypto.randomUUID(), reference, customerId: customer.id, source, status: 'aguardando_pagamento',
       subtotalCents: priced.subtotal, shippingCents: priced.shipping, totalCents: priced.total,
       buyer: {name: `${customer.firstName} ${customer.lastName}`, email: customer.email, company},
       buyerDocEnc: customer.cpfEnc, phoneEnc: fields.encrypt(env, recipient.phone),
-      shipTo: {recipient: recipient.name, ...address}, notes, lang,
+      shipTo: {recipient: recipient.name, ...address}, notes, lang, termsVersion: TERMS_VERSION, termsAcceptedAt: date(),
       items: priced.lines.map(line => ({productId: line.productId, title: line.title, quantity: line.quantity, unitCents: line.unitCents, selection: line.selection}))
     };
     const {order, created} = await store.orders.create(draft);

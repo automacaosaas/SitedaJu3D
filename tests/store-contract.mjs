@@ -62,12 +62,13 @@ async function contract(store, label) {
   const draft = {
     id: orderId, reference, customerId: id, source: 'test', status: 'aguardando_pagamento', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700,
     buyer: {name: 'Ana Lima', email, company: null}, buyerDocEnc: cpfEnc, phoneEnc: crypto.randomBytes(40), shipTo: {recipient: 'Ana Lima', cep: '01001000', street: 'Praça da Sé', number: '1', district: 'Sé', city: 'São Paulo', state: 'SP', complement: ''},
-    notes: 'Escrever "Ana" na base', lang: 'pt-BR',
+    notes: 'Escrever "Ana" na base', lang: 'pt-BR', termsVersion: '2026-09-28', termsAcceptedAt: new Date(),
     items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {body: 'pink', details: 'yellow'}}, {productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 2, unitCents: 15900, selection: {body: 'blue', details: 'red', engines: 'yellow'}}]
   };
   const first = await store.orders.create(draft);
   assert.equal(first.created, true);
   assert.equal(first.order.reference, reference);
+  assert.equal(first.order.termsVersion, '2026-09-28', `${label}: the order keeps the accepted terms version`); assert(first.order.termsAcceptedAt);
   assert.deepEqual(first.order.shipTo, draft.shipTo, `${label}: address snapshot round-trips`);
   assert.deepEqual(first.order.buyer, draft.buyer);
   assert.deepEqual(first.order.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), draft.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), `${label}: items keep order and colors`);

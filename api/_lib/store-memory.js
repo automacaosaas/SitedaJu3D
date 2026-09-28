@@ -16,7 +16,7 @@ function createMemoryStore() {
       async findByCpfIndex(index) { return copy([...customers.values()].find(c => c.cpfIndex && key(c.cpfIndex) === key(index)) || null); },
       async create(data) {
         if ([...customers.values()].some(c => c.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'account_exists'});
-        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, createdAt: new Date(), ...data};
+        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, termsVersion: null, termsAcceptedAt: null, createdAt: new Date(), ...data};
         customers.set(row.id, row);
         return copy(row);
       },
@@ -43,7 +43,7 @@ function createMemoryStore() {
       async create(order) {
         const existing = [...orders.values()].find(o => o.reference === order.reference);
         if (existing) return {order: copy(existing), created: false};
-        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, ownerNotifiedAt: null, customerNotifiedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
+        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, ownerNotifiedAt: null, customerNotifiedAt: null, termsVersion: null, termsAcceptedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
         orders.set(row.id, row);
         return {order: copy(row), created: true};
       },
