@@ -136,7 +136,11 @@ function start({env = process.env, log = console} = {}) {
   const port = /^\d+$/.test(String(env.PORT || '')) ? Number(env.PORT) : env.PORT || 3000;
   if (!env.SITE_URL) log.warn('Aviso: SITE_URL não está definida. Sem ela, formulários de conta e pagamento recusam os pedidos (proteção de origem). Veja HOSTINGER-SETUP.md.');
   running = createServer({env, log});
-  running.listen(port, () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · ${env.SITE_URL || 'sem SITE_URL'}`));
+  // Database migrations run before the first request. A failure is logged and the site still starts (pages keep
+  // working; /api/health reports the database state), so a database problem never takes the shop offline.
+  const pool = require('../api/_lib/db').getPool(env);
+  const ready = pool ? require('../api/_lib/migrate').migrate(pool, {log}).catch(error => log.error('db: migração falhou —', error.code || '', error.message)) : Promise.resolve();
+  ready.then(() => running.listen(port, () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · contas: ${pool ? 'MySQL' : isProduction(env) ? 'desligadas (sem banco)' : 'memória (teste)'} · ${env.SITE_URL || 'sem SITE_URL'}`)));
   const stop = () => running.close(() => process.exit(0));
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);

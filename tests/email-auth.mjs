@@ -232,8 +232,8 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
   const proof = {challenge: sent.json().challenge, code: codeFrom(resend.calls[0].body.html)};
   assert.equal((await call(checker, {body: proof})).statusCode, 200);
   assert.equal((await call(verifyCode.create({env: {...onlyKey, RESEND_API_KEY: 're_other_key_456'}}), {body: proof})).statusCode, 400, 'another key cannot verify it');
-  const healthRes = makeRes(); health.create({env: onlyKey})({}, healthRes);
-  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test'});
+  const healthRes = makeRes(); await health.create({env: onlyKey})({}, healthRes);
+  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing'});
 }
 
 // limiter
@@ -246,10 +246,11 @@ const fresh = (env = ENV, extra = {}) => { const resend = fakeResend(); let t = 
 
 // health and preview never expose values
 {
-  const res = makeRes(); health.create({env: ENV})({}, res);
-  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom'});
+  const res = makeRes(); await health.create({env: ENV})({}, res);
+  // Production without a database or data keys: accounts are off and the keys are reported missing (never shown).
+  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing'});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
-  const off = makeRes(); health.create({env: {}})({}, off);
+  const off = makeRes(); await health.create({env: {}})({}, off);
   assert.equal(off.json().mail, 'off');
   const prod = makeRes(); preview.create({env: ENV})({url: '/api/email-preview'}, prod);
   assert.equal(prod.statusCode, 404, 'the preview is not available in production');

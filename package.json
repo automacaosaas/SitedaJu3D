@@ -1,11 +1,15 @@
 {
   "name": "site-da-ju-3d",
   "private": true,
-  "description": "Ju imprime pra mim: vitrine estática em dist/ com funções em api/. Sem dependências.",
+  "description": "Ju imprime pra mim: vitrine em dist/, funções em api/ e servidor Node (server.cjs) para a Hostinger.",
   "main": "server.cjs",
   "scripts": {
     "start": "node server.cjs",
     "test": "node tools/run-tests.mjs",
-    "dev": "node tools/dev-server.cjs"
+    "dev": "node tools/dev-server.cjs",
+    "migrate": "node tools/migrate.cjs"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.4"
   }
 }
