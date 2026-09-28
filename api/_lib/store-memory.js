@@ -2,7 +2,8 @@
 // In-memory store with the same interface as store-mysql.js. Used by tests and, outside production, when no database is
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
 function createMemoryStore() {
-  const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map();
+  const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
+  let eventSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
 
@@ -24,7 +25,37 @@ function createMemoryStore() {
         if (patch.cpfIndex && [...customers.values()].some(c => c.id !== id && c.cpfIndex && key(c.cpfIndex) === key(patch.cpfIndex))) throw Object.assign(new Error('duplicate cpf'), {code: 'cpf_in_use'});
         Object.assign(row, patch);
         return copy(row);
+      },
+      // Account deletion: sessions and codes go; orders stay (fiscal records) without the link to the account.
+      async delete(id) {
+        const row = customers.get(id);
+        if (!row) return false;
+        customers.delete(id);
+        for (const [k, s] of sessions) if (s.customerId === id) sessions.delete(k);
+        for (const [k, c] of challenges) if (c.email === row.email) challenges.delete(k);
+        for (const o of orders.values()) if (o.customerId === id) o.customerId = null;
+        return true;
       }
+    },
+    orders: {
+      // Same reference (a retried payment attempt) returns the existing order instead of a second one.
+      async create(order) {
+        const existing = [...orders.values()].find(o => o.reference === order.reference);
+        if (existing) return {order: copy(existing), created: false};
+        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, ownerNotifiedAt: null, customerNotifiedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
+        orders.set(row.id, row);
+        return {order: copy(row), created: true};
+      },
+      async findById(id) { return copy(orders.get(id) || null); },
+      async findByReference(reference) { return copy([...orders.values()].find(o => o.reference === reference) || null); },
+      async findByMpId(mpOrderId) { return copy([...orders.values()].find(o => o.mpOrderId && o.mpOrderId === mpOrderId) || null); },
+      async update(id, patch) { const row = orders.get(id); if (!row) return null; Object.assign(row, patch); return copy(row); },
+      // Applies `patch` only while the order is still in one of `from`; true for exactly one caller.
+      async transition(id, from, patch) { const row = orders.get(id); if (!row || !from.includes(row.status)) return false; Object.assign(row, patch); return true; },
+      async listByCustomer(customerId, limit = 50) { return copy([...orders.values()].filter(o => o.customerId === customerId).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      async list({statuses = null, limit = 500} = {}) { return copy([...orders.values()].filter(o => !statuses || statuses.includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      async addEvent(orderId, kind, detail = null, actor = null) { events.push({id: ++eventSerial, orderId, kind, detail, actor, createdAt: new Date()}); },
+      async events(orderId) { return copy(events.filter(e => e.orderId === orderId)); }
     },
     sessions: {
       async create(session) { sessions.set(key(session.tokenHash), {revokedAt: null, lastSeenAt: new Date(), ...session}); },

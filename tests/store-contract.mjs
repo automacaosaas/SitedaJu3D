@@ -56,6 +56,50 @@ async function contract(store, label) {
   assert.equal(blocked.ok, false, `${label}: fourth hit in the window is refused`);
   assert(blocked.retryAfter > 0 && blocked.retryAfter <= 60);
   assert.equal((await store.rateLimit(bucket, 3, 60000, t + 60000)).ok, true, `${label}: next window starts fresh`);
+
+  // Orders: created once per reference, items in order, atomic status transitions, lists per customer and per status.
+  const orderId = crypto.randomUUID(), reference = `JU-${id.slice(0, 8).toUpperCase()}`;
+  const draft = {
+    id: orderId, reference, customerId: id, source: 'test', status: 'aguardando_pagamento', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700,
+    buyer: {name: 'Ana Lima', email, company: null}, buyerDocEnc: cpfEnc, phoneEnc: crypto.randomBytes(40), shipTo: {recipient: 'Ana Lima', cep: '01001000', street: 'Praça da Sé', number: '1', district: 'Sé', city: 'São Paulo', state: 'SP', complement: ''},
+    notes: 'Escrever "Ana" na base', lang: 'pt-BR',
+    items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {body: 'pink', details: 'yellow'}}, {productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 2, unitCents: 15900, selection: {body: 'blue', details: 'red', engines: 'yellow'}}]
+  };
+  const first = await store.orders.create(draft);
+  assert.equal(first.created, true);
+  assert.equal(first.order.reference, reference);
+  assert.deepEqual(first.order.shipTo, draft.shipTo, `${label}: address snapshot round-trips`);
+  assert.deepEqual(first.order.buyer, draft.buyer);
+  assert.deepEqual(first.order.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), draft.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), `${label}: items keep order and colors`);
+  assert(Buffer.from(first.order.phoneEnc).equals(draft.phoneEnc));
+  const again = await store.orders.create({...draft, id: crypto.randomUUID()});
+  assert.equal(again.created, false, `${label}: a retried attempt reuses the order`);
+  assert.equal(again.order.id, orderId);
+  await store.orders.update(orderId, {mpOrderId: `ORD${id.slice(0, 8).toUpperCase()}`, paymentState: 'pending_pix', method: 'pix'});
+  assert.equal((await store.orders.findByMpId(`ORD${id.slice(0, 8).toUpperCase()}`)).id, orderId);
+  const paidAt = new Date(t);
+  assert.equal(await store.orders.transition(orderId, ['aguardando_pagamento'], {status: 'pendente', paymentState: 'approved', paidAt}), true, `${label}: first transition wins`);
+  assert.equal(await store.orders.transition(orderId, ['aguardando_pagamento'], {status: 'pendente', paymentState: 'approved', paidAt}), false, `${label}: a repeated notice changes nothing`);
+  const paid = await store.orders.findByReference(reference);
+  assert.equal(paid.status, 'pendente');
+  assert.equal(new Date(paid.paidAt).getTime(), paidAt.getTime());
+  await store.orders.addEvent(orderId, 'paid', 'aprovado', 'mercadopago');
+  assert.deepEqual((await store.orders.events(orderId)).map(e => [e.kind, e.actor]), [['paid', 'mercadopago']]);
+  assert.deepEqual((await store.orders.listByCustomer(id)).map(o => o.id), [orderId]);
+  assert((await store.orders.list({statuses: ['pendente']})).some(o => o.id === orderId));
+  assert(!(await store.orders.list({statuses: ['concluido']})).some(o => o.id === orderId));
+
+  // Deleting the account keeps the order (fiscal record) and drops the link, the sessions and the codes.
+  const sessionHash = crypto.randomBytes(32);
+  await store.sessions.create({tokenHash: sessionHash, customerId: id, expiresAt, ip: null, userAgent: null});
+  assert.equal(await store.customers.delete(id), true);
+  assert.equal(await store.customers.findById(id), null);
+  assert.equal(await store.sessions.find(sessionHash), null, `${label}: sessions go with the account`);
+  assert.equal(await store.challenges.find(challengeId), null, `${label}: codes for the address go too`);
+  const kept = await store.orders.findById(orderId);
+  assert.equal(kept.customerId, null, `${label}: the order stays without the account link`);
+  assert.equal(kept.items.length, 2);
+  assert.equal(await store.customers.delete(id), false);
 }
 
 await contract(createMemoryStore(), 'memory');

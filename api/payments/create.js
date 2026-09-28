@@ -2,11 +2,17 @@
 // POST /api/payments/create
 //   {attempt, items:[{productId, quantity, selection}], customer:{name,email,phone}, address:{cep,street,number,district,city,state,complement},
 //    notes, lang, payment:{selectedPaymentMethod, formData}}
-// Validates the cart, recomputes every price on the server, creates the order at Mercado Pago and answers with a small
+// Needs a signed-in buyer with a complete identification (invoice and shipping label). Validates the cart, recomputes
+// every price on the server, records the order in the database, then creates it at Mercado Pago and answers with a small
 // status object (and, for Pix, the QR code). Card data never comes through here: the Payment Brick turns it into a token.
-const {json, readJson, clientIp, sameOrigin, createLimiter} = require('../_lib/http');
+// `customer` is who receives the parcel (the delivery form); the buyer comes from the account.
+const {json, readJson, clientIp, sameOrigin} = require('../_lib/http');
 const {config} = require('../_lib/mail');
 const {priceOrder} = require('../_lib/catalog');
+const {storeFor, readCookie} = require('../_lib/account-http');
+const {createAccounts} = require('../_lib/accounts');
+const {createOrders} = require('../_lib/orders');
+const fields = require('../_lib/fields');
 const mp = require('../_lib/mercadopago');
 
 const MAX_BODY = 16 * 1024;
@@ -29,12 +35,16 @@ function readCustomer(body) {
   return {customer: {name, email, phone}, address, notes: clean(body.notes, 500)};
 }
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), limiter = createLimiter(now)} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'POST') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'POST'});
     const settings = mp.settings(env), site = config(env);
     if (!sameOrigin(req, {...env, SITE_URL: site.siteUrl})) return json(res, 403, {error: 'forbidden'});
     if (settings.mode === 'off') return json(res, 503, {error: 'payments_not_configured'});
+    const store = injected || storeFor(env);
+    if (!store) return json(res, 503, {error: 'accounts_unavailable'});
+    const buyer = await createAccounts({store, env, now}).authenticate(readCookie(req));
+    if (!buyer) return json(res, 401, {error: 'unauthorized'});
 
     let body;
     try { body = await readJson(req, MAX_BODY); } catch (error) { return json(res, error.status || 400, {error: 'invalid_request'}); }
@@ -46,26 +56,43 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     try { priced = priceOrder(body.items); } catch { return json(res, 400, {error: 'invalid_items'}); }
     try { payment = mp.paymentFromBrick(body.payment || {}); } catch (error) { return json(res, 400, {error: error.code || 'invalid_payment'}); }
 
-    for (const [key, limit, windowMs] of [['pay-ip:' + clientIp(req), 20, 10 * 60 * 1000], ['pay-email:' + form.customer.email, 8, 10 * 60 * 1000]]) {
-      const taken = limiter.take(key, limit, windowMs);
+    for (const [key, limit, windowMs] of [['pay-ip:' + clientIp(req), 20, 10 * 60 * 1000], ['pay-account:' + buyer.id, 8, 10 * 60 * 1000]]) {
+      const taken = await store.rateLimit(key, limit, windowMs, now());
       if (!taken.ok) return json(res, 429, {error: 'too_many_requests', retryAfter: taken.retryAfter}, {'Retry-After': String(taken.retryAfter)});
     }
 
     const lang = LANGUAGES.includes(body.lang) ? body.lang : 'pt-BR';
     const reference = mp.referenceFor(attempt);
-    const payload = mp.buildOrderPayload({priced, reference, customer: form.customer, address: form.address, notes: form.notes, lang, payment});
+    const orders = createOrders({store, env, now});
+    let order;
+    try { order = await orders.open({customer: buyer, reference, source: settings.mode, priced, recipient: form.customer, address: form.address, notes: form.notes, lang}); }
+    catch (error) {
+      if (error.code === 'profile_incomplete') return json(res, 400, {error: 'profile_incomplete'});
+      if (error.code === 'conflict') return json(res, 409, {error: 'invalid_request', field: 'attempt'});
+      throw error;
+    }
+
+    // Mercado Pago gets the buyer from the account (name, e-mail, CPF when the Brick did not send one) and the phone
+    // of this delivery. A complete payer improves approval and fraud checks.
+    const identification = payment.identification || {type: 'CPF', number: fields.decrypt(env, buyer.cpfEnc)};
+    const payer = {name: `${buyer.firstName} ${buyer.lastName}`, email: buyer.email, phone: form.customer.phone};
+    const payload = mp.buildOrderPayload({priced, reference, customer: payer, address: form.address, notes: form.notes, lang, payment: {...payment, identification}});
     try {
-      let order;
-      try { order = await mp.createOrder({settings, fetchImpl, payload, idempotencyKey: attempt}); }
+      let answer;
+      try { answer = await mp.createOrder({settings, fetchImpl, payload, idempotencyKey: attempt}); }
       catch (error) {
-        // The test environment may accept only Mercado Pago's own test buyer address. The real e-mail stays in the order description.
+        // The test environment may accept only Mercado Pago's own test buyer address. The real e-mail stays in our order.
         if (settings.mode !== 'test' || !mp.isTestEmailRejection(error)) throw error;
-        order = await mp.createOrder({settings, fetchImpl, payload: {...payload, payer: {...payload.payer, email: mp.TEST_PAYER_EMAIL}}, idempotencyKey: attempt + '-t'});
+        answer = await mp.createOrder({settings, fetchImpl, payload: {...payload, payer: {...payload.payer, email: mp.TEST_PAYER_EMAIL}}, idempotencyKey: attempt + '-t'});
       }
-      return json(res, 201, {ok: true, mode: settings.mode, ...mp.normalizeOrder(order)});
+      const normalized = mp.normalizeOrder(answer);
+      const {order: updated} = await orders.applyPayment(order, normalized, {actor: 'checkout'});
+      if (orders.PAID.includes(updated.status)) await orders.notifyPaid(updated, {fetchImpl, outbox, test: settings.mode === 'test'});
+      return json(res, 201, {ok: true, mode: settings.mode, ...normalized});
     } catch (error) {
       console.error('payments/create: Mercado Pago answered', error.status || '', error.code || '', error.message);
       const refused = [400, 402, 409, 422].includes(error.status);   // the order itself was turned down; everything else is on our side or theirs
+      await store.orders.addEvent(order.id, refused ? 'payment_rejected' : 'provider_error', String(error.code || error.status || ''), 'checkout').catch(() => {});
       return json(res, refused ? 422 : 502, {error: refused ? 'payment_rejected' : 'provider_unavailable', code: error.code || null, ...(settings.mode === 'test' ? {detail: String(error.message).slice(0, 300)} : {})});
     }
   };

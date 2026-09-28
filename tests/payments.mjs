@@ -12,7 +12,10 @@ const require = createRequire(import.meta.url);
 const catalog = require('../api/_lib/catalog');
 const mp = require('../api/_lib/mercadopago');
 const {renderOwnerEmail, renderCustomerEmail} = require('../api/_lib/order-email');
-const {createLimiter} = require('../api/_lib/http');
+const {createMemoryStore} = require('../api/_lib/store-memory');
+const {createAccounts} = require('../api/_lib/accounts');
+const {createOrders} = require('../api/_lib/orders');
+const {decrypt} = require('../api/_lib/fields');
 const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), health = require('../api/health');
 const site = f => import(pathToFileURL(path.join(root, 'dist', f)).href);
 const {PRODUCTS: SITE_PRODUCTS, PALETTE} = await site('products.js');
@@ -22,6 +25,8 @@ const {translations} = await site('translations.js');
 const SITE = 'https://site.test';
 const ENV = {SITE_URL: SITE, RESEND_API_KEY: 're_test_key_123', MAIL_FROM: 'Ju <pedidos@site.test>', MP_ACCESS_TOKEN: 'TEST-secret-token-000', MP_PUBLIC_KEY: 'TEST-public-key-111', MP_WEBHOOK_SECRET: 'whsec-test-222', ORDER_NOTIFY_EMAIL: 'Ju@Site.Test', VERCEL_ENV: 'preview'};
 const SECRETS = [ENV.MP_ACCESS_TOKEN, ENV.MP_WEBHOOK_SECRET, ENV.RESEND_API_KEY];
+// Real money: Production, MP_MODE=live, and the data keys that production requires (test values here).
+const LIVE = {...ENV, VERCEL_ENV: 'production', MP_MODE: 'live', DATA_KEY: Buffer.alloc(32, 1).toString('base64'), INDEX_KEY: Buffer.alloc(32, 2).toString('base64')};
 const ITEMS = [{productId: 'borboletoscopio', quantity: 2, selection: {body: 'pink', details: 'lilac'}}, {productId: 'aviaoscopia', quantity: 1, selection: {body: 'black'}}];
 const CUSTOMER = {name: 'Ana Souza Lima', email: 'Ana@Example.com', phone: '(31) 99999-1234'};
 const ADDRESS = {cep: '30140-071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'mg', complement: 'Sala 4'};
@@ -216,28 +221,51 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   assert(mp.verifySignature({secret: S, signature: noRequestId, dataId: id}), 'a missing part is left out of the signed text');
 }
 
+// ── helpers: a database (memory store) with signed-in buyers ─────────────
+// A valid CPF that no other test account uses (the database keeps one account per CPF).
+function randomCpf() {
+  const d = Array.from({length: 9}, () => crypto.randomInt(0, 10));
+  for (const size of [9, 10]) { const sum = d.slice(0, size).reduce((acc, n, i) => acc + n * (size + 1 - i), 0); d.push((sum * 10) % 11 % 10); }
+  return d.join('');
+}
+// A buyer with a verified account and, unless profile is false, the identification filled in. The session is opened
+// directly in the store (as a sign-in would) to keep the tests fast.
+async function signedInBuyer(store, {email = 'ana@example.com', profile = true, env = ENV} = {}) {
+  const id = crypto.randomUUID(), cpf = randomCpf(), token = crypto.randomBytes(32).toString('base64url');
+  await store.customers.create({id, email, emailVerifiedAt: new Date(), displayName: 'Ana'});
+  if (profile) await createAccounts({store, env}).updateProfile(await store.customers.findById(id), {firstName: 'Ana', lastName: 'Souza Lima', cpf, phone: '(31) 98888-7777'});
+  await store.sessions.create({tokenHash: crypto.createHash('sha256').update(token).digest(), customerId: id, expiresAt: new Date(Date.now() + 86400000)});
+  return {id, cpf, cookie: `__Host-ju_session=${token}`};
+}
+const as = buyer => ({headers: {cookie: buyer.cookie}});
+
 // ── POST /api/payments/create ─────────────────────────────────────────
 {
-  const net = fakeNetwork(), clock = {t: 1_700_000_000_000};
-  const handler = createHandler.create({env: ENV, fetchImpl: net.fetchImpl, now: () => clock.t});
+  const net = fakeNetwork(), clock = {t: 1_700_000_000_000}, store = createMemoryStore();
+  const handler = createHandler.create({env: ENV, fetchImpl: net.fetchImpl, now: () => clock.t, store});
+  const ana = await signedInBuyer(store);
   const errors = spyErrors();
   try {
     assert.equal((await call(handler, {method: 'GET'})).statusCode, 405);
-    assert.equal((await call(handler, {origin: '', body: request()})).statusCode, 403, 'no Origin'); assert.equal((await call(handler, {origin: 'https://evil.example', body: request()})).statusCode, 403, 'foreign Origin');
-    assert.equal((await call(createHandler.create({env: {SITE_URL: SITE}, fetchImpl: net.fetchImpl}), {body: request()})).statusCode, 503, 'no keys → the checkout falls back to the demo');
-    assert.equal((await call(createHandler.create({env: {...ENV, VERCEL_ENV: 'production'}, fetchImpl: net.fetchImpl}), {body: request()})).statusCode, 503, 'Production without MP_MODE refuses');
+    assert.equal((await call(handler, {origin: '', body: request(), ...as(ana)})).statusCode, 403, 'no Origin'); assert.equal((await call(handler, {origin: 'https://evil.example', body: request(), ...as(ana)})).statusCode, 403, 'foreign Origin');
+    assert.equal((await call(createHandler.create({env: {SITE_URL: SITE}, fetchImpl: net.fetchImpl, store}), {body: request(), ...as(ana)})).statusCode, 503, 'no keys → the checkout falls back to the demo');
+    assert.equal((await call(createHandler.create({env: {...ENV, VERCEL_ENV: 'production'}, fetchImpl: net.fetchImpl, store}), {body: request(), ...as(ana)})).statusCode, 503, 'Production without MP_MODE refuses');
+    assert.equal((await call(handler, {body: request()})).statusCode, 401, 'buying needs an account');
+    const incomplete = await signedInBuyer(store, {email: 'sem-dados@example.com', profile: false});
+    assert.equal((await call(handler, {body: request(), ...as(incomplete)})).json().error, 'profile_incomplete', 'and the identification (invoice and label)');
     assert.equal(net.mpCalls.length, 0, 'nothing reached Mercado Pago so far');
-    const badField = async (mutate, field, status = 400) => { const res = await call(handler, {ip: '198.51.100.' + Math.floor(Math.random() * 200), body: mutate(request())}); assert.equal(res.statusCode, status, field); assert.equal(res.json().field ?? res.json().error, field); };
+    const badField = async (mutate, field, status = 400) => { const res = await call(handler, {ip: '198.51.100.' + Math.floor(Math.random() * 200), body: mutate(request()), ...as(ana)}); assert.equal(res.statusCode, status, field); assert.equal(res.json().field ?? res.json().error, field); };
     await badField(b => ({...b, attempt: 'short'}), 'attempt'); await badField(b => ({...b, attempt: undefined}), 'attempt');
     await badField(b => ({...b, customer: {...CUSTOMER, name: ' '}}), 'name'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'not-an-email'}}), 'email'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'a@b.co\nBcc: x@y.zz'}}), 'email');
     await badField(b => ({...b, customer: {...CUSTOMER, phone: '123'}}), 'phone'); await badField(b => ({...b, address: {...ADDRESS, cep: '123'}}), 'cep'); await badField(b => ({...b, address: {...ADDRESS, street: ''}}), 'street'); await badField(b => ({...b, address: {...ADDRESS, state: 'XX'}}), 'state'); await badField(b => ({...b, address: {...ADDRESS, city: '   '}}), 'city');
     await badField(b => ({...b, items: []}), 'invalid_items'); await badField(b => ({...b, items: [{productId: 'nao-existe', quantity: 1}]}), 'invalid_items');
     await badField(b => ({...b, payment: {selectedPaymentMethod: 'ticket', formData: {payment_method_id: 'bolbradesco'}}}), 'unsupported_method'); await badField(b => ({...b, payment: brickCard('short')}), 'invalid_card');
-    assert.equal((await call(handler, {body: 'not json'})).statusCode, 400);
+    assert.equal((await call(handler, {body: 'not json', ...as(ana)})).statusCode, 400);
     assert.equal(net.mpCalls.length, 0, 'invalid requests never reach Mercado Pago');
+    assert.equal((await store.orders.list()).length, 0, 'nor create orders');
 
     const body = request({items: [{...ITEMS[0], unitPrice: 1, price: 1, unitCents: 1, total: 1}, ITEMS[1]], total: 1, amount: '0.01'});
-    const ok = await call(handler, {body});
+    const ok = await call(handler, {body, ...as(ana)});
     assert.equal(ok.statusCode, 201); assert.equal(ok.headers['cache-control'], 'no-store');
     const answer = ok.json();
     assert.equal(answer.state, 'pending_pix'); assert.equal(answer.pix.qrCode, '000201PIXCODE'); assert.equal(answer.mode, 'test'); assert.equal(answer.reference, mp.referenceFor(body.attempt)); assert.match(answer.id, /^ORD01TEST/);
@@ -245,54 +273,74 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
     assert.equal(sent.method, 'POST'); assert.equal(sent.url, 'https://api.mercadopago.com/v1/orders');
     assert.equal(sent.headers.Authorization, `Bearer ${ENV.MP_ACCESS_TOKEN}`); assert.equal(sent.headers['X-Idempotency-Key'], body.attempt);
     assert.equal(sent.body.total_amount, '435.00', 'the total was recomputed on the server, not taken from the browser');
-    assert.equal(sent.body.payer.email, 'ana@example.com', 'the e-mail is normalized'); assert.equal(sent.body.shipment.address.state, 'MG'); assert.equal(sent.body.shipment.address.zip_code, '30140071');
-    assert.equal(sent.body.description, 'en|ana@example.com|Escrever "Ana" na base');
+    assert.equal(sent.body.payer.email, 'ana@example.com', 'the payer is the account'); assert.equal(sent.body.payer.first_name, 'Ana'); assert.equal(sent.body.payer.last_name, 'Souza Lima');
+    assert.deepEqual(sent.body.payer.identification, {type: 'CPF', number: ana.cpf}, 'Pix carries the CPF from the identification (better approval and fraud checks)');
+    assert.equal(sent.body.shipment.address.state, 'MG'); assert.equal(sent.body.shipment.address.zip_code, '30140071');
     for (const secret of SECRETS) assert(!ok.body.includes(secret), 'no secret in the answer');
+    assert(!ok.body.includes(ana.cpf), 'the CPF is not echoed back');
 
-    const again = await call(handler, {body});
+    // The order is in our database before and after Mercado Pago answers.
+    const saved = await store.orders.findByReference(answer.reference);
+    assert.equal(saved.customerId, ana.id); assert.equal(saved.status, 'aguardando_pagamento'); assert.equal(saved.paymentState, 'pending_pix'); assert.equal(saved.mpOrderId, answer.id); assert.equal(saved.method, 'pix');
+    assert.equal(saved.totalCents, 43500); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
+    assert.deepEqual(saved.items[0].selection, {body: 'pink', details: 'lilac'}, 'the colors of each part are recorded');
+    assert.equal(saved.shipTo.recipient, 'Ana Souza Lima'); assert.equal(saved.buyer.name, 'Ana Souza Lima'); assert.equal(saved.buyer.email, 'ana@example.com');
+    assert.equal(decrypt(ENV, saved.phoneEnc), '31999991234'); assert.equal(decrypt(ENV, saved.buyerDocEnc), ana.cpf, 'CPF and phone are encrypted in the order too');
+
+    const again = await call(handler, {body, ...as(ana)});
     assert.equal(again.json().id, answer.id, 'the same attempt id returns the same order (a double click cannot charge twice)');
-    assert.equal(new Set(net.orders.keys()).size >= 2, true);
+    assert.equal((await store.orders.list()).filter(o => o.reference === answer.reference).length, 1, 'and one order in the database');
+    const bia = await signedInBuyer(store, {email: 'bia@example.com'});
+    assert.equal((await call(handler, {body, ...as(bia)})).statusCode, 409, "another buyer cannot take over someone else's attempt");
 
-    const card = await call(handler, {body: request({payment: brickCard()})});
+    const card = await call(handler, {body: request({payment: brickCard()}), ...as(ana)});
     assert.equal(card.statusCode, 201); assert.equal(card.json().state, 'approved'); assert.equal(card.json().method.installments, 3);
+    const paidOrder = await store.orders.findByReference(card.json().reference);
+    assert.equal(paidOrder.status, 'pendente', 'an approved card is a paid order for Ju right away'); assert.ok(paidOrder.paidAt); assert.equal(paidOrder.installments, 3);
+    assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ana@example.com', 'ju@site.test'], 'and Ju and the buyer are told at once');
+    assert.equal(net.mails.find(m => m.to[0] === 'ju@site.test').headers['Idempotency-Key'], `order-owner-${paidOrder.id}`);
+    assert.ok(paidOrder.ownerNotifiedAt && paidOrder.customerNotifiedAt);
     const cardCall = net.mpCalls.at(-1).body.transactions.payments[0];
     assert.equal(cardCall.payment_method.installments, 3); assert.equal(cardCall.payment_method.token.length, 32); assert(!card.body.includes('aaaaaaaa'), 'the card token stays on the server');
-    assert.equal((await call(handler, {body: request({payment: brickCard('REJE' + 'r'.repeat(28))})})).json().state, 'refused');
+    assert.deepEqual(net.mpCalls.at(-1).body.payer.identification, {type: 'CPF', number: '12345678909'}, 'the card holder CPF typed in the Brick wins');
+    const refused = await call(handler, {body: request({payment: brickCard('REJE' + 'r'.repeat(28))}), ...as(ana)});
+    assert.equal(refused.json().state, 'refused'); assert.equal((await store.orders.findByReference(refused.json().reference)).status, 'cancelado');
     assert(!errors.lines.join('\n').includes('aaaaaaaa'), 'the card token is never logged');
 
-    const refuse = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl}), {body: request()});
+    const refuse = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store}), {body: request(), ...as(ana)});
     assert.equal(refuse.statusCode, 422); assert.equal(refuse.json().error, 'payment_rejected'); assert.equal(refuse.json().code, 'invalid_payer'); assert(refuse.json().detail, 'test mode shows Mercado Pago\'s reason');
-    const live = await call(createHandler.create({env: {...ENV, VERCEL_ENV: 'production', MP_MODE: 'live'}, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl}), {body: request()});
+    const liveStore = createMemoryStore(), liveAna = await signedInBuyer(liveStore, {env: LIVE});
+    const live = await call(createHandler.create({env: LIVE, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store: liveStore}), {body: request(), ...as(liveAna)});
     assert.equal(live.statusCode, 422); assert(!('detail' in live.json()), 'live mode never leaks the provider message (it can quote the customer\'s data)');
-    for (const status of [401, 403, 404, 424, 429, 500, 503]) { const res = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: status}).fetchImpl}), {body: request()}); assert.equal(res.statusCode, 502, `MP ${status} → 502`); assert.equal(res.json().error, 'provider_unavailable'); }
-    assert.equal((await call(createHandler.create({env: ENV, fetchImpl: async () => { throw new Error('socket hang up'); }}), {body: request()})).statusCode, 502, 'a network failure is reported as 502');
+    for (const status of [401, 403, 404, 424, 429, 500, 503]) { const res = await call(createHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: status}).fetchImpl, store}), {body: request(), ...as(bia)}); assert.equal(res.statusCode, 502, `MP ${status} → 502`); assert.equal(res.json().error, 'provider_unavailable'); }
+    assert.equal((await call(createHandler.create({env: ENV, fetchImpl: async () => { throw new Error('socket hang up'); }, store}), {body: request(), ...as(bia)})).statusCode, 502, 'a network failure is reported as 502');
 
-    // rate limits: 20 per IP and 8 per e-mail in ten minutes
-    const limited = createHandler.create({env: ENV, fetchImpl: fakeNetwork().fetchImpl, now: () => clock.t, limiter: createLimiter(() => clock.t)});
-    for (let i = 0; i < 8; i++) assert.equal((await call(limited, {ip: `192.0.2.${i}`, body: request({customer: {...CUSTOMER, email: 'same@example.com'}})})).statusCode, 201);
-    const ninth = await call(limited, {ip: '192.0.2.99', body: request({customer: {...CUSTOMER, email: 'same@example.com'}})});
+    // rate limits, kept in the database: 8 per account and 20 per IP in ten minutes
+    const limitStore = createMemoryStore(), limited = createHandler.create({env: ENV, fetchImpl: fakeNetwork().fetchImpl, now: () => clock.t, store: limitStore});
+    const same = await signedInBuyer(limitStore, {email: 'same@example.com'});
+    for (let i = 0; i < 8; i++) assert.equal((await call(limited, {ip: `192.0.2.${i}`, body: request(), ...as(same)})).statusCode, 201);
+    const ninth = await call(limited, {ip: '192.0.2.99', body: request(), ...as(same)});
     assert.equal(ninth.statusCode, 429); assert(Number(ninth.headers['retry-after']) > 0);
-    for (let i = 0; i < 20; i++) await call(limited, {ip: '192.0.2.200', body: request({customer: {...CUSTOMER, email: `n${i}@example.com`}})});
-    assert.equal((await call(limited, {ip: '192.0.2.200', body: request({customer: {...CUSTOMER, email: 'fresh@example.com'}})})).statusCode, 429, 'per IP');
+    for (let i = 0; i < 20; i++) await call(limited, {ip: '192.0.2.200', body: request(), ...as(await signedInBuyer(limitStore, {email: `n${i}@example.com`}))});
+    assert.equal((await call(limited, {ip: '192.0.2.200', body: request(), ...as(await signedInBuyer(limitStore, {email: 'fresh@example.com'}))})).statusCode, 429, 'per IP');
   } finally { errors.restore(); }
 }
 
 // ── test environment that only accepts Mercado Pago's own buyer address ─
 {
-  const net = fakeNetwork({testEmailOnly: true}), errors = spyErrors();
+  const net = fakeNetwork({testEmailOnly: true}), errors = spyErrors(), store = createMemoryStore();
   try {
-    const handler = createHandler.create({env: ENV, fetchImpl: net.fetchImpl});
-    const ok = await call(handler, {body: request({customer: {...CUSTOMER, email: 'real.customer@example.com'}, payment: brickCard()})});
+    const buyer = await signedInBuyer(store, {email: 'real.customer@example.com'});
+    const handler = createHandler.create({env: ENV, fetchImpl: net.fetchImpl, store});
+    const ok = await call(handler, {body: request({payment: brickCard()}), ...as(buyer)});
     assert.equal(ok.statusCode, 201, 'the second try with the test address succeeds'); assert.equal(ok.json().state, 'approved');
     const posts = net.mpCalls.filter(c => c.method === 'POST');
     assert.equal(posts.length, 2); assert.equal(posts[0].body.payer.email, 'real.customer@example.com'); assert.equal(posts[1].body.payer.email, 'test@testuser.com');
     assert(posts[1].headers['X-Idempotency-Key'].endsWith('-t') && posts[1].headers['X-Idempotency-Key'] !== posts[0].headers['X-Idempotency-Key'], 'the retry is a new request for Mercado Pago');
-    assert(posts[1].body.description.includes('real.customer@example.com'), 'the real address stays in the order');
-    const hook = webhookHandler.create({env: ENV, fetchImpl: net.fetchImpl});
-    assert.equal((await notify(hook, ok.json().id)).statusCode, 200);
-    assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ju@site.test', 'real.customer@example.com'], 'the receipt still goes to the real customer, not to the test address');
-    const live = createHandler.create({env: {...ENV, VERCEL_ENV: 'production', MP_MODE: 'live'}, fetchImpl: fakeNetwork({testEmailOnly: true}).fetchImpl});
-    const before = net.mpCalls.length; const refused = await call(live, {body: request({customer: {...CUSTOMER, email: 'someone@example.com'}, payment: brickCard()})});
+    assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ju@site.test', 'real.customer@example.com'], 'the receipt goes to the real customer (from our order), not to the test address');
+    const liveStore = createMemoryStore(), liveBuyer = await signedInBuyer(liveStore, {email: 'someone@example.com', env: LIVE});
+    const live = createHandler.create({env: LIVE, fetchImpl: fakeNetwork({testEmailOnly: true}).fetchImpl, store: liveStore});
+    const before = net.mpCalls.length; const refused = await call(live, {body: request({payment: brickCard()}), ...as(liveBuyer)});
     assert.equal(refused.statusCode, 422, 'in live mode the address is never swapped'); assert.equal(net.mpCalls.length, before);
   } finally { errors.restore(); }
   assert.equal(mp.isTestEmailRejection({code: 2198}), true); assert.equal(mp.isTestEmailRejection({code: '2198'}), true); assert.equal(mp.isTestEmailRejection({message: 'Invalid test user email'}), true); assert.equal(mp.isTestEmailRejection({code: 4050, message: 'Payer.email must be a valid email'}), false);
@@ -300,83 +348,105 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
 
 // ── GET /api/payments/status ──────────────────────────────────────────
 {
-  const net = fakeNetwork(), created = await call(createHandler.create({env: ENV, fetchImpl: net.fetchImpl}), {body: request()});
-  const {id} = created.json(), handler = statusHandler.create({env: ENV, fetchImpl: net.fetchImpl});
-  const get = (query, opts = {}) => call(handler, {method: 'GET', origin: '', url: '/api/payments/status' + query, ...opts});
+  const net = fakeNetwork(), store = createMemoryStore(), ana = await signedInBuyer(store), bia = await signedInBuyer(store, {email: 'bia@example.com'});
+  const created = await call(createHandler.create({env: ENV, fetchImpl: net.fetchImpl, store}), {body: request(), ...as(ana)});
+  const {id, reference} = created.json(), handler = statusHandler.create({env: ENV, fetchImpl: net.fetchImpl, store});
+  const get = (query, buyer = ana, opts = {}) => call(handler, {method: 'GET', origin: '', url: '/api/payments/status' + query, ...(buyer ? as(buyer) : {}), ...opts});
   const waiting = await get('?id=' + id); assert.equal(waiting.statusCode, 200); assert.equal(waiting.json().state, 'pending_pix'); assert.deepEqual(Object.keys(waiting.json()).sort(), ['expiresAt', 'reference', 'state', 'statusDetail'], 'only the state is exposed');
+  assert.equal((await get('?id=' + id, null)).statusCode, 401, 'needs the session');
+  assert.equal((await get('?id=' + id, bia)).statusCode, 404, "another buyer's order does not exist for her");
+  assert.equal(net.mails.length, 0);
   net.pay(id); assert.equal((await get('?id=' + id)).json().state, 'approved');
+  const order = await store.orders.findByReference(reference);
+  assert.equal(order.status, 'pendente', 'a status check records the payment even without a webhook');
+  assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ana@example.com', 'ju@site.test'], 'and tells Ju and the buyer');
+  await get('?id=' + id); assert.equal(net.mails.length, 2, 'once');
   assert.equal((await get('')).statusCode, 400); assert.equal((await get('?id=../../secret')).statusCode, 400); assert.equal((await get('?id=short')).statusCode, 400);
   assert.equal((await get('?id=ORD01DOESNOTEXIST999')).statusCode, 404);
-  net.orders.get(id).external_reference = 'OUTRA-LOJA-1'; assert.equal((await get('?id=' + id)).statusCode, 404, 'only orders that carry our reference');
   assert.equal((await call(handler, {method: 'POST', origin: ''})).statusCode, 405);
-  assert.equal((await call(statusHandler.create({env: {}, fetchImpl: net.fetchImpl}), {method: 'GET', origin: '', url: '/x?id=' + id})).statusCode, 503);
-  const errors = spyErrors(); try { assert.equal((await call(statusHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 500}).fetchImpl}), {method: 'GET', origin: '', url: '/x?id=' + id})).statusCode, 502); } finally { errors.restore(); }
-  let t = 0; const flood = statusHandler.create({env: ENV, fetchImpl: net.fetchImpl, now: () => t, limiter: createLimiter(() => t)});
-  for (let i = 0; i < 200; i++) await call(flood, {method: 'GET', origin: '', url: '/x?id=' + id, ip: '198.51.100.7'});
-  assert.equal((await call(flood, {method: 'GET', origin: '', url: '/x?id=' + id, ip: '198.51.100.7'})).statusCode, 429);
+  assert.equal((await call(statusHandler.create({env: {}, fetchImpl: net.fetchImpl, store}), {method: 'GET', origin: '', url: '/x?id=' + id, ...as(ana)})).statusCode, 503);
+  const errors = spyErrors(); try { assert.equal((await call(statusHandler.create({env: ENV, fetchImpl: fakeNetwork({mpStatus: 500}).fetchImpl, store}), {method: 'GET', origin: '', url: '/x?id=' + id, ...as(ana)})).statusCode, 502); } finally { errors.restore(); }
+  let t = 0; const flood = statusHandler.create({env: ENV, fetchImpl: net.fetchImpl, now: () => t, store});
+  for (let i = 0; i < 200; i++) await call(flood, {method: 'GET', origin: '', url: '/x?id=' + id, ...as(ana)});
+  assert.equal((await call(flood, {method: 'GET', origin: '', url: '/x?id=' + id, ...as(ana)})).statusCode, 429);
 }
 
 // ── POST /api/payments/webhook ────────────────────────────────────────
 {
-  const build = (extra = {}, envOver = {}) => { const net = fakeNetwork(extra); return {net, handler: webhookHandler.create({env: {...ENV, ...envOver}, fetchImpl: net.fetchImpl}), create: createHandler.create({env: ENV, fetchImpl: net.fetchImpl})}; };
+  const build = async (extra = {}, envOver = {}) => {
+    const net = fakeNetwork(extra), store = createMemoryStore(), env = {...ENV, ...envOver}, buyer = await signedInBuyer(store, {env});
+    return {net, store, buyer, handler: webhookHandler.create({env, fetchImpl: net.fetchImpl, store}), create: createHandler.create({env, fetchImpl: net.fetchImpl, store})};
+  };
   const errors = spyErrors();
   try {
-    const {net, handler, create} = build();
-    const card = (await call(create, {body: request({payment: brickCard()})})).json(), pix = (await call(create, {body: request()})).json();
+    const {net, store, buyer, handler, create} = await build();
+    const card = (await call(create, {body: request({payment: brickCard()}), ...as(buyer)})).json(), pix = (await call(create, {body: request(), ...as(buyer)})).json();
+    assert.equal(net.mails.length, 2, 'the approved card already told Ju and the buyer');
     assert.equal((await call(handler, {method: 'GET', origin: ''})).statusCode, 405);
-    assert.equal((await notify(handler, card.id, {signature: 'ts=1,v1=' + '0'.repeat(64)})).statusCode, 401, 'wrong signature');
-    assert.equal((await notify(handler, card.id, {signature: sign({id: card.id, secret: 'another-secret'})})).statusCode, 401, 'signed with another secret');
-    assert.equal((await call(handler, {origin: '', url: `/x?data.id=${card.id}`, body: {}})).statusCode, 401, 'no signature at all');
+    assert.equal((await notify(handler, pix.id, {signature: 'ts=1,v1=' + '0'.repeat(64)})).statusCode, 401, 'wrong signature');
+    assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, secret: 'another-secret'})})).statusCode, 401, 'signed with another secret');
+    assert.equal((await call(handler, {origin: '', url: `/x?data.id=${pix.id}`, body: {}})).statusCode, 401, 'no signature at all');
     assert.equal((await notify(handler, pix.id, {signature: sign({id: card.id})})).statusCode, 401, 'a signature for another order');
-    assert.equal(net.mails.length, 0, 'unsigned notifications send nothing');
 
     const first = await notify(handler, card.id);
     assert.equal(first.statusCode, 200); assert.deepEqual(first.json(), {ok: true, paid: true, sent: {owner: true, customer: true}});
-    assert.equal(net.mails.length, 2);
-    const [owner, customer] = net.mails;
-    assert.deepEqual(owner.to, ['ju@site.test']); assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('435,00'));
+    assert.equal(net.mails.length, 2, 'a notice about an order already recorded as paid sends nothing new');
+    const [owner, customer] = [net.mails.find(m => m.to[0] === 'ju@site.test'), net.mails.find(m => m.to[0] === 'ana@example.com')];
+    assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('435,00'));
     assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa Ju') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
     assert(owner.html.includes('Rua da Bahia, 1200') && owner.html.includes('30140-071') && owner.html.includes('wa.me/5531999991234') && owner.html.includes('ana@example.com'), 'and where to send it and how to reach the customer');
     assert(owner.html.includes('Cartão de crédito · 3x') && owner.html.includes('Escrever &quot;Ana&quot; na base') && owner.html.includes('AMBIENTE DE TESTE'));
-    assert.deepEqual(customer.to, ['ana@example.com']); assert(customer.subject.startsWith('[TESTE] Payment confirmed · JU-'), 'the customer gets it in the language they used');
+    assert(customer.subject.startsWith('[TESTE] Payment confirmed · JU-'), 'the customer gets it in the language they used');
     assert(customer.html.includes('Body') && customer.html.includes('Ju pink') && customer.html.includes('Wing details') && customer.html.includes('Credit card · 3x'));
-    assert.equal(owner.headers['Idempotency-Key'], `order-owner-${card.id}`); assert.equal(customer.headers['Idempotency-Key'], `order-customer-${card.id}`, 'a retried notification reuses the same keys, so Resend drops the duplicate');
-    const retry = await notify(handler, card.id, {requestId: 'req-456'}); assert.equal(retry.statusCode, 200);
-    assert.equal(net.mails.at(-1).headers['Idempotency-Key'], `order-customer-${card.id}`);
 
-    const waiting = await notify(handler, pix.id); assert.deepEqual(waiting.json(), {ok: true, paid: false}); assert.equal(net.mails.length, 4, 'an unpaid Pix sends nothing');
+    const waiting = await notify(handler, pix.id); assert.deepEqual(waiting.json(), {ok: true, paid: false}); assert.equal(net.mails.length, 2, 'an unpaid Pix sends nothing');
     net.pay(pix.id); const bodyOnly = await notify(handler, pix.id, {dataInQuery: false});
-    assert.equal(bodyOnly.statusCode, 200, 'the id may also come in the body; the signature still covers it'); assert.equal(net.mails.length, 6); assert(net.mails.at(-2).html.includes('Pix'));
+    assert.equal(bodyOnly.statusCode, 200, 'the id may also come in the body; the signature still covers it'); assert.equal(net.mails.length, 4); assert(net.mails.at(-2).html.includes('Pix'));
+    assert.equal((await store.orders.findByMpId(pix.id)).status, 'pendente');
+    await notify(handler, pix.id, {requestId: 'req-456'}); assert.equal(net.mails.length, 4, 'a repeated notice changes nothing');
+    const events = await store.orders.events((await store.orders.findByMpId(pix.id)).id);
+    assert.deepEqual(events.filter(e => e.kind === 'paid').map(e => e.actor), ['webhook'], 'paid exactly once, by the webhook');
+
+    // Amount tampering: Mercado Pago says a different total → never marked paid.
+    const other = (await call(create, {body: request(), ...as(buyer)})).json();
+    net.orders.get(other.id).total_amount = '1.00'; net.pay(other.id);
+    await notify(handler, other.id);
+    const tampered = await store.orders.findByMpId(other.id);
+    assert.equal(tampered.status, 'aguardando_pagamento', 'a different amount is not a payment of this order');
+    assert((await store.orders.events(tampered.id)).some(e => e.kind === 'payment_mismatch'));
 
     assert.equal((await notify(handler, 'ORD01DOESNOTEXIST999')).statusCode, 500, 'Mercado Pago cannot find it → 5xx so it retries later');
     assert.equal((await notify(handler, 'x/../y', {signature: sign({id: 'x/../y'})})).json().ignored, 'not_an_order');
     net.orders.get(card.id).external_reference = 'OUTRA-LOJA'; const before = net.mails.length;
     assert.equal((await notify(handler, card.id)).json().ignored, 'not_ours'); assert.equal(net.mails.length, before, 'orders from elsewhere are ignored');
+    net.orders.get(card.id).external_reference = 'JU-NAOEXISTE'; assert.equal((await notify(handler, card.id)).json().ignored, 'unknown_order', 'ours by prefix but not in the database');
     for (const text of net.mails.map(m => m.html + m.text)) for (const secret of SECRETS) assert(!text.includes(secret), 'no secret in any e-mail');
   } finally { errors.restore(); }
 
-  // failure handling
+  // failure handling: the order is saved first, e-mails are retried by later notices
   const quiet = spyErrors();
   try {
-    const noSecret = build({}, {MP_WEBHOOK_SECRET: ''}); assert.equal((await notify(noSecret.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 503, 'no webhook secret → refuses');
+    const noSecret = await build({}, {MP_WEBHOOK_SECRET: ''}); assert.equal((await notify(noSecret.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 503, 'no webhook secret → refuses');
     assert.equal((await call(webhookHandler.create({env: {}, fetchImpl: noSecret.net.fetchImpl}), {origin: '', url: '/x?data.id=ORD01ABCDEFGHIJKLM', body: {}})).statusCode, 503, 'payments off');
-    const ownerDown = build({resendFailFor: 'ju@site.test'}); const paid = (await call(ownerDown.create, {body: request({payment: brickCard()})})).json();
-    assert.equal((await notify(ownerDown.handler, paid.id)).statusCode, 500, 'Ju\'s e-mail failing → 500 so Mercado Pago retries');
-    const customerDown = build({resendFailFor: 'ana@example.com'}); const paid2 = (await call(customerDown.create, {body: request({payment: brickCard()})})).json();
+    const ownerDown = await build({resendFailFor: 'ju@site.test'}); const paid = (await call(ownerDown.create, {body: request({payment: brickCard()}), ...as(ownerDown.buyer)})).json();
+    assert.equal((await ownerDown.store.orders.findByMpId(paid.id)).status, 'pendente', 'the paid order is saved even when the e-mail fails');
+    assert.equal((await notify(ownerDown.handler, paid.id)).statusCode, 500, 'Ju\'s e-mail still failing → 500 so Mercado Pago calls again');
+    const customerDown = await build({resendFailFor: 'ana@example.com'}); const paid2 = (await call(customerDown.create, {body: request({payment: brickCard()}), ...as(customerDown.buyer)})).json();
     const partial = await notify(customerDown.handler, paid2.id); assert.equal(partial.statusCode, 200, 'the customer\'s copy is best effort'); assert.deepEqual(partial.json().sent, {owner: true, customer: false});
-    const noOwner = build({}, {ORDER_NOTIFY_EMAIL: ''}); const paid3 = (await call(noOwner.create, {body: request({payment: brickCard()})})).json();
+    const noOwner = await build({}, {ORDER_NOTIFY_EMAIL: ''}); const paid3 = (await call(noOwner.create, {body: request({payment: brickCard()}), ...as(noOwner.buyer)})).json();
     const ownerless = await notify(noOwner.handler, paid3.id); assert.equal(ownerless.statusCode, 200); assert.deepEqual(ownerless.json().sent, {owner: false, customer: true}); assert(quiet.lines.some(l => l.includes('ORDER_NOTIFY_EMAIL')), 'says why Ju was not told');
-    const noMail = build({}, {RESEND_API_KEY: ''}); const paid4 = (await call(noMail.create, {body: request({payment: brickCard()})})).json();
+    const noMail = await build({}, {RESEND_API_KEY: ''}); const paid4 = (await call(noMail.create, {body: request({payment: brickCard()}), ...as(noMail.buyer)})).json();
     assert.deepEqual((await notify(noMail.handler, paid4.id)).json(), {ok: true, paid: true, sent: {owner: false, customer: false}}); assert.equal(noMail.net.mails.length, 0);
-    const live = build({}, {VERCEL_ENV: 'production', MP_MODE: 'live'}); const paid5 = (await call(createHandler.create({env: {...ENV, VERCEL_ENV: 'production', MP_MODE: 'live'}, fetchImpl: live.net.fetchImpl}), {body: request({payment: brickCard()})})).json();
+    const live = await build({}, {...LIVE}); const paid5 = (await call(live.create, {body: request({payment: brickCard()}), ...as(live.buyer)})).json();
     await notify(live.handler, paid5.id); assert(!live.net.mails[0].subject.includes('[TESTE]') && !live.net.mails[0].html.includes('AMBIENTE DE TESTE'), 'live orders are not marked as tests');
   } finally { quiet.restore(); }
 }
 
-// ── the e-mails themselves ────────────────────────────────────────────
+// ── the e-mails themselves (built from our order) ─────────────────────
 {
-  const net = fakeNetwork(), made = await call(createHandler.create({env: ENV, fetchImpl: net.fetchImpl}), {body: request({payment: brickCard()})});
-  const real = mp.summarizeOrder(net.orders.get(made.json().id));
+  const net = fakeNetwork(), store = createMemoryStore(), buyer = await signedInBuyer(store);
+  const made = await call(createHandler.create({env: ENV, fetchImpl: net.fetchImpl, store}), {body: request({payment: brickCard()}), ...as(buyer)});
+  const real = createOrders({store, env: ENV}).summary(await store.orders.findByMpId(made.json().id));
   const summary = {...real, notes: '<script>alert(1)</script> "oi" & mais', customer: {...real.customer, name: '<img src=x onerror=alert(1)> Lima'}};
   for (const lang of ['pt-BR', 'en', 'es']) {
     const mail = renderCustomerEmail({summary: {...summary, lang}, lang, test: true, assetUrl: SITE});
@@ -411,4 +481,4 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   assert.equal(client.parseExpiry('2030-01-01T10:00:00.000-03:00', 0), Date.parse('2030-01-01T13:00:00.000Z')); assert.equal(client.parseExpiry('yesterday', 1000), 1000 + 3600000); assert.equal(client.parseExpiry('2000-01-01T00:00:00Z', 5e12), 5e12 + 3600000, 'a date in the past falls back to one hour'); assert.equal(client.parseExpiry(null, 0), 3600000);
 }
 
-console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped.');
+console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped.');

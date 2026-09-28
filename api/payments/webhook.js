@@ -1,13 +1,15 @@
 'use strict';
 // POST /api/payments/webhook — Mercado Pago tells us an order changed. The notification itself is never trusted: the
-// signature is checked, then the order is read back from Mercado Pago. When it is paid, Ju and the customer get an e-mail.
+// signature is checked, then the order is read back from Mercado Pago and matched with ours (reference and amount).
+// A paid order moves once (atomic transition) and Ju and the buyer get their e-mails once.
 // Answer 200 fast (Mercado Pago waits 22 s and retries otherwise); a 5xx makes it retry later.
 const {json, readJson} = require('../_lib/http');
-const {config, mailReady, sendMail} = require('../_lib/mail');
-const {renderOwnerEmail, renderCustomerEmail} = require('../_lib/order-email');
+const {config, mailReady} = require('../_lib/mail');
+const {storeFor} = require('../_lib/account-http');
+const {createOrders} = require('../_lib/orders');
 const mp = require('../_lib/mercadopago');
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, outbox} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'POST') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'POST'});
     const settings = mp.settings(env);
@@ -20,26 +22,23 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, outbox}
     if (!mp.verifySignature({secret: settings.webhookSecret, signature: req.headers['x-signature'], requestId: req.headers['x-request-id'], dataId})) return json(res, 401, {error: 'invalid_signature'});
     if (!/^[A-Za-z0-9]{10,64}$/.test(String(dataId))) return json(res, 200, {ok: true, ignored: 'not_an_order'});
 
-    let order;
-    try { order = await mp.getOrder({settings, fetchImpl, id: String(dataId)}); }
+    let remote;
+    try { remote = await mp.getOrder({settings, fetchImpl, id: String(dataId)}); }
     catch (error) { console.error('payments/webhook: could not read the order —', error.status || '', error.message); return json(res, 500, {error: 'lookup_failed'}); }
-    if (!String(order.external_reference || '').startsWith(mp.REFERENCE_PREFIX)) return json(res, 200, {ok: true, ignored: 'not_ours'});
-    const summary = mp.summarizeOrder(order);
-    if (!summary.paid) return json(res, 200, {ok: true, paid: false});
+    if (!String(remote.external_reference || '').startsWith(mp.REFERENCE_PREFIX)) return json(res, 200, {ok: true, ignored: 'not_ours'});
 
-    const mail = config(env), test = settings.mode === 'test', sent = {owner: false, customer: false};
-    if (!mailReady(mail)) { console.error(`payments/webhook: order ${summary.reference} is paid but e-mail is not configured`); return json(res, 200, {ok: true, paid: true, sent}); }
-    const deliver = (to, message, key) => sendMail({settings: mail, to, subject: message.subject, html: message.html, text: message.text, idempotencyKey: key, fetchImpl, outbox: outbox && (m => outbox({...m, kind: key.split('-')[1], reference: summary.reference}))});
-    // Ju's e-mail is the one that matters: if it fails, ask Mercado Pago to retry. The customer's copy is best effort
-    // (until a domain is verified at Resend it can only reach the account owner's address).
-    if (settings.ownerEmail) {
-      try { await deliver(settings.ownerEmail, renderOwnerEmail({summary, test, assetUrl: mail.assetUrl}), `order-owner-${summary.id}`); sent.owner = true; }
-      catch (error) { console.error('payments/webhook: e-mail to the owner failed —', error.status || '', error.message); return json(res, 500, {error: 'owner_email_failed'}); }
-    } else console.error('payments/webhook: ORDER_NOTIFY_EMAIL is not set, so Ju was not notified');
-    if (summary.customer.email) {
-      try { await deliver(summary.customer.email, renderCustomerEmail({summary, lang: summary.lang, test, assetUrl: mail.assetUrl}), `order-customer-${summary.id}`); sent.customer = true; }
-      catch (error) { console.error('payments/webhook: e-mail to the customer failed —', error.status || '', error.message); }
-    }
+    const store = injected || storeFor(env);
+    const ours = store && await store.orders.findByReference(remote.external_reference);
+    if (!ours) { console.error(`payments/webhook: ${remote.external_reference} is not in the database`); return json(res, 200, {ok: true, ignored: 'unknown_order'}); }
+    const orders = createOrders({store, env, now});
+    const {order} = await orders.applyPayment(ours, mp.normalizeOrder(remote), {actor: 'webhook'});
+    if (!orders.PAID.includes(order.status)) return json(res, 200, {ok: true, paid: false});
+
+    const sent = await orders.notifyPaid(order, {fetchImpl, outbox, test: settings.mode === 'test'});
+    if (!mailReady(config(env))) console.error(`payments/webhook: order ${order.reference} is paid but e-mail is not configured`);
+    else if (!settings.ownerEmail) console.error('payments/webhook: ORDER_NOTIFY_EMAIL is not set, so Ju was not notified');
+    // Ju's e-mail is the one that matters: if it failed, ask Mercado Pago to call again (the order itself is already saved).
+    else if (!sent.owner) return json(res, 500, {error: 'owner_email_failed'});
     return json(res, 200, {ok: true, paid: true, sent});
   };
 }

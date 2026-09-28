@@ -14,11 +14,34 @@ function toCustomer(row) {
   customer.marketingOptIn = Boolean(row.marketing_opt_in);
   return customer;
 }
+const ORDER_COLUMNS = {
+  id: 'id', reference: 'reference', customerId: 'customer_id', source: 'source', status: 'status', paymentState: 'payment_state', method: 'method',
+  installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
+  buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
+  decidedAt: 'decided_at', declineReason: 'decline_reason', ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at'
+};
+const JSON_FIELDS = new Set(['buyer', 'shipTo']);
+const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
+const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
+function toOrder(row, items = []) {
+  if (!row) return null;
+  const order = {};
+  for (const [field, column] of Object.entries(ORDER_COLUMNS)) order[field] = JSON_FIELDS.has(field) ? parse(row[column]) : row[column] ?? null;
+  order.items = items.map(i => ({productId: i.product_id, title: i.title, quantity: i.quantity, unitCents: i.unit_price_cents, selection: parse(i.selection) || {}}));
+  return order;
+}
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
 
 function createMysqlStore(pool) {
   const one = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows[0] || null; };
+  const all = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows; };
+  async function withItems(row) { return row ? toOrder(row, await all('SELECT * FROM order_items WHERE order_id = ? ORDER BY position', [row.id])) : null; }
+  async function withItemsList(rows) {
+    if (!rows.length) return [];
+    const items = await all(`SELECT * FROM order_items WHERE order_id IN (${rows.map(() => '?').join(', ')}) ORDER BY order_id, position`, rows.map(r => r.id));
+    return rows.map(r => toOrder(r, items.filter(i => i.order_id === r.id)));
+  }
   const run = async (sql, params) => { const [result] = await pool.execute(sql, params); return result; };
   const duplicate = (error, name) => error?.code === 'ER_DUP_ENTRY' && String(error.message).includes(name);
 
@@ -41,7 +64,57 @@ function createMysqlStore(pool) {
           catch (error) { if (duplicate(error, 'uq_customers_cpf')) throw Object.assign(new Error('duplicate cpf'), {code: 'cpf_in_use'}); throw error; }
         }
         return toCustomer(await one('SELECT * FROM customers WHERE id = ?', [id]));
+      },
+      // Account deletion: sessions go by cascade, orders keep their snapshot with customer_id set to NULL.
+      async delete(id) {
+        const customer = await one('SELECT email FROM customers WHERE id = ?', [id]);
+        if (!customer) return false;
+        await run('DELETE FROM auth_challenges WHERE email = ?', [customer.email]);
+        return (await run('DELETE FROM customers WHERE id = ?', [id])).affectedRows === 1;
       }
+    },
+    orders: {
+      async create(order) {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const fields = Object.keys(order).filter(f => ORDER_COLUMNS[f]);
+          try { await connection.execute(`INSERT INTO orders (${fields.map(f => ORDER_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => toDb(f, order[f]))); }
+          catch (error) {
+            await connection.rollback();
+            if (duplicate(error, 'uq_orders_reference')) return {order: await this.findByReference(order.reference), created: false};
+            throw error;
+          }
+          for (const [position, item] of (order.items || []).entries()) {
+            await connection.execute('INSERT INTO order_items (order_id, position, product_id, title, quantity, unit_price_cents, selection) VALUES (?, ?, ?, ?, ?, ?, ?)', [order.id, position, item.productId, item.title, item.quantity, item.unitCents, JSON.stringify(item.selection || {})]);
+          }
+          await connection.commit();
+        } catch (error) { await connection.rollback().catch(() => {}); throw error; }
+        finally { connection.release(); }
+        return {order: await this.findById(order.id), created: true};
+      },
+      async findById(id) { return withItems(await one('SELECT * FROM orders WHERE id = ?', [id])); },
+      async findByReference(reference) { return withItems(await one('SELECT * FROM orders WHERE reference = ?', [reference])); },
+      async findByMpId(mpOrderId) { return withItems(await one('SELECT * FROM orders WHERE mp_order_id = ?', [mpOrderId])); },
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => ORDER_COLUMNS[f] && f !== 'id');
+        if (fields.length) await run(`UPDATE orders SET ${fields.map(f => `${ORDER_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => toDb(f, patch[f])), id]);
+        return this.findById(id);
+      },
+      // The WHERE on the current status makes this atomic: one caller gets affectedRows = 1, every other gets 0.
+      async transition(id, from, patch) {
+        const fields = Object.keys(patch).filter(f => ORDER_COLUMNS[f] && f !== 'id');
+        const result = await run(`UPDATE orders SET ${fields.map(f => `${ORDER_COLUMNS[f]} = ?`).join(', ')} WHERE id = ? AND status IN (${from.map(() => '?').join(', ')})`, [...fields.map(f => toDb(f, patch[f])), id, ...from]);
+        return result.affectedRows === 1;
+      },
+      async listByCustomer(customerId, limit = 50) { return withItemsList(await all(`SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC LIMIT ${Math.min(Number(limit) || 50, 200)}`, [customerId])); },
+      async list({statuses = null, limit = 500} = {}) {
+        const cap = Math.min(Number(limit) || 500, 2000);
+        const rows = statuses ? await all(`SELECT * FROM orders WHERE status IN (${statuses.map(() => '?').join(', ')}) ORDER BY created_at DESC LIMIT ${cap}`, statuses) : await all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ${cap}`, []);
+        return withItemsList(rows);
+      },
+      addEvent: (orderId, kind, detail = null, actor = null) => run('INSERT INTO order_events (order_id, kind, detail, actor) VALUES (?, ?, ?, ?)', [orderId, kind, detail === null ? null : String(detail).slice(0, 500), actor === null ? null : String(actor).slice(0, 180)]),
+      async events(orderId) { return (await all('SELECT * FROM order_events WHERE order_id = ? ORDER BY id', [orderId])).map(e => ({id: e.id, orderId: e.order_id, kind: e.kind, detail: e.detail, actor: e.actor, createdAt: e.created_at})); }
     },
     sessions: {
       create: s => run('INSERT INTO sessions (token_hash, customer_id, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)', [s.tokenHash, s.customerId, s.expiresAt, s.ip, s.userAgent]),
