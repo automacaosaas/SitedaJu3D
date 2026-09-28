@@ -121,7 +121,7 @@ function chartView(list) {
   const todayKey = dayKey(new Date());
   const rangeTotal = days.reduce((sum, d) => sum + d.totalCents, 0);
   const bars = days.map(d => `<button type="button" class="chart-bar${d.date === todayKey ? ' is-today' : ''}" style="--v:${(d.totalCents / max).toFixed(4)}" data-value="${d.totalCents}" data-label="${esc(d.label)}" aria-label="${esc(d.label)}: ${esc(money(d.totalCents))}"></button>`).join('');
-  const ticks = [max, Math.round(max / 2), 0].map(v => `<span style="top:${100 - (v / max) * 100}%">${esc(money(v))}</span>`).join('');
+  const ticks = (rangeTotal ? [max, Math.round(max / 2), 0] : [0]).map(v =>`<span style="top:${100 - (v / max) * 100}%">${esc(money(v))}</span>`).join('');
   return `<div class="admin-panel"><h2>Faturamento dos últimos 14 dias</h2><p class="panel-sub">Total no período: <strong>${esc(money(rangeTotal))}</strong> · sem os recusados</p>
     <div class="admin-chart" role="img" aria-label="Faturamento diário dos últimos 14 dias, total ${esc(money(rangeTotal))}"><div class="chart-grid">${ticks}</div><div class="chart-bars">${bars}</div></div>
     <div class="chart-axis"><span>${esc(days[0].label)}</span><span>${esc(days.at(-1).label)}</span></div>

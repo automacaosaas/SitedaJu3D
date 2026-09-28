@@ -35,6 +35,8 @@
 /* dashboard shell */
 .admin-dash-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 22px}
 .admin-dash-head h1{font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:500;margin:0}
+/* The page moves focus to its title after each screen change (screen readers announce it); it is not a control, so no ring. */
+#admin-title:focus{outline:none}
 .admin-dash-head p{margin:0;font-size:13px;color:var(--muted)}
 
 /* KPI tiles */
