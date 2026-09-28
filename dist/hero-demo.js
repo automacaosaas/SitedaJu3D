@@ -8,6 +8,7 @@
 // camada da frente.
 import {Timeline} from './motion-timeline.js';
 import {withAlpha} from './hero-motion.js';
+import {imageReady} from './loading-ui.js';
 
 const PERSPECTIVE = 1600;
 const CLOSE_RATE = 1.35;
@@ -98,7 +99,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       dom.cta.href = `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : [])];
-      dom.ready = Promise.all(images.map(img => img.decode().catch(() => {})));
+      dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));
     }
     return dom.ready;
   }
@@ -205,8 +206,11 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const ready = prepare(i);
     if (!ready) return;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
-    await Promise.race([ready, new Promise(resolve => setTimeout(resolve, 350))]);
+    region.setAttribute('aria-busy', 'true');
+    const loaded = await ready;
+    region.removeAttribute('aria-busy');
     if (state !== 'opening') return;
+    if (!loaded) { prepared = -1; finish(); status.textContent = 'Não foi possível carregar a demonstração. Tente novamente.'; return; }
     show(true);
     timeline.load(tracks(measure()));
     run('opening');

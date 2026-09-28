@@ -6,6 +6,11 @@ import {icon} from './icons.js';
 import {imageReady} from './loading-ui.js';
 
 const entries = Object.entries(PRODUCTS).map(([id, product]) => ({id, product}));
+const cardArt = Object.freeze({
+  borboletoscopio: 'card-borboletoscopio.webp',
+  dinossauroscopio: 'card-dinossauroscopio.webp',
+  aviaoscopia: 'card-aviaoscopia.webp'
+});
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
 const category = key => PRODUCT_CATEGORIES[key] || {label:key};
@@ -18,32 +23,52 @@ const offsetFrom = (index, active, length) => {
 function colorsFor(id, product) { const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
 function productCard({id, product}) {
   const colors = colorsFor(id, product), categoryLabel = category(product.category).label;
-  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${productHref(id)}" aria-label="Personalizar ${product.title}"><img src="assets/${product.catalogImage || product.image}" alt="${product.title} nas cores originais" width="1024" height="1024" loading="lazy"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note">Preço ilustrativo</span></div><div class="product-rail-actions"><a class="product-customize" href="${productHref(id)}">Personalize o seu</a><button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho">${icon('cart')}</button></div></div></article>`;
+  const fullArt = cardArt[id] || product.catalogImage || product.image;
+  const previewArt = cardArt[id] ? `card-preview-${id}.webp` : fullArt;
+  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${productHref(id)}" aria-label="Personalizar ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note">Preço ilustrativo</span></div><div class="product-rail-actions"><a class="product-customize" href="${productHref(id)}">Personalize o seu</a><button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho">${icon('cart')}</button></div></div></article>`;
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 
 class ProductCarousel {
   constructor(host, items) {
     this.host = host; this.items = items; this.active = 0; this.gesture = null; this.wheelLock = false;
-    host.innerHTML = `<div class="product-carousel-stage" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="${host.getAttribute('aria-label') || 'Produtos'}"><div class="product-carousel-track"></div><button class="product-carousel-arrow product-carousel-prev" type="button" aria-label="Ver produto anterior">${icon('arrow')}</button><button class="product-carousel-arrow product-carousel-next" type="button" aria-label="Ver próximo produto">${icon('arrow')}</button></div><div class="product-carousel-dots" role="tablist" aria-label="Escolher produto"></div><p class="sr-only" aria-live="polite" aria-atomic="true"></p>`;
+    const initialCards = [...host.querySelectorAll('.product-rail-card')];
+    const preRendered = host.dataset.preRendered === 'true' && initialCards.length === items.length &&
+      initialCards.every((card, index) => card.dataset.productId === items[index].id &&
+        card.dataset.productTitle === items[index].product.title &&
+        card.dataset.productSubtitle === items[index].product.subtitle &&
+        Number(card.dataset.priceCents) === COMMERCE.prices[items[index].id]);
+    if (!preRendered) host.innerHTML = `<div class="product-carousel-stage" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="${host.getAttribute('aria-label') || 'Produtos'}"><div class="product-carousel-track"></div><button class="product-carousel-arrow product-carousel-prev" type="button" aria-label="Ver produto anterior">${icon('arrow')}</button><button class="product-carousel-arrow product-carousel-next" type="button" aria-label="Ver próximo produto">${icon('arrow')}</button></div><div class="product-carousel-dots" role="tablist" aria-label="Escolher produto"></div><p class="sr-only" aria-live="polite" aria-atomic="true"></p>`;
     this.stage = host.querySelector('.product-carousel-stage'); this.track = host.querySelector('.product-carousel-track'); this.dots = host.querySelector('.product-carousel-dots'); this.live = host.querySelector('[aria-live]');
-    this.track.innerHTML = items.map(productCard).join(''); this.cards = [...this.track.children];
+    if (!preRendered) this.track.innerHTML = items.map(productCard).join('');
+    this.cards = [...this.track.children];
     this.cards.forEach(card => {
-      card.classList.add('is-loading'); card.setAttribute('aria-busy', 'true');
       const img = card.querySelector('img');
-      // Lazy images start when approaching the viewport, not on a global timeout.
+      // Keep the small artwork visible until the sharper version is decoded.
       const begin = async () => {
         img.loading = 'eager';
-        const ok = await imageReady(img);
-        if (!ok) {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');}
-        card.classList.remove('is-loading'); card.setAttribute('aria-busy', 'false');
+        let ok = await imageReady(img);
+        if (!ok && img.dataset.fullSrc) {
+          img.src = img.dataset.fullSrc;
+          ok = await imageReady(img);
+        }
+        if (!ok) {
+          img.hidden = true;
+          img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');
+          return;
+        }
+        if (!img.dataset.fullSrc || img.src.endsWith(img.dataset.fullSrc)) return;
+        const sharp = new Image();
+        sharp.decoding = 'async';
+        sharp.src = img.dataset.fullSrc;
+        if (await imageReady(sharp) && img.isConnected) img.src = sharp.src;
       };
       if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(entries => {if(entries.some(entry => entry.isIntersecting)){observer.disconnect();begin();}}, {rootMargin:'240px'});
         observer.observe(card);
       } else begin();
     });
-    this.dots.innerHTML = items.map(({product}, index) => `<button type="button" role="tab" aria-label="Mostrar ${product.title}" aria-selected="${index === 0}" data-dot="${index}"><span class="sr-only">${product.title}</span></button>`).join('');
+    if (!preRendered) this.dots.innerHTML = items.map(({product}, index) => `<button type="button" role="tab" aria-label="Mostrar ${product.title}" aria-selected="${index === 0}" data-dot="${index}"><span class="sr-only">${product.title}</span></button>`).join('');
     this.bind(); this.render(false);
   }
   bind() {
@@ -84,7 +109,9 @@ function mountCarousel(host, key = host.dataset.category) { const list = entries
 for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
 for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
   const categories = Object.entries(PRODUCT_CATEGORIES);
-  tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
+  const initialTabs = [...tabs.querySelectorAll('[data-catalog-filter]')];
+  if (initialTabs.length !== categories.length || initialTabs.some((tab, index) => tab.dataset.catalogFilter !== categories[index][0]))
+    tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
   tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel]'); host.dataset.category = button.dataset.catalogFilter; mountCarousel(host, button.dataset.catalogFilter); });
 }
 document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await goToCart(); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
