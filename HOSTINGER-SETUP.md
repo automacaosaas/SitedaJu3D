@@ -71,8 +71,33 @@ Cole cada valor direto no painel da Hostinger e guarde uma cópia de `DATA_KEY` 
 Não mande esses valores por chat, e-mail ou GitHub. Sem banco nem chaves, o site de teste continua funcionando com as contas
 em memória (somem quando o app reinicia).
 
-Não coloque ainda chaves do Resend nem do Mercado Pago. Sem `RESEND_API_KEY`, a tela de conta mostra o código de teste na
-própria página. `PORT` é definida pela Hostinger; sem ela, o servidor usa 3000.
+Não coloque ainda a chave do Resend: sem `RESEND_API_KEY`, a tela de conta mostra o código de teste na própria página. As
+do Mercado Pago entram só para o teste de pagamentos (seção 4.1). `PORT` é definida pela Hostinger; sem ela, o servidor usa 3000.
+
+Prefira os campos separados (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`): a senha vai como está, sem cuidado extra. Numa
+`DATABASE_URL`, caracteres como `@ : / ? #` na senha precisam ser escritos em código `%xx`.
+
+### 4.1 Pagamentos de teste (Mercado Pago) e painel da Ju
+
+Com `APP_ENV=preview`, o Mercado Pago roda sempre em **modo de teste**: só as credenciais de teste funcionam e nenhum valor real
+é cobrado (com `APP_ENV=production`, os pagamentos só ligam com `MP_MODE` escolhido de propósito). Onde pegar cada valor está em
+`MERCADOPAGO-SETUP.md` e `ADMIN-SETUP.md`.
+
+| Nome | Valor | Secreta |
+|---|---|---|
+| `MP_PUBLIC_KEY` | Public Key **de teste** da aplicação | não |
+| `MP_ACCESS_TOKEN` | Access Token **de teste** | **sim** |
+| `MP_WEBHOOK_SECRET` | assinatura secreta do webhook | **sim** |
+| `ORDER_NOTIFY_EMAIL` | e-mail da Ju que recebe os pedidos pagos (precisa do Resend para sair) | não |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | entrada do painel `/admin.html` | a senha, **sim** |
+
+Webhook no painel do Mercado Pago (modo de teste): `https://<endereço temporário>/api/payments/webhook`, evento **Order**.
+Diferente das prévias da Vercel, o site da Hostinger é público, então o webhook chega. Conferir: `/api/health` mostra
+`"payments":"test"` e `"mp":{"token":true,"publicKey":true,"webhookSecret":true}`.
+
+No checkout, a prevenção de fraude avançada do SDK fica desligada enquanto for teste: ela injeta um script embutido que a
+política de segurança do site não permite. Antes de cobrar de verdade, enviar o identificador do aparelho do jeito documentado
+pelo Mercado Pago (`security.js` + cabeçalho `X-meli-session-id` no servidor), sem afrouxar a política.
 
 ## 5. Conferir
 
