@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const {isProduction} = require('./runtime');
 const DEFAULT_SITE = 'https://siteda-ju3-d.vercel.app';
 const DEFAULT_FROM = 'Ju imprime pra mim <onboarding@resend.dev>';
+const SEND_TIMEOUT_MS = 10000;
 const MIN_SECRET = 32;
 
 // Without a dedicated AUTH_SECRET the signing key is derived from the Resend key (already a server-only secret), so
@@ -38,7 +39,10 @@ async function sendMail({settings, to, subject, html, text, idempotencyKey, fetc
   const response = await fetchImpl('https://api.resend.com/emails', {
     method: 'POST',
     headers: {Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json', ...(idempotencyKey ? {'Idempotency-Key': idempotencyKey} : {})},
-    body: JSON.stringify({from: settings.from, to: [to], subject, html, text, ...(settings.replyTo ? {reply_to: settings.replyTo} : {})})
+    body: JSON.stringify({from: settings.from, to: [to], subject, html, text, ...(settings.replyTo ? {reply_to: settings.replyTo} : {})}),
+    // A slow e-mail service must not hold the answer to a payment (the order is saved before any e-mail goes out, and a
+    // later webhook or status check retries the e-mail).
+    ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(SEND_TIMEOUT_MS)} : {})
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw Object.assign(new Error(`Resend ${response.status}: ${data.message || data.name || 'request failed'}`), {status: response.status});

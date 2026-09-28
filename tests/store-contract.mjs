@@ -132,6 +132,24 @@ async function contract(store, label) {
   await store.adminAudit.add({adminId, action: 'login', detail: 'contrato', ip: '1.1.1.1'});
   const [last] = await store.adminAudit.list(1);
   assert.equal(last.action, 'login'); assert.equal(last.adminId, adminId); assert.equal(last.detail, 'contrato');
+
+  // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
+  const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();
+  await store.customers.create({id: purger, email: purgerEmail, emailVerifiedAt: new Date(), displayName: 'P'});
+  const oldSession = crypto.randomBytes(32), recentSession = crypto.randomBytes(32), oldAdmin = crypto.randomBytes(32);
+  await store.sessions.create({tokenHash: oldSession, customerId: purger, expiresAt: new Date(nowMs - 200 * day), ip: '1.1.1.1', userAgent: null});
+  await store.sessions.create({tokenHash: recentSession, customerId: purger, expiresAt: new Date(nowMs - 10 * day), ip: '1.1.1.1', userAgent: null});
+  await store.adminSessions.create({tokenHash: oldAdmin, adminId, expiresAt: new Date(nowMs - 200 * day)});
+  const oldCode = crypto.randomUUID(), recentCode = crypto.randomUUID();
+  await store.challenges.create({id: oldCode, email: purgerEmail, purpose: 'access', codeHash: crypto.randomBytes(32), expiresAt: new Date(nowMs - 40 * day)});
+  await store.challenges.create({id: recentCode, email: purgerEmail, purpose: 'access', codeHash: crypto.randomBytes(32), expiresAt: new Date(nowMs - 2 * day)});
+  await store.purge(nowMs);
+  assert.equal(await store.sessions.find(oldSession), null, `${label}: a session expired 6+ months ago is deleted`);
+  assert(await store.sessions.find(recentSession), `${label}: a recently expired session is kept (access log)`);
+  assert.equal(await store.adminSessions.find(oldAdmin), null, `${label}: same for the panel`);
+  assert.equal(await store.challenges.find(oldCode), null, `${label}: codes older than 30 days are deleted`);
+  assert(await store.challenges.find(recentCode), `${label}: recent codes stay`);
+  await store.customers.delete(purger);
 }
 
 await contract(createMemoryStore(), 'memory');

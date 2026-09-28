@@ -22,7 +22,7 @@ export async function verifyCode(code, options) {
 export async function currentSession(options) {
   const {status, data} = await request('/api/admin/session', options);
   if (status === 200 && data?.ok) return {email: data.email, expiresAt: data.expiresAt};
-  if (status === 401) return null;
+  if ((status === 200 && data?.ok === false) || status === 401) return null;
   throw Object.assign(new Error('unavailable'), {status, code: data?.error || 'unavailable'});
 }
 export async function logout(options) { try { await request('/api/admin/logout', {method: 'POST', ...options}); } catch {} }

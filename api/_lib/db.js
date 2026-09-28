@@ -25,6 +25,10 @@ function getPool(env = process.env) {
   if (pool && poolKey === key) return pool;
   const mysql = require('mysql2/promise');
   pool = mysql.createPool({host: s.host, port: s.port, database: s.database, user: s.user, password: s.password, connectionLimit: 5, waitForConnections: true, charset: 'utf8mb4', timezone: 'Z', dateStrings: false, multipleStatements: false, enableKeepAlive: true, connectTimeout: 10000});
+  // Dates from the app go in as UTC (timezone 'Z'); the ones MySQL fills by itself (DEFAULT CURRENT_TIMESTAMP: created_at,
+  // last_seen_at…) follow the session time zone, which on a shared host may be local time. Every connection uses UTC,
+  // so both kinds line up. The command is queued before the connection's first query.
+  pool.on('connection', connection => connection.query("SET time_zone = '+00:00'", error => { if (error) console.error('db: could not set the UTC time zone —', error.code || error.message); }));
   poolKey = key;
   return pool;
 }

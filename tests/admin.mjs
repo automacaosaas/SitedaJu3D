@@ -163,7 +163,8 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const me = await call(h.session, {method: 'GET', origin: '', cookie});
   assert.equal(me.statusCode, 200); assert.equal(me.json().email, 'ju@site.test');
   const anon = await call(h.session, {method: 'GET', origin: '', cookie: '__Host-ju_admin=' + 'x'.repeat(43)});
-  assert.equal(anon.statusCode, 401); assert.match(anon.headers['set-cookie'], /Max-Age=0/, 'a stale cookie is cleared');
+  assert.equal(anon.statusCode, 200, 'nobody signed in is a normal answer, not a console error'); assert.deepEqual(anon.json(), {ok: false}); assert.match(anon.headers['set-cookie'], /Max-Age=0/, 'a stale cookie is cleared');
+  const nobody = await call(h.session, {method: 'GET', origin: ''}); assert.deepEqual(nobody.json(), {ok: false}); assert.equal(nobody.headers['set-cookie'], undefined, 'no cookie to clear');
 
   const list = await call(h.orders, {method: 'GET', origin: '', cookie});
   assert.equal(list.statusCode, 200);
@@ -226,6 +227,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(await client.login('x', 'y', {fetchImpl: fake([[401, {error: 'invalid_credentials'}]]).fetchImpl}), {ok: false, status: 401, error: 'invalid_credentials', retryAfter: undefined});
   assert.deepEqual(await client.verifyCode('123456', {fetchImpl: fake([[400, {error: 'invalid_code', remaining: 3}]]).fetchImpl}), {ok: false, status: 400, error: 'invalid_code', remaining: 3});
   assert.equal(await client.currentSession({fetchImpl: fake([[401, {error: 'unauthorized'}]]).fetchImpl}), null);
+  assert.equal(await client.currentSession({fetchImpl: fake([[200, {ok: false}]]).fetchImpl}), null, 'signed out');
   await assert.rejects(client.currentSession({fetchImpl: fake([[503, {error: 'admin_unavailable'}]]).fetchImpl}), error => error.code === 'admin_unavailable', 'a server problem is not a sign-out');
   await assert.rejects(client.loadOrders({fetchImpl: fake([[401, {}]]).fetchImpl}), error => error.code === 'unauthorized');
   const moved = fake([[200, {ok: true, order: {id: 'x', status: 'concluido'}}]]);

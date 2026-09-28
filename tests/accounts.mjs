@@ -195,6 +195,9 @@ await rejects(createAccounts({store, env: {APP_ENV: 'production'}, now}).start({
   const attempt = (id, reference, status) => store.orders.create({id, reference, customerId: carlaRow.id, source: 'test', status, subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Carla Dias', email: 'carla@exemplo.com'}, shipTo: {recipient: 'Carla'}, items: [{productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {body: 'blue'}}]});
   await attempt('order-carla-2', 'JU-CARLA00002', 'cancelado');
   await attempt('order-carla-3', 'JU-CARLA00003', 'aguardando_pagamento');
+  // An unpaid Pix from 3 hours ago: its code expired (1 h), so it is not listed even without Mercado Pago's notice.
+  const stalePix = (await store.orders.create({id: 'order-carla-4', reference: 'JU-CARLA00004', customerId: carlaRow.id, source: 'test', status: 'aguardando_pagamento', subtotalCents: 1, shippingCents: 0, totalCents: 1, buyer: {name: 'Carla', email: 'carla@exemplo.com'}, shipTo: {}, items: [], createdAt: new Date(clock - 3 * 3600e3)})).order;
+  await store.orders.update(stalePix.id, {paymentState: 'pending_pix'});
 
   assert.equal((await invoke(orderHandler, {method: 'GET', origin: ''})).status, 401, 'my orders need a session');
   const mine = await invoke(orderHandler, {method: 'GET', origin: '', cookie});

@@ -170,11 +170,21 @@ function createMysqlStore(pool) {
       // The UPDATE only matches an unused row, so exactly one caller wins even with two requests at the same time.
       async markUsed(id, now) { return (await run('UPDATE auth_challenges SET used_at = ? WHERE id = ? AND used_at IS NULL', [now, id])).affectedRows === 1; }
     },
+    // Data kept only as long as needed (Política de Privacidade): attempt counters for a day, e-mailed codes for 30 days,
+    // expired sessions (they hold the IP of each access) for the 6 months of the Marco Civil. Runs now and then from
+    // rateLimit, so no scheduled job is needed.
+    async purge(now) {
+      const day = 86400000, before = days => new Date(now - days * day);
+      await run('DELETE FROM rate_limits WHERE window_start < ?', [now - day]);
+      await run('DELETE FROM auth_challenges WHERE expires_at < ?', [before(30)]);
+      await run('DELETE FROM sessions WHERE expires_at < ?', [before(183)]);
+      await run('DELETE FROM admin_sessions WHERE expires_at < ?', [before(183)]);
+    },
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs;
       await run('INSERT INTO rate_limits (bucket, window_start, hits) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1', [bucket.slice(0, 200), start]);
       const {hits} = await one('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start = ?', [bucket.slice(0, 200), start]);
-      if (Math.random() < 0.01) run('DELETE FROM rate_limits WHERE window_start < ?', [now - 86400000]).catch(() => {});
+      if (Math.random() < 0.01) this.purge(now).catch(error => console.error('db: cleanup failed —', error.code || error.message));
       return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
     }
   };

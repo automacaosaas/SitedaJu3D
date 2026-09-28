@@ -100,12 +100,20 @@ function createMemoryStore() {
       // Returns true only for the first caller, so a grant or a code is spent exactly once.
       async markUsed(id, now) { const c = challenges.get(id); if (!c || c.usedAt) return false; c.usedAt = now; return true; }
     },
+    // Same retention as store-mysql.js: counters 1 day, codes 30 days, expired sessions 6 months.
+    async purge(now) {
+      const day = 86400000, old = (value, days) => new Date(value).getTime() < now - days * day;
+      for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - day) limits.delete(k);
+      for (const [k, c] of challenges) if (old(c.expiresAt, 30)) challenges.delete(k);
+      for (const [k, s] of sessions) if (old(s.expiresAt, 183)) sessions.delete(k);
+      for (const [k, s] of adminSessions) if (old(s.expiresAt, 183)) adminSessions.delete(k);
+    },
     // Fixed windows: at most `limit` hits per `windowMs` for a bucket.
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs, id = `${bucket}|${start}`;
       const hits = (limits.get(id) || 0) + 1;
       limits.set(id, hits);
-      if (limits.size > 10000) for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - 86400000) limits.delete(k);
+      if (limits.size > 10000) await this.purge(now);
       return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
     }
   };
