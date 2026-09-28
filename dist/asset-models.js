@@ -1,10 +1,13 @@
 import * as T from 'three';
 import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 
+// GLBs are Meshopt-compressed (EXT_meshopt_compression, 16-bit positions); see PERFORMANCE-QA.md. Bump `v` whenever a
+// model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
-  borboletoscopio:new URL('./assets/models/borboletoscopio.glb',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=rodin6-pintura',import.meta.url)
+  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=meshopt1',import.meta.url),
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshopt1',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=rodin6-meshopt1',import.meta.url)
 };
 
 export function disposeAsset(group){
@@ -25,7 +28,7 @@ export async function createAssetModel(key,colors,signal){
   const response=await fetch(ASSETS[key],{signal});
   if(!response.ok)throw new Error(`Modelo 3D: HTTP ${response.status}`);
   const data=await response.arrayBuffer();signal?.throwIfAborted();
-  const gltf=await new GLTFLoader().parseAsync(data,'');
+  const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data,'');
   const group=gltf.scene;
   if(signal?.aborted){disposeAsset(group);signal.throwIfAborted();}
   const bounds=new T.Box3().setFromObject(group),size=bounds.getSize(new T.Vector3());

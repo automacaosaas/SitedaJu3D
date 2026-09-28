@@ -9,6 +9,9 @@
   <script src="page-entry.js"></script>
   <link rel="preload" as="image" href="assets/product-borboletoscopio-cutout.webp" fetchpriority="high">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&amp;family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Parisienne&amp;display=swap">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="experience.css">
   <link rel="stylesheet" href="carousel.css">
@@ -20,7 +23,7 @@
   <script type="module" src="site-shell.js"></script>
   <script type="module" src="catalog.js"></script>
   <script type="module" src="carousel.js"></script>
-  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   <script type="module" src="controller.js"></script>
 </head>
 <body class="home">
@@ -55,7 +58,7 @@
     <button class="close" aria-label="Fechar produto">×</button>
     <div class="detail-visual">
       <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Imagem</button><button type="button" data-view="model" aria-pressed="false">Prévia 3D</button></div>
-      <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.png" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
+      <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.webp" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
       <div id="viewer-host" hidden></div>
       <div class="viewer-message" role="status" hidden></div>
       <div class="viewer-tools" hidden role="group" aria-label="Controles do modelo 3D"><button data-camera="left" aria-label="Girar para a esquerda">↶</button><button data-camera="auto" aria-label="Girar automaticamente" aria-pressed="false">Girar</button><button data-camera="right" aria-label="Girar para a direita">↷</button><span></span><button data-camera="in" aria-label="Aproximar">+</button><button data-camera="out" aria-label="Afastar">−</button><button data-camera="reset" aria-label="Voltar à vista inicial">Início</button></div>

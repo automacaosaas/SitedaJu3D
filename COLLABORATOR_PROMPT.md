@@ -50,7 +50,7 @@ de efeitos. A interação chama atenção com profundidade e movimento suave.
 - Tipografia de interface: **DM Sans**.
 - Títulos editoriais: **Playfair Display**.
 - Frases manuscritas: **Parisienne**.
-- Logotipo oficial: `dist/assets/logo-ju.png`.
+- Logotipo oficial: `design/originais/logo-ju.png` (original); o site usa `dist/assets/logo-ju.webp` (336 px).
 
 Use bastante respiro, hierarquia editorial, bordas suaves e animações discretas.
 Preserve contraste, legibilidade, áreas de toque de pelo menos 44 px e estados
@@ -84,7 +84,7 @@ publicados ficam em `dist/`:
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
 - `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
-- `vendor/`: Three.js e OrbitControls locais.
+- `vendor/`: Three.js r180 minificado (`three.module.min.js`), OrbitControls, GLTFLoader e o decodificador Meshopt locais.
 - `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
   usado no e-mail).
 - `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
@@ -95,7 +95,7 @@ publicados ficam em `dist/`:
   `page-entry.js` (abertura com logo da home), `header-scroll.js` (cabeçalho compacto que
   some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
   catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
-  em WebP ao lado dos PNG originais. Detalhes em `EXPERIENCE-QA.md`.
+  em WebP; os PNG originais ficam em `design/originais/` (fora do site publicado). Detalhes em `EXPERIENCE-QA.md` e `PERFORMANCE-QA.md`.
 - `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
@@ -179,8 +179,8 @@ base. Ele representa a régua encaixada:
 - A parte inferior usa um rasgo retangular horizontal, largo e baixo, que
   atravessa a base para acomodar a haste plana da régua. Nunca desenhe uma
   bolinha, tubo ou ponto pintado nesse local.
-- A imagem principal do modal é `dist/assets/aviaoscopia-regua.png`; o banner e o
-  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.png`.
+- A imagem principal do modal é `dist/assets/aviaoscopia-regua.webp`; o banner e o
+  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.webp`.
 - O teste estrutural é `node tests/plane-geometry.mjs`.
 
 ## Vitrine principal (banner temático)

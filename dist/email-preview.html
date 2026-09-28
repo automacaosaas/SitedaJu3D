@@ -26,21 +26,6 @@
   </main>
   <iframe class="email-frame" title="Prévia do e-mail de verificação"></iframe>
   <p class="note" hidden>A prévia só existe fora de produção. Para vê-la no seu computador, rode <code>node tools/dev-server.cjs</code> e abra <code>http://localhost:8844/email-preview.html</code>.</p>
-  <script>
-    (function () {
-      var frame = document.querySelector('iframe'), note = document.querySelector('.note');
-      function load() {
-        var url = '/api/email-preview?purpose=' + document.getElementById('purpose').value + '&lang=' + document.getElementById('lang').value;
-        fetch(url).then(function (response) {
-          var available = response.ok;
-          frame.hidden = !available; note.hidden = available;
-          if (available) frame.src = url;
-        }).catch(function () { frame.hidden = true; note.hidden = false; });
-      }
-      document.getElementById('purpose').addEventListener('change', load);
-      document.getElementById('lang').addEventListener('change', load);
-      load();
-    })();
-  </script>
+  <script src="email-preview.js"></script>
 </body>
 </html>

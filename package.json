@@ -1,0 +1,9 @@
+{
+  "name": "site-da-ju-3d",
+  "private": true,
+  "description": "Ju imprime pra mim: vitrine estática em dist/ com funções em api/. Sem dependências.",
+  "scripts": {
+    "test": "node tools/run-tests.mjs",
+    "dev": "node tools/dev-server.cjs"
+  }
+}

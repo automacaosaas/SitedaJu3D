@@ -30,7 +30,7 @@ com “© ano Ju, imprime pra mim?” e Instagram. Tabelas e estilos inline, sem
 JavaScript nem CSS externo, porque é o que os leitores de e-mail suportam.
 
 O logo é `dist/assets/logo-ju-email.png`: a arte oficial **com fundo transparente**
-(360 px, ~57 KB), exibida a 172 px. Ele é gerado a partir de `assets/logo-ju.png`
+(360 px, ~57 KB), exibida a 172 px. Ele é gerado a partir de `design/originais/logo-ju.png`
 por `node tools/make-email-logo.cjs`; não edite o PNG à mão.
 No e-mail o logo é carregado sempre do site público (`SITE_URL`, ou
 `siteda-ju3-d.vercel.app`), mesmo quando o envio sai de uma prévia protegida por

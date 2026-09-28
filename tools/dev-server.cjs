@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
-const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary'};
+const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary', '.webp': 'image/webp'};
 
 // Reads a secret without echoing it. Pasting works. Falls back to a plain line when stdin is not a terminal.
 function askHidden(question) {
@@ -38,6 +38,17 @@ function askHidden(question) {
     };
     process.stdin.on('data', onData);
   });
+}
+
+// vercel.json `headers` rules as {pattern, headers}. Sources here are plain "/prefix/(.*)" patterns, which are also valid
+// regular expressions; tests/headers.mjs keeps it that way.
+function readHeaderRules() {
+  const file = path.join(__dirname, '..', 'vercel.json');
+  if (!fs.existsSync(file)) return [];
+  return (JSON.parse(fs.readFileSync(file, 'utf8')).headers || []).map(rule => ({
+    pattern: new RegExp(`^${rule.source}$`),
+    headers: rule.headers.filter(header => header.key.toLowerCase() !== 'cache-control')
+  }));
 }
 
 async function main() {
@@ -77,8 +88,13 @@ async function main() {
     '/api/email-preview': require('../api/email-preview').create({env})
   };
 
+  // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
+  // Cache-Control is left out on purpose: local files stay `no-store` while editing.
+  const headerRules = readHeaderRules();
+
   http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
+    for (const rule of headerRules) if (rule.pattern.test(url.pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
     try {
       if (routes[url.pathname]) return await routes[url.pathname](req, res);
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
