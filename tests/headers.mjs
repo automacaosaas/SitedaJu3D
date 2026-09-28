@@ -68,6 +68,14 @@ for (const file of (await readdir(new URL('dist/', root))).filter(f => f.endsWit
 const assetModels = await readFile(new URL('dist/asset-models.js', root), 'utf8');
 if (assetModels.includes('meshopt_decoder')) assert(directives['script-src'].includes("'wasm-unsafe-eval'"), "script-src has 'wasm-unsafe-eval' for the Meshopt decoder");
 
+// The checkout loads Mercado Pago's SDK and its secure card fields (iframes); without these the payment step is blank.
+const livePayment = await readFile(new URL('dist/live-payment.js', root), 'utf8').catch(() => '');
+if (livePayment.includes('https://sdk.mercadopago.com')) {
+  assert(directives['script-src'].includes('https://sdk.mercadopago.com'), 'script-src allows the Mercado Pago SDK');
+  assert(directives['connect-src'].includes('https://api.mercadopago.com'), 'connect-src allows the Mercado Pago API');
+  assert(directives['frame-src']?.includes('https://*.mercadopago.com'), 'frame-src allows the secure card fields');
+}
+
 // E-mail logos load from the public site (api/_lib/mail.js DEFAULT_SITE); the dev e-mail preview shows them in a frame.
 const mail = await readFile(new URL('api/_lib/mail.js', root), 'utf8');
 const site = mail.match(/DEFAULT_SITE = '([^']+)'/)[1];
