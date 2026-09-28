@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
-import {createModel} from './models.js';
+import {createAssetModel} from './asset-models.js';
 
 export class ProductViewer{
   constructor(host,onError){
@@ -22,8 +22,20 @@ export class ProductViewer{
     canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();this.active=false;this.stop();onError();});
     this.reset();
   }
-  show(key,colors,title){if(this.key!==key){if(this.model){this.scene.remove(this.model.group);this.model.dispose();}this.model=createModel(key,colors);this.scene.add(this.model.group);this.key=key;this.reset();}else this.model.setColors(colors);this.renderer.domElement.setAttribute('aria-label',`Prévia 3D ilustrativa de ${title}`);this.active=true;this.resize();this.render();this.loop();}
-  update(colors){this.model?.setColors(colors);this.render();}
+  async show(key,colors,title){
+    this.hide();const version=this.loadVersion;this.colors=colors;
+    if(this.key!==key){
+      if(this.model){this.scene.remove(this.model.group);this.model.dispose();this.model=null;this.key=null;}
+      this.loadController=new AbortController();
+      const model=await createAssetModel(key,colors,this.loadController.signal);
+      if(version!==this.loadVersion){model.dispose();return false;}
+      this.model=model;this.scene.add(model.group);this.key=key;this.reset();
+    }
+    this.model.setColors(this.colors);
+    this.renderer.domElement.setAttribute('aria-label',`Modelo 3D de ${title}`);
+    this.renderer.domElement.hidden=false;this.active=true;this.resize();this.render();this.loop();return true;
+  }
+  update(colors){this.colors=colors;this.model?.setColors(colors);this.render();}
   resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;const changed=w!==this.width||h!==this.height;this.width=w;this.height=h;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();if(changed)this.fit();this.render();}
   fit(){
     if(!this.model)return;
@@ -60,7 +72,6 @@ export class ProductViewer{
     try{this.renderer.setSize(320,320,false);this.renderer.render(this.scene,camera);return this.renderer.domElement.toDataURL('image/png');}
     finally{this.renderer.setSize(this.width,this.height,false);this.render();}
   }
-  hide(){this.active=false;this.stop();}
+  hide(){this.loadVersion=(this.loadVersion||0)+1;this.loadController?.abort();this.active=false;this.stop();this.renderer.domElement.hidden=true;}
   dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }
-

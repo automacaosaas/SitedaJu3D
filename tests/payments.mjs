@@ -116,13 +116,18 @@ const spyErrors = () => { const lines = []; const original = console.error; cons
   assert.equal(mp.settings({...ENV, VERCEL_ENV: 'production', MP_MODE: 'test'}).mode, 'test', 'Production can run the Mercado Pago test credentials on purpose');
   for (const word of ['yes', 'LIVE', 'true', '1', ' live']) assert.equal(mp.settings({...ENV, VERCEL_ENV: 'production', MP_MODE: word}).mode, 'off', `only the exact words "live" and "test" switch Production on (${word})`);
   assert.equal(mp.settings({...ENV, VERCEL_ENV: 'preview', MP_MODE: 'live'}).mode, 'test', 'a preview never goes live');
+  // Hostinger (server.cjs): the same rule through APP_ENV.
+  const {VERCEL_ENV, ...hostinger} = ENV;
+  assert.equal(mp.settings({...hostinger, APP_ENV: 'preview'}).mode, 'test', 'Hostinger test site: test credentials work');
+  assert.equal(mp.settings({...hostinger, APP_ENV: 'production'}).mode, 'off', 'Hostinger production needs a deliberate MP_MODE');
+  assert.equal(mp.settings({...hostinger, APP_ENV: 'production', MP_MODE: 'test'}).mode, 'test');
   assert.equal(mp.settings(ENV).ownerEmail, 'ju@site.test');
   const res = makeRes(); configHandler.create({env: ENV})({method: 'GET'}, res);
   assert.deepEqual(res.json(), {mode: 'test', publicKey: 'TEST-public-key-111'}); assert(!res.body.includes('secret-token') && !res.body.includes('whsec'));
   const off = makeRes(); configHandler.create({env: {}})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
   const blocked = makeRes(); configHandler.create({env: {...ENV, VERCEL_ENV: 'production'}})({method: 'GET'}, blocked); assert.deepEqual(blocked.json(), {mode: 'off'}, 'the public key is not even exposed while blocked');
   const post = makeRes(); configHandler.create({env: ENV})({method: 'POST'}, post); assert.equal(post.statusCode, 405);
-  const h = makeRes(); health.create({env: ENV})({}, h);
+  const h = makeRes(); await health.create({env: ENV})({}, h);
   assert.deepEqual(h.json().mp, {token: true, publicKey: true, webhookSecret: true}); assert.equal(h.json().payments, 'test'); assert.equal(h.json().orderMail, true);
   for (const secret of SECRETS) assert(!h.body.includes(secret), 'health never prints a secret');
 }

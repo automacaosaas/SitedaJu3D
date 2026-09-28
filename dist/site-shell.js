@@ -1,9 +1,10 @@
 import {icon} from './icons.js';
 import {mountLanguagePicker} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
-import {getSession, signOut} from './auth-service.js';
+import {getSession, refreshSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
 import './shopping-navigation.js';
+import './account-drawer.js';
 
 const MAIN_NAVIGATION = [
   {label:'Início', href:'index.html', active:() => /(?:\/|\/index\.html)$/.test(location.pathname)},
@@ -104,6 +105,8 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
   document.addEventListener('click', e => { if (!host.contains(e.target)) close(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { close(); trigger.focus(); } });
 }
+// The session is an HttpOnly cookie; ask the server who is signed in so a new tab shows the right name in the menu.
+refreshSession();
 setupMobileDrawer();
 setupScrollHeader(document.querySelector('.site-header'));
 window.addEventListener('hashchange', () => {
@@ -117,3 +120,4 @@ window.addEventListener('storage', e => { if (e.key === CART_KEY) refreshHeader(
 window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
+window.dispatchEvent(new Event('ju:header-ready'));

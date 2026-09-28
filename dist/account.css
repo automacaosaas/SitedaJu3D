@@ -204,6 +204,8 @@
 .profile-summary p { font-size:13px; color:var(--auth-muted); }
 .profile-summary small { display:block; margin-top:9px; font-size:11px; color:var(--auth-muted); }
 .signout { float:right; }
+/* Profile links: "Meus dados" and "Meus pedidos" side by side. */
+.back-auth[data-screen="details"] { margin-right:22px; }
 #demo-inbox:empty { display:none; }
 .account-card > #demo-inbox { margin:14px 0 8px; }
 .account-card > #demo-inbox .demo-code { padding:9px 13px; font-size:10px; }

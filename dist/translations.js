@@ -1,5 +1,8 @@
 // Portuguese source copy → English / Spanish. Brand and product names stay unchanged.
 export const translations = Object.fromEntries(`
+Abrir página de acesso|Open sign-in page|Abrir página de acceso
+Fechar acesso|Close sign-in|Cerrar acceso
+Não foi possível carregar a demonstração. Tente novamente.|Could not load the demonstration. Please try again.|No se pudo cargar la demostración. Inténtalo de nuevo.
 Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.|To verify your account in this preview, create an account or request a new code. Real email delivery is not connected yet.|Para verificar tu cuenta en esta vista previa, crea una cuenta o solicita un nuevo código. El envío real de correo aún no está conectado.
 ← Voltar à vitrine|← Back to showcase|← Volver a la vitrina
 Voltar à vitrine|Back to showcase|Volver a la vitrina
@@ -17,6 +20,7 @@ Adicionado|Added|Añadido
 Não foi possível preparar a compra. Verifique o armazenamento do navegador.|Unable to prepare your purchase. Check browser storage.|No se pudo preparar la compra. Comprueba el almacenamiento del navegador.
 Imagem de apresentação • cores originais.|Presentation image • original colors.|Imagen de presentación • colores originales.
 Arraste para girar · Prévia 3D ilustrativa, aguardando os modelos finais.|Drag to rotate · Illustrative 3D preview, awaiting final models.|Arrastra para girar · Vista previa 3D ilustrativa, a la espera de los modelos finales.
+Arraste para girar · Personalize as cores do modelo 3D.|Drag to rotate · Customize the 3D model colors.|Arrastra para girar · Personaliza los colores del modelo 3D.
 Preparando sua prévia 3D…|Preparing your 3D preview…|Preparando tu vista previa 3D…
 A prévia 3D não está disponível neste navegador. Você pode continuar escolhendo as cores e consultar a imagem do produto.|3D preview is unavailable in this browser. You can still choose colors and view the product image.|La vista previa 3D no está disponible en este navegador. Puedes seguir eligiendo colores y consultar la imagen del producto.
 Suas cores estão salvas neste navegador.|Your colors are saved in this browser.|Tus colores están guardados en este navegador.
@@ -378,6 +382,7 @@ Fuselagem, asas e cauda|Fuselage, wings and tail|Fuselaje, alas y cola
 Estrelas e topo|Stars and top|Estrellas y parte superior
 A mesma cor nos dois detalhes|The same color for both details|El mismo color en ambos detalles
 Motores|Engines|Motores
+As janelas da cabine mantêm a cor original.|The cabin windows keep their original color.|Las ventanas de la cabina mantienen su color original.
 As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre las alas
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
 Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.|A butterfly to bring color and imagination to every appointment. 3D printed, with an open slot for the retinoscope.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D, con el espacio para encajar el retinoscopio libre.
@@ -575,4 +580,49 @@ Não foi possível verificar agora. Tente de novo em instantes.|We could not che
 Verificando…|Checking…|Verificando…
 Código Pix copiado.|Pix code copied.|Código Pix copiado.
 Selecione e copie o código Pix.|Select and copy the Pix code.|Selecciona y copia el código Pix.
+Nome|First name|Nombre
+Sobrenome|Last name|Apellidos
+CPF|CPF|CPF
+Telefone|Phone|Teléfono
+CPF e telefone são usados na nota fiscal e na entrega.|Your CPF and phone are used on the invoice and for delivery.|El CPF y el teléfono se usan en la factura y en la entrega.
+Incluir dados de pessoa jurídica|Add company details|Incluir datos de persona jurídica
+CNPJ|CNPJ|CNPJ
+Razão social|Company legal name|Razón social
+Inscrição estadual|State registration|Inscripción estatal
+Isenta de inscrição estadual|Exempt from state registration|Exenta de inscripción estatal
+A nota fiscal sai no CNPJ. O CPF continua sendo o de quem compra.|The invoice is issued to the CNPJ. The CPF remains the buyer's.|La factura se emite al CNPJ. El CPF sigue siendo el de quien compra.
+Quero receber comunicações promocionais.|I want to receive promotional messages.|Quiero recibir comunicaciones promocionales.
+Informe seu nome.|Enter your first name.|Introduce tu nombre.
+Informe seu sobrenome.|Enter your last name.|Introduce tus apellidos.
+Confira o CPF.|Check the CPF.|Revisa el CPF.
+Informe um telefone com DDD.|Enter a phone number with area code.|Introduce un teléfono con código de área.
+Confira o CNPJ.|Check the CNPJ.|Revisa el CNPJ.
+Informe a razão social.|Enter the company legal name.|Introduce la razón social.
+Informe a inscrição estadual ou marque que é isenta.|Enter the state registration or mark it as exempt.|Introduce la inscripción estatal o marca que está exenta.
+Este código não é mais válido. Solicite um novo código.|This code is no longer valid. Request a new code.|Este código ya no es válido. Solicita un nuevo código.
+E-mail ou senha não conferem.|Email or password do not match.|El correo o la contraseña no coinciden.
+Este e-mail já tem uma conta. Entre com o código ou com a sua senha.|This email already has an account. Sign in with the code or your password.|Este correo ya tiene una cuenta. Entra con el código o con tu contraseña.
+O envio de e-mails ainda não está disponível. Tente novamente mais tarde.|Email delivery is not available yet. Please try again later.|El envío de correos aún no está disponible. Inténtalo más tarde.
+As contas estão indisponíveis no momento. Tente novamente mais tarde.|Accounts are unavailable right now. Please try again later.|Las cuentas no están disponibles en este momento. Inténtalo más tarde.
+Sua sessão terminou. Entre de novo para continuar.|Your session has ended. Sign in again to continue.|Tu sesión terminó. Vuelve a entrar para continuar.
+Este CPF já está ligado a outra conta.|This CPF is already linked to another account.|Este CPF ya está vinculado a otra cuenta.
+Não foi possível confirmar este pedido. Recarregue a página e tente de novo.|We could not confirm this request. Reload the page and try again.|No se pudo confirmar esta solicitud. Recarga la página e inténtalo de nuevo.
+E-mail confirmado|Email confirmed|Correo confirmado
+Meus dados|My details|Mis datos
+SEUS DADOS|YOUR DETAILS|TUS DATOS
+Meus dados.|My details.|Mis datos.
+Usados na nota fiscal e na entrega. Altere quando quiser.|Used on the invoice and for delivery. Change them whenever you like.|Se usan en la factura y en la entrega. Cámbialos cuando quieras.
+Salvar meus dados|Save my details|Guardar mis datos
+Buscando seus dados…|Loading your details…|Cargando tus datos…
+Salvando seus dados…|Saving your details…|Guardando tus datos…
+Dados salvos!|Details saved!|¡Datos guardados!
+Criando sua conta…|Creating your account…|Creando tu cuenta…
+Atualizando sua senha…|Updating your password…|Actualizando tu contraseña…
+Senha atualizada!|Password updated!|¡Contraseña actualizada!
+IDENTIFICAÇÃO|IDENTIFICATION|IDENTIFICACIÓN
+Quem está|Who is|¿Quién está
+comprando?|buying?|comprando?
+Seus dados para a nota fiscal e a entrega.|Your details for the invoice and delivery.|Tus datos para la factura y la entrega.
+Ir para a entrega|Go to delivery|Ir a la entrega
+Identificação|Identification|Identificación
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

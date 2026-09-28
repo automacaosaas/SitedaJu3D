@@ -1,5 +1,6 @@
 'use strict';
-// Small helpers so handlers work on Vercel and on the local dev server (plain Node req/res).
+// Small helpers so handlers work on Vercel, on the Hostinger server (server.cjs) and on the local dev server (plain Node req/res).
+const {isProduction} = require('./runtime');
 const MAX_BODY = 4096;
 
 function json(res, status, body, headers = {}) {
@@ -40,7 +41,7 @@ function sameOrigin(req, env) {
   if (!origin) return false;
   let url; try { url = new URL(origin); } catch { return false; }
   if (allowedOrigins(env).has(url.host)) return true;
-  return env.VERCEL_ENV !== 'production' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
+  return !isProduction(env) && /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
 }
 
 // Best-effort limiter kept in memory. Serverless instances are short-lived, so this only slows down naive loops;

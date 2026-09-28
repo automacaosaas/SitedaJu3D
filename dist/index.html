@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval' https://sdk.mercadopago.com https://http2.mlstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://http2.mlstatic.com; font-src 'self' https://fonts.gstatic.com https://http2.mlstatic.com; img-src 'self' data: blob: https://siteda-ju3-d.vercel.app https://*.mlstatic.com https://*.mercadopago.com; connect-src 'self' https://api.mercadopago.com https://api-static.mercadopago.com https://http2.mlstatic.com; frame-src 'self' https://*.mercadopago.com https://www.mercadopago.com.br; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <script src="journey.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fff7f5">
@@ -9,6 +11,9 @@
   <script src="page-entry.js"></script>
   <link rel="preload" as="image" href="assets/product-borboletoscopio-cutout.webp" fetchpriority="high">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&amp;family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Parisienne&amp;display=swap">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="experience.css">
   <link rel="stylesheet" href="carousel.css">
@@ -20,8 +25,9 @@
   <script type="module" src="site-shell.js"></script>
   <script type="module" src="catalog.js"></script>
   <script type="module" src="carousel.js"></script>
-  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   <script type="module" src="controller.js"></script>
+  <link rel="stylesheet" href="journey.css">
 </head>
 <body class="home">
   <div class="page-opening" role="status" aria-live="polite"><span class="ju-loader" aria-hidden="true"><img src="assets/logo-ju.webp" alt="" width="104" height="104"><span><img src="assets/logo-ju.webp" alt="" width="104" height="104"></span></span><p>Preparando um pouco de encanto…</p></div>
@@ -55,7 +61,7 @@
     <button class="close" aria-label="Fechar produto">×</button>
     <div class="detail-visual">
       <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Imagem</button><button type="button" data-view="model" aria-pressed="false">Prévia 3D</button></div>
-      <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.png" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
+      <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.webp" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
       <div id="viewer-host" hidden></div>
       <div class="viewer-message" role="status" hidden></div>
       <div class="viewer-tools" hidden role="group" aria-label="Controles do modelo 3D"><button data-camera="left" aria-label="Girar para a esquerda">↶</button><button data-camera="auto" aria-label="Girar automaticamente" aria-pressed="false">Girar</button><button data-camera="right" aria-label="Girar para a direita">↷</button><span></span><button data-camera="in" aria-label="Aproximar">+</button><button data-camera="out" aria-label="Afastar">−</button><button data-camera="reset" aria-label="Voltar à vista inicial">Início</button></div>
