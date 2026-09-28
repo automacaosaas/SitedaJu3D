@@ -117,4 +117,4 @@ function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '',
   return {subject: p.subject, html, text};
 }
 
-module.exports = {COPY, renderVerificationEmail, verificationUrl};
+module.exports = {COPY, renderVerificationEmail, verificationUrl, C, SERIF, SANS, esc};

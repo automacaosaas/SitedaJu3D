@@ -52,7 +52,13 @@ for (const text of ['Enviamos um código de seis números para', 'Código enviad
   'Um instante de cuidado.', 'Tudo pronto para continuar.', 'Preparando seu acesso…', 'Conferindo seu código…', 'Confirmar e continuar', 'Usar minha senha',
   'Vamos nos', 'conhecer?', 'Quero receber novidades e ofertas da Ju por e-mail.', 'Conta de teste criada!', 'Novidades por e-mail: você escolheu receber.',
   'Novidades por e-mail: não autorizadas.', 'Peça adicionada. Indo para o carrinho…', 'Cores salvas. Voltando ao carrinho…', 'Imagem indisponível',
-  'Voltar à página anterior', 'Confirme seu e-mail com um novo código.', 'Enviamos um novo código para o seu e-mail.']) {
+  'Voltar à página anterior', 'Confirme seu e-mail com um novo código.', 'Enviamos um novo código para o seu e-mail.',
+  // real payments (Mercado Pago) at checkout
+  'AMBIENTE DE TESTE', 'Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado', 'Como testar neste ambiente', 'Pague com o Pix e o pedido é confirmado na hora.', 'Já paguei · verificar agora', 'Gerar novo código Pix',
+  'Só mais um instante.', 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.', 'Carregando as formas de pagamento…', 'Confira os dados do cartão e tente novamente.',
+  'O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.', 'Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.',
+  'O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.', 'Pix gerado. Pague com o código ou o QR Code.', 'Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.',
+  'Pagamento confirmado. A Ju já recebeu o seu pedido.', 'O Pix expirou. Gere um novo código para continuar.', 'Tentar novamente']) {
   assert.notEqual(t(text, 'en'), text, `missing EN: ${text}`);
   assert.notEqual(t(text, 'es'), text, `missing ES: ${text}`);
 }
@@ -62,7 +68,8 @@ const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal
 const entities = {'&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&copy;': '©', '&larr;': '←', '&rarr;': '→', '&middot;': '·', '&hearts;': '♥'};
 const decode = text => text.replace(/&#?\w+;/g, entity => entities[entity] ?? entity);
 const missing = [];
-for (const file of fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWith('.html') && name !== 'email-preview.html')) {
+// admin.html is Ju's own internal tool (never shown to a shopper) and is deliberately Portuguese-only.
+for (const file of fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWith('.html') && !['email-preview.html', 'admin.html'].includes(name))) {
   const html = read('dist/' + file).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '');
   const strings = [...html.matchAll(/(?:aria-label|alt|placeholder|title)="([^"]+)"/g)].map(match => match[1]);
   strings.push(...html.replace(/<[^>]+>/g, '\n').split('\n'));
