@@ -523,4 +523,49 @@ use Personalize o seu para escolher as cores.|use Customize yours to choose the 
 Falar com a Ju no WhatsApp ↗|Talk to Ju on WhatsApp ↗|Hablar con Ju por WhatsApp ↗
 Informe um WhatsApp com DDD, por exemplo (11) 99999-9999.|Enter a WhatsApp number with area code, for example (11) 99999-9999.|Introduce un WhatsApp con código de área, por ejemplo (11) 99999-9999.
 Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.|Demo approved, but the cart could not be updated in this browser.|Demostración aprobada, pero no se pudo actualizar el carrito en este navegador.
+Nome|First name|Nombre
+Sobrenome|Last name|Apellidos
+CPF|CPF|CPF
+Telefone|Phone|Teléfono
+CPF e telefone são usados na nota fiscal e na entrega.|Your CPF and phone are used on the invoice and for delivery.|El CPF y el teléfono se usan en la factura y en la entrega.
+Incluir dados de pessoa jurídica|Add company details|Incluir datos de persona jurídica
+CNPJ|CNPJ|CNPJ
+Razão social|Company legal name|Razón social
+Inscrição estadual|State registration|Inscripción estatal
+Isenta de inscrição estadual|Exempt from state registration|Exenta de inscripción estatal
+A nota fiscal sai no CNPJ. O CPF continua sendo o de quem compra.|The invoice is issued to the CNPJ. The CPF remains the buyer's.|La factura se emite al CNPJ. El CPF sigue siendo el de quien compra.
+Quero receber comunicações promocionais.|I want to receive promotional messages.|Quiero recibir comunicaciones promocionales.
+Informe seu nome.|Enter your first name.|Introduce tu nombre.
+Informe seu sobrenome.|Enter your last name.|Introduce tus apellidos.
+Confira o CPF.|Check the CPF.|Revisa el CPF.
+Informe um telefone com DDD.|Enter a phone number with area code.|Introduce un teléfono con código de área.
+Confira o CNPJ.|Check the CNPJ.|Revisa el CNPJ.
+Informe a razão social.|Enter the company legal name.|Introduce la razón social.
+Informe a inscrição estadual ou marque que é isenta.|Enter the state registration or mark it as exempt.|Introduce la inscripción estatal o marca que está exenta.
+Este código não é mais válido. Solicite um novo código.|This code is no longer valid. Request a new code.|Este código ya no es válido. Solicita un nuevo código.
+E-mail ou senha não conferem.|Email or password do not match.|El correo o la contraseña no coinciden.
+Este e-mail já tem uma conta. Entre com o código ou com a sua senha.|This email already has an account. Sign in with the code or your password.|Este correo ya tiene una cuenta. Entra con el código o con tu contraseña.
+O envio de e-mails ainda não está disponível. Tente novamente mais tarde.|Email delivery is not available yet. Please try again later.|El envío de correos aún no está disponible. Inténtalo más tarde.
+As contas estão indisponíveis no momento. Tente novamente mais tarde.|Accounts are unavailable right now. Please try again later.|Las cuentas no están disponibles en este momento. Inténtalo más tarde.
+Sua sessão terminou. Entre de novo para continuar.|Your session has ended. Sign in again to continue.|Tu sesión terminó. Vuelve a entrar para continuar.
+Este CPF já está ligado a outra conta.|This CPF is already linked to another account.|Este CPF ya está vinculado a otra cuenta.
+Não foi possível confirmar este pedido. Recarregue a página e tente de novo.|We could not confirm this request. Reload the page and try again.|No se pudo confirmar esta solicitud. Recarga la página e inténtalo de nuevo.
+E-mail confirmado|Email confirmed|Correo confirmado
+Meus dados|My details|Mis datos
+SEUS DADOS|YOUR DETAILS|TUS DATOS
+Meus dados.|My details.|Mis datos.
+Usados na nota fiscal e na entrega. Altere quando quiser.|Used on the invoice and for delivery. Change them whenever you like.|Se usan en la factura y en la entrega. Cámbialos cuando quieras.
+Salvar meus dados|Save my details|Guardar mis datos
+Buscando seus dados…|Loading your details…|Cargando tus datos…
+Salvando seus dados…|Saving your details…|Guardando tus datos…
+Dados salvos!|Details saved!|¡Datos guardados!
+Criando sua conta…|Creating your account…|Creando tu cuenta…
+Atualizando sua senha…|Updating your password…|Actualizando tu contraseña…
+Senha atualizada!|Password updated!|¡Contraseña actualizada!
+IDENTIFICAÇÃO|IDENTIFICATION|IDENTIFICACIÓN
+Quem está|Who is|¿Quién está
+comprando?|buying?|comprando?
+Seus dados para a nota fiscal e a entrega.|Your details for the invoice and delivery.|Tus datos para la factura y la entrega.
+Ir para a entrega|Go to delivery|Ir a la entrega
+Identificação|Identification|Identificación
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

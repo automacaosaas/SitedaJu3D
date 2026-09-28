@@ -174,7 +174,10 @@ try {
   const out = await call('POST', '/api/auth/logout', {}, {cookie: jar});
   assert.match(out.headers['set-cookie'][0], /__Host-ju_session=; .*Max-Age=0/, 'logout clears the cookie');
   const after = await call('GET', '/api/auth/me', null, {cookie: jar});
-  assert.equal(after.status, 401);
+  assert.equal(after.status, 200, 'nobody signed in is a normal answer, not a browser error on every page');
+  assert.equal(after.body.user, null);
+  assert.match(after.headers['set-cookie'][0], /Max-Age=0/, 'the stale cookie is cleared');
+  assert.deepEqual((await call('GET', '/api/auth/me')).body, {user: null});
   const login = await call('POST', '/api/auth/login', {email: 'dani@exemplo.com', password: 'senha-da-dani-1'});
   assert.equal(login.status, 200);
   assert.equal((await call('POST', '/api/auth/login', {email: 'dani@exemplo.com', password: 'errada-000'})).body.error, 'invalid_credentials');

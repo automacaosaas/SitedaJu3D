@@ -81,12 +81,15 @@ async function main() {
     return response;
   };
 
+  // Accounts use the in-memory store here (no database locally): they last until the server stops. Codes go to the
+  // terminal and to the outbox folder (or by Resend with --ask-key).
   const routes = {
-    '/api/auth/send-code': require('../api/auth/send-code').create({env, outbox, fetchImpl: loggedFetch}),
-    '/api/auth/verify-code': require('../api/auth/verify-code').create({env}),
+    '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
     '/api/health': require('../api/health').create({env}),
     '/api/email-preview': require('../api/email-preview').create({env})
   };
+  for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
+  routes['/api/account/profile'] = require('../api/account/profile').create({env});
 
   // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
   // Cache-Control is left out on purpose: local files stay `no-store` while editing.

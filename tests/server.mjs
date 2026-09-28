@@ -71,7 +71,7 @@ try {
   assert.equal(JSON.parse(health.body).ok, true);
   assert.match(health.headers['content-security-policy'] || '', /default-src 'self'/, 'API responses carry the same headers');
   for (const path of ['/api/_lib/mail', '/api/_lib/http', '/api/../server', '/api/nao-existe', '/api/Health']) assert.equal((await raw(path)).status, 404, `not a route: ${path}`);
-  assert.equal((await raw('/api/auth/send-code')).status, 405, 'handlers keep their own method checks');
+  assert.equal((await raw('/api/auth/start')).status, 405, 'handlers keep their own method checks');
 
   assert.deepEqual(errors, [], 'no server errors logged');
 

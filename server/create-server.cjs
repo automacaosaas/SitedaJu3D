@@ -38,7 +38,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   const compressed = new Map();
   let compressedBytes = 0;
 
-  // /api/auth/send-code → api/auth/send-code.js. Lowercase segments only, so "_lib" helpers and "..": never routes.
+  // /api/auth/start → api/auth/start.js. Lowercase segments only, so "_lib" helpers and "..": never routes.
   function apiHandler(pathname) {
     const match = /^\/api\/([a-z0-9-]+(?:\/[a-z0-9-]+)*)\/?$/.exec(pathname);
     if (!match) return null;

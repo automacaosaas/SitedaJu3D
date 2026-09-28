@@ -5,7 +5,10 @@ import {readCart, writeCart, totals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCa
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 
 import {icon} from './icons.js';
-import {saveDemoOrder, getSession} from './auth-service.js';
+import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
+import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
+
+await refreshSession();
 import {refreshHeader} from './site-shell.js';
 import {renderCart} from './cart-view.js';
 
@@ -13,6 +16,7 @@ const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
 const main = document.querySelector('#shop-main'), live = document.querySelector('#shop-live');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let profile = null;
 let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || ''}, timer = null, busy = false, noticeTimer = null;
 let selected = new Set(cart.map(i=>i.id));
 const purchaseItems = () => selectedItems(cart, selected);
@@ -25,6 +29,8 @@ function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${co
 function amounts(items) {const t = totals(items); return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>Entrega <small>(exemplo)</small></dt><dd>${money(t.shipping)}</dd></div><div class="grand-total"><dt>Total</dt><dd>${money(t.total)}</dd></div></dl>`;}
 function summary(items, action = '') {return `<aside class="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>Produção: ${COMMERCE.productionLabel}</strong></p>${action}<p class="small-note">Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.</p></aside>`;}
 function field(name, label, options = {}) {return `<label class="field ${options.wide ? 'wide' : ''}"><span>${label}${options.optional ? ' <small>(opcional)</small>' : ''}</span><input name="${name}" value="${esc(draft[name])}" type="${options.type || 'text'}" ${options.optional ? '' : 'required'} autocomplete="${options.auto || 'off'}" ${options.inputmode ? `inputmode="${options.inputmode}"` : ''} ${options.pattern ? `pattern="${options.pattern}"` : ''} maxlength="${options.max || 100}" ${options.placeholder ? `placeholder="${options.placeholder}"` : ''}></label>`;}
+// Identification (FARM Rio reference): e-mail from the account, name, surname, CPF, phone and optional company data.
+function identificationView() {return `${heading(direct?'COMPRAR AGORA':'IDENTIFICAÇÃO', 'Quem está<br><em>comprando?</em>', 'Seus dados para a nota fiscal e a entrega.')}<div class="shop-layout"><section class="identification-panel">${identificationForm({email:getSession()?.email || '', profile, submitLabel:'Ir para a entrega'})}<button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button></section>${summary(purchaseItems())}</div>`;}
 function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">Use dados fictícios neste protótipo. Eles não são enviados nem salvos pelo formulário.</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000'})}${field('city','Cidade',{auto:'address-level2'})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('district','Bairro',{max:80})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div><div class="shipping-option"><span aria-hidden="true">↗</span><div><strong>Entrega no seu endereço</strong><p>Frete e prazo finais serão definidos na integração.</p></div><strong>${money(COMMERCE.shippingCents)}<small>exemplo</small></strong></div></div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div><fieldset class="payment-choice"><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset><p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
 // Decorative matrix, deliberately NOT a payable QR code.
 function qrIllustration() {let cells = '';for(let y=0;y<21;y++)for(let x=0;x<21;x++){const inFinder = (x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(inFinder){const a=x>13?x-14:x,b=y>13?y-14:y;if(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}else if((x*13+y*7+x*y)%5<2)cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}return `<div class="demo-qr"><svg viewBox="-2 -2 25 25" role="img" aria-label="QR Code ilustrativo, sem valor de pagamento"><g fill="#49303b">${cells}</g></svg><span>DEMONSTRAÇÃO</span></div>`;}
@@ -40,8 +46,9 @@ function render(focus = true) {
   const steps = document.querySelector('.shop-steps');
   main.before(steps);
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
-  main.innerHTML = stage === 'cart' ? renderCart(cart, selected) : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
+  main.innerHTML = stage === 'cart' ? renderCart(cart, selected) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
+  if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
   if (previousStage && previousStage !== stage && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
     main.getAnimations().forEach(animation => animation.cancel());
     main.animate([{opacity:0,translate:'0 6px'},{opacity:1,translate:'0 0'}], {duration:220,easing:'ease-out'});
@@ -49,7 +56,7 @@ function render(focus = true) {
   const summaryPanel=main.querySelector('.order-summary');
   if(summaryPanel&&stage!=='cart'){
     summaryPanel.id='order-summary';
-    const items=stage==='delivery'?purchaseItems():order.items;
+    const items=['identification','delivery'].includes(stage)?purchaseItems():order.items;
     const quick=document.createElement('a');quick.className='mobile-order-bar';quick.href='#order-summary';
     quick.innerHTML=`<span>${count(items)} ${count(items)===1?'peça':'peças'} · <strong>${money(totals(items).total)}</strong></span><span>Ver resumo ↓</span>`;
     main.querySelector('.shop-heading').after(quick);
@@ -63,12 +70,36 @@ function render(focus = true) {
     tick();timer=setInterval(tick,1000);
   }
 }
+// Identification needs an account: without one, the account page opens and brings the buyer back to this step.
+const signInPage = () => `conta.html?next=${direct ? 'comprar-agora' : 'checkout'}`;
+async function toIdentification() {
+  if (!getSession()) { location.assign(signInPage()); return; }
+  try { profile = await loadProfile(); }
+  catch (error) { if (error.code === 'unauthorized') { location.assign(signInPage()); return; } announce(error.message); return; }
+  stage = 'identification'; render();
+}
 function persist(next) {
   if(direct){cart=normalizeCart(next);sessionStorage.setItem(DIRECT_KEY,JSON.stringify(cart));}
   else cart=writeCart(next);
   selected=new Set([...selected].filter(id=>cart.some(i=>i.id===id)));
   window.dispatchEvent(new Event('ju:cart'));
 }
+main.addEventListener('submit', async e => {
+  if (e.target.id !== 'identification-form') return;
+  e.preventDefault(); if (busy) return;
+  const form = e.target, {data, error} = readIdentification(form);
+  if (error) { showIdentificationError(form, error); return; }
+  const button = form.querySelector('.id-submit'); busy = true; button.disabled = true;
+  try {
+    profile = await saveProfile(data);
+    draft = {...draft, name: `${data.firstName} ${data.lastName}`, email: getSession()?.email || draft.email, phone: data.phone};
+    busy = false; stage = 'delivery'; render();
+  } catch (problem) {
+    busy = false; button.disabled = false;
+    if (problem.code === 'unauthorized') { location.assign(signInPage()); return; }
+    showIdentificationError(form, {field: problem.field, message: problem.message});
+  }
+});
 main.addEventListener('submit', e=>{if(e.target.id!=='delivery-form')return;e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;draft=Object.fromEntries(new FormData(form));if(!draft.name.trim()||!draft.street.trim()||!draft.city.trim()||!draft.number.trim()||!draft.district.trim()){announce('Preencha os dados de entrega, sem deixar campos em branco.');return;}method=draft.payment;try{order=createDemoOrder(purchaseItems(),method);stage='payment';render();}catch(error){announce(error.message);}});
 main.addEventListener('change',e=>{
   if(e.target.name==='payment')method=e.target.value;
@@ -95,7 +126,7 @@ main.addEventListener('click',async e=>{
     if(action==='return'){returnFromCart();return;}
     if(['plus','minus','remove'].includes(action)&&item){const next=cart.map(i=>({...i}));if(action==='remove')persist(next.filter(i=>i.id!==id));else{next.find(i=>i.id===id).quantity=Math.max(1,Math.min(99,item.quantity+(action==='plus'?1:-1)));persist(next);}render(false);const target=[...main.querySelectorAll('[data-action]')].find(b=>b.dataset.id===id&&b.dataset.action===action&&!b.disabled);(target||main.querySelector('h1')).focus({preventScroll:true});announce(action==='remove'?'Peça removida do carrinho.':'Quantidade atualizada.');}
     if(action==='edit'&&item){sessionStorage.setItem(EDIT_KEY,JSON.stringify({id:item.id}));location.assign(`index.html#produto/${item.productId}`);}
-    if(action==='checkout'&&purchaseItems().length){stage='delivery';render();}
+    if(action==='checkout'&&purchaseItems().length){await toIdentification();}
     if(action==='remove-selected'){persist(cart.filter(i=>!selected.has(i.id)));render();announce('Itens selecionados removidos.');}
     if(action==='cart'&&direct&&cart[0]){location.assign(`index.html#produto/${cart[0].productId}`);return;}
     if(action==='cart'){const form=document.querySelector('#delivery-form');if(form)draft=Object.fromEntries(new FormData(form));stage='cart';order=null;render();}
@@ -120,4 +151,6 @@ main.addEventListener('click',async e=>{
   } catch(error){busy=false;button.disabled=false;announce(error.message);}
 });
 window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=readCart();selected=new Set(cart.map(i=>i.id));if(stage==='cart')render(false);else if(stage==='delivery'||stage==='payment'){order=null;stage='cart';render();announce('O carrinho foi alterado em outra aba. Confira os itens antes de continuar.');}});
-render(false);
+// Coming back from the account page (#identificacao) or starting a direct purchase: go straight to identification.
+if ((location.hash === '#identificacao' || stage === 'delivery') && purchaseItems().length) { history.replaceState(null, '', location.pathname + location.search); await toIdentification(); }
+else render(false);
