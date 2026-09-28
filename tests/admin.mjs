@@ -229,7 +229,8 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   await assert.rejects(client.currentSession({fetchImpl: fake([[503, {error: 'admin_unavailable'}]]).fetchImpl}), error => error.code === 'admin_unavailable', 'a server problem is not a sign-out');
   await assert.rejects(client.loadOrders({fetchImpl: fake([[401, {}]]).fetchImpl}), error => error.code === 'unauthorized');
   const moved = fake([[200, {ok: true, order: {id: 'x', status: 'concluido'}}]]);
-  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: moved.fetchImpl}), {id: 'x', status: 'concluido'});
+  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: moved.fetchImpl}), {order: {id: 'x', status: 'concluido'}, mailed: false});
+  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: fake([[200, {ok: true, order: {id: 'x'}, mailed: true}]]).fetchImpl}), {order: {id: 'x'}, mailed: true}, 'the panel learns whether the buyer was e-mailed');
   assert.deepEqual(JSON.parse(moved.calls[0].init.body), {id: 'x', status: 'concluido', reason: ''});
 
   // The vendored QR generator draws a valid symbol for an otpauth link (finder pattern in the corner).
@@ -237,6 +238,45 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert(qr.getModuleCount() >= 41, 'version 6 or larger for a ~120-character link');
   for (let i = 0; i < 7; i++) assert(qr.isDark(0, i) && qr.isDark(6, i) && qr.isDark(i, 0) && qr.isDark(i, 6), 'finder pattern border');
   assert(!qr.isDark(1, 1) && qr.isDark(3, 3), 'finder pattern inside');
+}
+
+// ── Ju's decision e-mails the buyer: confirmed or declined, never the reason; reopening sends nothing ──
+{
+  const MAIL_ENV = {...ENV, RESEND_API_KEY: 're_test_key_admin', MAIL_FROM: 'Ju <pedidos@site.test>'};
+  const sent = [], fetchImpl = async (url, init) => { sent.push({url, key: init.headers['Idempotency-Key'], body: JSON.parse(init.body)}); return {ok: true, status: 200, json: async () => ({id: 'em_' + sent.length})}; };
+  const store = createMemoryStore(), h = Object.fromEntries(Object.entries(handlers).map(([name, handler]) => [name, handler.create({env: MAIL_ENV, store, now, fetchImpl})]));
+  const base = {customerId: null, source: 'test', method: 'pix', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: '<b>Ana</b> Souza', email: 'ana@example.com', company: null}, shipTo: {recipient: '<b>Ana</b> Souza', cep: '30140071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''}, notes: '', paidAt: new Date(clock), items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {body: 'pink', details: 'lilac'}}]};
+  const make = (reference, lang) => store.orders.create({...base, id: crypto.randomUUID(), reference, status: 'pendente', lang}).then(r => r.order);
+  const pt = await make('JU-DECIDE0001', 'pt-BR'), en = await make('JU-DECIDE0002', 'en');
+  const login = await call(h.login, {body: {email: 'ju@site.test', password: 'senha-do-painel-2026'}});
+  const cookie = jar(await call(h.verify, {body: {code: codeFor(totp.fromBase32(login.json().setup.secret))}, cookie: jar(login)}));
+  const move = body => call(h['order-status'], {body, cookie});
+
+  const done = await move({id: pt.id, status: 'concluido'});
+  assert.equal(done.statusCode, 200); assert.equal(done.json().mailed, true, 'confirming e-mails the buyer');
+  assert.equal(sent.length, 1); assert.deepEqual(sent[0].body.to, ['ana@example.com']);
+  assert.equal(sent[0].body.subject, '[TESTE] Pedido confirmado · JU-DECIDE0001 · Ju, imprime pra mim?');
+  assert(sent[0].body.html.includes('Seu pedido foi') && sent[0].body.html.includes('JU-DECIDE0001') && sent[0].body.html.includes('Borboletoscópio'));
+  assert(!sent[0].body.html.includes('<b>Ana') && sent[0].body.html.includes('&lt;b&gt;Ana&lt;/b&gt;'), 'the name is escaped');
+
+  const declined = await move({id: en.id, status: 'recusado', reason: 'sem estoque da cor lilás'});
+  assert.equal(declined.json().mailed, true); assert.equal(sent.length, 2);
+  assert.equal(sent[1].body.subject, '[TESTE] About your order JU-DECIDE0002 · Ju, imprime pra mim?', 'in the language the buyer used');
+  assert(sent[1].body.html.includes('refunded through Mercado Pago'));
+  assert(!JSON.stringify(sent[1].body).includes('estoque'), 'the decline reason stays with the team');
+
+  const reopened = await move({id: en.id, status: 'pendente'});
+  assert.equal(reopened.json().mailed, false); assert.equal(sent.length, 2, 'reopening sends nothing');
+  advance(60000);
+  await move({id: en.id, status: 'concluido'});
+  assert.equal(sent.length, 3); assert.notEqual(sent[2].key, sent[1].key, 'a new decision is a new e-mail (its own idempotency key)');
+  assert.match(sent[0].key, /^order-concluido-[0-9a-f-]{36}-\d+$/);
+
+  // Without an e-mail service nothing is sent and nothing breaks (the route still saves the status and says mailed: false).
+  const {createOrders} = require('../api/_lib/orders');
+  const noMail = createOrders({store, env: ENV, now});
+  assert.equal(await noMail.notifyDecision({...pt, status: 'concluido'}, {fetchImpl}), false, 'no e-mail service: nothing sent, nothing thrown');
+  assert.equal(sent.length, 3);
 }
 
 console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable); browser helpers (grouping, revenue without declined orders, API client) and the vendored QR code.');

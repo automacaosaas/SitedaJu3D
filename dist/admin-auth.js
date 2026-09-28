@@ -34,7 +34,7 @@ export async function loadOrders(options) {
 }
 export async function changeStatus(id, status, reason = '', options) {
   const answer = await request('/api/admin/order-status', {method: 'POST', body: {id, status, reason}, ...options});
-  if (answer.status === 200 && answer.data?.order) return answer.data.order;
+  if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, mailed: answer.data.mailed === true};
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 

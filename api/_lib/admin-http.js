@@ -9,7 +9,7 @@ const {createAdminAuth, sessionCookie, clearCookie, readCookie} = require('./adm
 const ADMIN_STATUS = {...STATUS, not_found: 404};
 
 function adminEndpoint({methods, open = false, handle}) {
-  function create({env = process.env, store, now = () => Date.now()} = {}) {
+  function create({env = process.env, store, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox} = {}) {
     return async function handler(req, res) {
       if (!methods.includes(req.method)) return json(res, 405, {error: 'method_not_allowed'}, {Allow: methods.join(', ')});
       const writing = req.method !== 'GET';
@@ -19,7 +19,7 @@ function adminEndpoint({methods, open = false, handle}) {
       let body = {};
       if (writing) { try { body = await readJson(req, 8 * 1024); } catch (error) { return json(res, error.status || 400, {error: 'invalid_request'}); } }
       const auth = createAdminAuth({store: active, env, now}), token = readCookie(req);
-      const context = {req, body, auth, store: active, env, now, token, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || '')};
+      const context = {req, body, auth, store: active, env, now, token, fetchImpl, outbox, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || '')};
       try {
         if (!open) {
           const current = await auth.authenticate(token);

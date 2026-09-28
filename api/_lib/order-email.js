@@ -146,4 +146,50 @@ function renderOwnerEmail({summary, test = false, assetUrl}) {
   return {subject, html: frame({lang: 'pt-BR', title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
-module.exports = {renderCustomerEmail, renderOwnerEmail, CUSTOMER, OWNER};
+// Ju's decision in the panel, told to the buyer: "concluido" (she confirmed it, the pieces go into production) or
+// "recusado" (she cannot make it; the refund goes back through Mercado Pago). The reason Ju types never goes here: the
+// panel promises it stays with the team.
+const DECISION = {
+  'pt-BR': {
+    concluido: {subject: ref => `Pedido confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'A Ju confirmou o seu pedido e as peças já vão para a produção.',
+      eyebrow: 'PEDIDO CONFIRMADO', title: ['Seu pedido foi', 'confirmado!'], intro: 'A Ju conferiu o seu pedido e as suas peças entram em produção, uma a uma.',
+      next: 'Quando as peças estiverem a caminho, avisamos por aqui.'},
+    recusado: {subject: ref => `Sobre o seu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Infelizmente a Ju não vai conseguir produzir este pedido.',
+      eyebrow: 'PEDIDO NÃO CONFIRMADO', title: ['Não vamos conseguir', 'produzir este pedido.'], intro: 'Sentimos muito: desta vez a Ju não vai conseguir produzir o seu pedido.',
+      next: 'O valor pago será devolvido pelo Mercado Pago, na mesma forma de pagamento.'}
+  },
+  en: {
+    concluido: {subject: ref => `Order confirmed · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmed your order and your pieces are going into production.',
+      eyebrow: 'ORDER CONFIRMED', title: ['Your order is', 'confirmed!'], intro: 'Ju checked your order and your pieces are going into production, one by one.',
+      next: 'We will let you know here when your pieces are on their way.'},
+    recusado: {subject: ref => `About your order ${ref} · Ju, imprime pra mim?`, preheader: 'Unfortunately Ju will not be able to make this order.',
+      eyebrow: 'ORDER NOT CONFIRMED', title: ['We will not be able', 'to make this order.'], intro: 'We are very sorry: this time Ju will not be able to make your order.',
+      next: 'The amount you paid will be refunded through Mercado Pago, with the same payment method.'}
+  },
+  es: {
+    concluido: {subject: ref => `Pedido confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmó tu pedido y tus piezas ya pasan a producción.',
+      eyebrow: 'PEDIDO CONFIRMADO', title: ['¡Tu pedido fue', 'confirmado!'], intro: 'Ju revisó tu pedido y tus piezas pasan a producción, una por una.',
+      next: 'Cuando tus piezas estén en camino, te avisaremos por aquí.'},
+    recusado: {subject: ref => `Sobre tu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Lamentablemente Ju no podrá producir este pedido.',
+      eyebrow: 'PEDIDO NO CONFIRMADO', title: ['No podremos', 'producir este pedido.'], intro: 'Lo sentimos mucho: esta vez Ju no podrá producir tu pedido.',
+      next: 'El valor pagado será devuelto por Mercado Pago, con el mismo medio de pago.'}
+  }
+};
+
+function renderDecisionEmail({summary, status, lang = 'pt-BR', test = false, assetUrl}) {
+  const language = DECISION[lang] ? lang : 'pt-BR';
+  if (!DECISION[language][status]) throw new Error(`no e-mail for status ${status}`);
+  const copy = {...CUSTOMER[language], ...DECISION[language][status]};
+  const hello = copy.hello(summary.customer.name.split(' ')[0] || '');
+  const inner = [
+    `<tr><td class="px" align="center" style="padding:18px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:16px;line-height:25px;">${esc(hello)} ${esc(copy.intro)}</p></td></tr>`,
+    section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`)),
+    section(copy.pieces, itemsTable(copy, summary, language)),
+    `<tr><td class="px" align="center" style="padding:24px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:14px;line-height:22px;">${esc(copy.next)}</p></td></tr>`
+  ].join('\n');
+  const subject = (test ? '[TESTE] ' : '') + copy.subject(summary.reference);
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, '', copy.pieces, plainItems(summary, language, copy), `${copy.total}: ${money(summary.total)}`, '', copy.next].filter((part, i, all) => part !== '' || all[i - 1] !== '').join('\n');
+  return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
+}
+
+module.exports = {renderCustomerEmail, renderOwnerEmail, renderDecisionEmail, CUSTOMER, OWNER, DECISION};

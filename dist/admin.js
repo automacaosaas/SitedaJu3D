@@ -23,6 +23,7 @@ declineDialog.innerHTML = `<form method="dialog">
   <h2 id="decline-title">Recusar este pedido?</h2>
   <p class="admin-confirm-ref"></p>
   <p class="admin-confirm-warn">O pedido vai para a aba Recusados. Se for engano, dá para reabrir depois. O estorno do pagamento é feito no Mercado Pago.</p>
+  <p class="admin-confirm-warn">O cliente recebe um e-mail avisando que o pedido não será produzido e que o valor volta pelo Mercado Pago. O motivo não vai no e-mail.</p>
   <label class="admin-field"><span>Motivo (opcional, só a equipe vê)</span><textarea name="reason" maxlength="300" placeholder="Ex.: sem estoque da cor escolhida"></textarea></label>
   <div class="admin-confirm-actions"><button type="button" data-action="cancel-decline">Cancelar</button><button type="button" class="btn-decline" data-action="confirm-decline">Sim, recusar pedido</button></div>
 </form>`;
@@ -241,7 +242,12 @@ async function openDashboard() {
 
 async function move(id, status, reason, done) {
   await run('Salvando…', async () => {
-    try { orders = replaceOrder(orders, await changeStatus(id, status, reason)); announce(done); }
+    try {
+      const result = await changeStatus(id, status, reason);
+      orders = replaceOrder(orders, result.order);
+      // Confirming or declining e-mails the buyer; say whether it went out (reopening sends nothing).
+      announce(status === 'pendente' ? done : `${done} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}`);
+    }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível salvar agora. Tente novamente.'); }
   });
 }

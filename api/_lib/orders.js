@@ -9,10 +9,11 @@
 const crypto = require('node:crypto');
 const fields = require('./fields');
 const {config, mailReady, sendMail} = require('./mail');
-const {renderOwnerEmail, renderCustomerEmail} = require('./order-email');
+const {renderOwnerEmail, renderCustomerEmail, renderDecisionEmail} = require('./order-email');
 
 const PAID = ['pendente', 'concluido', 'recusado'];
 const ADMIN_STATUSES = ['pendente', 'concluido', 'recusado'];
+const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer hears about by e-mail
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
 const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.id || method?.type ? 'card' : null;
 
@@ -117,7 +118,22 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     return store.orders.findById(id);
   }
 
-  return {open, applyPayment, notifyPaid, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
+  // Tells the buyer what Ju decided in the panel: confirmed (concluido) or declined (recusado). Reopening sends nothing,
+  // and the decline reason never leaves the panel. One e-mail per decision: the key carries the decision time, so a retry
+  // cannot double it, while a new decision after reopening is a new e-mail. The status is already saved either way.
+  async function notifyDecision(order, {fetchImpl = globalThis.fetch, outbox, test = order.source !== 'live'} = {}) {
+    if (!DECIDED.includes(order.status)) return false;
+    const mail = config(env), data = summary(order);
+    if (!mailReady(mail) || !data.customer.email) return false;
+    const message = renderDecisionEmail({summary: data, status: order.status, lang: order.lang, test, assetUrl: mail.assetUrl});
+    const decided = order.decidedAt ? new Date(order.decidedAt).getTime() : 0;
+    try {
+      await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${order.status}-${order.id}-${decided}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind: order.status, reference: order.reference}))});
+      return true;
+    } catch (error) { console.error(`orders: decision e-mail (${order.status}) failed for ${order.reference} —`, error.status || '', error.message); return false; }
+  }
+
+  return {open, applyPayment, notifyPaid, notifyDecision, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
 module.exports = {createOrders, PAID, ADMIN_STATUSES};
