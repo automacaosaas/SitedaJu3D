@@ -88,6 +88,9 @@ const livePayment = await readFile(new URL('dist/live-payment.js', root), 'utf8'
 if (livePayment.includes('https://sdk.mercadopago.com')) {
   for (const host of ['https://sdk.mercadopago.com', 'https://http2.mlstatic.com']) assert(allows('script-src', host), `script-src allows ${host} (Payment Brick)`);
   for (const host of ['https://api.mercadopago.com', 'https://http2.mlstatic.com']) assert(allows('connect-src', host), `connect-src allows ${host} (Payment Brick)`);
+  // The SDK downloads the card fields page from secure-fields.mercadopago.com before framing it (fallback:
+  // api-static.mercadopago.com/secure-fields). Without the first one the card form stays a grey skeleton.
+  for (const host of ['https://secure-fields.mercadopago.com', 'https://api-static.mercadopago.com']) assert(allows('connect-src', host), `connect-src allows ${host} (card secure fields)`);
   assert(allows('frame-src', 'https://*.mercadopago.com'), 'frame-src allows the card secure fields (Payment Brick)');
   assert(allows('frame-src', "'self'"), 'frame-src keeps our own frames (e-mail preview)');
   assert(/advancedFraudPrevention: false/.test(livePayment), 'the SDK runs without the inline-script fraud module (the policy has no unsafe-inline)');
