@@ -49,8 +49,10 @@ própria página, como na prévia atual. `PORT` é definida pela Hostinger; sem 
 
 - `https://<endereço temporário>/api/health` responde `{"ok":true,...}`.
 - A home abre, a prévia 3D dos três produtos carrega e o console do navegador fica sem erros.
-- `curl -I https://<endereço temporário>/` mostra `content-security-policy`, `x-frame-options: SAMEORIGIN` e
-  `x-robots-tag: noindex, nofollow`.
+- `curl -I https://<endereço temporário>/` mostra `x-frame-options: SAMEORIGIN`, `nosniff` e `x-robots-tag: noindex, nofollow`.
+- A CDN da Hostinger (`server: hcdn`) troca o cabeçalho `content-security-policy` por `upgrade-insecure-requests`. Por isso a
+  política completa também vai numa tag `<meta http-equiv="Content-Security-Policy">` em cada página (sem `frame-ancestors`,
+  que o `<meta>` não aceita; o `x-frame-options` cobre isso). `tests/headers.mjs` mantém as duas cópias iguais.
 
 ## 5. Atualizar
 

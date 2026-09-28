@@ -25,11 +25,21 @@ assert.equal(header(global, 'X-Content-Type-Options'), 'nosniff');
 assert.equal(header(global, 'X-Frame-Options'), 'SAMEORIGIN');
 assert(header(global, 'Referrer-Policy'), 'Referrer-Policy set');
 
+// Every page also carries the policy in a <meta> tag: the Hostinger CDN replaces the CSP header with its own
+// "upgrade-insecure-requests", while the markup reaches the browser untouched. <meta> ignores frame-ancestors (X-Frame-Options
+// covers framing), so it is the header policy without that directive, placed before any script or stylesheet.
+const metaPolicy = csp.split(';').map(s => s.trim()).filter(s => s && !s.startsWith('frame-ancestors')).join('; ');
+
 // Every inline script (the import map) is allowed by its exact hash; nothing else is inline.
 const pages = (await readdir(new URL('dist/', root))).filter(f => f.endsWith('.html'));
 const hashes = new Set();
 for (const page of pages) {
   const html = await readFile(new URL(`dist/${page}`, root), 'utf8');
+  const metas = [...html.matchAll(/<meta http-equiv="Content-Security-Policy" content="([^"]*)">/g)];
+  assert.equal(metas.length, 1, `${page}: one CSP <meta> tag`);
+  assert.equal(metas[0][1], metaPolicy, `${page}: CSP <meta> equals vercel.json without frame-ancestors. Use:\n<meta http-equiv="Content-Security-Policy" content="${metaPolicy}">`);
+  const firstResource = html.search(/<script\b|<link\b|<style\b/);
+  assert(firstResource === -1 || metas[0].index < firstResource, `${page}: CSP <meta> comes before any script, stylesheet or style`);
   assert(!/\son[a-z]+\s*=\s*["']/i.test(html), `${page}: no inline event handlers`);
   assert(!/(href|src)\s*=\s*["']javascript:/i.test(html), `${page}: no javascript: URLs`);
   for (const [, attrs, body] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {

@@ -53,7 +53,10 @@ A CSP libera só o que o site usa:
 `tests/headers.mjs` confere a CSP contra as páginas.
 
 **Ao editar o import map de `index.html`**, o hash muda. O teste avisa e mostra o valor novo, que deve ir para o
-`script-src` do `vercel.json`.
+`script-src` do `vercel.json` e para a tag `<meta http-equiv="Content-Security-Policy">` de cada página.
+
+**A política também está em `<meta>`** em todas as páginas, porque a CDN da Hostinger substitui o cabeçalho CSP pelo dela.
+O `<meta>` é a política do cabeçalho sem `frame-ancestors`; `tests/headers.mjs` exige que as duas fiquem iguais.
 
 **Ao juntar com `integracao/mercado-pago`**, a CSP precisa liberar o SDK e os campos seguros do Mercado Pago
 (`sdk.mercadopago.com`, `*.mercadopago.com`, `*.mercadolibre.com`, `*.mlstatic.com`). Isso deve ser testado no navegador,
