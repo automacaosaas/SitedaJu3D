@@ -204,4 +204,37 @@ function renderDecisionEmail({summary, status, lang = 'pt-BR', test = false, ass
   return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
-module.exports = {renderCustomerEmail, renderOwnerEmail, renderDecisionEmail, CUSTOMER, OWNER, DECISION};
+// The NF-e, sent to the buyer once the tax authority authorizes it: links to the DANFE (PDF) and the XML, and the access
+// key. In the test environment (homologação) the banner says the note has no fiscal value.
+const INVOICE = {
+  'pt-BR': {subject: ref => `Nota fiscal do seu pedido · ${ref} · Ju, imprime pra mim?`, preheader: 'A nota fiscal do seu pedido foi emitida.',
+    eyebrow: 'NOTA FISCAL', title: ['A nota fiscal', 'do seu pedido.'], intro: 'A nota fiscal do seu pedido foi emitida. Guarde os arquivos abaixo.',
+    note: 'NOTA FISCAL', number: (n, s) => `Nº ${n}${s ? ` · série ${s}` : ''}`, key: 'Chave de acesso', pdf: 'Ver a nota (PDF)', xml: 'Baixar o XML',
+    test: 'AMBIENTE DE TESTE · nota de homologação, sem valor fiscal.'},
+  en: {subject: ref => `Invoice for your order · ${ref} · Ju, imprime pra mim?`, preheader: 'The invoice for your order has been issued.',
+    eyebrow: 'INVOICE', title: ['The invoice', 'for your order.'], intro: 'The invoice (nota fiscal) for your order has been issued. Keep the files below.',
+    note: 'INVOICE', number: (n, s) => `No. ${n}${s ? ` · series ${s}` : ''}`, key: 'Access key', pdf: 'View the invoice (PDF)', xml: 'Download the XML',
+    test: 'TEST ENVIRONMENT · test invoice, no fiscal value.'},
+  es: {subject: ref => `Factura de tu pedido · ${ref} · Ju, imprime pra mim?`, preheader: 'Se emitió la factura de tu pedido.',
+    eyebrow: 'FACTURA', title: ['La factura', 'de tu pedido.'], intro: 'Se emitió la factura (nota fiscal) de tu pedido. Guarda los archivos de abajo.',
+    note: 'FACTURA', number: (n, s) => `N.º ${n}${s ? ` · serie ${s}` : ''}`, key: 'Clave de acceso', pdf: 'Ver la factura (PDF)', xml: 'Descargar el XML',
+    test: 'ENTORNO DE PRUEBA · factura de homologación, sin valor fiscal.'}
+};
+
+function renderInvoiceEmail({summary, invoice, lang = 'pt-BR', test = false, assetUrl}) {
+  const language = INVOICE[lang] ? lang : 'pt-BR';
+  const copy = {...CUSTOMER[language], ...INVOICE[language]};
+  const hello = copy.hello(summary.customer.name.split(' ')[0] || '');
+  const button = (href, text) => `<a href="${esc(href)}" target="_blank" style="display:inline-block;margin:0 8px 8px 0;padding:12px 22px;border-radius:999px;background:${C.rose};color:#ffffff;font-family:${SANS};font-size:15px;font-weight:700;line-height:20px;text-decoration:none;">${esc(text)}</a>`;
+  const inner = [
+    `<tr><td class="px" align="center" style="padding:18px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:16px;line-height:25px;">${esc(hello)} ${esc(copy.intro)}</p></td></tr>`,
+    section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`)),
+    section(copy.note, line(esc(copy.number(invoice.number, invoice.series))) + (invoice.accessKey ? line(`${esc(copy.key)}: <span style="font-size:13px;letter-spacing:.5px;">${esc(invoice.accessKey.replace(/(\d{4})(?=\d)/g, '$1 '))}</span>`, `color:${C.muted};font-size:13px;`) : '')),
+    `<tr><td class="px" style="padding:18px 44px 0;">${invoice.pdfUrl ? button(invoice.pdfUrl, copy.pdf) : ''}${invoice.xmlUrl ? button(invoice.xmlUrl, copy.xml) : ''}</td></tr>`
+  ].join('\n');
+  const subject = (test ? '[TESTE] ' : '') + copy.subject(summary.reference);
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, copy.number(invoice.number, invoice.series), invoice.accessKey ? `${copy.key}: ${invoice.accessKey}` : '', '', invoice.pdfUrl ? `${copy.pdf}: ${invoice.pdfUrl}` : '', invoice.xmlUrl ? `${copy.xml}: ${invoice.xmlUrl}` : ''].filter(part => part !== '').join('\n');
+  return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
+}
+
+module.exports = {renderCustomerEmail, renderOwnerEmail, renderDecisionEmail, renderInvoiceEmail, CUSTOMER, OWNER, DECISION, INVOICE};

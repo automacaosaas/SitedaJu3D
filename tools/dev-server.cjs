@@ -64,6 +64,8 @@ async function main() {
     else console.log(`Chave recebida (${env.RESEND_API_KEY.length} caracteres).`);
   }
   const fakeMp = process.argv.includes('--fake-mp');
+  // --fake-nfe: simulated NF-e service with example tax data (never in production), to see the whole invoice flow locally.
+  if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
     env.MP_ACCESS_TOKEN = await askHidden('Cole o Access Token de teste e tecle Enter (não aparece na tela): ');
@@ -89,6 +91,7 @@ async function main() {
   };
   // Logs what Resend answered (status and id or message) without ever printing the key.
   const loggedFetch = async (url, init) => {
+    if (!String(url).startsWith('https://api.resend.com/')) return fetch(url, init);   // CEP lookups and the like pass through
     const response = await fetch(url, init);
     const info = await response.clone().json().catch(() => ({}));
     const to = JSON.parse(init.body).to?.[0] || '?';
@@ -111,7 +114,7 @@ async function main() {
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
-  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-document']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: loggedFetch});
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-document', 'order-invoice']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: loggedFetch});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
 

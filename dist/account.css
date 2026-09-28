@@ -247,3 +247,5 @@
 .auth-terms { margin: 14px 0 4px; font-size: 12px; line-height: 1.5; color: var(--auth-muted); }
 .auth-terms-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; font-size: 12px; }
 .auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+/* "Ver nota fiscal": the NF-e of the order, once authorized. */
+.order-invoice { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }

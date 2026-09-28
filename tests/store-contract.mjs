@@ -133,6 +133,18 @@ async function contract(store, label) {
   const [last] = await store.adminAudit.list(1);
   assert.equal(last.action, 'login'); assert.equal(last.adminId, adminId); assert.equal(last.detail, 'contrato');
 
+  // NF-e: one invoice per order; a second create returns the first; updates and listing by orders.
+  const invoiceId = crypto.randomUUID();
+  const madeInvoice = await store.invoices.create({id: invoiceId, orderId, provider: 'fake', environment: 'homologacao', reference, status: 'processando'});
+  assert.equal(madeInvoice.created, true); assert.equal(madeInvoice.invoice.status, 'processando'); assert.equal(madeInvoice.invoice.attempts, 0);
+  const secondInvoice = await store.invoices.create({id: crypto.randomUUID(), orderId, provider: 'fake', environment: 'homologacao', reference, status: 'processando'});
+  assert.equal(secondInvoice.created, false, `${label}: one invoice per order`); assert.equal(secondInvoice.invoice.id, invoiceId);
+  const authorized = await store.invoices.update(invoiceId, {status: 'autorizada', number: '12', series: '1', accessKey: '3'.repeat(44), pdfUrl: 'https://n.test/a.pdf', attempts: 1, authorizedAt: new Date()});
+  assert.equal(authorized.status, 'autorizada'); assert.equal(authorized.number, '12'); assert.equal(authorized.accessKey.length, 44); assert.equal(Number(authorized.attempts), 1);
+  assert.equal((await store.invoices.findByOrder(orderId)).id, invoiceId);
+  assert.deepEqual((await store.invoices.listByOrders([orderId, crypto.randomUUID()])).map(i => i.id), [invoiceId]);
+  assert.deepEqual(await store.invoices.listByOrders([]), []);
+
   // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
   const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();
   await store.customers.create({id: purger, email: purgerEmail, emailVerifiedAt: new Date(), displayName: 'P'});

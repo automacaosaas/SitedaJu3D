@@ -662,4 +662,5 @@ Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e dec
 Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By creating your account, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al crear tu cuenta, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
 Para pagar, aceite os Termos de Uso e a Política de Trocas e Devoluções na etapa de entrega.|To pay, accept the Terms of Use and the Exchanges and Returns Policy in the delivery step.|Para pagar, acepta los Términos de Uso y la Política de Cambios y Devoluciones en la etapa de entrega.
 Este documento está disponível só em português. Em caso de dúvida, vale a versão em português.|This document is available in Portuguese only. In case of doubt, the Portuguese version prevails.|Este documento está disponible solo en portugués. En caso de duda, prevalece la versión en portugués.
+Ver nota fiscal|View invoice|Ver factura
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

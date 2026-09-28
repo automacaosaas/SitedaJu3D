@@ -14,6 +14,7 @@ const {createAccounts} = require('../_lib/accounts');
 const {createOrders} = require('../_lib/orders');
 const fields = require('../_lib/fields');
 const mp = require('../_lib/mercadopago');
+const {lookupCep} = require('../_lib/cep');
 
 const MAX_BODY = 16 * 1024;
 const EMAIL = /^[^\s@<>()[\],;:"\\]+@[^\s@<>()[\],;:"\\]+\.[^\s@<>()[\],;:"\\]+$/;
@@ -35,7 +36,7 @@ function readCustomer(body) {
   return {customer: {name, email, phone}, address, notes: clean(body.notes, 500)};
 }
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox, lookup = lookupCep} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'POST') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'POST'});
     const settings = mp.settings(env), site = config(env);
@@ -55,6 +56,12 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     try { form = readCustomer(body); } catch (error) { return json(res, 400, {error: 'invalid_request', field: error.field}); }
     try { priced = priceOrder(body.items); } catch { return json(res, 400, {error: 'invalid_items'}); }
     try { payment = mp.paymentFromBrick(body.payment || {}); } catch (error) { return json(res, 400, {error: error.code || 'invalid_payment'}); }
+    // The CEP must exist and match the state: the invoice and the shipping label depend on it. A lookup that fails (the
+    // service down or slow) never blocks the sale; the invoice step checks again later.
+    let place;
+    try { place = await lookup(form.address.cep, {fetchImpl}); } catch { place = undefined; }
+    if (place === null) return json(res, 400, {error: 'invalid_request', field: 'cep'});
+    if (place && place.state !== form.address.state) return json(res, 400, {error: 'invalid_request', field: 'state', expected: place.state});
 
     for (const [key, limit, windowMs] of [['pay-ip:' + clientIp(req), 20, 10 * 60 * 1000], ['pay-account:' + buyer.id, 8, 10 * 60 * 1000]]) {
       const taken = await store.rateLimit(key, limit, windowMs, now());

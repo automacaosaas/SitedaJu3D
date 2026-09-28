@@ -55,6 +55,8 @@ export const paymentState = (id, options) => request('/api/payments/status?id=' 
 // test mode, where the server passes Mercado Pago's own reason along to make problems easy to find.
 export function paymentMessage(status, data) {
   const code = data?.error, field = data?.field;
+  if (code === 'invalid_request' && field === 'cep') return 'Não encontramos esse CEP. Confira o CEP da entrega.';
+  if (code === 'invalid_request' && field === 'state') return 'O CEP não é do estado escolhido. Confira o CEP e o estado da entrega.';
   if (code === 'invalid_request' && field === 'terms') return 'Para pagar, aceite os Termos de Uso e a Política de Trocas e Devoluções na etapa de entrega.';
   if (code === 'invalid_request' && field) return 'Confira os dados de entrega e tente novamente.';
   if (code === 'invalid_items') return 'Não foi possível conferir os itens do pedido. Volte ao carrinho e tente novamente.';

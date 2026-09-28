@@ -13,5 +13,8 @@ const listed = now => order => order.status !== 'cancelado'
 module.exports = endpoint({methods: ['GET'], async handle(context) {
   const customer = await requireUser(context);
   const orders = createOrders({store: context.store, env: context.env, now: context.now});
-  return {body: {orders: (await context.store.orders.listByCustomer(customer.id, 50)).filter(listed(context.now())).map(orders.customerView)}};
+  const list = (await context.store.orders.listByCustomer(customer.id, 50)).filter(listed(context.now()));
+  // The buyer sees the NF-e once it is authorized: number and the PDF link.
+  const invoices = new Map((await context.store.invoices.listByOrders(list.map(o => o.id))).filter(i => i.status === 'autorizada').map(i => [i.orderId, {number: i.number, pdfUrl: i.pdfUrl, test: i.environment !== 'producao'}]));
+  return {body: {orders: list.map(order => ({...orders.customerView(order), invoice: invoices.get(order.id) || null}))}};
 }});

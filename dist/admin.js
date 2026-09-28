@@ -1,4 +1,4 @@
-import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, revealDocument, groupSecret} from './admin-auth.js';
+import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, revealDocument, retryInvoice, groupSecret} from './admin-auth.js';
 import {listByStatus, dailyTotals, ordersForDay, summary, dayKey, replaceOrder, STATUSES} from './admin-store.js';
 import qrcode from './vendor/qrcode-generator.js';
 import {PRODUCTS, color} from './products.js';
@@ -84,6 +84,22 @@ function invoiceLine(o) {
   return `${esc(o.buyer?.name || '—')}<br>${cpfLine(o)}`;
 }
 
+// NF-e of the order: issued when Ju confirms it ("concluído"). Shows the number and links, a note still being issued, or
+// what went wrong with a retry button. A declined order that already has a note needs it cancelled at the service.
+let invoicingMode = 'off';
+function nfeLine(o) {
+  const nfe = o.invoice;
+  if (!nfe) return invoicingMode !== 'off' && o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você marcar como concluído.</p>' : '';
+  const test = nfe.environment !== 'producao' ? ' <span class="admin-tag source-test">homologação</span>' : '';
+  if (nfe.status === 'autorizada') {
+    const links = [nfe.pdfUrl && `<a href="${esc(nfe.pdfUrl)}" target="_blank" rel="noopener">PDF</a>`, nfe.xmlUrl && `<a href="${esc(nfe.xmlUrl)}" target="_blank" rel="noopener">XML</a>`].filter(Boolean).join(' · ');
+    const warn = o.status === 'recusado' ? '<br><strong>Pedido recusado com nota emitida:</strong> cancele a nota no emissor (a Fazenda aceita em até 24 horas).' : '';
+    return `<p class="admin-invoice is-ok">Nota fiscal nº ${esc(nfe.number)}${nfe.series ? ` · série ${esc(nfe.series)}` : ''}${test}${links ? ` · ${links}` : ''}${warn}</p>`;
+  }
+  if (nfe.status === 'processando') return `<p class="admin-invoice is-waiting">Nota fiscal: emitindo…${test} Clique em Atualizar em alguns instantes.</p>`;
+  return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${o.status === 'concluido' ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
+}
+
 function orderCard(o) {
   const phoneDigits = String(o.customer.phone || '').replace(/\D/g, '');
   const whatsapp = /^\d{10,11}$/.test(phoneDigits) ? `<a href="https://wa.me/55${phoneDigits}" target="_blank" rel="noopener">${esc(formatPhone(phoneDigits))}</a>` : esc(o.customer.phone || '—');
@@ -108,6 +124,7 @@ function orderCard(o) {
       <div><strong>Entrega</strong>${esc(o.address.street)}, ${esc(o.address.number)}${o.address.complement ? ' — ' + esc(o.address.complement) : ''}<br>${esc(o.address.district)} · ${esc(o.address.city)}/${esc(o.address.state)} · CEP ${esc(cep)}</div>
       <div><strong>Nota fiscal</strong>${invoiceLine(o)}</div>
     </div>
+    ${nfeLine(o)}
     ${o.notes ? `<p class="admin-order-notes">${esc(o.notes)}</p>` : ''}
     <div class="admin-order-foot"><span class="admin-order-total">${esc(money(o.totalCents))}</span>${actions}</div>
   </article>`;
@@ -243,7 +260,8 @@ async function run(message, operation) {
 function signedOut() { session = null; orders = []; setup = null; revealed.clear(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
 
 async function openDashboard() {
-  orders = await loadOrders();
+  const loaded = await loadOrders();
+  orders = loaded.orders; invoicingMode = loaded.invoicing;
   screen = 'dashboard';
 }
 
@@ -253,7 +271,9 @@ async function move(id, status, reason, done) {
       const result = await changeStatus(id, status, reason);
       orders = replaceOrder(orders, result.order);
       // Confirming or declining e-mails the buyer; say whether it went out (reopening sends nothing).
-      announce(status === 'pendente' ? done : `${done} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}`);
+      const nfe = result.order.invoice;
+      const nfeNote = status === 'concluido' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' ? ' A nota fiscal está sendo emitida.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
+      announce(status === 'pendente' ? done : `${done} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu.'}${nfeNote}`);
     }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível salvar agora. Tente novamente.'); }
   });
@@ -297,6 +317,10 @@ content.addEventListener('click', event => {
   if (action.dataset.action === 'reopen') move(id, 'pendente', '', 'Pedido reaberto como pendente.');
   if (action.dataset.action === 'decline') { const order = orders.find(o => o.id === id); if (order) openDeclineDialog(order); }
   if (action.dataset.action === 'refresh') run('Atualizando os pedidos…', async () => { try { await openDashboard(); announce('Pedidos atualizados.'); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível atualizar agora.'); } });
+  if (action.dataset.action === 'retry-invoice') run('Emitindo a nota fiscal…', async () => {
+    try { const order = await retryInvoice(id); orders = replaceOrder(orders, order); announce(order.invoice?.status === 'autorizada' ? `Nota fiscal nº ${order.invoice.number} emitida.` : 'A nota fiscal ainda tem um problema: veja no pedido.'); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível emitir a nota agora. Tente novamente.'); }
+  });
   if (action.dataset.action === 'reveal-cpf') run('Buscando o CPF…', async () => {
     try { revealed.set(id, await revealDocument(id)); announce('CPF completo exibido. A consulta fica registrada.'); }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível buscar o CPF agora. Tente novamente.'); }

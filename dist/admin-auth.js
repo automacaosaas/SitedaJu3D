@@ -29,12 +29,19 @@ export async function logout(options) { try { await request('/api/admin/logout',
 
 export async function loadOrders(options) {
   const {status, data} = await request('/api/admin/orders', options);
-  if (status === 200 && Array.isArray(data?.orders)) return data.orders;
+  if (status === 200 && Array.isArray(data?.orders)) return {orders: data.orders, invoicing: data.invoicing || 'off'};
   throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
 }
 export async function changeStatus(id, status, reason = '', options) {
   const answer = await request('/api/admin/order-status', {method: 'POST', body: {id, status, reason}, ...options});
   if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, mailed: answer.data.mailed === true};
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
+// Issues the NF-e of a confirmed order again (after an error). Answers the order with its invoice.
+export async function retryInvoice(id, options) {
+  const answer = await request('/api/admin/order-invoice', {method: 'POST', body: {id}, ...options});
+  if (answer.status === 200 && answer.data?.order) return answer.data.order;
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 

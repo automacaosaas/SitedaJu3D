@@ -52,6 +52,10 @@ function fakeNetwork({mpStatus, resendFailFor, testEmailOnly} = {}) {
       if (resendFailFor && body.to.includes(resendFailFor)) return reply(403, {message: 'You can only send testing emails to your own email address'});
       return reply(200, {id: 'em_' + mails.length});
     }
+    if (String(url).startsWith('https://viacep.com.br/ws/')) {   // CEP lookup before charging
+      const cep = String(url).match(/ws\/(\d{8})\//)[1];
+      return reply(200, {'30140071': {cep: '30140-071', localidade: 'Belo Horizonte', uf: 'MG', ibge: '3106200'}, '01310100': {cep: '01310-100', localidade: 'São Paulo', uf: 'SP', ibge: '3550308'}}[cep] || {erro: true});
+    }
     mpCalls.push({url, method: init.method, headers: init.headers, body: init.body ? JSON.parse(init.body) : null});
     if (mpStatus) return reply(mpStatus, {errors: [{code: mpStatus === 422 ? 'invalid_payer' : 'internal', message: 'simulated failure with payer ana@example.com'}]});
     if (url === 'https://api.mercadopago.com/v1/orders' && init.method === 'POST') {
@@ -265,6 +269,9 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     await badField(b => ({...b, customer: {...CUSTOMER, name: ' '}}), 'name'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'not-an-email'}}), 'email'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'a@b.co\nBcc: x@y.zz'}}), 'email');
     await badField(b => ({...b, customer: {...CUSTOMER, phone: '123'}}), 'phone'); await badField(b => ({...b, address: {...ADDRESS, cep: '123'}}), 'cep'); await badField(b => ({...b, address: {...ADDRESS, street: ''}}), 'street'); await badField(b => ({...b, address: {...ADDRESS, state: 'XX'}}), 'state'); await badField(b => ({...b, address: {...ADDRESS, city: '   '}}), 'city');
     await badField(b => ({...b, acceptTerms: undefined}), 'terms'); await badField(b => ({...b, acceptTerms: 'true'}), 'terms');   // the checkout box, required and exactly true
+    await badField(b => ({...b, address: {...ADDRESS, cep: '99999-999'}}), 'cep');   // a CEP that does not exist
+    const otherState = await call(handler, {ip: '198.51.100.250', body: request({address: {...ADDRESS, cep: '01310-100'}}), ...as(ana)});
+    assert.equal(otherState.json().field, 'state'); assert.equal(otherState.json().expected, 'SP', 'a CEP of another state is sent back before charging');
     await badField(b => ({...b, items: []}), 'invalid_items'); await badField(b => ({...b, items: [{productId: 'nao-existe', quantity: 1}]}), 'invalid_items');
     await badField(b => ({...b, payment: {selectedPaymentMethod: 'ticket', formData: {payment_method_id: 'bolbradesco'}}}), 'unsupported_method'); await badField(b => ({...b, payment: brickCard('short')}), 'invalid_card');
     assert.equal((await call(handler, {body: 'not json', ...as(ana)})).statusCode, 400);
@@ -301,6 +308,8 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const bia = await signedInBuyer(store, {email: 'bia@example.com'});
     assert.equal((await call(handler, {body, ...as(bia)})).statusCode, 409, "another buyer cannot take over someone else's attempt");
 
+    const cepDown = await call(createHandler.create({env: ENV, fetchImpl: net.fetchImpl, now: () => clock.t, store, lookup: async () => { throw new Error('ViaCEP 503'); }}), {body: request(), ...as(bia)});
+    assert.equal(cepDown.statusCode, 201, 'the CEP service down never blocks a sale');
     const card = await call(handler, {body: request({payment: brickCard()}), ...as(ana)});
     assert.equal(card.statusCode, 201); assert.equal(card.json().state, 'approved'); assert.equal(card.json().method.installments, 3);
     const paidOrder = await store.orders.findByReference(card.json().reference);

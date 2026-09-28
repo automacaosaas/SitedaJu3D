@@ -170,3 +170,5 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-link{display:block;margin:14px auto 0;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
 /* "Ver CPF completo": a quiet link-style button inside the invoice block. */
 .admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+/* NF-e line on each order: issued (green), being issued (yellow), problem (red, with a retry button). */
+.admin-invoice{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5}.admin-invoice a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}.admin-invoice.is-ok{background:var(--g-bg);color:var(--g-fg)}.admin-invoice.is-waiting{background:var(--y-bg);color:var(--y-fg)}.admin-invoice.is-error{background:var(--r-bg);color:var(--r-fg)}.admin-invoice .admin-tag{margin-left:4px}

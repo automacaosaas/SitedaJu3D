@@ -38,6 +38,13 @@ function toAdmin(row) {
   if (admin.totpLastStep !== null) admin.totpLastStep = Number(admin.totpLastStep);
   return admin;
 }
+const INVOICE_COLUMNS = {id: 'id', orderId: 'order_id', provider: 'provider', environment: 'environment', reference: 'reference', status: 'status', number: 'number', series: 'series', accessKey: 'access_key', pdfUrl: 'pdf_url', xmlUrl: 'xml_url', message: 'message', attempts: 'attempts', authorizedAt: 'authorized_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at', updatedAt: 'updated_at'};
+function toInvoice(row) {
+  if (!row) return null;
+  const invoice = {};
+  for (const [field, column] of Object.entries(INVOICE_COLUMNS)) invoice[field] = row[column] ?? null;
+  return invoice;
+}
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
@@ -142,6 +149,22 @@ function createMysqlStore(pool) {
       },
       // Only a newer step matches the WHERE, so a code is accepted once even with two requests at the same time.
       async useStep(id, step) { return (await run('UPDATE admin_users SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)', [step, id, step])).affectedRows === 1; }
+    },
+    invoices: {
+      async create(data) {
+        const fields = Object.keys(data).filter(f => INVOICE_COLUMNS[f]);
+        try { await run(`INSERT INTO invoices (${fields.map(f => INVOICE_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f] ?? null)); }
+        catch (error) { if (duplicate(error, 'uq_invoices_order')) return {invoice: await this.findByOrder(data.orderId), created: false}; throw error; }
+        return {invoice: await this.findById(data.id), created: true};
+      },
+      findById: async id => toInvoice(await one('SELECT * FROM invoices WHERE id = ?', [id])),
+      findByOrder: async orderId => toInvoice(await one('SELECT * FROM invoices WHERE order_id = ?', [orderId])),
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => INVOICE_COLUMNS[f] && !['id', 'createdAt', 'updatedAt'].includes(f));
+        if (fields.length) await run(`UPDATE invoices SET ${fields.map(f => `${INVOICE_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f] ?? null), id]);
+        return this.findById(id);
+      },
+      async listByOrders(orderIds) { if (!orderIds.length) return []; return (await all(`SELECT * FROM invoices WHERE order_id IN (${orderIds.map(() => '?').join(', ')})`, orderIds)).map(toInvoice); }
     },
     adminSessions: {
       create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),
