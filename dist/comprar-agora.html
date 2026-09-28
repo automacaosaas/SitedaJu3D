@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://siteda-ju3-d.vercel.app; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <script src="journey.js"></script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fff7f5"><meta name="robots" content="noindex,nofollow">
   <title>Comprar agora · Ju imprime pra mim</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -11,10 +12,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&amp;family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Parisienne&amp;display=swap">
   <link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="commerce.css"><link rel="stylesheet" href="shopping.css"><link rel="stylesheet" href="cart-page.css">
   <script type="module" src="checkout.js"></script>
+  <link rel="stylesheet" href="journey.css">
 </head>
 <body class="commerce-page" data-flow="direct">
   <div class="demo-banner">PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças</span></div>
-  <header class="shop-header"><a class="brand" href="index.html" aria-label="Voltar à coleção da Ju"><img src="assets/logo-ju.webp" width="100" height="100" alt="Ju imprime pra mim"></a><a class="collection-link" href="index.html">← Voltar à coleção</a><nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav></header>
+  <header class="shop-header"><a class="brand" href="index.html" aria-label="Voltar à coleção da Ju"><img src="assets/logo-ju.webp" width="100" height="100" alt="Ju imprime pra mim"></a><a class="collection-link showcase-return" href="index.html" aria-label="Voltar à vitrine"><span class="showcase-return-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m13.5 6-6 6 6 6"/><path d="M7.5 12H20"/></svg></span><span class="showcase-return-label">Voltar à vitrine</span></a><nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav></header>
   <nav class="shop-steps" aria-label="Etapas da compra"><span data-step="cart"><b>01</b> Carrinho</span><i></i><span data-step="delivery"><b>02</b> Entrega</span><i></i><span data-step="payment"><b>03</b> Pagamento</span></nav>
   <main id="shop-main"></main>
   <p id="shop-live" class="shop-live" role="status" aria-live="polite"></p>

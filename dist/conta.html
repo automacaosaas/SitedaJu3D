@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://siteda-ju3-d.vercel.app; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <script src="journey.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://siteda-ju3-d.vercel.app; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="theme-color" content="#fff7f5">
   <meta name="robots" content="noindex,nofollow">
   <title>Seu cantinho · Ju imprime pra mim</title>
@@ -16,11 +17,12 @@
   <link rel="stylesheet" href="shopping.css">
   <link rel="stylesheet" href="account.css">
   <script type="module" src="account.js"></script>
+  <link rel="stylesheet" href="journey.css">
 </head>
 <body class="account-page">
   <a class="auth-skip" href="#account-title">Ir para o formulário</a>
   <header class="account-header">
-    <a href="index.html" class="back-collection">← <span>Voltar à coleção</span></a>
+    <a href="index.html" class="back-collection showcase-return" aria-label="Voltar à vitrine"><span class="showcase-return-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m13.5 6-6 6 6 6"/><path d="M7.5 12H20"/></svg></span><span class="showcase-return-label">Voltar à vitrine</span></a>
     <a class="brand account-logo" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.webp" width="90" height="90" alt="Ju imprime pra mim"></a>
     <div class="account-tools"><span>FEITO PARA ENCANTAR</span></div>
   </header>
