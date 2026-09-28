@@ -89,14 +89,16 @@ publicados ficam em `dist/`:
   usado no e-mail).
 - `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
   sugestão de idioma na primeira visita.
-- `account.js` e `auth-service.js`: conta em fluxo “e-mail primeiro” (e-mail → código →
-  nome/senha só para conta nova) e verificação por e-mail.
+- `account.js` e `auth-service.js`: contas reais no servidor, em fluxo “e-mail primeiro” (e-mail → código ou
+  senha → nome/senha só para conta nova). `identification.js`: etapa Identificação do checkout e “Meus dados”.
+  Detalhes em `AUTH-INTEGRATION.md`.
 - `loading-ui.js` (janela de carregamento por etapas e decodificação de imagens),
   `page-entry.js` (abertura com logo da home), `header-scroll.js` (cabeçalho compacto que
   some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
   catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
   em WebP; os PNG originais ficam em `design/originais/` (fora do site publicado). Detalhes em `EXPERIENCE-QA.md` e `PERFORMANCE-QA.md`.
-- `api/` (fora de `dist/`): funções para o e-mail de verificação (Vercel e Hostinger).
+- `api/` (fora de `dist/`): contas (`api/auth`, `api/account`) e e-mail, para Vercel e Hostinger. `db/migrations/`: tabelas
+  do MySQL, aplicadas quando o servidor liga.
 - `server.cjs` (entrada) e `server/create-server.cjs`: servidor de produção para a Hostinger (serve `dist/` e `api/` com os cabeçalhos de `vercel.json`). Ver `HOSTINGER-SETUP.md`.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
@@ -257,7 +259,7 @@ parte e a cor escolhida; essa etapa ainda não envia pedido.
 
 ## Validação obrigatória
 
-Antes de publicar, execute:
+Antes de publicar, execute `npm test` (roda todas as suítes de `tests/`) e confira também:
 
 ```text
 node tests/carousel.cjs

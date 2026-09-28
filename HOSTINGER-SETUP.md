@@ -1,8 +1,9 @@
 # Hostinger: site de teste por upload de arquivo
 
 O site roda na Hostinger como **aplicativo Node.js** (plano Unlimited). O arquivo de entrada é `server.cjs`, que só liga o
-servidor de `server/create-server.cjs`: ele serve `dist/` e as
-funções de `api/` nos mesmos endereços da Vercel, com os cabeçalhos de `vercel.json`. Não há dependências para instalar.
+servidor de `server/create-server.cjs`: ele serve `dist/` e as funções de `api/` nos mesmos endereços da Vercel, com os
+cabeçalhos de `vercel.json`. A única dependência é `mysql2`, o conector do banco, que a Hostinger instala a partir do
+`package.json` e do `package-lock.json`.
 
 Enquanto a loja não for validada, o site na Hostinger é só de **teste**, num domínio temporário. O GitHub **não** é
 conectado à Hostinger: a integração publica a cada push, e a regra do projeto é não publicar nada antes da validação.
@@ -12,11 +13,11 @@ conectado à Hostinger: a integração publica a cada push, e a regra do projeto
 Na pasta do projeto, a partir de um commit (o arquivo sai exatamente como está no commit, sem o que não vai para o servidor):
 
 ```bash
-git -c core.autocrlf=false archive --format=zip -o ../site-ju-teste.zip HEAD package.json server.cjs server vercel.json api dist
+git -c core.autocrlf=false archive --format=zip -o ../site-ju-teste.zip HEAD package.json package-lock.json server.cjs server vercel.json api db dist
 ```
 
-O `.zip` leva só `package.json`, `server.cjs`, `server/`, `vercel.json`, `api/` e `dist/`. Ficam de fora os testes, a documentação e
-os originais em `design/`.
+O `.zip` leva `package.json`, `package-lock.json`, `server.cjs`, `server/`, `vercel.json`, `api/`, `db/` (migrações do banco)
+e `dist/`. Ficam de fora `node_modules`, os testes, a documentação e os originais em `design/`.
 
 ## 2. Enviar pelo painel
 
@@ -33,7 +34,17 @@ Configurações de build:
 | Diretório de saída | vazio: é um app de servidor, não um site estático |
 | Arquivo de entrada | `server.cjs` |
 
-## 3. Variáveis de ambiente
+## 3. Banco de dados (MySQL)
+
+1. hPanel → **Bancos de dados** → **MySQL**: crie um banco e um usuário com senha forte. Anote o **nome do banco**, o
+   **usuário** e o **host** que o painel mostra (em geral `localhost` quando o app roda no mesmo plano; se o painel mostrar
+   outro endereço, use o dele).
+2. As tabelas são criadas sozinhas quando o app liga (`db/migrations/`). Não é preciso importar nada pelo phpMyAdmin.
+3. Se o painel do app oferecer um assistente para conectar o banco, ele pode gravar as variáveis por conta própria; o
+   servidor aceita tanto os campos separados abaixo quanto uma `DATABASE_URL` no formato
+   `mysql://usuario:senha@host:3306/banco`.
+
+## 4. Variáveis de ambiente
 
 hPanel → o site → **Variáveis de ambiente**. Salvar republica o app.
 
@@ -41,30 +52,50 @@ hPanel → o site → **Variáveis de ambiente**. Salvar republica o app.
 |---|---|---|
 | `APP_ENV` | `preview` | Modo de teste. Em `production`, os caminhos de teste fecham e o site volta a aparecer no Google. |
 | `SITE_URL` | `https://<endereço temporário>` (sem barra no fim) | Links dos e-mails e a proteção de origem dos formulários. Sem ela, criar conta falha. |
+| `DB_HOST` | o host do passo 3 | Endereço do banco. |
+| `DB_NAME` | o nome do banco | |
+| `DB_USER` | o usuário do banco | |
+| `DB_PASSWORD` | a senha do usuário do banco | Marque como secreta. |
+| `DATA_KEY` | 32 bytes aleatórios em base64 | Criptografa CPF e telefone. **Nunca pode mudar nem se perder.** |
+| `INDEX_KEY` | outros 32 bytes aleatórios em base64 | Garante um CPF por conta. **Nunca pode mudar nem se perder.** |
+| `AUTH_SECRET` | outros 32 bytes aleatórios em base64 | Protege os códigos enviados por e-mail. |
+
+Para gerar cada um dos três valores aleatórios, rode no seu computador (uma vez para cada variável; cada valor sai
+diferente):
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Cole cada valor direto no painel da Hostinger e guarde uma cópia de `DATA_KEY` e `INDEX_KEY` num gerenciador de senhas.
+Não mande esses valores por chat, e-mail ou GitHub. Sem banco nem chaves, o site de teste continua funcionando com as contas
+em memória (somem quando o app reinicia).
 
 Não coloque ainda chaves do Resend nem do Mercado Pago. Sem `RESEND_API_KEY`, a tela de conta mostra o código de teste na
-própria página, como na prévia atual. `PORT` é definida pela Hostinger; sem ela, o servidor usa 3000.
+própria página. `PORT` é definida pela Hostinger; sem ela, o servidor usa 3000.
 
-## 4. Conferir
+## 5. Conferir
 
-- `https://<endereço temporário>/api/health` responde `{"ok":true,...}`.
+- `https://<endereço temporário>/api/health` responde `{"ok":true,...}` com `"accounts":"mysql"`, `"db":"ok"` e
+  `"dataKeys":"ok"` depois do passo 4. Nenhum valor secreto aparece ali.
+- No computador, com Node instalado: `node tools/smoke-accounts.mjs https://<endereço temporário>` percorre o cadastro,
+  a sessão, a identificação e a entrada com senha, e diz o que falhou. Ele cria uma conta de teste `@exemplo.com`.
 - A home abre, a prévia 3D dos três produtos carrega e o console do navegador fica sem erros.
 - `curl -I https://<endereço temporário>/` mostra `x-frame-options: SAMEORIGIN`, `nosniff` e `x-robots-tag: noindex, nofollow`.
 - A CDN da Hostinger (`server: hcdn`) troca o cabeçalho `content-security-policy` por `upgrade-insecure-requests`. Por isso a
   política completa também vai numa tag `<meta http-equiv="Content-Security-Policy">` em cada página (sem `frame-ancestors`,
   que o `<meta>` não aceita; o `x-frame-options` cobre isso). `tests/headers.mjs` mantém as duas cópias iguais.
 
-## 5. Atualizar
+## 6. Atualizar
 
 Gere um `.zip` novo (passo 1) e envie de novo pelo painel (no site: **Implantações** → **Reimplantar** / enviar arquivos). Cada envio
-substitui o anterior.
+substitui o anterior. O banco e as contas continuam; migrações novas são aplicadas sozinhas quando o app liga.
 
 ## Depois da validação
 
 - Domínio `juimprimepramim.com.br` (titular: CNPJ da empresa) apontado para o app de produção.
-- `APP_ENV=production` e `SITE_URL=https://juimprimepramim.com.br` no app de produção.
+- `APP_ENV=production` e `SITE_URL=https://juimprimepramim.com.br` no app de produção, com banco, chaves e Resend.
 - Só então conectar o GitHub, com autorização do dono do repositório, escolhendo a branch que publica.
-- Banco MySQL da Hostinger: entra na fase de contas e pedidos.
 
 ## Solução de problemas
 
@@ -72,6 +103,10 @@ substitui o anterior.
 |---|---|
 | 503 "Service Unavailable" em todas as páginas | O app não está escutando. A Hostinger carrega o arquivo de entrada com `require()`: ele precisa ligar o servidor sem depender de `require.main` (`tests/server.mjs` verifica isso). Confira também se o arquivo de entrada é `server.cjs` e veja os logs de execução do app. Logo depois de um deploy, espere um ou dois minutos. |
 | Página de erro da Hostinger no deploy | Arquivo de entrada diferente de `server.cjs`, ou versão do Node abaixo de 18. Veja o log do deploy. |
+| `/api/health` mostra `"db":"error"` | Host, usuário, senha ou nome do banco errados, ou o usuário sem permissão no banco. O log de execução mostra o código do erro (por exemplo `ER_ACCESS_DENIED_ERROR`). |
+| `/api/health` mostra `"accounts":"memory"` | Faltam `DB_HOST`, `DB_NAME` ou `DB_USER`. |
+| `/api/health` mostra `"dataKeys":"missing"` | `DATA_KEY` ou `INDEX_KEY` ausente ou sem 32 bytes em base64 (em produção isso desliga a identificação). |
+| Log mostra "db: migração falhou" | Veja a mensagem na mesma linha; o site continua no ar, só as contas ficam indisponíveis. |
 | Site abre, mas criar conta dá erro | `SITE_URL` ausente ou diferente do endereço aberto (com ou sem `www`, `http` x `https`). |
 | Prévia 3D não carrega | Veja o console: um bloqueio de CSP aparece como erro "Content Security Policy". |
 | `/api/health` responde 404 | O `.zip` foi gerado sem a pasta `api/`. |

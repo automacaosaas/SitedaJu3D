@@ -1,86 +1,80 @@
-# Conta: prévia e integração futura
+# Contas: como funcionam
 
-Contas, senhas e sessões continuam sendo uma **interface demonstrativa local**,
-conforme a orientação de integrar o banco quando estiver pronto. Não é
-autenticação de produção. O envio do código por e-mail já é real quando o serviço
-está configurado (`RESEND-SETUP.md`, `EMAIL-TEMPLATE.md`); sem a configuração, a
-prévia mostra um código de teste. Nenhuma senha real deve ser usada e nenhuma
-aprovação de pagamento local autoriza produção ou envio.
+Contas reais, no servidor. A entrada é pelo e-mail: a pessoa recebe um código de 6 números ou, se já criou senha,
+entra com ela. O banco é o MySQL da Hostinger (`db/migrations/`); a configuração do painel está em `HOSTINGER-SETUP.md`.
 
-## Arquivos e contrato
+## Fluxo
 
-- `conta.html`, `account.css`, `account.js`: apresentação, formulários e estados. A
-  janela de carregamento por etapas é `loading-ui.js` (`createBusyDialog`).
-- `auth-service.js`: adaptador demonstrativo (contas em memória) que deverá ser
-  substituído. `createMailer` conversa com o servidor.
-- `api/auth/send-code.js` e `api/auth/verify-code.js`: funções da Vercel que geram,
-  enviam (Resend) e conferem o código de verificação.
-- `site-shell.js`: perfil, entrada, pedidos e saída no cabeçalho.
+1. **E-mail** (`POST /api/auth/start`): gera o código, guarda só o HMAC dele e envia pelo Resend. A resposta é igual
+   para quem já tem conta e para quem não tem, para ninguém descobrir quem é cliente.
+2. **Código** (`POST /api/auth/verify`): vale 10 minutos, uma vez, com até 5 tentativas.
+   - Conta existente: entra na hora.
+   - E-mail novo: recebe uma permissão de 15 minutos, de uso único, para terminar o cadastro.
+3. **Cadastro** (`POST /api/auth/register`): nome, senha (opcional no servidor; a tela pede) e a escolha de receber
+   novidades, que começa desmarcada.
+4. **Senha** (`POST /api/auth/login`): e-mail ou senha errados dão a mesma resposta.
+5. **Esqueci a senha**: o mesmo código, com `purpose: 'reset'`, e `POST /api/auth/reset`. A nova senha encerra as
+   sessões dos outros aparelhos.
+6. **Sessão**: cookie `__Host-ju_session` (HttpOnly, Secure, SameSite=Lax), 30 dias, renovada pelo uso. O banco guarda
+   só o SHA-256 do token. `GET /api/auth/me` diz quem está logado (`{user: null}` para visitante);
+   `POST /api/auth/logout` encerra.
 
-Métodos assíncronos atualmente usados pela interface:
+O link do e-mail (`conta.html#verificar?c=…&k=…`) preenche o código e confirma sozinho.
 
-| Método | Entrada | Resultado esperado |
+## Identificação do comprador
+
+`GET` e `PUT /api/account/profile`, usados no checkout (etapa **Identificação**, entre Carrinho e Entrega) e em
+**Meus dados**, na conta. O formulário (`dist/identification.js`) segue a referência da FARM Rio aprovada pela equipe:
+
+- e-mail da conta (não editável ali), **Nome** e **Sobrenome**, **CPF** e **Telefone**;
+- **Incluir dados de pessoa jurídica**: CNPJ (numérico ou alfanumérico, emitido desde julho de 2026), razão social e
+  inscrição estadual ou "isenta". A nota sai no CNPJ; o CPF continua sendo o de quem compra;
+- "Quero receber comunicações promocionais", desmarcado.
+
+O CPF é obrigatório na primeira vez e depois aparece mascarado (`***.982.247-**`), com a opção **Alterar**.
+
+## Onde fica cada dado
+
+| Dado | Como | Por quê |
 |---|---|---|
-| begin | email | desafio de acesso (mesma resposta para conta nova ou existente); o e-mail enviado é o de “Primeiro acesso” |
-| completeRegistration | name, password, marketingOptIn | usuário público, após código confirmado |
-| login | email, password | usuário público (name, email) |
-| forgot | email | desafio de recuperação, mensagem não reveladora |
-| resend | desafio atual | novo prazo de validade e reenvio |
-| verify | code | usuário confirmado OU permissão temporária de cadastro/redefinição |
-| reset | password | confirmação de alteração |
-| signOut | sessão atual | sessão encerrada |
-| cancel | desafio atual | descarta desafio e permissões temporárias |
+| Senha | scrypt (N=2^14, r=8, p=5), parâmetros gravados com o hash | irreversível; nativo do Node, sem módulo compilado |
+| CPF | AES-256-GCM (`DATA_KEY`) + índice HMAC (`INDEX_KEY`) | um CPF por conta sem guardar o número aberto |
+| Telefone | AES-256-GCM (`DATA_KEY`) | dado pessoal sem necessidade de busca |
+| CNPJ, razão social, IE | colunas normais | dados públicos da empresa |
+| Sessão | SHA-256 do token | uma cópia do banco não abre contas |
+| Código | HMAC com `AUTH_SECRET` | nunca guardado aberto |
 
-O fluxo começa por e-mail e confirmação do código. Se a conta já existe, entra;
-se é nova, pede somente nome e senha. A opção de usar senha permanece na etapa de
-código. O consentimento promocional começa desmarcado. Não há cadastro de pessoa
-jurídica. Nome/e-mail da sessão demonstrativa preenchem a entrega; localização,
-endereço e telefone ainda não são persistidos. `register` existe apenas para
-compatibilidade com testes do adaptador anterior.
+No navegador, `sessionStorage` guarda só nome e e-mail para o cabeçalho. Senha, token e CPF nunca vão para o
+armazenamento do navegador (`tests/account-commerce.mjs` verifica).
 
-O desafio da prévia inclui `email`, `purpose`, `expiresAt`, `resendAt` e
-`demoCode`. **Nunca retornar um código real para o navegador.** Na integração,
-remover a caixa de código demonstrativo e usar um identificador opaco do desafio,
-validado no servidor. A concessão temporária de redefinição também deve pertencer
-ao servidor, ser curta, de uso único e vinculada ao desafio verificado.
+**`DATA_KEY` e `INDEX_KEY` não podem mudar nem se perder**: sem elas, CPFs e telefones gravados ficam ilegíveis.
+Guarde as duas num gerenciador de senhas.
 
-## O que está simulado
+## Ambientes
 
-- Contas e hashes demonstrativos ficam apenas em memória na página: recarregar
-  ou navegar para outro documento descarta as credenciais de teste.
-- O hash simples do protótipo não é uma estratégia de armazenamento de senhas
-  para produção.
-- `ju.account.preview.v1` em sessionStorage é apenas nome/e-mail, preferência
-  promocional e uma marca de
-  interface. Não prova identidade, não autoriza acesso e pode ser alterado pelo
-  próprio navegador.
-- Códigos têm seis dígitos, validade de dez minutos, cinco tentativas e intervalo
-  de trinta segundos para reenvio. Essas verificações locais são apenas de UX.
-- `ju.orders.preview.v1` guarda no máximo vinte resumos de pedidos de teste nesta
-  aba, sem endereço, telefone ou senha. Não é histórico protegido por usuário.
-- `ju.direct.demo.v1` guarda a combinação temporária de Comprar agora, separada
-  do carrinho existente.
+| Onde | Contas | Código |
+|---|---|---|
+| Computador (`npm run dev`) | memória, somem ao reiniciar | no terminal e na pasta de saída de e-mails |
+| Site de teste sem banco (`APP_ENV=preview`) | memória | na própria página, sem Resend |
+| Site de teste com banco | MySQL | na página sem Resend; por e-mail com Resend |
+| Produção (`APP_ENV=production`) | MySQL obrigatório; sem banco, contas desligadas (503) | só por e-mail; sem Resend, recusa |
 
-## Antes de habilitar contas reais
+## Proteções
 
-1. Definir API/serviço de autenticação e serviço de entrega de e-mail.
-2. Transferir credenciais, desafios, expiração, limites de tentativas/reenvio e
-   autorização para o servidor; não confiar em sessionStorage/localStorage.
-3. Implementar sessão segura e revogação no logout/redefinição. Não enviar
-   segredos administrativos ou credenciais de e-mail no código publicado.
-4. Vincular cada pedido ao usuário autenticado e autorizar sua leitura no
-   servidor. Substituir `readDemoOrders` por consulta autenticada.
-5. Recalcular preço, quantidade, frete e estoque no servidor; a interface não
-   determina o valor confiável de um pedido.
-6. Integrar provedor de pagamento e confirmação verificável; remover qualquer
-   botão de aprovação local do fluxo real.
-7. Atualizar textos da prévia e confirmar entrega real do e-mail, expiração,
-   reenvio, proteção contra abuso e isolamento entre usuários.
-8. Guardar o estado dos desafios (contador de tentativas, uso único do código e
-   limite de envio) em armazenamento durável. Os limites atuais são em memória; ver
-   `EMAIL-TEMPLATE.md`.
+- Toda alteração exige a origem do próprio site (`SITE_URL`).
+- Limites no banco: um código a cada 30 s e 5 a cada 10 min por e-mail; 20 por hora por IP; 60 conferências por 10 min
+  por IP; 10 tentativas de senha a cada 15 min por e-mail e 30 por IP.
+- Erros de campo voltam com o nome do campo, e a tela aponta o campo em português (traduzido para EN/ES).
 
-Não basta mudar `AUTH_MODE` para transformar esta demonstração em autenticação.
-O envio real de e-mail foi conferido em uma prévia da Vercel (ver
-`LANGUAGE-EMAIL-QA.md`); em produção ele depende da configuração descrita em
-`RESEND-SETUP.md` e do domínio verificado. O banco de dados continua pendente.
+## Testes
+
+- `tests/accounts.mjs`: regras do serviço e camada HTTP, com relógio controlado.
+- `tests/store-contract.mjs`: memória e MySQL se comportam igual (MySQL quando `TEST_DB_*` estiver definido).
+- `tests/account-commerce.mjs`: o adaptador do navegador ligado à API real, em processo.
+- `tests/email-auth.mjs`: envio do código pelo Resend, falhas e as proteções das páginas.
+- `node tools/smoke-accounts.mjs <endereço>`: percorre o fluxo inteiro num site de teste publicado.
+
+## Ainda não
+
+Pedidos no banco ("Meus pedidos" ainda mostra os pedidos de demonstração da aba), endereços salvos, cartão salvo no
+Mercado Pago e exclusão/exportação de dados ("Meus dados" da LGPD).

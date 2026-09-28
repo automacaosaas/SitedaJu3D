@@ -60,6 +60,16 @@ async function contract(store, label) {
 
 await contract(createMemoryStore(), 'memory');
 
+// Connection settings: separate variables, or one DATABASE_URL (what a panel wizard may write); separate ones win.
+{
+  const {dbSettings} = require('../api/_lib/db.js');
+  const fromUrl = dbSettings({DATABASE_URL: 'mysql://u123_ju:s%40nha@srv1.exemplo.io:3307/u123_loja'});
+  assert.deepEqual({...fromUrl}, {host: 'srv1.exemplo.io', port: 3307, database: 'u123_loja', user: 'u123_ju', password: 's@nha', configured: true});
+  assert.equal(dbSettings({DB_HOST: 'localhost', DB_NAME: 'x', DB_USER: 'y', DB_PASSWORD: 'z', DATABASE_URL: 'mysql://a:b@c/d'}).host, 'localhost');
+  assert.equal(dbSettings({}).configured, false);
+  assert.equal(dbSettings({DATABASE_URL: 'postgres://a:b@c/d'}).configured, false, 'only MySQL URLs');
+}
+
 let mysql = 'skipped (defina TEST_DB_HOST, TEST_DB_NAME, TEST_DB_USER, TEST_DB_PASSWORD)';
 if (process.env.TEST_DB_HOST) {
   const {getPool} = require('../api/_lib/db.js');
