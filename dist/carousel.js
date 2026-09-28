@@ -38,7 +38,7 @@ function init() {
     const raw = location.hash.replace('#produto/', '').split('/')[0], index = keys.indexOf(ALIASES[raw] || raw);
     return index;
   }
-  const initial = Math.max(0, fromHash());
+  const initial = Math.max(0, fromHash() >= 0 ? fromHash() : keys.indexOf(window.juTheme?.product()));
 
   // ── Estrutura ────────────────────────────────────────────────────────────────
   bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
@@ -131,6 +131,8 @@ function init() {
   }
   function report() {
     const i = mod(Math.round(target), total);
+    const {key, theme, wash} = entries[i];
+    window.juTheme?.save(key, {'--theme-text':theme.textColor, '--theme-muted':theme.mutedColor, '--theme-accent':theme.accentColor, '--theme-wash':wash, '--theme-soft':mixColor(theme.accentColor, '#ffffff', .78), '--theme-accent-strong':mixColor(theme.accentColor, '#000000', .2)});
     status.textContent = `${entries[i].product.title}, produto ${i + 1} de ${total}.`;
   }
 

@@ -33,6 +33,7 @@ function paymentView() {const expired = paymentStatus(order) === 'expired', pix 
 function confirmationView() {const message = `Olá, Ju! Gostaria de falar sobre o pedido ${order.id} (demonstração).\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+PRODUCTS[i.productId].parts.map(p=>`${p.name}: ${color(i.selection[p.id]).name}`).join('\n')).join('\n\n');const whatsapp = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? `<a class="primary shop-primary" href="https://wa.me/${COMMERCE.whatsapp}?text=${encodeURIComponent(message)}" target="_blank" rel="noopener">Falar com a Ju no WhatsApp ↗</a>` : '<button class="secondary-button" disabled>WhatsApp da Ju · em breve</button><p class="small-note">O contato será habilitado quando o número da loja for definido.</p>';
 return `${heading('PEDIDO ' + order.id, 'Suas cores.<br><em>Um novo começo.</em>', 'Pagamento aprovado na demonstração. Nenhuma cobrança ou produção foi iniciada.')}<div class="shop-layout"><section class="confirmation-panel"><div class="success-mark" aria-hidden="true">✓</div><h2>Seu pedido ganhou vida.</h2><p>Na loja final, a confirmação chega por aqui e a Ju recebe todos os detalhes para preparar suas peças.</p>${progress()}<div class="confirmation-facts"><div><small>Forma de pagamento</small><strong>${order.method==='pix'?'Pix':'Cartão'}</strong></div><div><small>Produção estimada</small><strong>${COMMERCE.productionLabel}</strong></div></div>${whatsapp}<button class="text-button" data-action="copy-order">Copiar resumo para conversar com a Ju</button><a class="primary shop-primary" href="index.html">Continuar explorando <span aria-hidden="true">↗</span></a></section>${summary(order.items)}</div>`;}
 function render(focus = true) {
+  const previousStage = document.body.dataset.stage;
   clearInterval(timer); timer = null;
   document.body.dataset.stage = stage;
   // Keep the same step navigation while replacing the cart or delivery content.
@@ -41,6 +42,10 @@ function render(focus = true) {
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
   main.innerHTML = stage === 'cart' ? renderCart(cart, selected) : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
+  if (previousStage && previousStage !== stage && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    main.getAnimations().forEach(animation => animation.cancel());
+    main.animate([{opacity:0,translate:'0 6px'},{opacity:1,translate:'0 0'}], {duration:220,easing:'ease-out'});
+  }
   const summaryPanel=main.querySelector('.order-summary');
   if(summaryPanel&&stage!=='cart'){
     summaryPanel.id='order-summary';

@@ -4,6 +4,7 @@ import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
 import './shopping-navigation.js';
+import './account-drawer.js';
 
 const MAIN_NAVIGATION = [
   {label:'Início', href:'index.html', active:() => /(?:\/|\/index\.html)$/.test(location.pathname)},
@@ -117,3 +118,4 @@ window.addEventListener('storage', e => { if (e.key === CART_KEY) refreshHeader(
 window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
+window.dispatchEvent(new Event('ju:header-ready'));

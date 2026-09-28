@@ -19,6 +19,7 @@ function showCode() {
   document.querySelector('#demo-inbox').innerHTML = challenge?.demoCode && screen === 'verify' ? `<div class="demo-code">Código de teste · não enviado<strong>${esc(challenge.demoCode)}</strong></div>` : '';
 }
 function render(focus = true) {
+  const previousScreen = host.dataset.screen;
   clearInterval(countdown); feedback.textContent = notice; notice = ''; host.dataset.screen = screen;
   document.querySelector('.preview-details').hidden = AUTH_MODE !== 'demo';
   document.querySelector('#scene-greeting').hidden = true;
@@ -41,6 +42,10 @@ function render(focus = true) {
   }
   if (screen === 'profile') host.querySelector('#account-title')?.setAttribute('translate', 'no');
   showCode();
+  if (previousScreen && previousScreen !== screen && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    host.getAnimations().forEach(animation => animation.cancel());
+    host.animate([{opacity:0,translate:'0 5px'},{opacity:1,translate:'0 0'}], {duration:200,easing:'ease-out'});
+  }
   if (focus) host.querySelector('h2')?.focus({preventScroll:true});
 }
 async function run(message, operation) {
@@ -48,8 +53,6 @@ async function run(message, operation) {
   busy = true; host.inert = true; host.setAttribute('aria-busy', 'true'); feedback.textContent = '';
   busyDialog.start(message);
   try {
-    // Explicit demo latency lets the local prototype demonstrate its pending state.
-    if (AUTH_MODE === 'demo') await new Promise(resolve => setTimeout(resolve, 380));
     await operation(); render();
   } catch (error) { feedback.textContent = error.message || 'Não foi possível continuar. Tente novamente.'; host.querySelector('input[name="code"]')?.setAttribute('aria-invalid', 'true'); }
   finally { busy = false; host.inert = false; host.removeAttribute('aria-busy'); busyDialog.close(); if (!feedback.textContent) host.querySelector('h2')?.focus({preventScroll:true}); }
@@ -116,4 +119,9 @@ function route(focus = false) {
   if (routeName === 'verificar' && challenge) host.querySelector('[name="code"]')?.focus();
 }
 window.addEventListener('hashchange', () => route(true));
+if (window.parent !== window && new URLSearchParams(location.search).get('panel') === '1') {
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !document.querySelector('dialog[open]')) parent.postMessage({type:'ju:account-close'}, location.origin);
+  });
+}
 route();

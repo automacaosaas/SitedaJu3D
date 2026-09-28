@@ -1,5 +1,8 @@
 // Portuguese source copy → English / Spanish. Brand and product names stay unchanged.
 export const translations = Object.fromEntries(`
+Abrir página de acesso|Open sign-in page|Abrir página de acceso
+Fechar acesso|Close sign-in|Cerrar acceso
+Não foi possível carregar a demonstração. Tente novamente.|Could not load the demonstration. Please try again.|No se pudo cargar la demostración. Inténtalo de nuevo.
 Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.|To verify your account in this preview, create an account or request a new code. Real email delivery is not connected yet.|Para verificar tu cuenta en esta vista previa, crea una cuenta o solicita un nuevo código. El envío real de correo aún no está conectado.
 ← Voltar à vitrine|← Back to showcase|← Volver a la vitrina
 Voltar à vitrine|Back to showcase|Volver a la vitrina
