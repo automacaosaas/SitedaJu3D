@@ -5,7 +5,7 @@ import http from 'node:http';
 import {createRequire} from 'node:module';
 
 const require = createRequire(import.meta.url);
-const {createServer} = require('../server.cjs');
+const {createServer} = require('../server/create-server.cjs');
 const errors = [];
 const server = createServer({log: {error: (...args) => errors.push(args.join(' '))}});
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -101,4 +101,31 @@ try {
   server.close();
 }
 
-console.log('PASS: server.cjs serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, and blocks traversal, dot-files and api/_lib.');
+// Like the Hostinger runner: the entry file is loaded with require(), not executed. It must still start listening
+// (a `require.main === module` guard made the first upload answer 503 for every request).
+{
+  const {spawn} = await import('node:child_process');
+  const {fileURLToPath} = await import('node:url');
+  const probe = http.createServer();
+  await new Promise(resolve => probe.listen(0, '127.0.0.1', resolve));
+  const port = probe.address().port;
+  await new Promise(resolve => probe.close(resolve));
+  const entry = fileURLToPath(new URL('../server.cjs', import.meta.url));
+  const child = spawn(process.execPath, ['-e', `require(${JSON.stringify(entry)})`], {env: {...process.env, PORT: String(port), APP_ENV: 'preview', SITE_URL: `http://127.0.0.1:${port}`}, stdio: ['ignore', 'pipe', 'pipe']});
+  let output = '';
+  child.stdout.on('data', d => { output += d; });
+  child.stderr.on('data', d => { output += d; });
+  try {
+    let health = null;
+    for (let i = 0; i < 50 && !health; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      health = await fetch(`http://127.0.0.1:${port}/api/health`).then(r => r.status === 200 ? r.json() : null, () => null);
+    }
+    assert(health?.ok, `server.cjs listens when loaded with require() (output: ${output.trim()})`);
+    assert.match(output, new RegExp(`no ar em ${port} · modo teste`), 'start message names the port and mode');
+  } finally {
+    child.kill();
+  }
+}
+
+console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, and blocks traversal, dot-files and api/_lib.');
