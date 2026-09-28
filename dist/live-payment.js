@@ -6,6 +6,10 @@ const SDK_URL = 'https://sdk.mercadopago.com/js/v2';
 const LOCALES = {'pt-BR': 'pt-BR', en: 'en-US', es: 'es-AR'};
 
 export const brickLocale = lang => LOCALES[lang] || LOCALES['pt-BR'];
+// advancedFraudPrevention injects an inline script (a device session from Mercado Livre pages), which the site's
+// Content-Security-Policy does not allow. Off while payments are in test mode; before charging for real, send the device
+// id the documented way (security.js + X-meli-session-id on the server) instead of loosening the policy.
+export const SDK_OPTIONS = lang => ({locale: brickLocale(lang), advancedFraudPrevention: false});
 
 export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout = 2500} = {}) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);

@@ -3,7 +3,7 @@ import {PRODUCTS, color} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {readCart, writeCart, totals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, selectedItems, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
-import {loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
@@ -88,7 +88,7 @@ async function mountBrick() {
   try {
     const MercadoPago = await loadSdk();
     if (token !== brickToken) return;
-    const controller = await new MercadoPago(live.publicKey, {locale: brickLocale(lang())}).bricks().create('payment', 'payment-brick', {
+    const controller = await new MercadoPago(live.publicKey, SDK_OPTIONS(lang())).bricks().create('payment', 'payment-brick', {
       initialization: {amount: order.amounts.total / 100, payer: {email: draft.email}},
       customization: {paymentMethods: {creditCard: 'all', debitCard: 'all', bankTransfer: 'all', maxInstallments: 12}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
       callbacks: {

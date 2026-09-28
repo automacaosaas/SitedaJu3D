@@ -68,14 +68,6 @@ for (const file of (await readdir(new URL('dist/', root))).filter(f => f.endsWit
 const assetModels = await readFile(new URL('dist/asset-models.js', root), 'utf8');
 if (assetModels.includes('meshopt_decoder')) assert(directives['script-src'].includes("'wasm-unsafe-eval'"), "script-src has 'wasm-unsafe-eval' for the Meshopt decoder");
 
-// The checkout loads Mercado Pago's SDK and its secure card fields (iframes); without these the payment step is blank.
-const livePayment = await readFile(new URL('dist/live-payment.js', root), 'utf8').catch(() => '');
-if (livePayment.includes('https://sdk.mercadopago.com')) {
-  assert(directives['script-src'].includes('https://sdk.mercadopago.com'), 'script-src allows the Mercado Pago SDK');
-  assert(directives['connect-src'].includes('https://api.mercadopago.com'), 'connect-src allows the Mercado Pago API');
-  assert(directives['frame-src']?.includes('https://*.mercadopago.com'), 'frame-src allows the secure card fields');
-}
-
 // E-mail logos load from the public site (api/_lib/mail.js DEFAULT_SITE); the dev e-mail preview shows them in a frame.
 const mail = await readFile(new URL('api/_lib/mail.js', root), 'utf8');
 const site = mail.match(/DEFAULT_SITE = '([^']+)'/)[1];
@@ -89,4 +81,16 @@ for (const source of ['/assets/(.*)', '/vendor/(.*)']) {
   assert.match(cache || '', /stale-while-revalidate=\d+/, `${source}: stale-while-revalidate`);
 }
 
-console.log('PASS: CSP matches the pages (import map hash, no inline scripts or handlers, fonts, WebAssembly, e-mail logo), security headers and asset caching.');
+// Mercado Pago Payment Brick (dist/live-payment.js): the SDK and the form bundle, its API calls and the card's secure fields
+// (iframes). Measured by loading the real SDK under this policy; its "advanced fraud prevention" injects an inline script,
+// so it stays off instead of allowing inline scripts.
+const livePayment = await readFile(new URL('dist/live-payment.js', root), 'utf8');
+if (livePayment.includes('https://sdk.mercadopago.com')) {
+  for (const host of ['https://sdk.mercadopago.com', 'https://http2.mlstatic.com']) assert(allows('script-src', host), `script-src allows ${host} (Payment Brick)`);
+  for (const host of ['https://api.mercadopago.com', 'https://http2.mlstatic.com']) assert(allows('connect-src', host), `connect-src allows ${host} (Payment Brick)`);
+  assert(allows('frame-src', 'https://*.mercadopago.com'), 'frame-src allows the card secure fields (Payment Brick)');
+  assert(allows('frame-src', "'self'"), 'frame-src keeps our own frames (e-mail preview)');
+  assert(/advancedFraudPrevention: false/.test(livePayment), 'the SDK runs without the inline-script fraud module (the policy has no unsafe-inline)');
+}
+
+console.log('PASS: CSP matches the pages (import map hash, no inline scripts or handlers, fonts, WebAssembly, e-mail logo, Mercado Pago), security headers and asset caching.');

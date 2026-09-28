@@ -16,7 +16,7 @@ const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extr
 
 // Payments switch on only with both keys. On the production site (APP_ENV or VERCEL_ENV = production) they also need a deliberate MP_MODE: "test" (Mercado Pago's
 // test credentials, no real money can move) or "live" (real charges). Previews and local runs are always "test", so a key saved
-// in the wrong Vercel environment cannot charge anyone.
+// in the wrong environment cannot charge anyone. "Production" is VERCEL_ENV or, on the Hostinger server, APP_ENV (runtime.js).
 function settings(env = process.env) {
   const token = String(env.MP_ACCESS_TOKEN || '').trim();
   const publicKey = String(env.MP_PUBLIC_KEY || '').trim();
