@@ -16,7 +16,8 @@ const PAID = ['pendente', 'concluido', 'recusado'];
 const ADMIN_STATUSES = ['pendente', 'concluido', 'recusado'];
 const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer hears about by e-mail
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
-const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.id || method?.type ? 'card' : null;
+// pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
+const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
 
 function createOrders({store, env = process.env, now = () => Date.now()}) {
   const date = () => new Date(now());
@@ -58,12 +59,23 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   }
 
   // What the notification e-mails need (api/_lib/order-email.js), built from our own record.
+  // Who the invoice is for: the buyer's name and CPF (masked: the full number never goes by e-mail; the panel shows it on
+  // request), or the company's name, CNPJ (public data) and state registration.
+  function invoice(order) {
+    const cpf = decrypt(order.buyerDocEnc), company = order.buyer?.company;
+    return {
+      name: order.buyer?.name || '', cpf: cpf ? fields.maskCpf(cpf) : '',
+      company: company?.cnpj ? {name: company.name || '', cnpj: fields.formatCnpj(company.cnpj), stateRegistration: company.stateRegistration || ''} : null
+    };
+  }
+
   function summary(order) {
     return {
-      id: order.id, reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, total: order.totalCents,
+      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, total: order.totalCents,
+      invoice: invoice(order),
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       address: {cep: order.shipTo?.cep || '', street: order.shipTo?.street || '', number: order.shipTo?.number || '', district: order.shipTo?.district || '', city: order.shipTo?.city || '', state: order.shipTo?.state || '', complement: order.shipTo?.complement || ''},
-      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status)
+      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : order.method === 'debit' ? 'debit_card' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status)
     };
   }
 

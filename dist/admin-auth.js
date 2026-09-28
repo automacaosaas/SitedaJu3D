@@ -38,5 +38,12 @@ export async function changeStatus(id, status, reason = '', options) {
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 
+// The buyer's full CPF for issuing the invoice by hand (audited on the server).
+export async function revealDocument(id, options) {
+  const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});
+  if (answer.status === 200 && typeof answer.data?.cpf === 'string') return answer.data.cpf;
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
 // The secret in groups of four, for typing into the app when the QR code cannot be scanned.
 export const groupSecret = secret => String(secret || '').replace(/[^A-Z2-7]/g, '').replace(/(.{4})(?=.)/g, '$1 ');
