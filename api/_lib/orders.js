@@ -4,6 +4,7 @@
 // others find nothing left to do (atomic transitions), so an order is marked paid once and its e-mails go out once.
 //
 // Statuses: aguardando_pagamento → pendente (paid, Ju produces it) → concluido | recusado (Ju decides; can reopen).
+// Declining also refunds the buyer through Mercado Pago (refund); a refunded order can no longer be reopened.
 // A refused card or an expired Pix ends as cancelado. The order keeps a snapshot of buyer and delivery, so it survives
 // the account being deleted (fiscal record).
 const crypto = require('node:crypto');
@@ -11,10 +12,12 @@ const fields = require('./fields');
 const {TERMS_VERSION} = require('./legal');
 const {config, mailReady, sendMail} = require('./mail');
 const {renderOwnerEmail, renderCustomerEmail, renderDecisionEmail} = require('./order-email');
+const mp = require('./mercadopago');
 
 const PAID = ['pendente', 'concluido', 'recusado'];
 const ADMIN_STATUSES = ['pendente', 'concluido', 'recusado'];
 const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer hears about by e-mail
+const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
 const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
@@ -50,6 +53,14 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       return {order, newlyPaid: false};
     }
     const base = {mpOrderId: payment.id || order.mpOrderId, paymentState: payment.state, method: methodOf(payment.method) || order.method, installments: payment.method?.installments || null};
+    // Refunded (by our decline or straight in Mercado Pago's panel): record it; the status Ju chose stays as it is.
+    if (payment.state === 'refunded') {
+      if (order.refundState !== 'refunded') {
+        await store.orders.update(order.id, {paymentState: 'refunded', refundState: 'refunded', refundedAt: date(), refundError: null});
+        await store.orders.addEvent(order.id, 'refunded', 'mercadopago', actor);
+      }
+      return {order: await store.orders.findById(order.id), newlyPaid: false};
+    }
     let newlyPaid = false;
     if (payment.state === 'approved') newlyPaid = await store.orders.transition(order.id, ['aguardando_pagamento', 'cancelado'], {...base, status: 'pendente', paidAt: date()});
     else if (payment.state === 'refused' || payment.state === 'expired') await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
@@ -103,7 +114,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     return {
       reference: order.reference, status: order.status, paymentState: order.paymentState, method: order.method,
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
-      subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, totalCents: order.totalCents, test: order.source !== 'live',
+      subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
       items: order.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitCents, selection: i.selection}))
     };
   }
@@ -118,13 +129,16 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       buyer: {name: order.buyer?.name || '', cpf: cpf ? fields.maskCpf(cpf) : '', company: order.buyer?.company || null},
       address: summary(order).address, notes: order.notes || '',
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
-      decidedAt: order.decidedAt ? new Date(order.decidedAt).toISOString() : null, declineReason: order.declineReason || ''
+      decidedAt: order.decidedAt ? new Date(order.decidedAt).toISOString() : null, declineReason: order.declineReason || '',
+      refund: {state: order.refundState || null, at: order.refundedAt ? new Date(order.refundedAt).toISOString() : null, error: order.refundError || null}
     };
   }
 
   // Ju moves paid orders between pendente, concluido and recusado (reopening is allowed); unpaid ones are not hers to move.
   async function setStatus(id, status, {reason = '', actor}) {
     if (!ADMIN_STATUSES.includes(status)) throw fail('invalid_request', {field: 'status'});
+    const current = await store.orders.findById(id);
+    if (current && status !== 'recusado' && MONEY_BACK.includes(current.refundState)) throw fail('refunded');   // the money is on its way back
     const clean = String(reason || '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').trim().slice(0, 300);
     const moved = await store.orders.transition(id, ADMIN_STATUSES, {status, decidedAt: status === 'pendente' ? null : date(), declineReason: status === 'recusado' ? clean : null});
     if (!moved) throw fail('not_found');
@@ -139,7 +153,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     if (!DECIDED.includes(order.status)) return false;
     const mail = config(env), data = summary(order);
     if (!mailReady(mail) || !data.customer.email) return false;
-    const message = renderDecisionEmail({summary: data, status: order.status, lang: order.lang, test, assetUrl: mail.assetUrl});
+    const message = renderDecisionEmail({summary: data, status: order.status, refund: order.refundState, lang: order.lang, test, assetUrl: mail.assetUrl});
     const decided = order.decidedAt ? new Date(order.decidedAt).getTime() : 0;
     try {
       await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${order.status}-${order.id}-${decided}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind: order.status, reference: order.reference}))});
@@ -147,7 +161,50 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     } catch (error) { console.error(`orders: decision e-mail (${order.status}) failed for ${order.reference} —`, error.status || '', error.message); return false; }
   }
 
-  return {open, applyPayment, notifyPaid, notifyDecision, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
+  // Ju declined a paid order: ask Mercado Pago for the whole amount back. Each attempt has its own idempotency key (the
+  // attempt number), so a double click or a lost answer cannot refund twice, and a conflict ("already refunded / in
+  // process") is settled by reading the order back. Never throws: the result lands on the order for the panel.
+  async function refund(order, {fetchImpl = globalThis.fetch, actor = 'painel'} = {}) {
+    if (order.refundState === 'refunded') return order;
+    const settings = mp.settings(env);
+    const save = async (state, extra = {}) => { await store.orders.update(order.id, {refundState: state, ...extra}); return store.orders.findById(order.id); };
+    const failed = async code => { await store.orders.addEvent(order.id, 'refund_failed', String(code).slice(0, 120), actor); return save('failed', {refundError: String(code).slice(0, 120)}); };
+    if (settings.mode === 'off') return failed('payments_off');
+    if (!order.mpOrderId) return failed('no_mp_order');
+    if (order.source !== settings.mode) return failed('mode_mismatch');   // a test order cannot be refunded with live keys, nor the reverse
+    const attempt = (await store.orders.events(order.id)).filter(e => e.kind === 'refund_requested').length + 1;
+    await store.orders.addEvent(order.id, 'refund_requested', String(attempt), actor);
+    let outcome;
+    try {
+      outcome = mp.refundOutcome(await mp.refundOrder({settings, fetchImpl, id: order.mpOrderId, idempotencyKey: `refund-${order.id}-${attempt}`}));
+      if (outcome.state === 'none') outcome = {...outcome, state: 'requested'};   // accepted (201), not settled yet
+    } catch (error) {
+      if (error.status !== 409 && !mp.REFUND_CONFLICTS.has(error.code)) return failed(error.code || (error.status ? `http_${error.status}` : 'network'));
+      try { outcome = mp.refundOutcome(await mp.getOrder({settings, fetchImpl, id: order.mpOrderId})); }
+      catch (lookup) { return failed(lookup.code || error.code || 'lookup_failed'); }
+      if (outcome.state === 'none') return failed(error.code || 'conflict');
+    }
+    if (outcome.state === 'failed') return failed('refund_rejected');
+    await store.orders.addEvent(order.id, outcome.state === 'refunded' ? 'refunded' : 'refund_pending', outcome.id || null, actor);
+    return save(outcome.state, {refundId: outcome.id || null, refundedAt: outcome.state === 'refunded' ? date() : null, refundError: null});
+  }
+
+  // "Conferir estorno" / "Tentar estorno de novo" in the panel: a refund still being processed is read back from Mercado
+  // Pago (never requested twice); a failed one is tried again.
+  async function retryRefund(order, {fetchImpl = globalThis.fetch, actor = 'painel'} = {}) {
+    if (order.status !== 'recusado') throw fail('not_found');
+    if (order.refundState !== 'requested') return refund(order, {fetchImpl, actor});
+    try {
+      const outcome = mp.refundOutcome(await mp.getOrder({settings: mp.settings(env), fetchImpl, id: order.mpOrderId}));
+      if (outcome.state === 'refunded') {
+        await store.orders.addEvent(order.id, 'refunded', outcome.id || null, actor);
+        await store.orders.update(order.id, {refundState: 'refunded', refundId: outcome.id || order.refundId, refundedAt: date(), refundError: null});
+      } else if (outcome.state === 'failed') await store.orders.update(order.id, {refundState: 'failed', refundError: 'refund_rejected'});
+    } catch (error) { console.error(`orders: could not check the refund of ${order.reference} —`, error.status || '', error.message); }
+    return store.orders.findById(order.id);
+  }
+
+  return {open, applyPayment, notifyPaid, notifyDecision, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
 module.exports = {createOrders, PAID, ADMIN_STATUSES};

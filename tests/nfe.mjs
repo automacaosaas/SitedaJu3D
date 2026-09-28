@@ -17,7 +17,7 @@ const {createMemoryStore} = require('../api/_lib/store-memory');
 const {encrypt} = require('../api/_lib/fields');
 const catalog = require('../api/_lib/catalog');
 const {renderInvoiceEmail} = require('../api/_lib/order-email');
-const orderStatus = require('../api/admin/order-status'), orderInvoice = require('../api/admin/order-invoice'), adminOrders = require('../api/admin/orders'), accountOrders = require('../api/account/orders');
+const orderStatus = require('../api/admin/order-status'), orderInvoice = require('../api/admin/order-invoice'), orderRefund = require('../api/admin/order-refund'), adminOrders = require('../api/admin/orders'), accountOrders = require('../api/account/orders');
 
 const ENV = {APP_ENV: 'preview', SITE_URL: 'https://site.test', NFE_PROVIDER: 'fake', NFE_EXAMPLE_DATA: '1', RESEND_API_KEY: 're_test_key_123', AUTH_SECRET: 's'.repeat(40), MAIL_FROM: 'Ju <pedidos@site.test>'};
 const BH = {cep: '30140071', city: 'Belo Horizonte', state: 'MG', cityCode: '3106200'};
@@ -192,6 +192,9 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   // Declining after the note: the order moves, the note stays (it must be cancelled at the service).
   const declined = await call(orderStatus.create({env, store, fetchImpl}), {body: {id: paid.id, status: 'recusado'}, cookie: admin});
   assert.equal(declined.json().order.status, 'recusado'); assert.equal(declined.json().order.invoice.status, 'autorizada');
+  assert.equal(declined.json().refund, 'failed', 'no Mercado Pago here: the refund waits for a retry');
+  const refundCheck = await call(orderRefund.create({env, store, fetchImpl}), {body: {id: paid.id}, cookie: admin});
+  assert.equal(refundCheck.json().order.invoice.status, 'autorizada', 'checking the refund keeps the note on the order');
 
   const mine = (await call(accountOrders.create({env, store}), {method: 'GET', cookie: buyer})).json().orders;
   assert.equal(mine[0].invoice.number, confirmed.json().order.invoice.number); assert(mine[0].invoice.pdfUrl.startsWith('https://'), 'the buyer sees the note in "Meus pedidos"');

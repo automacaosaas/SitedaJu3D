@@ -1,6 +1,6 @@
 'use strict';
 // A small stand-in for Mercado Pago, for local prototyping and tests. It answers the calls the site makes
-// (POST /v1/orders, GET /v1/orders/:id) with the shapes documented for the Orders API, so the whole checkout can be
+// (POST /v1/orders, GET /v1/orders/:id, POST /v1/orders/:id/refund) with the shapes documented for the Orders API, so the whole checkout can be
 // tried without credentials. It is NOT Mercado Pago: the real behavior is only proven with the test credentials.
 //   Card token starting with APRO → approved · CONT → in review · anything else → refused. Pix always waits for payment.
 const zlib = require('node:zlib');
@@ -50,10 +50,29 @@ function createFakeMercadoPago({now = () => Date.now(), onPaid} = {}) {
     return reply(201, order);
   }
 
+  // Total refund, like POST /v1/orders/{id}/refund: 201 with the refund, the same answer for a repeated key, 409 when the
+  // order was already refunded or cannot be (not paid).
+  const refundKeys = new Map();
+  function refund(id, key) {
+    if (!key) return error(400, 'empty_required_header', 'X-Idempotency-Key is required');
+    const order = orders.get(id); if (!order) return error(404, 'order_not_found', 'order not found');
+    if (refundKeys.has(key)) return reply(201, order);
+    if (order.status === 'refunded') return error(409, 'order_already_refunded', 'order already refunded');
+    if (order.status !== 'processed' || order.status_detail !== 'accredited') return error(409, 'cannot_refund_order', 'order cannot be refunded');
+    const payment = order.transactions.payments[0];
+    Object.assign(order, {status: 'refunded', status_detail: 'refunded'});
+    Object.assign(payment, {status: 'refunded', status_detail: 'refunded'});
+    order.transactions.refunds = [{id: 'REF01FAKE' + id.slice(-10), transaction_id: payment.id, amount: payment.amount, status: 'processed'}];
+    refundKeys.set(key, id);
+    return reply(201, order);
+  }
+
   async function fetchImpl(url, init = {}) {
     const path = String(url).replace('https://api.mercadopago.com', '');
     if (!/^Bearer \S+/.test(init.headers?.Authorization || '')) return error(401, 'unauthorized', 'missing access token');
     if (path === '/v1/orders' && init.method === 'POST') { if (!init.headers['X-Idempotency-Key']) return error(400, 'missing_idempotency_key', 'X-Idempotency-Key is required'); return create(JSON.parse(init.body), init.headers['X-Idempotency-Key']); }
+    const refunding = path.match(/^\/v1\/orders\/([^/?]+)\/refund$/);
+    if (refunding && init.method === 'POST') return refund(refunding[1], init.headers['X-Idempotency-Key']);
     const found = path.match(/^\/v1\/orders\/([^/?]+)$/);
     if (found && init.method === 'GET') { const order = orders.get(found[1]); if (!order) return error(404, 'order_not_found', 'order not found'); expireIfDue(order); return reply(200, order); }
     return error(404, 'not_found', path);

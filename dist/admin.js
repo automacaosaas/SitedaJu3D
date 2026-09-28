@@ -1,4 +1,4 @@
-import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, revealDocument, retryInvoice, groupSecret} from './admin-auth.js';
+import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, retryRefund, revealDocument, retryInvoice, groupSecret} from './admin-auth.js';
 import {listByStatus, dailyTotals, ordersForDay, summary, dayKey, replaceOrder, STATUSES} from './admin-store.js';
 import qrcode from './vendor/qrcode-generator.js';
 import {PRODUCTS, color} from './products.js';
@@ -22,10 +22,10 @@ declineDialog.innerHTML = `<form method="dialog">
   <p class="admin-confirm-icon" aria-hidden="true">⚠️</p>
   <h2 id="decline-title">Recusar este pedido?</h2>
   <p class="admin-confirm-ref"></p>
-  <p class="admin-confirm-warn">O pedido vai para a aba Recusados. Se for engano, dá para reabrir depois. O estorno do pagamento é feito no Mercado Pago.</p>
-  <p class="admin-confirm-warn">O cliente recebe um e-mail avisando que o pedido não será produzido e que o valor volta pelo Mercado Pago. O motivo não vai no e-mail.</p>
+  <p class="admin-confirm-warn">O pedido vai para a aba Recusados e <strong>o valor é estornado na hora pelo Mercado Pago</strong>, na mesma forma de pagamento. Depois do estorno, o pedido não pode mais ser reaberto.</p>
+  <p class="admin-confirm-warn">O cliente recebe um e-mail avisando que o pedido não será produzido e que o valor foi estornado. O motivo não vai no e-mail.</p>
   <label class="admin-field"><span>Motivo (opcional, só a equipe vê)</span><textarea name="reason" maxlength="300" placeholder="Ex.: sem estoque da cor escolhida"></textarea></label>
-  <div class="admin-confirm-actions"><button type="button" data-action="cancel-decline">Cancelar</button><button type="button" class="btn-decline" data-action="confirm-decline">Sim, recusar pedido</button></div>
+  <div class="admin-confirm-actions"><button type="button" data-action="cancel-decline">Cancelar</button><button type="button" class="btn-decline" data-action="confirm-decline">Sim, recusar e estornar</button></div>
 </form>`;
 document.body.append(declineDialog);
 function openDeclineDialog(order) {
@@ -100,6 +100,15 @@ function nfeLine(o) {
   return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${o.status === 'concluido' ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
 }
 
+const REFUND_ERRORS = {payments_off: 'os pagamentos estão desligados neste ambiente', mode_mismatch: 'o pedido é de outro ambiente (teste × real)', no_mp_order: 'o pedido não tem código do Mercado Pago', refund_rejected: 'o Mercado Pago recusou o estorno', network: 'sem resposta do Mercado Pago'};
+// Refund badge of a declined order: estornado (with the date), em andamento (with a check button) or não feito (with the reason and a retry button).
+function refundNote(o) {
+  const state = o.refund?.state || null, id = esc(o.id);
+  if (state === 'refunded') return `<p class="admin-refund refund-done">Valor estornado pelo Mercado Pago${o.refund.at ? ` em ${esc(formatWhen(o.refund.at))}` : ''}.</p>`;
+  if (state === 'requested') return `<p class="admin-refund refund-wait">Estorno em andamento no Mercado Pago. <button type="button" class="btn-refund" data-action="refund-retry" data-id="${id}">Conferir estorno</button></p>`;
+  if (state === 'failed') return `<p class="admin-refund refund-fail">Estorno não feito: ${esc(REFUND_ERRORS[o.refund.error] || 'o Mercado Pago não respondeu como esperado')}. Tente de novo ou estorne pelo painel do Mercado Pago. <button type="button" class="btn-refund" data-action="refund-retry" data-id="${id}">Tentar estorno de novo</button></p>`;
+  return o.status === 'recusado' ? '<p class="admin-refund refund-fail">Pedido recusado antes do estorno automático: confira o estorno no painel do Mercado Pago.</p>' : '';
+}
 function orderCard(o) {
   const phoneDigits = String(o.customer.phone || '').replace(/\D/g, '');
   const whatsapp = /^\d{10,11}$/.test(phoneDigits) ? `<a href="https://wa.me/55${phoneDigits}" target="_blank" rel="noopener">${esc(formatPhone(phoneDigits))}</a>` : esc(o.customer.phone || '—');
@@ -108,9 +117,12 @@ function orderCard(o) {
   // The payment method rides a colored corner badge (icon only) instead of a text tag — quicker to scan, and its
   // color always matches the order's own status (yellow/green/red), never an extra color to learn.
   const payBadge = `<span class="admin-pay-badge status-${esc(o.status)}" title="${esc(payLabel)}">${icon(o.method === 'pix' ? 'pix' : 'card')}<span class="sr-only">${esc(payLabel)}</span></span>`;
+  // Declined orders show where the automatic refund stands; once the money is going back, the order cannot be reopened.
+  const refund = o.refund?.state || null, moneyBack = refund === 'refunded' || refund === 'requested';
+  const refundLine = o.status === 'recusado' || refund ? refundNote(o) : '';
   const actions = o.status === 'pendente'
-    ? `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="complete" data-id="${esc(o.id)}">Marcar como concluído</button><button type="button" class="btn-decline" data-action="decline" data-id="${esc(o.id)}">Recusar pedido</button></div>`
-    : `<div class="admin-order-actions"><span class="admin-decision-note">${o.status === 'concluido' ? 'Concluído' : 'Recusado'} em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span><button type="button" class="btn-reopen" data-action="reopen" data-id="${esc(o.id)}">Reabrir</button></div>`;
+    ? `${refundLine}<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="complete" data-id="${esc(o.id)}"${moneyBack ? ' disabled' : ''}>Marcar como concluído</button><button type="button" class="btn-decline" data-action="decline" data-id="${esc(o.id)}">Recusar pedido</button></div>`
+    : `${refundLine}<div class="admin-order-actions"><span class="admin-decision-note">${o.status === 'concluido' ? 'Concluído' : 'Recusado'} em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : `<button type="button" class="btn-reopen" data-action="reopen" data-id="${esc(o.id)}">Reabrir</button>`}</div>`;
   return `<article class="admin-order status-${esc(o.status)}" data-order="${esc(o.id)}">
     ${payBadge}
     <div class="admin-order-head">
@@ -270,12 +282,13 @@ async function move(id, status, reason, done) {
     try {
       const result = await changeStatus(id, status, reason);
       orders = replaceOrder(orders, result.order);
-      // Confirming or declining e-mails the buyer; say whether it went out (reopening sends nothing).
+      // Declining refunds the buyer and confirming issues the NF-e; both e-mail them. Say how it all went (reopening sends nothing).
+      const refundText = status !== 'recusado' ? '' : result.refund === 'refunded' ? ' Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? ' Estorno em andamento no Mercado Pago.' : ' O estorno automático não deu certo: veja o aviso no pedido.';
       const nfe = result.order.invoice;
       const nfeNote = status === 'concluido' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' ? ' A nota fiscal está sendo emitida.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
-      announce(status === 'pendente' ? done : `${done} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu.'}${nfeNote}`);
+      announce(status === 'pendente' ? done : `${done}${refundText} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}${nfeNote}`);
     }
-    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível salvar agora. Tente novamente.'); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } if (error.code === 'refunded') throw new Error('Este pedido já teve o valor estornado e não pode mais ser reaberto.'); throw new Error('Não foi possível salvar agora. Tente novamente.'); }
   });
 }
 
@@ -315,6 +328,10 @@ content.addEventListener('click', event => {
   const id = action.dataset.id;
   if (action.dataset.action === 'complete') move(id, 'concluido', '', 'Pedido marcado como concluído.');
   if (action.dataset.action === 'reopen') move(id, 'pendente', '', 'Pedido reaberto como pendente.');
+  if (action.dataset.action === 'refund-retry') run('Conferindo o estorno…', async () => {
+    try { const result = await retryRefund(id); orders = replaceOrder(orders, result.order); announce(result.refund === 'refunded' ? 'Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? 'O estorno ainda está em andamento no Mercado Pago.' : 'O estorno ainda não deu certo. Estorne pelo painel do Mercado Pago.'); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível conferir o estorno agora. Tente novamente.'); }
+  });
   if (action.dataset.action === 'decline') { const order = orders.find(o => o.id === id); if (order) openDeclineDialog(order); }
   if (action.dataset.action === 'refresh') run('Atualizando os pedidos…', async () => { try { await openDashboard(); announce('Pedidos atualizados.'); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível atualizar agora.'); } });
   if (action.dataset.action === 'retry-invoice') run('Emitindo a nota fiscal…', async () => {
