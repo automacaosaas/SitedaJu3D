@@ -185,7 +185,8 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(reopened.json().order.status, 'pendente'); assert.equal(reopened.json().order.declineReason, ''); assert.equal(reopened.json().order.decidedAt, null);
   assert.equal((await move({id: paid.id, status: 'concluido'})).json().order.status, 'concluido');
   const events = (await store.orders.events(paid.id)).map(e => [e.kind, e.actor]);
-  assert.deepEqual(events, [['status:recusado', 'ju@site.test'], ['status:pendente', 'ju@site.test'], ['status:concluido', 'ju@site.test']], 'each change is recorded with who made it');
+  // Here Mercado Pago is not configured, so the automatic refund of the decline is recorded as failed (and the order can be reopened).
+  assert.deepEqual(events, [['status:recusado', 'ju@site.test'], ['refund_failed', 'ju@site.test'], ['status:pendente', 'ju@site.test'], ['status:concluido', 'ju@site.test']], 'each change is recorded with who made it');
   assert.equal((await store.adminAudit.list()).filter(a => a.action === 'order_status').length, 3);
 
   const out = await call(h.logout, {cookie});
@@ -229,8 +230,8 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   await assert.rejects(client.currentSession({fetchImpl: fake([[503, {error: 'admin_unavailable'}]]).fetchImpl}), error => error.code === 'admin_unavailable', 'a server problem is not a sign-out');
   await assert.rejects(client.loadOrders({fetchImpl: fake([[401, {}]]).fetchImpl}), error => error.code === 'unauthorized');
   const moved = fake([[200, {ok: true, order: {id: 'x', status: 'concluido'}}]]);
-  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: moved.fetchImpl}), {order: {id: 'x', status: 'concluido'}, mailed: false});
-  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: fake([[200, {ok: true, order: {id: 'x'}, mailed: true}]]).fetchImpl}), {order: {id: 'x'}, mailed: true}, 'the panel learns whether the buyer was e-mailed');
+  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: moved.fetchImpl}), {order: {id: 'x', status: 'concluido'}, mailed: false, refund: null});
+  assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: fake([[200, {ok: true, order: {id: 'x'}, mailed: true, refund: 'refunded'}]]).fetchImpl}), {order: {id: 'x'}, mailed: true, refund: 'refunded'}, 'the panel learns whether the buyer was e-mailed and refunded');
   assert.deepEqual(JSON.parse(moved.calls[0].init.body), {id: 'x', status: 'concluido', reason: ''});
 
   // The vendored QR generator draws a valid symbol for an otpauth link (finder pattern in the corner).
@@ -277,6 +278,100 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const noMail = createOrders({store, env: ENV, now});
   assert.equal(await noMail.notifyDecision({...pt, status: 'concluido'}, {fetchImpl}), false, 'no e-mail service: nothing sent, nothing thrown');
   assert.equal(sent.length, 3);
+}
+
+// ── automatic refund: declining returns the whole amount through Mercado Pago (Orders API), once ──
+{
+  const mp = require('../api/_lib/mercadopago');
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  const {createOrders} = require('../api/_lib/orders');
+  const PAY_ENV = {...ENV, MP_ACCESS_TOKEN: 'TEST-token-refund', MP_PUBLIC_KEY: 'TEST-public-refund', RESEND_API_KEY: 're_test_refund', MAIL_FROM: 'Ju <pedidos@site.test>'};
+  const fake = createFakeMercadoPago({now});
+  const calls = [], mails = [];
+  let mpDown = false;   // makes the refund call fail with a 500, to see the retry
+  const fetchImpl = async (url, init = {}) => {
+    if (String(url).startsWith('https://api.resend.com')) { mails.push(JSON.parse(init.body)); return {ok: true, status: 200, json: async () => ({id: 'em'})}; }
+    calls.push({url: String(url), method: init.method, key: init.headers?.['X-Idempotency-Key'], body: init.body});
+    if (mpDown && /\/refund$/.test(String(url))) return {ok: false, status: 500, json: async () => ({errors: [{code: 'internal_error', message: 'try again'}]})};
+    return fake.fetchImpl(url, init);
+  };
+  const settings = mp.settings(PAY_ENV);
+  assert.equal(settings.mode, 'test');
+  const store = createMemoryStore(), h = Object.fromEntries(Object.entries(handlers).map(([name, handler]) => [name, handler.create({env: PAY_ENV, store, now, fetchImpl})]));
+  h['order-refund'] = require('../api/admin/order-refund').create({env: PAY_ENV, store, now, fetchImpl});
+  let seq = 0;
+  async function paidOrder({source = 'test', lang = 'pt-BR'} = {}) {
+    const remote = await mp.createOrder({settings, fetchImpl: fake.fetchImpl, idempotencyKey: 'create-' + (++seq), payload: {type: 'online', total_amount: '147.00', external_reference: 'JU-REFUND000' + seq, transactions: {payments: [{amount: '147.00', payment_method: {id: 'master', type: 'credit_card', token: 'APRO' + 'a'.repeat(28)}}]}}});
+    return (await store.orders.create({id: crypto.randomUUID(), reference: 'JU-REFUND000' + seq, customerId: null, source, status: 'pendente', method: 'card', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, mpOrderId: remote.id,
+      buyer: {name: 'Ana Souza', email: 'ana@example.com', company: null}, shipTo: {recipient: 'Ana Souza', cep: '30140071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''},
+      notes: '', lang, paidAt: new Date(clock), items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {body: 'pink', details: 'lilac'}}]})).order;
+  }
+  const login = await call(h.login, {body: {email: 'ju@site.test', password: 'senha-do-painel-2026'}});
+  const cookie = jar(await call(h.verify, {body: {code: codeFor(totp.fromBase32(login.json().setup.secret))}, cookie: jar(login)}));
+  const move = body => call(h['order-status'], {body, cookie});
+  const refundCalls = () => calls.filter(c => /\/refund$/.test(c.url));
+
+  // 1 · decline → refunded at once; the buyer's e-mail says the money is already back
+  const a = await paidOrder();
+  const declined = await move({id: a.id, status: 'recusado', reason: 'sem estoque'});
+  assert.equal(declined.statusCode, 200); assert.equal(declined.json().refund, 'refunded'); assert.equal(declined.json().order.refund.state, 'refunded');
+  assert.equal(refundCalls().length, 1);
+  assert.equal(refundCalls()[0].url, 'https://api.mercadopago.com/v1/orders/' + a.mpOrderId + '/refund'); assert.equal(refundCalls()[0].method, 'POST');
+  assert.equal(refundCalls()[0].body, undefined, 'total refund: no amount, no body');
+  assert.equal(refundCalls()[0].key, 'refund-' + a.id + '-1', 'idempotency key per order and attempt');
+  assert.equal(fake.orders.get(a.mpOrderId).status, 'refunded');
+  assert.equal(mails.length, 1); assert(mails[0].text.includes('já foi estornado') && !mails[0].text.includes('sem estoque'), 'the e-mail says it was refunded, never the reason');
+  assert.deepEqual((await store.orders.events(a.id)).map(e => e.kind), ['status:recusado', 'refund_requested', 'refunded']);
+  // 2 · the money went back: no reopening, no confirming
+  assert.equal((await move({id: a.id, status: 'pendente'})).json().error, 'refunded');
+  assert.equal((await move({id: a.id, status: 'concluido'})).statusCode, 409);
+  // 3 · "conferir" on a refunded order asks Mercado Pago for nothing new
+  const checked = await call(h['order-refund'], {body: {id: a.id}, cookie});
+  assert.equal(checked.json().refund, 'refunded'); assert.equal(refundCalls().length, 1, 'never refunded twice');
+  assert.equal((await call(h['order-refund'], {body: {id: (await paidOrder()).id}, cookie})).statusCode, 404, 'only declined orders have a refund to look after');
+
+  // 4 · Mercado Pago fails: the decline stands, the failure is shown, reopening is still possible; the retry uses a new key
+  const b = await paidOrder({lang: 'en'});
+  mpDown = true;
+  const failed = await move({id: b.id, status: 'recusado'});
+  assert.equal(failed.statusCode, 200); assert.equal(failed.json().refund, 'failed'); assert.equal(failed.json().order.refund.error, 'internal_error');
+  assert(mails.at(-1).text.includes('will be refunded through Mercado Pago'), 'nothing refunded yet: the e-mail only promises it');
+  mpDown = false;
+  const retried = await call(h['order-refund'], {body: {id: b.id}, cookie});
+  assert.equal(retried.json().refund, 'refunded'); assert.equal(refundCalls().at(-1).key, 'refund-' + b.id + '-2', 'a new attempt has its own key');
+  // (a failed refund does not lock the order: it could have been reopened before the retry)
+  const c = await paidOrder(); mpDown = true; await move({id: c.id, status: 'recusado'}); mpDown = false;
+  assert.equal((await move({id: c.id, status: 'pendente'})).json().order.status, 'pendente');
+
+  // 5 · already refunded in Mercado Pago's panel: the conflict is read back as refunded, no second refund
+  const d = await paidOrder();
+  await mp.refundOrder({settings, fetchImpl: fake.fetchImpl, id: d.mpOrderId, idempotencyKey: 'by-hand'});
+  const before = refundCalls().length;
+  const conflict = await move({id: d.id, status: 'recusado'});
+  assert.equal(conflict.json().refund, 'refunded'); assert.equal(refundCalls().length, before + 1);
+  assert(calls.at(-1).method === 'GET', 'the 409 was settled by reading the order back');
+
+  // 6 · a test order is never refunded with other keys (and the reverse)
+  const e = await paidOrder({source: 'live'});
+  const mismatch = await move({id: e.id, status: 'recusado'});
+  assert.equal(mismatch.json().refund, 'failed'); assert.equal(mismatch.json().order.refund.error, 'mode_mismatch');
+
+  // 7 · webhook/status saying "refunded" (e.g. done in Mercado Pago's panel) is recorded; declining later does not refund again
+  const g = await paidOrder();
+  await mp.refundOrder({settings, fetchImpl: fake.fetchImpl, id: g.mpOrderId, idempotencyKey: 'panel'});
+  const orders = createOrders({store, env: PAY_ENV, now});
+  const remote = mp.normalizeOrder(fake.orders.get(g.mpOrderId));
+  assert.equal(remote.state, 'refunded');
+  const {order: marked} = await orders.applyPayment(g, {...remote, reference: g.reference, total: g.totalCents});
+  assert.equal(marked.refundState, 'refunded'); assert.equal(marked.status, 'pendente', 'Ju still decides; the money is already back');
+  const count = refundCalls().length;
+  assert.equal((await move({id: g.id, status: 'recusado'})).json().refund, 'refunded'); assert.equal(refundCalls().length, count, 'no second refund');
+
+  // outcome parsing: refunded / requested / failed / none
+  assert.equal(mp.refundOutcome({status: 'processed', status_detail: 'refunded'}).state, 'refunded');
+  assert.equal(mp.refundOutcome({status: 'processed', transactions: {refunds: [{id: 'R', status: 'in_process'}]}}).state, 'requested');
+  assert.equal(mp.refundOutcome({transactions: {refunds: [{id: 'R', status: 'rejected'}]}}).state, 'failed');
+  assert.equal(mp.refundOutcome({status: 'processed', status_detail: 'accredited'}).state, 'none');
 }
 
 console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable); browser helpers (grouping, revenue without declined orders, API client) and the vendored QR code.');

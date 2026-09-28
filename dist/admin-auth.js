@@ -32,9 +32,15 @@ export async function loadOrders(options) {
   if (status === 200 && Array.isArray(data?.orders)) return data.orders;
   throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
 }
+// "Conferir estorno" / "Tentar estorno de novo" on a declined order.
+export async function retryRefund(id, options) {
+  const answer = await request('/api/admin/order-refund', {method: 'POST', body: {id}, ...options});
+  if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, refund: answer.data.refund || null};
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
 export async function changeStatus(id, status, reason = '', options) {
   const answer = await request('/api/admin/order-status', {method: 'POST', body: {id, status, reason}, ...options});
-  if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, mailed: answer.data.mailed === true};
+  if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, mailed: answer.data.mailed === true, refund: answer.data.refund || null};
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 

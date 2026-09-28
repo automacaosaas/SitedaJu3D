@@ -132,5 +132,5 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 ## Depois
 
 - Rastreamento e nota fiscal por e-mail (os modelos de e-mail já existem; faltam os gatilhos).
-- Estorno e cancelamento pelo painel da Ju.
+- Estorno parcial (hoje o painel estorna o valor total ao recusar; ver ADMIN-SETUP.md).
 - Frete com o Melhor Envio (PAC), nota fiscal e rastreio por e-mail e no site.

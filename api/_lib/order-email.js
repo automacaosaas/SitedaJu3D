@@ -156,7 +156,9 @@ const DECISION = {
       next: 'Quando as peças estiverem a caminho, avisamos por aqui.'},
     recusado: {subject: ref => `Sobre o seu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Infelizmente a Ju não vai conseguir produzir este pedido.',
       eyebrow: 'PEDIDO NÃO CONFIRMADO', title: ['Não vamos conseguir', 'produzir este pedido.'], intro: 'Sentimos muito: desta vez a Ju não vai conseguir produzir o seu pedido.',
-      next: 'O valor pago será devolvido pelo Mercado Pago, na mesma forma de pagamento.'}
+      next: 'O valor pago será devolvido pelo Mercado Pago, na mesma forma de pagamento.',
+      refunded: 'O valor pago já foi estornado pelo Mercado Pago, na mesma forma de pagamento. No cartão, o prazo para aparecer na fatura depende do banco; no Pix, volta para a conta que pagou.',
+      requested: 'O estorno do valor pago já foi solicitado ao Mercado Pago e volta na mesma forma de pagamento.'}
   },
   en: {
     concluido: {subject: ref => `Order confirmed · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmed your order and your pieces are going into production.',
@@ -164,7 +166,9 @@ const DECISION = {
       next: 'We will let you know here when your pieces are on their way.'},
     recusado: {subject: ref => `About your order ${ref} · Ju, imprime pra mim?`, preheader: 'Unfortunately Ju will not be able to make this order.',
       eyebrow: 'ORDER NOT CONFIRMED', title: ['We will not be able', 'to make this order.'], intro: 'We are very sorry: this time Ju will not be able to make your order.',
-      next: 'The amount you paid will be refunded through Mercado Pago, with the same payment method.'}
+      next: 'The amount you paid will be refunded through Mercado Pago, with the same payment method.',
+      refunded: 'The amount you paid has already been refunded through Mercado Pago, with the same payment method. On a card, when it shows on your statement depends on your bank; with Pix, it goes back to the paying account.',
+      requested: 'The refund of the amount you paid has already been requested from Mercado Pago and goes back with the same payment method.'}
   },
   es: {
     concluido: {subject: ref => `Pedido confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmó tu pedido y tus piezas ya pasan a producción.',
@@ -172,14 +176,18 @@ const DECISION = {
       next: 'Cuando tus piezas estén en camino, te avisaremos por aquí.'},
     recusado: {subject: ref => `Sobre tu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Lamentablemente Ju no podrá producir este pedido.',
       eyebrow: 'PEDIDO NO CONFIRMADO', title: ['No podremos', 'producir este pedido.'], intro: 'Lo sentimos mucho: esta vez Ju no podrá producir tu pedido.',
-      next: 'El valor pagado será devuelto por Mercado Pago, con el mismo medio de pago.'}
+      next: 'El valor pagado será devuelto por Mercado Pago, con el mismo medio de pago.',
+      refunded: 'El valor pagado ya fue reembolsado por Mercado Pago, con el mismo medio de pago. En la tarjeta, el plazo para verlo en el resumen depende del banco; con Pix, vuelve a la cuenta que pagó.',
+      requested: 'El reembolso del valor pagado ya fue solicitado a Mercado Pago y vuelve con el mismo medio de pago.'}
   }
 };
 
-function renderDecisionEmail({summary, status, lang = 'pt-BR', test = false, assetUrl}) {
+// refund (decline only): 'refunded' or 'requested' say the money is already on its way; otherwise the plain promise.
+function renderDecisionEmail({summary, status, refund = null, lang = 'pt-BR', test = false, assetUrl}) {
   const language = DECISION[lang] ? lang : 'pt-BR';
   if (!DECISION[language][status]) throw new Error(`no e-mail for status ${status}`);
-  const copy = {...CUSTOMER[language], ...DECISION[language][status]};
+  const base = DECISION[language][status];
+  const copy = {...CUSTOMER[language], ...base, next: (status === 'recusado' && base[refund]) || base.next};
   const hello = copy.hello(summary.customer.name.split(' ')[0] || '');
   const inner = [
     `<tr><td class="px" align="center" style="padding:18px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:16px;line-height:25px;">${esc(hello)} ${esc(copy.intro)}</p></td></tr>`,

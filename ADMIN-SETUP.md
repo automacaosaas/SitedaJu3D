@@ -9,7 +9,13 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 - Em cada pedido: peças e cores, quem recebe, WhatsApp, endereço de entrega, observações e os dados da **nota fiscal**
   (nome e CPF mascarado, ou razão social, CNPJ e inscrição estadual).
 - **Marcar como concluído** ou **Recusar pedido** (motivo opcional, visto só pela equipe). Concluídos e recusados ficam em
-  abas separadas, com **Reabrir** para desfazer um engano. Recusar não estorna: o estorno é feito no Mercado Pago.
+  abas separadas, com **Reabrir** para desfazer um engano. Concluir ou recusar manda um e-mail ao cliente (o motivo nunca vai).
+- **Estorno automático ao recusar:** o servidor pede ao Mercado Pago o reembolso total do pedido (cartão ou Pix,
+  `POST /v1/orders/{id}/refund`). O pedido mostra **Valor estornado**, **Estorno em andamento** (botão *Conferir estorno*) ou
+  **Estorno não feito** com o motivo (botão *Tentar estorno de novo*; se continuar, estorne pelo painel do Mercado Pago).
+  A recusa vale mesmo se o estorno falhar. Cada tentativa tem a sua chave de idempotência, então um clique duplo ou uma
+  resposta perdida nunca estorna duas vezes. Com o valor estornado (ou em andamento), o pedido não pode mais ser reaberto
+  nem concluído. Um estorno feito direto no painel do Mercado Pago também aparece aqui (pelo webhook ou consulta).
 - **Gráfico** dos últimos 14 dias e **calendário** com os pedidos de cada dia. O faturamento não conta os recusados.
 - Etiqueta de origem em cada pedido: **Teste Mercado Pago** ou **Pedido real**.
 - Pedidos aguardando pagamento ou cancelados não aparecem, e a equipe não consegue mudar o status deles.

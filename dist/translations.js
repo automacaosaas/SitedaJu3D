@@ -627,6 +627,7 @@ Selecione e copie o código Pix.|Select and copy the Pix code.|Selecciona y copi
 Pagamento confirmado · em produção|Payment confirmed · in production|Pago confirmado · en producción
 Pedido concluído|Order completed|Pedido completado
 Pedido não pôde ser atendido|Order could not be fulfilled|El pedido no pudo ser atendido
+Valor estornado|Amount refunded|Valor reembolsado
 Pagamento não concluído|Payment not completed|Pago no completado
 Pedido de teste · nenhum valor real|Test order · no real charge|Pedido de prueba · ningún cargo real
 Pedido|Order|Pedido

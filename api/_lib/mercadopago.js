@@ -52,6 +52,22 @@ async function call({settings: s, fetchImpl = globalThis.fetch, method, path, bo
 const isTestEmailRejection = error => Number(error?.code) === 2198 || /test user email|testuser/i.test(String(error?.message || ''));
 const createOrder = ({settings: s, fetchImpl, payload, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: '/v1/orders', body: payload, idempotencyKey});
 const getOrder = ({settings: s, fetchImpl, id}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/orders/${encodeURIComponent(id)}`});
+// Total refund of an order: POST /v1/orders/{id}/refund with no amount (the documented way to return everything; card
+// and Pix alike). X-Idempotency-Key is mandatory; the caller derives it from the order, so a retry cannot refund twice.
+const refundOrder = ({settings: s, fetchImpl, id, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: `/v1/orders/${encodeURIComponent(id)}/refund`, idempotencyKey});
+// Mercado Pago's answers that mean "a refund already exists or is running": the order is read back to know which.
+const REFUND_CONFLICTS = new Set(['order_already_refunded', 'cannot_refund_order', 'order_refund_already_in_process', 'idempotency_key_already_used']);
+// Where a refund stands, from an order (the refund answer or GET /v1/orders/{id}): refunded, requested (still being
+// processed), failed or none.
+function refundOutcome(order) {
+  const refunds = order?.transactions?.refunds || [], status = String(order?.status || ''), detail = String(order?.status_detail || '');
+  const id = String(refunds[0]?.id || '');
+  if (status === 'refunded' || detail === 'refunded') return {state: 'refunded', id};
+  if (refunds.some(r => ['failed', 'rejected', 'cancelled', 'canceled'].includes(String(r.status)))) return {state: 'failed', id};
+  if (refunds.length && refunds.every(r => String(r.status) === 'processed')) return {state: 'refunded', id};
+  if (refunds.length || detail === 'partially_refunded') return {state: 'requested', id};
+  return {state: 'none', id};
+}
 
 // The reference is derived from the browser's attempt id, so a double click or a network retry lands on the same order.
 const referenceFor = attempt => REFERENCE_PREFIX + crypto.createHash('sha256').update('ju-order:' + attempt).digest('hex').slice(0, 10).toUpperCase();
@@ -120,7 +136,8 @@ function normalizeOrder(order) {
   const paymentStatus = String(payment.status || ''), paymentDetail = String(payment.status_detail || '');
   const isPix = method.id === 'pix' || method.type === 'bank_transfer';
   let state = 'in_review';
-  if (status === 'processed' && detail === 'accredited') state = 'approved';
+  if (status === 'refunded' || detail === 'refunded') state = 'refunded';   // returned to the buyer (by us or in Mercado Pago's panel)
+  else if (status === 'processed' && detail === 'accredited') state = 'approved';
   else if (status === 'expired' || paymentStatus === 'expired' || paymentDetail === 'expired') state = 'expired';
   else if (['failed', 'canceled', 'cancelled', 'rejected'].includes(status) || ['failed', 'rejected', 'canceled', 'cancelled'].includes(paymentStatus)) state = 'refused';
   else if (isPix && ['created', 'action_required', 'processing'].includes(status)) state = 'pending_pix';
@@ -166,4 +183,4 @@ function verifySignature({secret, signature, requestId, dataId}) {
   });
 }
 
-module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, createOrder, getOrder, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};
+module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, createOrder, getOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};
