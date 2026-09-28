@@ -624,4 +624,34 @@ Não foi possível verificar agora. Tente de novo em instantes.|We could not che
 Verificando…|Checking…|Verificando…
 Código Pix copiado.|Pix code copied.|Código Pix copiado.
 Selecione e copie o código Pix.|Select and copy the Pix code.|Selecciona y copia el código Pix.
+Pagamento confirmado · em produção|Payment confirmed · in production|Pago confirmado · en producción
+Pedido concluído|Order completed|Pedido completado
+Pedido não pôde ser atendido|Order could not be fulfilled|El pedido no pudo ser atendido
+Pagamento não concluído|Payment not completed|Pago no completado
+Pedido de teste · nenhum valor real|Test order · no real charge|Pedido de prueba · ningún cargo real
+Pedido|Order|Pedido
+Acompanhe o pagamento e a produção de cada pedido.|Follow the payment and production of each order.|Sigue el pago y la producción de cada pedido.
+Excluir minha conta|Delete my account|Eliminar mi cuenta
+Apaga seus dados de cadastro. Pede a confirmação de um código enviado ao seu e-mail.|Erases your account details. Asks you to confirm with a code sent to your email.|Borra tus datos de registro. Pide confirmar con un código enviado a tu correo.
+EXCLUIR CONTA|DELETE ACCOUNT|ELIMINAR CUENTA
+Excluir minha|Delete my|Eliminar mi
+conta.|account.|cuenta.
+Enviamos um código de seis números para o seu e-mail. Digite o código para confirmar.|We sent a six-digit code to your email. Type the code to confirm.|Enviamos un código de seis números a tu correo. Escribe el código para confirmar.
+Esta ação não pode ser desfeita.|This cannot be undone.|Esta acción no se puede deshacer.
+Excluir minha conta definitivamente|Delete my account permanently|Eliminar mi cuenta definitivamente
+Seus dados de cadastro (nome, CPF, telefone e senha) são apagados.|Your account details (name, CPF, phone and password) are erased.|Tus datos de registro (nombre, CPF, teléfono y contraseña) se borran.
+Os pedidos já feitos ficam guardados pelo prazo exigido para a nota fiscal, sem ligação com a conta.|Orders already placed are kept for the period required for invoices, no longer linked to the account.|Los pedidos ya hechos se guardan durante el plazo exigido para la factura, sin vínculo con la cuenta.
+Você sai da conta em todos os aparelhos.|You are signed out on every device.|Se cierra tu sesión en todos los dispositivos.
+Enviar código de confirmação|Send confirmation code|Enviar código de confirmación
+Cancelar|Cancel|Cancelar
+Enviando o código…|Sending the code…|Enviando el código…
+Código de teste gerado.|Test code generated.|Código de prueba generado.
+Enviamos o código para o seu e-mail.|We sent the code to your email.|Enviamos el código a tu correo.
+Excluindo sua conta…|Deleting your account…|Eliminando tu cuenta…
+Conta excluída.|Account deleted.|Cuenta eliminada.
+Sua conta foi excluída. Obrigada por ter passado por aqui.|Your account was deleted. Thank you for stopping by.|Tu cuenta fue eliminada. Gracias por haber pasado por aquí.
+Buscando seus pedidos…|Loading your orders…|Buscando tus pedidos…
+Entre na sua conta para confirmar a exclusão.|Sign in to your account to confirm the deletion.|Inicia sesión en tu cuenta para confirmar la eliminación.
+Complete sua identificação (nome, CPF e telefone) para a nota fiscal e a entrega.|Complete your identification (name, CPF and phone) for the invoice and delivery.|Completa tu identificación (nombre, CPF y teléfono) para la factura y la entrega.
+Sua sessão terminou. Entre de novo na sua conta para continuar.|Your session ended. Sign in to your account again to continue.|Tu sesión terminó. Vuelve a iniciar sesión en tu cuenta para continuar.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

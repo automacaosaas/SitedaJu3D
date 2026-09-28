@@ -159,7 +159,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert.equal((await call(verifyEndpoint.create({env: {...onlyKey, RESEND_API_KEY: 're_other_key_456'}, store}), {body: proof})).json().error, 'invalid_code', 'another key cannot verify it');
   assert.equal((await call(verifyEndpoint.create({env: onlyKey, store}), {body: proof})).statusCode, 200);
   const healthRes = makeRes(); await health.create({env: onlyKey})({}, healthRes);
-  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: false});
+  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off'});
 }
 
 // limiter
@@ -174,7 +174,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
 {
   const res = makeRes(); await health.create({env: ENV})({}, res);
   // Production without a database or data keys: accounts are off and the keys are reported missing (never shown).
-  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: false});
+  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off'});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
   const off = makeRes(); await health.create({env: {}})({}, off);
   assert.equal(off.json().mail, 'off');
@@ -187,7 +187,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
 // ── account and checkout pages (source level; the browser flows are checked by hand, see AUTH-VISUAL-QA.md) ──────────
 {
   const account = fs.readFileSync(path.join(root, 'dist/account.js'), 'utf8').replace(/\r\n/g, '\n');
-  assert(/challenge\?\.demoCode && screen === 'verify'/.test(account), 'the test-code box exists only when the code was not e-mailed');
+  assert(/screen === 'verify' \? challenge\?\.demoCode : screen === 'delete' \? deletion\?\.demoCode : ''/.test(account) && /demoCode\(\) \? `<div class="demo-code">/.test(account), 'the test-code box exists only when the code was not e-mailed');
   assert(/challenge\?\.demoCode \? 'Digite o código de teste/.test(account) && /Enviamos um código de seis números para o seu e-mail/.test(account), 'the verify screen tells the truth about where the code is');
   assert(/auth\.adopt\(token\)/.test(account) && /history\.replaceState\(null, '', location\.pathname \+ location\.search \+ '#verificar'\)/.test(account), 'the e-mail link is adopted and its secrets leave the address bar');
   assert(/mountLanguagePicker\(document\.querySelector\('\.account-tools'\)\)/.test(account), 'language picker in the account header');

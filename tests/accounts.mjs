@@ -138,6 +138,81 @@ assert.equal(sent.at(-1).email, 'caio@exemplo.com');
 assert.match(sent.at(-1).code, /^\d{6}$/);
 await rejects(createAccounts({store, env: {APP_ENV: 'production'}, now}).start({email: 'x@exemplo.com'}), 'email_not_configured', 'production never shows codes on the page');
 
+// --- Excluir minha conta: a code to the account's own address; orders stay without the link -----------------------
+{
+  const biaRow = await store.customers.findByEmail('bia@exemplo.com');
+  await store.orders.create({id: 'order-bia-1', reference: 'JU-BIA0000001', customerId: biaRow.id, source: 'test', status: 'pendente', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Bia Lima', email: 'bia@exemplo.com'}, shipTo: {recipient: 'Bia Lima'}, items: []});
+  advance(31_000);
+  const access = await accounts.start({email: 'bia@exemplo.com', ip: '5.5.5.6'});
+  const {session} = await accounts.verify({challenge: access.challenge, code: access.demoCode});
+  advance(31_000);
+  const deletion = await accounts.startDeletion(biaRow, {ip: '5.5.5.6'});
+  assert.equal(deletion.purpose, 'delete'); assert.equal(deletion.email, 'bia@exemplo.com'); assert.match(deletion.demoCode, /^\d{6}$/);
+  await rejects(accounts.verify({challenge: deletion.challenge, code: deletion.demoCode}), 'invalid_challenge', 'a deletion code never signs anyone in nor opens a password reset');
+  await rejects(accounts.deleteAccount(await store.customers.findByEmail('ana.souza@exemplo.com.br'), {challenge: deletion.challenge, code: deletion.demoCode}), 'invalid_challenge', 'only for the account it was sent to');
+  await rejects(accounts.deleteAccount(biaRow, {challenge: access.challenge, code: access.demoCode}), 'invalid_challenge', 'a sign-in code cannot delete');
+  const wrongCode = deletion.demoCode === '000000' ? '111111' : '000000';
+  const miss = await accounts.deleteAccount(biaRow, {challenge: deletion.challenge, code: wrongCode}).catch(e => e);
+  assert.equal(miss.code, 'invalid_code'); assert.equal(miss.remaining, 4);
+  assert(await store.customers.findByEmail('bia@exemplo.com'), 'nothing is deleted by a wrong code');
+  assert.deepEqual(await accounts.deleteAccount(biaRow, {challenge: deletion.challenge, code: deletion.demoCode}), {deleted: true});
+  assert.equal(await store.customers.findByEmail('bia@exemplo.com'), null, 'the account is gone');
+  assert.equal(await accounts.authenticate(session.token), null, 'and signed out on every device');
+  const kept = await store.orders.findById('order-bia-1');
+  assert.equal(kept.customerId, null, 'the order stays for the invoice records, without the link to the account');
+  assert.equal(kept.buyer.email, 'bia@exemplo.com');
+  await rejects(accounts.deleteAccount(biaRow, {challenge: deletion.challenge, code: deletion.demoCode}), 'invalid_challenge', 'once');
+  // The address is free again: a new sign-up starts an empty account.
+  advance(31_000);
+  const fresh = await accounts.start({email: 'bia@exemplo.com', ip: '5.5.5.7'});
+  assert.equal((await accounts.verify({challenge: fresh.challenge, code: fresh.demoCode})).status, 'needs_profile');
+  // Rate limits: deletion codes are limited like any other code (and to five per hour per account).
+  const ana = await store.customers.findByEmail('ana.souza@exemplo.com.br');
+  for (let i = 0; i < 5; i++) { advance(31_000); await accounts.startDeletion(ana, {ip: `7.7.7.${i}`}); }
+  advance(31_000);
+  await rejects(accounts.startDeletion(ana, {ip: '7.7.7.9'}), 'too_many_requests');
+}
+
+// --- Endpoints for "Meus pedidos" and the deletion (handlers with the test store and clock) ------------------------
+{
+  const orderHandler = require('../api/account/orders.js').create({env, store, now});
+  const startHandler = require('../api/account/delete-start.js').create({env, store, now});
+  const deleteHandler = require('../api/account/delete.js').create({env, store, now});
+  const invoke = async (handler, {method = 'POST', body = {}, cookie = '', origin = 'http://localhost:8844'} = {}) => {
+    const res = {statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, end(d) { this.body = d || ''; }};
+    await handler({method, headers: {...(origin ? {origin} : {}), ...(cookie ? {cookie} : {}), 'x-forwarded-for': '8.8.8.8'}, body, socket: {}, url: '/'}, res);
+    return {status: res.statusCode, headers: res.headers, body: res.body ? JSON.parse(res.body) : null};
+  };
+  advance(31_000);
+  const carla = await accounts.start({email: 'carla@exemplo.com', ip: '8.8.8.8'});
+  const grant = (await accounts.verify({challenge: carla.challenge, code: carla.demoCode})).grant;
+  const {session} = await accounts.register({grant, name: 'Carla'});
+  const cookie = `__Host-ju_session=${session.token}`, carlaRow = await store.customers.findByEmail('carla@exemplo.com');
+  await store.orders.create({id: 'order-carla-1', reference: 'JU-CARLA00001', customerId: carlaRow.id, source: 'test', status: 'pendente', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Carla Dias', email: 'carla@exemplo.com'}, buyerDocEnc: Buffer.from('x'), shipTo: {recipient: 'Carla'}, mpOrderId: 'ORD01SECRET', paidAt: new Date(clock), items: [{productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {body: 'blue'}}]});
+
+  assert.equal((await invoke(orderHandler, {method: 'GET', origin: ''})).status, 401, 'my orders need a session');
+  const mine = await invoke(orderHandler, {method: 'GET', origin: '', cookie});
+  assert.equal(mine.status, 200);
+  assert.deepEqual(mine.body.orders.map(o => [o.reference, o.status, o.totalCents, o.test]), [['JU-CARLA00001', 'pendente', 14700, true]]);
+  assert(!JSON.stringify(mine.body).includes('ORD01SECRET') && !JSON.stringify(mine.body).includes('buyerDoc'), 'no payment ids or documents in the answer');
+  const {createHash, randomBytes} = require('node:crypto'), anaToken = randomBytes(32).toString('base64url');
+  await store.sessions.create({tokenHash: createHash('sha256').update(anaToken).digest(), customerId: (await store.customers.findByEmail('ana.souza@exemplo.com.br')).id, expiresAt: new Date(clock + 3600e3)});
+  assert.deepEqual((await invoke(orderHandler, {method: 'GET', origin: '', cookie: `__Host-ju_session=${anaToken}`})).body.orders, [], "another buyer's orders never show");
+
+  assert.equal((await invoke(startHandler, {cookie, origin: 'https://outro-site.com'})).status, 403);
+  assert.equal((await invoke(startHandler)).status, 401);
+  advance(31_000);
+  const started = await invoke(startHandler, {cookie, body: {lang: 'en'}});
+  assert.equal(started.status, 200); assert.match(started.body.challenge, /^[0-9a-f-]{36}\./);
+  assert.equal((await invoke(deleteHandler, {cookie, body: {challenge: started.body.challenge, code: started.body.demoCode}, origin: 'https://outro-site.com'})).status, 403);
+  assert.equal((await invoke(deleteHandler, {body: {challenge: started.body.challenge, code: started.body.demoCode}})).status, 401, 'the session is needed too, not only the code');
+  const gone = await invoke(deleteHandler, {cookie, body: {challenge: started.body.challenge, code: started.body.demoCode}});
+  assert.equal(gone.status, 200); assert.deepEqual(gone.body, {ok: true, deleted: true});
+  assert.match(gone.headers['set-cookie'], /^__Host-ju_session=; .*Max-Age=0/, 'the cookie is cleared');
+  assert.equal(await store.customers.findByEmail('carla@exemplo.com'), null);
+  assert.equal((await store.orders.findById('order-carla-1')).customerId, null);
+}
+
 // --- HTTP: cookies, origin and what the browser sees ----------------------------------------------------------
 const {createServer} = require('../server/create-server.cjs');
 const server = createServer({log: {error: () => {}}});
@@ -195,4 +270,4 @@ try {
   server.close();
 }
 
-console.log('PASS: codes (single use, 5 attempts, 10 min, rate limits), sign-up grants, passwords (scrypt, reset signs out other devices), 30-day sliding sessions, identification (CPF encrypted and unique, alphanumeric CNPJ, phone), and the HTTP layer (HttpOnly __Host- cookie, origin check, 503 without a database in production).');
+console.log('PASS: codes (single use, 5 attempts, 10 min, rate limits), sign-up grants, passwords (scrypt, reset signs out other devices), 30-day sliding sessions, identification (CPF encrypted and unique, alphanumeric CNPJ, phone), account deletion (e-mailed code of its own purpose, orders kept without the link, signed out everywhere), my orders (own orders only, no payment ids), and the HTTP layer (HttpOnly __Host- cookie, origin check, 503 without a database in production).');

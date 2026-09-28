@@ -3,7 +3,8 @@
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
 function createMemoryStore() {
   const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
-  let eventSerial = 0;
+  const admins = new Map(), adminSessions = new Map(), audit = [];
+  let eventSerial = 0, auditSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
 
@@ -56,6 +57,32 @@ function createMemoryStore() {
       async list({statuses = null, limit = 500} = {}) { return copy([...orders.values()].filter(o => !statuses || statuses.includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
       async addEvent(orderId, kind, detail = null, actor = null) { events.push({id: ++eventSerial, orderId, kind, detail, actor, createdAt: new Date()}); },
       async events(orderId) { return copy(events.filter(e => e.orderId === orderId)); }
+    },
+    // Painel da Ju (db/migrations/003_painel.sql).
+    admins: {
+      async count() { return admins.size; },
+      async findByEmail(email) { return copy([...admins.values()].find(a => a.email === email) || null); },
+      async findById(id) { return copy(admins.get(id) || null); },
+      async create(data) {
+        if ([...admins.values()].some(a => a.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'admin_exists'});
+        const row = {totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null, lastLoginAt: null, createdAt: new Date(), ...data};
+        admins.set(row.id, row);
+        return copy(row);
+      },
+      async update(id, patch) { const row = admins.get(id); if (!row) return null; Object.assign(row, patch); return copy(row); },
+      // Accepts a TOTP step only if it is newer than the last one used: true for exactly one caller.
+      async useStep(id, step) { const row = admins.get(id); if (!row || (row.totpLastStep !== null && row.totpLastStep >= step)) return false; row.totpLastStep = step; return true; }
+    },
+    adminSessions: {
+      async create(session) { adminSessions.set(key(session.tokenHash), {mfaAt: null, attempts: 0, revokedAt: null, createdAt: new Date(), ...session}); },
+      async find(tokenHash) { return copy(adminSessions.get(key(tokenHash)) || null); },
+      async recordAttempt(tokenHash) { const s = adminSessions.get(key(tokenHash)); if (s) s.attempts += 1; return s ? s.attempts : 0; },
+      async revoke(tokenHash, now) { const s = adminSessions.get(key(tokenHash)); if (s && !s.revokedAt) s.revokedAt = now; },
+      async revokeAllFor(adminId, now) { for (const s of adminSessions.values()) if (s.adminId === adminId && !s.revokedAt) s.revokedAt = now; }
+    },
+    adminAudit: {
+      async add({adminId = null, action, detail = null, ip = null}) { audit.push({id: ++auditSerial, adminId, action, detail, ip, createdAt: new Date()}); },
+      async list(limit = 100) { return copy(audit.slice(-limit).reverse()); }
     },
     sessions: {
       async create(session) { sessions.set(key(session.tokenHash), {revokedAt: null, lastSeenAt: new Date(), ...session}); },

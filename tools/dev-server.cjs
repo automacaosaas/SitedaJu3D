@@ -74,7 +74,7 @@ async function main() {
   env.AUTH_SECRET = env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
   // The admin panel (dist/admin.html) always works locally, with a fixed local-only login unless you set your own.
   env.ADMIN_EMAIL = env.ADMIN_EMAIL || 'ju@exemplo.test';
-  env.ADMIN_PASSWORD = env.ADMIN_PASSWORD || '12345678';
+  env.ADMIN_PASSWORD = env.ADMIN_PASSWORD || 'painel-local-123';
   if (!env.RESEND_API_KEY && !env.MAIL_TRANSPORT) env.MAIL_TRANSPORT = 'console';
 
   const outboxDir = path.join(os.tmpdir(), 'ju-mail-outbox');
@@ -107,14 +107,13 @@ async function main() {
     '/api/health': require('../api/health').create({env}),
     '/api/email-preview': require('../api/email-preview').create({env}),
     '/api/payments/config': require('../api/payments/config').create({env}),
-    '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed}),
-    '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed}),
+    '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox}),
+    '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
-    '/api/admin/login': require('../api/admin/login').create({env}),
-    '/api/admin/session': require('../api/admin/session').create({env})
   };
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
-  routes['/api/account/profile'] = require('../api/account/profile').create({env});
+  for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
 
   // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
   // Cache-Control is left out on purpose: local files stay `no-store` while editing.

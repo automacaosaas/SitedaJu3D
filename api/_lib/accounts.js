@@ -55,6 +55,30 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
   }
   async function spend(challenge) { if (!await store.challenges.markUsed(challenge.id, date())) throw fail('invalid_grant'); }
 
+  // A new 6-digit code for `email`, e-mailed when possible (outside production it comes back on the page otherwise).
+  async function issue(email, purpose, lang, ip) {
+    const canMail = mailReady(config(env));
+    if (!canMail && isProduction(env)) throw fail('email_not_configured');
+    await limit(`code-wait:${email}`, 1, RESEND_AFTER);
+    await limit(`code-email:${email}`, 5, 10 * 60 * 1000);
+    await limit(`code-ip:${ip}`, 20, 60 * 60 * 1000);
+    const id = crypto.randomUUID(), code = String(crypto.randomInt(0, 1000000)).padStart(6, '0'), expiresAt = new Date(now() + CODE_TTL);
+    await store.challenges.create({id, email, purpose, codeHash: codeHash(id, code), expiresAt});
+    // The reference carries the address only so the page can show it; the server trusts the id alone.
+    const challenge = `${id}.${Buffer.from(email).toString('base64url')}`;
+    if (canMail) await sendCode({email, code, challenge, purpose, lang, expiresAt});
+    // Without e-mail (local and test sites only) the code comes back so the page can show it, as the preview did.
+    return {challenge, email, purpose, expiresAt: expiresAt.getTime(), resendAt: now() + RESEND_AFTER, ...(canMail ? {} : {demoCode: code})};
+  }
+  // Checks a code against its challenge: expiry, attempts (5 at most) and the value, in constant time.
+  async function checkCode(found, code) {
+    if (now() >= time(found.expiresAt)) throw fail('expired');
+    if (found.attempts >= MAX_ATTEMPTS) throw fail('too_many_attempts');
+    const attempts = await store.challenges.recordAttempt(found.id);
+    const matches = typeof code === 'string' && /^\d{6}$/.test(code) && crypto.timingSafeEqual(codeHash(found.id, code), Buffer.from(found.codeHash));
+    if (!matches) throw fail(attempts >= MAX_ATTEMPTS ? 'too_many_attempts' : 'invalid_code', {remaining: Math.max(0, MAX_ATTEMPTS - attempts)});
+  }
+
   function publicUser(c) {
     return {
       name: c.displayName || c.firstName || c.email.split('@')[0], email: c.email, hasPassword: Boolean(c.passwordHash),
@@ -79,18 +103,7 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
       email = normalizeEmail(email);
       if (email.length > 180 || !EMAIL.test(email)) throw fail('invalid_email');
       if (!PURPOSES.includes(purpose)) throw fail('invalid_request');
-      const canMail = mailReady(config(env));
-      if (!canMail && isProduction(env)) throw fail('email_not_configured');
-      await limit(`code-wait:${email}`, 1, RESEND_AFTER);
-      await limit(`code-email:${email}`, 5, 10 * 60 * 1000);
-      await limit(`code-ip:${ip}`, 20, 60 * 60 * 1000);
-      const id = crypto.randomUUID(), code = String(crypto.randomInt(0, 1000000)).padStart(6, '0'), expiresAt = new Date(now() + CODE_TTL);
-      await store.challenges.create({id, email, purpose, codeHash: codeHash(id, code), expiresAt});
-      // The reference carries the address only so the page can show it; the server trusts the id alone.
-      const challenge = `${id}.${Buffer.from(email).toString('base64url')}`;
-      if (canMail) await sendCode({email, code, challenge, purpose, lang, expiresAt});
-      // Without e-mail (local and test sites only) the code comes back so the page can show it, as the preview did.
-      return {challenge, email, purpose, expiresAt: expiresAt.getTime(), resendAt: now() + RESEND_AFTER, ...(canMail ? {} : {demoCode: code})};
+      return issue(email, purpose, lang, ip);
     },
 
     async verify({challenge, code, ip = '', userAgent = ''}) {
@@ -98,12 +111,9 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
       if (!/^[0-9a-f-]{36}$/.test(id)) throw fail('invalid_challenge');
       await limit(`verify-ip:${ip}`, 60, 10 * 60 * 1000);
       const found = await store.challenges.find(id);
-      if (!found || found.usedAt || found.verifiedAt) throw fail('invalid_challenge');
-      if (now() >= time(found.expiresAt)) throw fail('expired');
-      if (found.attempts >= MAX_ATTEMPTS) throw fail('too_many_attempts');
-      const attempts = await store.challenges.recordAttempt(id);
-      const matches = typeof code === 'string' && /^\d{6}$/.test(code) && crypto.timingSafeEqual(codeHash(id, code), Buffer.from(found.codeHash));
-      if (!matches) throw fail(attempts >= MAX_ATTEMPTS ? 'too_many_attempts' : 'invalid_code', {remaining: Math.max(0, MAX_ATTEMPTS - attempts)});
+      // Only sign-in and password codes are accepted here; a code for deleting the account never signs anyone in.
+      if (!found || !PURPOSES.includes(found.purpose) || found.usedAt || found.verifiedAt) throw fail('invalid_challenge');
+      await checkCode(found, code);
 
       const customer = await store.customers.findByEmail(found.email);
       if (customer && found.purpose === 'access') {
@@ -166,6 +176,24 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
     },
 
     async logout(token) { if (typeof token === 'string' && token) await store.sessions.revoke(sha256(token), date()); },
+
+    // "Excluir minha conta": a code e-mailed to the account's own address confirms it. The account, its sessions and
+    // codes go; orders stay for the period the invoice rules require, with their snapshot and without the link.
+    async startDeletion(customer, {lang = 'pt-BR', ip = ''} = {}) {
+      await limit(`delete-account:${customer.id}`, 5, 60 * 60 * 1000);
+      return issue(customer.email, 'delete', lang, ip);
+    },
+    async deleteAccount(customer, {challenge, code, ip = ''}) {
+      const id = String(challenge ?? '').split('.')[0];
+      if (!/^[0-9a-f-]{36}$/.test(id)) throw fail('invalid_challenge');
+      await limit(`verify-ip:${ip}`, 60, 10 * 60 * 1000);
+      const found = await store.challenges.find(id);
+      if (!found || found.purpose !== 'delete' || found.email !== customer.email || found.usedAt) throw fail('invalid_challenge');
+      await checkCode(found, code);
+      if (!await store.challenges.markUsed(id, date())) throw fail('invalid_challenge');
+      await store.customers.delete(customer.id);
+      return {deleted: true};
+    },
 
     // Identification before delivery. CPF is required once and afterwards only sent when it changes; company data
     // (pessoa jurídica) goes together or not at all. The state registration is checked by the NF-e issuer later.

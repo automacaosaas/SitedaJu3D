@@ -73,7 +73,7 @@
 .admin-order-items{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .admin-order-items li{font-size:13.5px;color:var(--ink)}
 .admin-order-items small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.admin-order-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:13px;color:var(--muted)}
+.admin-order-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;font-size:13px;color:var(--muted)}
 .admin-order-grid strong{display:block;color:var(--ink);font-weight:600}
 .admin-order-notes{font-size:13px;background:#f6efef;border-radius:10px;padding:10px 12px;color:#5f525a}
 .admin-order-foot{display:grid;gap:12px;border-top:1px solid var(--line);padding-top:12px}
@@ -157,3 +157,12 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
   .admin-order-grid{grid-template-columns:1fr}
   .admin-chart{margin:0 8px 0 36px}.chart-grid span{left:-36px}.chart-grid span::after{left:36px}.chart-axis{margin:6px 8px 0 36px}
 }
+/* Two-step login: QR code for the authenticator app on the first access, then the 6-digit code. */
+.admin-setup-steps{margin:0 0 18px;padding-left:20px;font-size:14px;line-height:1.6;color:var(--ink)}
+.admin-setup-steps li{margin:0 0 6px}
+.admin-qr{display:block;width:208px;height:208px;margin:0 auto 14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.admin-secret{margin:0 0 20px;font-size:13px;color:var(--muted)}
+.admin-secret summary{cursor:pointer;color:var(--rose);font-weight:600}
+.admin-secret code{display:block;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px;letter-spacing:1px;word-break:break-all}
+.admin-field input[name=code]{font-size:22px;letter-spacing:6px;text-align:center;font-variant-numeric:tabular-nums}
+.admin-link{display:block;margin:14px auto 0;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}

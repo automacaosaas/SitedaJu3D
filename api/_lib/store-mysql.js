@@ -30,6 +30,15 @@ function toOrder(row, items = []) {
   order.items = items.map(i => ({productId: i.product_id, title: i.title, quantity: i.quantity, unitCents: i.unit_price_cents, selection: parse(i.selection) || {}}));
   return order;
 }
+const ADMIN_COLUMNS = {id: 'id', email: 'email', passwordHash: 'password_hash', totpSecretEnc: 'totp_secret_enc', totpEnabledAt: 'totp_enabled_at', totpLastStep: 'totp_last_step', lastLoginAt: 'last_login_at', createdAt: 'created_at'};
+function toAdmin(row) {
+  if (!row) return null;
+  const admin = {};
+  for (const [field, column] of Object.entries(ADMIN_COLUMNS)) admin[field] = row[column] ?? null;
+  if (admin.totpLastStep !== null) admin.totpLastStep = Number(admin.totpLastStep);
+  return admin;
+}
+const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
 
@@ -115,6 +124,35 @@ function createMysqlStore(pool) {
       },
       addEvent: (orderId, kind, detail = null, actor = null) => run('INSERT INTO order_events (order_id, kind, detail, actor) VALUES (?, ?, ?, ?)', [orderId, kind, detail === null ? null : String(detail).slice(0, 500), actor === null ? null : String(actor).slice(0, 180)]),
       async events(orderId) { return (await all('SELECT * FROM order_events WHERE order_id = ? ORDER BY id', [orderId])).map(e => ({id: e.id, orderId: e.order_id, kind: e.kind, detail: e.detail, actor: e.actor, createdAt: e.created_at})); }
+    },
+    admins: {
+      count: async () => Number((await one('SELECT COUNT(*) AS n FROM admin_users', [])).n),
+      findByEmail: async email => toAdmin(await one('SELECT * FROM admin_users WHERE email = ?', [email])),
+      findById: async id => toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [id])),
+      async create(data) {
+        const fields = Object.keys(data).filter(f => ADMIN_COLUMNS[f]);
+        try { await run(`INSERT INTO admin_users (${fields.map(f => ADMIN_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f])); }
+        catch (error) { if (duplicate(error, 'uq_admin_users_email')) throw Object.assign(new Error('duplicate email'), {code: 'admin_exists'}); throw error; }
+        return toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [data.id]));
+      },
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => ADMIN_COLUMNS[f] && f !== 'id');
+        if (fields.length) await run(`UPDATE admin_users SET ${fields.map(f => `${ADMIN_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f]), id]);
+        return toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [id]));
+      },
+      // Only a newer step matches the WHERE, so a code is accepted once even with two requests at the same time.
+      async useStep(id, step) { return (await run('UPDATE admin_users SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)', [step, id, step])).affectedRows === 1; }
+    },
+    adminSessions: {
+      create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),
+      find: async tokenHash => toAdminSession(await one('SELECT * FROM admin_sessions WHERE token_hash = ?', [tokenHash])),
+      async recordAttempt(tokenHash) { await run('UPDATE admin_sessions SET attempts = attempts + 1 WHERE token_hash = ?', [tokenHash]); return (await one('SELECT attempts FROM admin_sessions WHERE token_hash = ?', [tokenHash]))?.attempts ?? 0; },
+      revoke: (tokenHash, now) => run('UPDATE admin_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL', [now, tokenHash]),
+      revokeAllFor: (adminId, now) => run('UPDATE admin_sessions SET revoked_at = ? WHERE admin_id = ? AND revoked_at IS NULL', [now, adminId])
+    },
+    adminAudit: {
+      add: ({adminId = null, action, detail = null, ip = null}) => run('INSERT INTO admin_audit (admin_id, action, detail, ip) VALUES (?, ?, ?, ?)', [adminId, String(action).slice(0, 40), detail === null ? null : String(detail).slice(0, 300), ip === null ? null : String(ip).slice(0, 64)]),
+      async list(limit = 100) { return (await all(`SELECT * FROM admin_audit ORDER BY id DESC LIMIT ${Math.min(Number(limit) || 100, 1000)}`, [])).map(a => ({id: a.id, adminId: a.admin_id, action: a.action, detail: a.detail, ip: a.ip, createdAt: a.created_at})); }
     },
     sessions: {
       create: s => run('INSERT INTO sessions (token_hash, customer_id, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)', [s.tokenHash, s.customerId, s.expiresAt, s.ip, s.userAgent]),

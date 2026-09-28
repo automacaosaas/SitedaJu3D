@@ -100,6 +100,37 @@ async function contract(store, label) {
   assert.equal(kept.customerId, null, `${label}: the order stays without the account link`);
   assert.equal(kept.items.length, 2);
   assert.equal(await store.customers.delete(id), false);
+
+  // Painel da Ju: admins, their sessions (the code step and the full one) and the audit log.
+  const adminEmail = `admin-${crypto.randomUUID()}@exemplo.com`, adminId = crypto.randomUUID();
+  const before = await store.admins.count();
+  const admin = await store.admins.create({id: adminId, email: adminEmail, passwordHash: 'scrypt$x'});
+  assert.equal(admin.email, adminEmail); assert.equal(admin.totpEnabledAt, null); assert.equal(admin.totpLastStep, null);
+  assert.equal(await store.admins.count(), before + 1);
+  await assert.rejects(store.admins.create({id: crypto.randomUUID(), email: adminEmail, passwordHash: 'x'}), e => e.code === 'admin_exists', `${label}: one admin per address`);
+  const secretEnc = crypto.randomBytes(61);
+  const enrolled = await store.admins.update(adminId, {totpSecretEnc: secretEnc, totpEnabledAt: new Date(), lastLoginAt: new Date()});
+  assert(Buffer.from(enrolled.totpSecretEnc).equals(secretEnc)); assert(enrolled.totpEnabledAt);
+  assert.equal(await store.admins.useStep(adminId, 100), true, `${label}: a new step is accepted`);
+  assert.equal(await store.admins.useStep(adminId, 100), false, `${label}: the same step is not`);
+  assert.equal(await store.admins.useStep(adminId, 99), false, `${label}: nor an older one`);
+  assert.equal(await store.admins.useStep(adminId, 101), true);
+  assert.equal((await store.admins.findById(adminId)).totpLastStep, 101);
+  const pendingHash = crypto.randomBytes(32), adminExpires = new Date(Date.now() + 600000);
+  await store.adminSessions.create({tokenHash: pendingHash, adminId, mfaAt: null, expiresAt: adminExpires, ip: '1.1.1.1', userAgent: 'teste'});
+  const pending = await store.adminSessions.find(pendingHash);
+  assert.equal(pending.adminId, adminId); assert.equal(pending.mfaAt, null); assert.equal(pending.attempts, 0); assert.equal(pending.revokedAt, null);
+  assert.equal(await store.adminSessions.recordAttempt(pendingHash), 1); assert.equal(await store.adminSessions.recordAttempt(pendingHash), 2);
+  await store.adminSessions.revoke(pendingHash, new Date());
+  assert((await store.adminSessions.find(pendingHash)).revokedAt, `${label}: revoked`);
+  const fullHash = crypto.randomBytes(32);
+  await store.adminSessions.create({tokenHash: fullHash, adminId, mfaAt: new Date(), expiresAt: adminExpires});
+  assert((await store.adminSessions.find(fullHash)).mfaAt);
+  await store.adminSessions.revokeAllFor(adminId, new Date());
+  assert((await store.adminSessions.find(fullHash)).revokedAt, `${label}: revoke all`);
+  await store.adminAudit.add({adminId, action: 'login', detail: 'contrato', ip: '1.1.1.1'});
+  const [last] = await store.adminAudit.list(1);
+  assert.equal(last.action, 'login'); assert.equal(last.adminId, adminId); assert.equal(last.detail, 'contrato');
 }
 
 await contract(createMemoryStore(), 'memory');

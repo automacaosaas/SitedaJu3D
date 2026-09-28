@@ -57,6 +57,8 @@ export function paymentMessage(status, data) {
   if (code === 'unsupported_method') return 'Esta forma de pagamento não está disponível. Escolha Pix ou cartão.';
   if (code === 'too_many_requests' || status === 429) return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.';
   if (code === 'payment_rejected') return 'O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.';
+  if (code === 'profile_incomplete') return 'Complete sua identificação (nome, CPF e telefone) para a nota fiscal e a entrega.';
+  if (code === 'unauthorized' || status === 401) return 'Sua sessão terminou. Entre de novo na sua conta para continuar.';
   if (code === 'payments_not_configured') return 'Os pagamentos ainda não estão disponíveis. Tente novamente mais tarde.';
   return 'Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.';
 }

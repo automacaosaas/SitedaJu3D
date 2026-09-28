@@ -54,7 +54,7 @@ export function createClient({fetchImpl = (...args) => fetch(...args), language 
   }
 
   // --- e-mail first: code, then name/password for a new address ------------------------------------------------
-  let challenge = null, grant = null;
+  let challenge = null, grant = null, deletion = null;
   const view = c => ({email: c.email, purpose: c.purpose, expiresAt: c.expiresAt, resendAt: c.resendAt, ...(c.demoCode ? {demoCode: c.demoCode} : {})});
   async function start(email, purpose) {
     const data = await request('POST', '/api/auth/start', {email, purpose, lang: language()});
@@ -118,7 +118,22 @@ export function createClient({fetchImpl = (...args) => fetch(...args), language 
     },
     async signOut() { try { await request('POST', '/api/auth/logout', {}); } catch {} auth.cancel(); remember(null); },
     loadProfile: async () => (await request('GET', '/api/account/profile')).profile,
-    async saveProfile(data) { const profile = (await request('PUT', '/api/account/profile', data)).profile; if (cached) remember({...cached, profileComplete: true}); return profile; }
+    async saveProfile(data) { const profile = (await request('PUT', '/api/account/profile', data)).profile; if (cached) remember({...cached, profileComplete: true}); return profile; },
+    loadOrders: async () => (await request('GET', '/api/account/orders')).orders || [],
+
+    // "Excluir minha conta": a code goes to the account's e-mail; confirming it deletes the account and ends the session.
+    async startDeletion() { deletion = await request('POST', '/api/account/delete-start', {lang: language()}); return view(deletion); },
+    adoptDeletion(token) {
+      if (!/^[0-9a-f-]{36}\.[\w-]+$/.test(String(token))) throw Error('Este link não é mais válido. Solicite um novo código.');
+      deletion = {challenge: token, email: decodeEmail(String(token).split('.')[1]), purpose: 'delete', expiresAt: Date.now() + 600000, resendAt: Date.now()};
+      return view(deletion);
+    },
+    async confirmDeletion({code}) {
+      if (!deletion) throw Error('Solicite um novo código.');
+      await request('POST', '/api/account/delete', {challenge: deletion.challenge, code});
+      deletion = null; auth.cancel(); remember(null);
+      try { sessionStorage.removeItem(ORDERS_KEY); } catch {}
+    }
   };
 }
 
@@ -130,8 +145,12 @@ export const refreshSession = client.refreshSession;
 export const signOut = client.signOut;
 export const loadProfile = client.loadProfile;
 export const saveProfile = client.saveProfile;
+export const loadOrders = client.loadOrders;
+export const startDeletion = client.startDeletion;
+export const adoptDeletion = client.adoptDeletion;
+export const confirmDeletion = client.confirmDeletion;
 
-// Orders are still the demonstration kept in this tab until the orders database arrives.
+// Orders of the demonstration (payments switched off) stay in this tab only; real and test orders come from the server.
 export function saveDemoOrder(order) {
   try {
     const existing = JSON.parse(sessionStorage.getItem(ORDERS_KEY) || '[]');

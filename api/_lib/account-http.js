@@ -36,7 +36,7 @@ const storeKind = env => storeFor(env)?.kind || 'off';
 function mailerFor(env, fetchImpl, outbox) {
   return async ({email, code, challenge, purpose, lang}) => {
     const settings = config(env);
-    const url = verificationUrl({siteUrl: settings.siteUrl, token: challenge, code});
+    const url = verificationUrl({siteUrl: settings.siteUrl, token: challenge, code, route: purpose === 'delete' ? 'excluir' : 'verificar'});
     const message = renderVerificationEmail({lang, purpose, code, url, siteUrl: settings.siteUrl, assetUrl: settings.assetUrl, expiryMinutes: CODE_TTL / 60000});
     try {
       await sendMail({settings, to: email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `code-${challenge.split('.')[0]}`, fetchImpl, outbox: outbox && (mail => outbox({...mail, code, challenge, purpose, url}))});
@@ -66,7 +66,7 @@ function endpoint({methods, handle}) {
       let body = {};
       if (writing) { try { body = await readJson(req); } catch (error) { return json(res, error.status || 400, {error: 'invalid_request'}); } }
       const token = readCookie(req);
-      const context = {req, res, body, accounts, token, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || ''), user: () => accounts.authenticate(token)};
+      const context = {req, res, body, accounts, store: active, env, now, token, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || ''), user: () => accounts.authenticate(token)};
       try {
         const {status = 200, body: answer = {ok: true}, session, clear} = await handle(context);
         const headers = session ? {'Set-Cookie': sessionCookie(session)} : clear ? {'Set-Cookie': clearCookie()} : {};
