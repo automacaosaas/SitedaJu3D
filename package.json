@@ -3,6 +3,7 @@
   "private": true,
   "description": "Ju imprime pra mim: vitrine estática em dist/ com funções em api/. Sem dependências.",
   "scripts": {
+    "start": "node server.cjs",
     "test": "node tools/run-tests.mjs",
     "dev": "node tools/dev-server.cjs"
   }

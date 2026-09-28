@@ -96,7 +96,8 @@ publicados ficam em `dist/`:
   some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
   catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
   em WebP; os PNG originais ficam em `design/originais/` (fora do site publicado). Detalhes em `EXPERIENCE-QA.md` e `PERFORMANCE-QA.md`.
-- `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
+- `api/` (fora de `dist/`): funções para o e-mail de verificação (Vercel e Hostinger).
+- `server.cjs`: servidor de produção para a Hostinger (serve `dist/` e `api/` com os cabeçalhos de `vercel.json`). Ver `HOSTINGER-SETUP.md`.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
 

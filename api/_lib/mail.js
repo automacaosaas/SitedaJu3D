@@ -1,6 +1,7 @@
 'use strict';
 // Server-side settings and the Resend call. The API key only ever lives in server environment variables.
 const crypto = require('node:crypto');
+const {isProduction} = require('./runtime');
 const DEFAULT_SITE = 'https://siteda-ju3-d.vercel.app';
 const DEFAULT_FROM = 'Ju imprime pra mim <onboarding@resend.dev>';
 const MIN_SECRET = 32;
@@ -11,7 +12,7 @@ const MIN_SECRET = 32;
 const deriveSecret = key => crypto.createHmac('sha256', key).update('ju-imprime-pra-mim:auth-challenge:v1').digest('hex');
 
 function config(env = process.env) {
-  const production = env.VERCEL_ENV === 'production';
+  const production = isProduction(env);
   const apiKey = String(env.RESEND_API_KEY || '').trim();
   const explicit = String(env.AUTH_SECRET || '').length >= MIN_SECRET ? env.AUTH_SECRET : '';
   const siteUrl = (env.SITE_URL || (production || !env.VERCEL_URL ? DEFAULT_SITE : 'https://' + env.VERCEL_URL)).replace(/\/+$/, '');
