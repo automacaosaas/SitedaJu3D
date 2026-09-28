@@ -190,10 +190,15 @@ await rejects(createAccounts({store, env: {APP_ENV: 'production'}, now}).start({
   const cookie = `__Host-ju_session=${session.token}`, carlaRow = await store.customers.findByEmail('carla@exemplo.com');
   await store.orders.create({id: 'order-carla-1', reference: 'JU-CARLA00001', customerId: carlaRow.id, source: 'test', status: 'pendente', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Carla Dias', email: 'carla@exemplo.com'}, buyerDocEnc: Buffer.from('x'), shipTo: {recipient: 'Carla'}, mpOrderId: 'ORD01SECRET', paidAt: new Date(clock), items: [{productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {body: 'blue'}}]});
 
+  const attempt = (id, reference, status) => store.orders.create({id, reference, customerId: carlaRow.id, source: 'test', status, subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Carla Dias', email: 'carla@exemplo.com'}, shipTo: {recipient: 'Carla'}, items: [{productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {body: 'blue'}}]});
+  await attempt('order-carla-2', 'JU-CARLA00002', 'cancelado');
+  await attempt('order-carla-3', 'JU-CARLA00003', 'aguardando_pagamento');
+
   assert.equal((await invoke(orderHandler, {method: 'GET', origin: ''})).status, 401, 'my orders need a session');
   const mine = await invoke(orderHandler, {method: 'GET', origin: '', cookie});
   assert.equal(mine.status, 200);
-  assert.deepEqual(mine.body.orders.map(o => [o.reference, o.status, o.totalCents, o.test]), [['JU-CARLA00001', 'pendente', 14700, true]]);
+  assert.deepEqual(mine.body.orders.map(o => [o.reference, o.status, o.totalCents, o.test]).sort(), [['JU-CARLA00001', 'pendente', 14700, true], ['JU-CARLA00003', 'aguardando_pagamento', 14700, true]], 'paid and still-waiting orders are listed; attempts never paid are not');
+  assert(await store.orders.findById('order-carla-2'), 'the unpaid attempt stays in the database');
   assert(!JSON.stringify(mine.body).includes('ORD01SECRET') && !JSON.stringify(mine.body).includes('buyerDoc'), 'no payment ids or documents in the answer');
   const {createHash, randomBytes} = require('node:crypto'), anaToken = randomBytes(32).toString('base64url');
   await store.sessions.create({tokenHash: createHash('sha256').update(anaToken).digest(), customerId: (await store.customers.findByEmail('ana.souza@exemplo.com.br')).id, expiresAt: new Date(clock + 3600e3)});

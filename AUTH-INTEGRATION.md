@@ -36,7 +36,9 @@ O CPF é obrigatório na primeira vez e depois aparece mascarado (`***.982.247-*
 ## Meus pedidos e Excluir minha conta
 
 - `GET /api/account/orders`: os pedidos da própria conta (status, peças, valores e data), sem ids de pagamento nem
-  documentos. Os pedidos de demonstração da aba (pagamentos desligados) aparecem junto, marcados como simulação.
+  documentos. Aparecem os pagos e os que ainda aguardam pagamento; tentativas que nunca foram pagas (cartão recusado,
+  Pix expirado) ficam no banco, mas não na lista. Os pedidos de demonstração da aba (pagamentos desligados) aparecem
+  junto, marcados como simulação.
 - **Excluir minha conta**, em Meus dados: `POST /api/account/delete-start` envia um código ao e-mail da própria conta
   (finalidade `delete`, com e-mail próprio nos três idiomas) e `POST /api/account/delete` com o código apaga a conta,
   as sessões e os códigos, e limpa o cookie. O link do e-mail (`conta.html#excluir?...`) só preenche o código: a exclusão
