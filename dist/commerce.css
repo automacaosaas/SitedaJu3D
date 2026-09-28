@@ -11,3 +11,7 @@
 .payment-brick{margin:16px 0 6px;min-height:96px}.payment-brick[aria-busy=true]{min-height:0}
 .test-help{margin:14px 0 0}.test-help p{margin:10px 0 0}
 .test-cards{display:grid;gap:6px;margin:10px 0 0}.test-cards div{display:flex;justify-content:space-between;gap:12px;font-size:13px}.test-cards dt{color:var(--muted)}.test-cards dd{margin:0;font-weight:650;font-family:ui-monospace,monospace;text-align:right}
+/* Checkout: required agreement to the Termos and the Trocas (and the Privacidade read), recorded with the order. */
+.terms-check{margin-top:22px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fffcfb}.terms-check label{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;cursor:pointer}.terms-check input{width:18px;height:18px;margin:1px 0 0;flex-shrink:0;accent-color:var(--rose)}.terms-links{display:flex;flex-wrap:wrap;gap:4px 16px;margin:8px 0 0 28px;font-size:12px}.terms-links a{color:var(--rose);text-decoration:underline;text-underline-offset:3px}
+/* Four steps (with Identificação) do not fit a phone: the steps not in progress show only their number; the name stays for screen readers. */
+@media(max-width:480px){.shop-steps>span:not([aria-current]){font-size:0;gap:0}.shop-steps>span:not([aria-current]) b{font-size:9px}}

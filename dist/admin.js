@@ -1,4 +1,4 @@
-import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, retryRefund, groupSecret} from './admin-auth.js';
+import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, retryRefund, revealDocument, groupSecret} from './admin-auth.js';
 import {listByStatus, dailyTotals, ordersForDay, summary, dayKey, replaceOrder, STATUSES} from './admin-store.js';
 import qrcode from './vendor/qrcode-generator.js';
 import {PRODUCTS, color} from './products.js';
@@ -71,10 +71,17 @@ function itemLine(item) {
   return `<li>${Number(item.quantity) || 1}× ${esc(item.title)}${parts ? `<small>${esc(parts)}</small>` : ''}</li>`;
 }
 
+// CPFs shown on request in this session only (never stored in the browser); each request is audited on the server.
+const revealed = new Map();
+function cpfLine(o) {
+  const button = o.buyer?.cpf && !revealed.has(o.id) ? ` <button type="button" class="admin-reveal" data-action="reveal-cpf" data-id="${esc(o.id)}">Ver CPF completo</button>` : '';
+  return `CPF ${esc(revealed.get(o.id) || o.buyer?.cpf || '—')}${button}`;
+}
 function invoiceLine(o) {
   const company = o.buyer?.company;
-  if (company?.cnpj) return `${esc(company.name)}<br>CNPJ ${esc(company.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'))} · IE ${esc(company.stateRegistration || '—')}`;
-  return `${esc(o.buyer?.name || '—')}<br>CPF ${esc(o.buyer?.cpf || '—')}`;
+  // CNPJ may be alphanumeric (since July 2026): 12 letters or digits and 2 check digits.
+  if (company?.cnpj) return `${esc(company.name)}<br>CNPJ ${esc(company.cnpj.replace(/^(\w{2})(\w{3})(\w{3})(\w{4})(\d{2})$/, '$1.$2.$3/$4-$5'))} · IE ${esc(company.stateRegistration || '—')}<br>Comprador: ${esc(o.buyer?.name || '—')} · ${cpfLine(o)}`;
+  return `${esc(o.buyer?.name || '—')}<br>${cpfLine(o)}`;
 }
 
 const REFUND_ERRORS = {payments_off: 'os pagamentos estão desligados neste ambiente', mode_mismatch: 'o pedido é de outro ambiente (teste × real)', no_mp_order: 'o pedido não tem código do Mercado Pago', refund_rejected: 'o Mercado Pago recusou o estorno', network: 'sem resposta do Mercado Pago'};
@@ -90,7 +97,7 @@ function orderCard(o) {
   const phoneDigits = String(o.customer.phone || '').replace(/\D/g, '');
   const whatsapp = /^\d{10,11}$/.test(phoneDigits) ? `<a href="https://wa.me/55${phoneDigits}" target="_blank" rel="noopener">${esc(formatPhone(phoneDigits))}</a>` : esc(o.customer.phone || '—');
   const cep = String(o.address.cep || '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
-  const payLabel = o.method === 'pix' ? 'Pago via Pix' : `Pago no cartão${o.installments > 1 ? ` · ${o.installments}x` : ''}`;
+  const payLabel = o.method === 'pix' ? 'Pago via Pix' : o.method === 'debit' ? 'Pago no débito' : `Pago no crédito${o.installments > 1 ? ` · ${o.installments}x` : ''}`;
   // The payment method rides a colored corner badge (icon only) instead of a text tag — quicker to scan, and its
   // color always matches the order's own status (yellow/green/red), never an extra color to learn.
   const payBadge = `<span class="admin-pay-badge status-${esc(o.status)}" title="${esc(payLabel)}">${icon(o.method === 'pix' ? 'pix' : 'card')}<span class="sr-only">${esc(payLabel)}</span></span>`;
@@ -245,7 +252,7 @@ async function run(message, operation) {
 }
 
 // Signed out (session ended elsewhere, or expired): back to the password, saying why.
-function signedOut() { session = null; orders = []; setup = null; screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
+function signedOut() { session = null; orders = []; setup = null; revealed.clear(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
 
 async function openDashboard() {
   orders = await loadOrders();
@@ -307,6 +314,10 @@ content.addEventListener('click', event => {
   });
   if (action.dataset.action === 'decline') { const order = orders.find(o => o.id === id); if (order) openDeclineDialog(order); }
   if (action.dataset.action === 'refresh') run('Atualizando os pedidos…', async () => { try { await openDashboard(); announce('Pedidos atualizados.'); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível atualizar agora.'); } });
+  if (action.dataset.action === 'reveal-cpf') run('Buscando o CPF…', async () => {
+    try { revealed.set(id, await revealDocument(id)); announce('CPF completo exibido. A consulta fica registrada.'); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível buscar o CPF agora. Tente novamente.'); }
+  });
   if (action.dataset.action === 'restart') { setup = null; screen = 'login'; render(); }
   if (action.dataset.action === 'retry') start();
 });
@@ -314,7 +325,7 @@ content.addEventListener('click', event => {
 // The logout button lives in the topbar (#admin-tools), outside #admin-content, so it needs its own listener.
 tools.addEventListener('click', async event => {
   if (!event.target.closest('#admin-logout')) return;
-  await logout(); session = null; orders = []; screen = 'login'; render();
+  await logout(); session = null; orders = []; revealed.clear(); screen = 'login'; render();
 });
 
 content.addEventListener('input', event => { if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = ''; });

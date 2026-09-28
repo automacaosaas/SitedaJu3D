@@ -96,4 +96,6 @@ if (livePayment.includes('https://sdk.mercadopago.com')) {
   assert(/advancedFraudPrevention: false/.test(livePayment), 'the SDK runs without the inline-script fraud module (the policy has no unsafe-inline)');
 }
 
+// HTTPS only, for a year: a store with sign-in and payments never falls back to plain HTTP.
+assert(JSON.parse(await readFile(new URL('vercel.json', root), 'utf8')).headers.find(r => r.source === '/(.*)').headers.some(h => h.key === 'Strict-Transport-Security' && /max-age=31536000/.test(h.value)), 'HSTS header');
 console.log('PASS: CSP matches the pages (import map hash, no inline scripts or handlers, fonts, WebAssembly, e-mail logo, Mercado Pago), security headers and asset caching.');

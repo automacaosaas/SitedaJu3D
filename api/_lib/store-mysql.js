@@ -4,7 +4,7 @@
 const COLUMNS = {
   id: 'id', email: 'email', emailVerifiedAt: 'email_verified_at', displayName: 'display_name', firstName: 'first_name', lastName: 'last_name',
   passwordHash: 'password_hash', cpfEnc: 'cpf_enc', cpfIndex: 'cpf_index', phoneEnc: 'phone_enc', companyCnpj: 'company_cnpj', companyName: 'company_name',
-  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', createdAt: 'created_at'
+  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
 
 function toCustomer(row) {
@@ -19,7 +19,7 @@ const ORDER_COLUMNS = {
   installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
   buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
   decidedAt: 'decided_at', declineReason: 'decline_reason', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
-  ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at'
+  ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
 const JSON_FIELDS = new Set(['buyer', 'shipTo']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
@@ -171,11 +171,21 @@ function createMysqlStore(pool) {
       // The UPDATE only matches an unused row, so exactly one caller wins even with two requests at the same time.
       async markUsed(id, now) { return (await run('UPDATE auth_challenges SET used_at = ? WHERE id = ? AND used_at IS NULL', [now, id])).affectedRows === 1; }
     },
+    // Data kept only as long as needed (Política de Privacidade): attempt counters for a day, e-mailed codes for 30 days,
+    // expired sessions (they hold the IP of each access) for the 6 months of the Marco Civil. Runs now and then from
+    // rateLimit, so no scheduled job is needed.
+    async purge(now) {
+      const day = 86400000, before = days => new Date(now - days * day);
+      await run('DELETE FROM rate_limits WHERE window_start < ?', [now - day]);
+      await run('DELETE FROM auth_challenges WHERE expires_at < ?', [before(30)]);
+      await run('DELETE FROM sessions WHERE expires_at < ?', [before(183)]);
+      await run('DELETE FROM admin_sessions WHERE expires_at < ?', [before(183)]);
+    },
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs;
       await run('INSERT INTO rate_limits (bucket, window_start, hits) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1', [bucket.slice(0, 200), start]);
       const {hits} = await one('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start = ?', [bucket.slice(0, 200), start]);
-      if (Math.random() < 0.01) run('DELETE FROM rate_limits WHERE window_start < ?', [now - 86400000]).catch(() => {});
+      if (Math.random() < 0.01) this.purge(now).catch(error => console.error('db: cleanup failed —', error.code || error.message));
       return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
     }
   };

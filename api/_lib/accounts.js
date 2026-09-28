@@ -11,6 +11,7 @@ const {isProduction} = require('./runtime');
 const {config, mailReady} = require('./mail');
 const fields = require('./fields');
 const {validPassword, hashPassword, verifyPassword} = require('./passwords');
+const {TERMS_VERSION} = require('./legal');
 
 const CODE_TTL = 10 * 60 * 1000, RESEND_AFTER = 30 * 1000, MAX_ATTEMPTS = 5, GRANT_TTL = 15 * 60 * 1000;
 const SESSION_TTL = 30 * 24 * 60 * 60 * 1000, TOUCH_EVERY = 24 * 60 * 60 * 1000;
@@ -137,7 +138,9 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
       const customer = await store.customers.create({
         id: crypto.randomUUID(), email: challenge.email, emailVerifiedAt: date(), displayName: name,
         passwordHash: withPassword ? await hashPassword(password) : null,
-        marketingOptIn: marketingOptIn === true, marketingConsentAt: marketingOptIn === true ? date() : null
+        marketingOptIn: marketingOptIn === true, marketingConsentAt: marketingOptIn === true ? date() : null,
+        // The sign-up screen says that creating the account is agreeing to the Termos (and reading the Privacidade).
+        termsVersion: TERMS_VERSION, termsAcceptedAt: date()
       });
       return {user: publicUser(customer), session: await openSession(customer, {ip, userAgent})};
     },

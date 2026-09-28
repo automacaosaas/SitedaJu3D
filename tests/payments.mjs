@@ -15,7 +15,8 @@ const {renderOwnerEmail, renderCustomerEmail} = require('../api/_lib/order-email
 const {createMemoryStore} = require('../api/_lib/store-memory');
 const {createAccounts} = require('../api/_lib/accounts');
 const {createOrders} = require('../api/_lib/orders');
-const {decrypt} = require('../api/_lib/fields');
+const {decrypt, maskCpf} = require('../api/_lib/fields');
+const {TERMS_VERSION} = require('../api/_lib/legal');
 const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), health = require('../api/health');
 const site = f => import(pathToFileURL(path.join(root, 'dist', f)).href);
 const {PRODUCTS: SITE_PRODUCTS, PALETTE} = await site('products.js');
@@ -32,7 +33,7 @@ const CUSTOMER = {name: 'Ana Souza Lima', email: 'Ana@Example.com', phone: '(31)
 const ADDRESS = {cep: '30140-071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'mg', complement: 'Sala 4'};
 const BRICK_PIX = {selectedPaymentMethod: 'bank_transfer', formData: {payment_method_id: 'pix', payer: {email: 'ana@example.com'}}};
 const brickCard = (token = 'APRO' + 'a'.repeat(28), extra = {}) => ({selectedPaymentMethod: 'credit_card', formData: {token, payment_method_id: 'master', installments: 3, issuer_id: '24', payer: {email: 'ana@example.com', identification: {type: 'CPF', number: '123.456.789-09'}}, ...extra}});
-const request = (over = {}) => ({attempt: crypto.randomUUID(), items: ITEMS, customer: CUSTOMER, address: ADDRESS, notes: 'Escrever "Ana" na base', lang: 'en', payment: BRICK_PIX, ...over});
+const request = (over = {}) => ({attempt: crypto.randomUUID(), items: ITEMS, customer: CUSTOMER, address: ADDRESS, notes: 'Escrever "Ana" na base', lang: 'en', acceptTerms: true, payment: BRICK_PIX, ...over});
 
 // ── fakes ─────────────────────────────────────────────────────────────
 function makeRes() { return {statusCode: 200, headers: {}, body: '', setHeader(key, value) { this.headers[key.toLowerCase()] = value; }, end(data) { this.body = data || ''; }, json() { return JSON.parse(this.body); }}; }
@@ -263,6 +264,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     await badField(b => ({...b, attempt: 'short'}), 'attempt'); await badField(b => ({...b, attempt: undefined}), 'attempt');
     await badField(b => ({...b, customer: {...CUSTOMER, name: ' '}}), 'name'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'not-an-email'}}), 'email'); await badField(b => ({...b, customer: {...CUSTOMER, email: 'a@b.co\nBcc: x@y.zz'}}), 'email');
     await badField(b => ({...b, customer: {...CUSTOMER, phone: '123'}}), 'phone'); await badField(b => ({...b, address: {...ADDRESS, cep: '123'}}), 'cep'); await badField(b => ({...b, address: {...ADDRESS, street: ''}}), 'street'); await badField(b => ({...b, address: {...ADDRESS, state: 'XX'}}), 'state'); await badField(b => ({...b, address: {...ADDRESS, city: '   '}}), 'city');
+    await badField(b => ({...b, acceptTerms: undefined}), 'terms'); await badField(b => ({...b, acceptTerms: 'true'}), 'terms');   // the checkout box, required and exactly true
     await badField(b => ({...b, items: []}), 'invalid_items'); await badField(b => ({...b, items: [{productId: 'nao-existe', quantity: 1}]}), 'invalid_items');
     await badField(b => ({...b, payment: {selectedPaymentMethod: 'ticket', formData: {payment_method_id: 'bolbradesco'}}}), 'unsupported_method'); await badField(b => ({...b, payment: brickCard('short')}), 'invalid_card');
     assert.equal((await call(handler, {body: 'not json', ...as(ana)})).statusCode, 400);
@@ -290,6 +292,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(saved.totalCents, 43500); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
     assert.deepEqual(saved.items[0].selection, {body: 'pink', details: 'lilac'}, 'the colors of each part are recorded');
     assert.equal(saved.shipTo.recipient, 'Ana Souza Lima'); assert.equal(saved.buyer.name, 'Ana Souza Lima'); assert.equal(saved.buyer.email, 'ana@example.com');
+    assert.equal(saved.termsVersion, TERMS_VERSION, 'the order records which Termos the buyer accepted'); assert.ok(saved.termsAcceptedAt);
     assert.equal(decrypt(ENV, saved.phoneEnc), '31999991234'); assert.equal(decrypt(ENV, saved.buyerDocEnc), ana.cpf, 'CPF and phone are encrypted in the order too');
 
     const again = await call(handler, {body, ...as(ana)});
@@ -308,6 +311,8 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const cardCall = net.mpCalls.at(-1).body.transactions.payments[0];
     assert.equal(cardCall.payment_method.installments, 3); assert.equal(cardCall.payment_method.token.length, 32); assert(!card.body.includes('aaaaaaaa'), 'the card token stays on the server');
     assert.deepEqual(net.mpCalls.at(-1).body.payer.identification, {type: 'CPF', number: '12345678909'}, 'the card holder CPF typed in the Brick wins');
+    const debit = await call(handler, {body: request({payment: {selectedPaymentMethod: 'debit_card', formData: {token: 'APRO' + 'd'.repeat(28), payment_method_id: 'debelo', installments: 1, payer: {email: 'ana@example.com'}}}}), ...as(ana)});
+    assert.equal((await store.orders.findByReference(debit.json().reference)).method, 'debit', 'debit is recorded as debit (e-mails and panel say "débito")');
     const refused = await call(handler, {body: request({payment: brickCard('REJE' + 'r'.repeat(28))}), ...as(ana)});
     assert.equal(refused.json().state, 'refused'); assert.equal((await store.orders.findByReference(refused.json().reference)).status, 'cancelado');
     assert(!errors.lines.join('\n').includes('aaaaaaaa'), 'the card token is never logged');
@@ -407,6 +412,8 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('435,00'));
     assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa Ju') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
     assert(owner.html.includes('Rua da Bahia, 1200') && owner.html.includes('30140-071') && owner.html.includes('wa.me/5531999991234') && owner.html.includes('ana@example.com'), 'and where to send it and how to reach the customer');
+    assert(owner.html.includes('NOTA FISCAL') && owner.html.includes(`CPF ${maskCpf(buyer.cpf)}`) && !owner.html.includes(buyer.cpf) && !owner.text.includes(buyer.cpf), 'invoice data for Ju, CPF masked (the full number stays in the panel)');
+    assert(owner.html.includes(`Pedido no Mercado Pago: ${card.id}`) && card.id.startsWith('ORD'), 'the Mercado Pago order number, not our internal id');
     assert(owner.html.includes('Cartão de crédito · 3x') && owner.html.includes('Escrever &quot;Ana&quot; na base') && owner.html.includes('AMBIENTE DE TESTE'));
     assert(customer.subject.startsWith('[TESTE] Payment confirmed · JU-'), 'the customer gets it in the language they used');
     assert(customer.html.includes('Body') && customer.html.includes('Ju pink') && customer.html.includes('Wing details') && customer.html.includes('Credit card · 3x'));

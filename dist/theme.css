@@ -79,3 +79,6 @@
   .header.site-header.cart-notified [data-cart-link],.header.site-header.cart-notified .cart-badge,.cart-transfer > i { animation:none; }
   .cart-transfer.is-visible { animation:none; opacity:1; transform:translate(-50%,0); }
 }
+/* Legal links and store identification in every footer (Decreto 7.962/2013); values come from api/_lib/legal.js. */
+.shop-footer{flex-wrap:wrap}.footer-legal{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 18px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.footer-legal nav{display:flex;flex-wrap:wrap;gap:4px 16px}.footer-legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}.footer-legal a:hover{color:var(--rose)}.footer-company{margin:0;font-size:11px;line-height:1.5}
+@media(max-width:600px){.footer-legal{justify-content:center;text-align:center}.footer-legal nav{justify-content:center}}

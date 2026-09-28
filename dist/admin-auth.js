@@ -22,7 +22,7 @@ export async function verifyCode(code, options) {
 export async function currentSession(options) {
   const {status, data} = await request('/api/admin/session', options);
   if (status === 200 && data?.ok) return {email: data.email, expiresAt: data.expiresAt};
-  if (status === 401) return null;
+  if ((status === 200 && data?.ok === false) || status === 401) return null;
   throw Object.assign(new Error('unavailable'), {status, code: data?.error || 'unavailable'});
 }
 export async function logout(options) { try { await request('/api/admin/logout', {method: 'POST', ...options}); } catch {} }
@@ -41,6 +41,13 @@ export async function retryRefund(id, options) {
 export async function changeStatus(id, status, reason = '', options) {
   const answer = await request('/api/admin/order-status', {method: 'POST', body: {id, status, reason}, ...options});
   if (answer.status === 200 && answer.data?.order) return {order: answer.data.order, mailed: answer.data.mailed === true, refund: answer.data.refund || null};
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
+// The buyer's full CPF for issuing the invoice by hand (audited on the server).
+export async function revealDocument(id, options) {
+  const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});
+  if (answer.status === 200 && typeof answer.data?.cpf === 'string') return answer.data.cpf;
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 

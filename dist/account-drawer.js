@@ -28,7 +28,7 @@ window.openJuAccount = raw => {
       if (event.data?.type === 'ju:account-close') close();
       if (event.data?.type === 'ju:account-navigate') {
         const next = new URL(event.data.url, location.href);
-        if (next.origin === location.origin && /\/(index|produtos|checkout)\.html$/.test(next.pathname)) location.assign(next);
+        if (next.origin === location.origin && /\/(index|produtos|checkout|termos|privacidade|trocas)\.html$/.test(next.pathname)) location.assign(next);
       }
     });
   }

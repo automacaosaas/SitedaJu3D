@@ -137,7 +137,7 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .chart-tip strong{display:block;font-size:13px}
 .admin-calendar-nav{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
 .admin-calendar-nav button{border:1px solid var(--line);background:#fff;border-radius:50%;width:32px;height:32px}
-.admin-calendar-nav strong{font-size:14px;text-transform:capitalize}
+.admin-calendar-nav strong{font-size:14px}.admin-calendar-nav strong::first-letter{text-transform:uppercase}
 .admin-calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
 .admin-calendar .weekday{font-size:10.5px;color:var(--muted);padding:4px 0}
 .admin-calendar button{aspect-ratio:1;border:0;border-radius:10px;background:transparent;font-size:12.5px;color:var(--ink);position:relative}
@@ -148,7 +148,7 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-calendar button[aria-pressed=true]{background:var(--rose);color:#fff}
 .admin-calendar button[aria-pressed=true]::after{background:#fff}
 .admin-day-detail{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
-.admin-day-detail h3{font-size:14px;margin:0 0 4px;text-transform:capitalize}
+.admin-day-detail h3{font-size:14px;margin:0 0 4px}.admin-day-detail h3::first-letter{text-transform:uppercase}
 .admin-day-detail .day-total{font-size:13px;color:var(--muted);margin:0 0 10px}
 /* Bounded and scrollable on purpose — a busy day never turns the calendar into an endless page. */
 .admin-day-orders{list-style:none;margin:0;padding:0 6px 0 0;display:grid;gap:8px;max-height:236px;overflow-y:auto;scrollbar-gutter:stable}
@@ -175,3 +175,5 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-secret code{display:block;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px;letter-spacing:1px;word-break:break-all}
 .admin-field input[name=code]{font-size:22px;letter-spacing:6px;text-align:center;font-variant-numeric:tabular-nums}
 .admin-link{display:block;margin:14px auto 0;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+/* "Ver CPF completo": a quiet link-style button inside the invoice block. */
+.admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

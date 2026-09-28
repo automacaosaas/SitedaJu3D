@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const {createAccounts, SESSION_TTL} = require('../api/_lib/accounts.js');
 const {createMemoryStore} = require('../api/_lib/store-memory.js');
 const {decrypt} = require('../api/_lib/fields.js');
+const {TERMS_VERSION} = require('../api/_lib/legal.js');
 
 const env = {APP_ENV: 'preview'};
 let clock = Date.parse('2026-09-28T12:00:00Z');
@@ -44,6 +45,7 @@ await rejects(accounts.verify({challenge: second.challenge, code: second.demoCod
 await rejects(accounts.register({grant: verified.grant, name: 'A'}), 'invalid_request', 'name is required');
 await rejects(accounts.register({grant: verified.grant, name: 'Ana', password: 'curta'}), 'weak_password');
 const signup = await accounts.register({grant: verified.grant, name: 'Ana', password: 'senha-forte-123', marketingOptIn: false});
+{ const row = await store.customers.findByEmail('ana.souza@exemplo.com.br'); assert.equal(row.termsVersion, TERMS_VERSION, 'the account records the Termos accepted at sign-up'); assert(row.termsAcceptedAt); }
 assert.deepEqual(signup.user, {name: 'Ana', email: 'ana.souza@exemplo.com.br', hasPassword: true, profileComplete: false, marketingOptIn: false});
 assert.match(signup.session.token, /^[\w-]{43}$/);
 await rejects(accounts.register({grant: verified.grant, name: 'Ana'}), 'invalid_grant', 'a grant is spent once');
@@ -193,6 +195,9 @@ await rejects(createAccounts({store, env: {APP_ENV: 'production'}, now}).start({
   const attempt = (id, reference, status) => store.orders.create({id, reference, customerId: carlaRow.id, source: 'test', status, subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Carla Dias', email: 'carla@exemplo.com'}, shipTo: {recipient: 'Carla'}, items: [{productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {body: 'blue'}}]});
   await attempt('order-carla-2', 'JU-CARLA00002', 'cancelado');
   await attempt('order-carla-3', 'JU-CARLA00003', 'aguardando_pagamento');
+  // An unpaid Pix from 3 hours ago: its code expired (1 h), so it is not listed even without Mercado Pago's notice.
+  const stalePix = (await store.orders.create({id: 'order-carla-4', reference: 'JU-CARLA00004', customerId: carlaRow.id, source: 'test', status: 'aguardando_pagamento', subtotalCents: 1, shippingCents: 0, totalCents: 1, buyer: {name: 'Carla', email: 'carla@exemplo.com'}, shipTo: {}, items: [], createdAt: new Date(clock - 3 * 3600e3)})).order;
+  await store.orders.update(stalePix.id, {paymentState: 'pending_pix'});
 
   assert.equal((await invoke(orderHandler, {method: 'GET', origin: ''})).status, 401, 'my orders need a session');
   const mine = await invoke(orderHandler, {method: 'GET', origin: '', cookie});

@@ -655,4 +655,12 @@ Buscando seus pedidos…|Loading your orders…|Buscando tus pedidos…
 Entre na sua conta para confirmar a exclusão.|Sign in to your account to confirm the deletion.|Inicia sesión en tu cuenta para confirmar la eliminación.
 Complete sua identificação (nome, CPF e telefone) para a nota fiscal e a entrega.|Complete your identification (name, CPF and phone) for the invoice and delivery.|Completa tu identificación (nombre, CPF y teléfono) para la factura y la entrega.
 Sua sessão terminou. Entre de novo na sua conta para continuar.|Your session ended. Sign in to your account again to continue.|Tu sesión terminó. Vuelve a iniciar sesión en tu cuenta para continuar.
+Termos de Uso|Terms of Use|Términos de Uso
+Política de Privacidade|Privacy Policy|Política de Privacidad
+Trocas e Devoluções|Exchanges and Returns|Cambios y Devoluciones
+Informações legais|Legal information|Información legal
+Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.|I have read and agree to the Terms of Use and the Exchanges and Returns Policy, and I confirm I have read the Privacy Policy.|He leído y acepto los Términos de Uso y la Política de Cambios y Devoluciones, y declaro haber leído la Política de Privacidad.
+Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By creating your account, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al crear tu cuenta, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
+Para pagar, aceite os Termos de Uso e a Política de Trocas e Devoluções na etapa de entrega.|To pay, accept the Terms of Use and the Exchanges and Returns Policy in the delivery step.|Para pagar, acepta los Términos de Uso y la Política de Cambios y Devoluciones en la etapa de entrega.
+Este documento está disponível só em português. Em caso de dúvida, vale a versão em português.|This document is available in Portuguese only. In case of doubt, the Portuguese version prevails.|Este documento está disponible solo en portugués. En caso de duda, prevalece la versión en portugués.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

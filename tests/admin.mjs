@@ -11,8 +11,8 @@ const require = createRequire(import.meta.url);
 const totp = require('../api/_lib/totp');
 const adminAuth = require('../api/_lib/admin-auth');
 const {createMemoryStore} = require('../api/_lib/store-memory');
-const {decrypt} = require('../api/_lib/fields');
-const handlers = Object.fromEntries(['login', 'verify', 'session', 'logout', 'orders', 'order-status'].map(name => [name, require(`../api/admin/${name}`)]));
+const {decrypt, encrypt} = require('../api/_lib/fields');
+const handlers = Object.fromEntries(['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-document'].map(name => [name, require(`../api/admin/${name}`)]));
 const health = require('../api/health');
 const site = f => import(pathToFileURL(path.join(root, 'dist', f)).href);
 const helpers = await site('admin-store.js');
@@ -136,7 +136,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
 {
   const store = createMemoryStore(), h = Object.fromEntries(Object.entries(handlers).map(([name, handler]) => [name, handler.create({env: ENV, store, now})]));
   const order = (reference, status, extra = {}) => store.orders.create({id: crypto.randomUUID(), reference, customerId: null, source: 'test', status, method: 'pix', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Ana Souza', email: 'ana@example.com', company: null}, shipTo: {recipient: 'Ana Souza', cep: '30140071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''}, notes: '', lang: 'pt-BR', paidAt: status === 'aguardando_pagamento' ? null : new Date(clock), items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {body: 'pink', details: 'lilac'}}], ...extra}).then(r => r.order);
-  const paid = await order('JU-PAGO000001', 'pendente'), waiting = await order('JU-ESPERA0001', 'aguardando_pagamento'), cancelled = await order('JU-CANCEL0001', 'cancelado');
+  const paid = await order('JU-PAGO000001', 'pendente', {buyerDocEnc: encrypt(ENV, '52998224725')}), waiting = await order('JU-ESPERA0001', 'aguardando_pagamento'), cancelled = await order('JU-CANCEL0001', 'cancelado');
 
   assert.equal((await call(h.login, {method: 'GET'})).statusCode, 405);
   assert.equal((await call(h.login, {origin: '', body: {email: 'ju@site.test', password: 'x'}})).statusCode, 403, 'no Origin');
@@ -163,13 +163,14 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const me = await call(h.session, {method: 'GET', origin: '', cookie});
   assert.equal(me.statusCode, 200); assert.equal(me.json().email, 'ju@site.test');
   const anon = await call(h.session, {method: 'GET', origin: '', cookie: '__Host-ju_admin=' + 'x'.repeat(43)});
-  assert.equal(anon.statusCode, 401); assert.match(anon.headers['set-cookie'], /Max-Age=0/, 'a stale cookie is cleared');
+  assert.equal(anon.statusCode, 200, 'nobody signed in is a normal answer, not a console error'); assert.deepEqual(anon.json(), {ok: false}); assert.match(anon.headers['set-cookie'], /Max-Age=0/, 'a stale cookie is cleared');
+  const nobody = await call(h.session, {method: 'GET', origin: ''}); assert.deepEqual(nobody.json(), {ok: false}); assert.equal(nobody.headers['set-cookie'], undefined, 'no cookie to clear');
 
   const list = await call(h.orders, {method: 'GET', origin: '', cookie});
   assert.equal(list.statusCode, 200);
   assert.deepEqual(list.json().orders.map(o => o.reference), ['JU-PAGO000001'], 'only paid orders: not the ones waiting or cancelled');
   const shown = list.json().orders[0];
-  assert.equal(shown.customer.name, 'Ana Souza'); assert.equal(shown.address.cep, '30140071'); assert.equal(shown.items[0].selection.body, 'pink');
+  assert.equal(shown.customer.name, 'Ana Souza'); assert.equal(shown.buyer.cpf, '***.982.247-**', 'the list shows the CPF masked'); assert.equal(shown.address.cep, '30140071'); assert.equal(shown.items[0].selection.body, 'pink');
 
   const move = (body, extra = {}) => call(h['order-status'], {body, cookie, ...extra});
   assert.equal((await move({id: paid.id, status: 'concluido'}, {origin: 'https://evil.example'})).statusCode, 403);
@@ -188,6 +189,15 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   // Here Mercado Pago is not configured, so the automatic refund of the decline is recorded as failed (and the order can be reopened).
   assert.deepEqual(events, [['status:recusado', 'ju@site.test'], ['refund_failed', 'ju@site.test'], ['status:pendente', 'ju@site.test'], ['status:concluido', 'ju@site.test']], 'each change is recorded with who made it');
   assert.equal((await store.adminAudit.list()).filter(a => a.action === 'order_status').length, 3);
+
+  // Full CPF for the invoice: on request, paid orders only, every view recorded.
+  const doc = (id, extra = {}) => call(h['order-document'], {body: {id}, cookie, ...extra});
+  assert.equal((await doc(paid.id, {cookie: ''})).statusCode, 401);
+  assert.equal((await doc(paid.id, {origin: 'https://evil.example'})).statusCode, 403);
+  assert.equal((await doc(waiting.id)).statusCode, 404, 'not for unpaid orders');
+  assert.equal((await doc('nao-e-um-id')).json().field, 'id');
+  assert.deepEqual((await doc(paid.id)).json(), {ok: true, cpf: '529.982.247-25'});
+  assert((await store.adminAudit.list()).some(a => a.action === 'cpf_viewed' && a.detail === 'JU-PAGO000001'), 'each view of a full CPF is recorded');
 
   const out = await call(h.logout, {cookie});
   assert.match(out.headers['set-cookie'], /__Host-ju_admin=; .*Max-Age=0/);
@@ -227,6 +237,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(await client.login('x', 'y', {fetchImpl: fake([[401, {error: 'invalid_credentials'}]]).fetchImpl}), {ok: false, status: 401, error: 'invalid_credentials', retryAfter: undefined});
   assert.deepEqual(await client.verifyCode('123456', {fetchImpl: fake([[400, {error: 'invalid_code', remaining: 3}]]).fetchImpl}), {ok: false, status: 400, error: 'invalid_code', remaining: 3});
   assert.equal(await client.currentSession({fetchImpl: fake([[401, {error: 'unauthorized'}]]).fetchImpl}), null);
+  assert.equal(await client.currentSession({fetchImpl: fake([[200, {ok: false}]]).fetchImpl}), null, 'signed out');
   await assert.rejects(client.currentSession({fetchImpl: fake([[503, {error: 'admin_unavailable'}]]).fetchImpl}), error => error.code === 'admin_unavailable', 'a server problem is not a sign-out');
   await assert.rejects(client.loadOrders({fetchImpl: fake([[401, {}]]).fetchImpl}), error => error.code === 'unauthorized');
   const moved = fake([[200, {ok: true, order: {id: 'x', status: 'concluido'}}]]);

@@ -16,7 +16,7 @@ function createMemoryStore() {
       async findByCpfIndex(index) { return copy([...customers.values()].find(c => c.cpfIndex && key(c.cpfIndex) === key(index)) || null); },
       async create(data) {
         if ([...customers.values()].some(c => c.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'account_exists'});
-        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, createdAt: new Date(), ...data};
+        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, termsVersion: null, termsAcceptedAt: null, createdAt: new Date(), ...data};
         customers.set(row.id, row);
         return copy(row);
       },
@@ -43,7 +43,7 @@ function createMemoryStore() {
       async create(order) {
         const existing = [...orders.values()].find(o => o.reference === order.reference);
         if (existing) return {order: copy(existing), created: false};
-        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, refundState: null, refundId: null, refundedAt: null, refundError: null, ownerNotifiedAt: null, customerNotifiedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
+        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, refundState: null, refundId: null, refundedAt: null, refundError: null, ownerNotifiedAt: null, customerNotifiedAt: null, termsVersion: null, termsAcceptedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
         orders.set(row.id, row);
         return {order: copy(row), created: true};
       },
@@ -100,12 +100,20 @@ function createMemoryStore() {
       // Returns true only for the first caller, so a grant or a code is spent exactly once.
       async markUsed(id, now) { const c = challenges.get(id); if (!c || c.usedAt) return false; c.usedAt = now; return true; }
     },
+    // Same retention as store-mysql.js: counters 1 day, codes 30 days, expired sessions 6 months.
+    async purge(now) {
+      const day = 86400000, old = (value, days) => new Date(value).getTime() < now - days * day;
+      for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - day) limits.delete(k);
+      for (const [k, c] of challenges) if (old(c.expiresAt, 30)) challenges.delete(k);
+      for (const [k, s] of sessions) if (old(s.expiresAt, 183)) sessions.delete(k);
+      for (const [k, s] of adminSessions) if (old(s.expiresAt, 183)) adminSessions.delete(k);
+    },
     // Fixed windows: at most `limit` hits per `windowMs` for a bucket.
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs, id = `${bucket}|${start}`;
       const hits = (limits.get(id) || 0) + 1;
       limits.set(id, hits);
-      if (limits.size > 10000) for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - 86400000) limits.delete(k);
+      if (limits.size > 10000) await this.purge(now);
       return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
     }
   };

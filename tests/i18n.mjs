@@ -70,7 +70,9 @@ const decode = text => text.replace(/&#?\w+;/g, entity => entities[entity] ?? en
 const missing = [];
 // admin.html is Ju's own internal tool (never shown to a shopper) and is deliberately Portuguese-only.
 for (const file of fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWith('.html') && !['email-preview.html', 'admin.html'].includes(name))) {
-  const html = read('dist/' + file).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '');
+  // Content marked translate="no" is skipped, as dist/i18n.js does: the store's legal details and the legal documents,
+  // which are Portuguese only (a notice says so in English and Spanish).
+  const html = read('dist/' + file).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '').replace(/<(p|span|div|article|section)\b[^>]*\btranslate="no"[^>]*>[\s\S]*?<\/\1>/g, '');
   const strings = [...html.matchAll(/(?:aria-label|alt|placeholder|title)="([^"]+)"/g)].map(match => match[1]);
   strings.push(...html.replace(/<[^>]+>/g, '\n').split('\n'));
   for (const raw of strings) {

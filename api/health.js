@@ -8,6 +8,7 @@ const {storeKind, storeFor} = require('./_lib/account-http');
 const {keys} = require('./_lib/fields');
 const mp = require('./_lib/mercadopago');
 const admin = require('./_lib/admin-auth');
+const legal = require('./_lib/legal');
 
 function createHandler({env = process.env} = {}) {
   return async function handler(req, res) {
@@ -18,7 +19,8 @@ function createHandler({env = process.env} = {}) {
       ok: true, mail: !mailReady(settings) ? 'off' : settings.transport === 'console' ? 'console' : 'resend', secret: Boolean(settings.secret), secretFrom: settings.secretFrom, key: Boolean(settings.apiKey), sender: settings.from.includes('onboarding@resend.dev') ? 'test' : 'custom',
       accounts: storeKind(env), db: await ping(env), dataKeys,
       payments: pay.mode, paymentsBlocked: pay.blocked, mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
-      admin: await admin.status(storeFor(env), env)
+      admin: await admin.status(storeFor(env), env),
+      legal: legal.pending() ? 'pending' : 'ok'   // store details still marked [PREENCHER] in api/_lib/legal.js
     });
   };
 }

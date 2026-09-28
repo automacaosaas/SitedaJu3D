@@ -9,6 +9,7 @@
 // the account being deleted (fiscal record).
 const crypto = require('node:crypto');
 const fields = require('./fields');
+const {TERMS_VERSION} = require('./legal');
 const {config, mailReady, sendMail} = require('./mail');
 const {renderOwnerEmail, renderCustomerEmail, renderDecisionEmail} = require('./order-email');
 const mp = require('./mercadopago');
@@ -18,22 +19,24 @@ const ADMIN_STATUSES = ['pendente', 'concluido', 'recusado'];
 const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer hears about by e-mail
 const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
-const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.id || method?.type ? 'card' : null;
+// pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
+const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
 
 function createOrders({store, env = process.env, now = () => Date.now()}) {
   const date = () => new Date(now());
   const decrypt = blob => { try { return blob ? fields.decrypt(env, blob) : ''; } catch { return ''; } };
 
   // The buyer must be signed in with a complete identification: the invoice and the shipping label need it.
-  async function open({customer, reference, source, priced, recipient, address, notes = '', lang = 'pt-BR'}) {
+  async function open({customer, reference, source, priced, recipient, address, notes = '', lang = 'pt-BR', termsAccepted = false}) {
     if (!customer.firstName || !customer.lastName || !customer.cpfEnc || !customer.phoneEnc) throw fail('profile_incomplete');
+    if (termsAccepted !== true) throw fail('invalid_request', {field: 'terms'});
     const company = customer.companyCnpj ? {cnpj: customer.companyCnpj, name: customer.companyName || '', stateRegistration: customer.companyIe || ''} : null;
     const draft = {
       id: crypto.randomUUID(), reference, customerId: customer.id, source, status: 'aguardando_pagamento',
       subtotalCents: priced.subtotal, shippingCents: priced.shipping, totalCents: priced.total,
       buyer: {name: `${customer.firstName} ${customer.lastName}`, email: customer.email, company},
       buyerDocEnc: customer.cpfEnc, phoneEnc: fields.encrypt(env, recipient.phone),
-      shipTo: {recipient: recipient.name, ...address}, notes, lang,
+      shipTo: {recipient: recipient.name, ...address}, notes, lang, termsVersion: TERMS_VERSION, termsAcceptedAt: date(),
       items: priced.lines.map(line => ({productId: line.productId, title: line.title, quantity: line.quantity, unitCents: line.unitCents, selection: line.selection}))
     };
     const {order, created} = await store.orders.create(draft);
@@ -67,12 +70,23 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   }
 
   // What the notification e-mails need (api/_lib/order-email.js), built from our own record.
+  // Who the invoice is for: the buyer's name and CPF (masked: the full number never goes by e-mail; the panel shows it on
+  // request), or the company's name, CNPJ (public data) and state registration.
+  function invoice(order) {
+    const cpf = decrypt(order.buyerDocEnc), company = order.buyer?.company;
+    return {
+      name: order.buyer?.name || '', cpf: cpf ? fields.maskCpf(cpf) : '',
+      company: company?.cnpj ? {name: company.name || '', cnpj: fields.formatCnpj(company.cnpj), stateRegistration: company.stateRegistration || ''} : null
+    };
+  }
+
   function summary(order) {
     return {
-      id: order.id, reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, total: order.totalCents,
+      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, total: order.totalCents,
+      invoice: invoice(order),
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       address: {cep: order.shipTo?.cep || '', street: order.shipTo?.street || '', number: order.shipTo?.number || '', district: order.shipTo?.district || '', city: order.shipTo?.city || '', state: order.shipTo?.state || '', complement: order.shipTo?.complement || ''},
-      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status)
+      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : order.method === 'debit' ? 'debit_card' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status)
     };
   }
 

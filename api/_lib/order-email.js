@@ -36,7 +36,8 @@ const OWNER = Object.freeze({
   eyebrow: 'NOVO PEDIDO', title: ['Pedido pago,', 'pronto para produzir.'], intro: 'O Mercado Pago confirmou este pagamento. Abaixo estão as peças, as cores escolhidas e para onde enviar.',
   order: 'PEDIDO', pieces: 'PEÇAS E CORES', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGAR PARA', notes: 'OBSERVAÇÃO DO CLIENTE',
   pix: 'Pix', credit: n => n > 1 ? `Cartão de crédito · ${n}x` : 'Cartão de crédito', debit: 'Cartão de débito', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.',
-  contact: 'CONTATO', mpOrder: 'Pedido no Mercado Pago'
+  contact: 'CONTATO', mpOrder: 'Pedido no Mercado Pago',
+  invoice: 'NOTA FISCAL', buyer: 'Comprador', invoiceNote: 'O CPF completo está no painel da Ju (por segurança, não vai por e-mail).'
 });
 
 const label = text => `<p style="margin:0 0 8px;color:${C.rose};font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:2px;line-height:16px;">${esc(text)}</p>`;
@@ -131,18 +132,29 @@ function renderCustomerEmail({summary, lang = 'pt-BR', test = false, assetUrl}) 
   return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
+// Who the invoice is for (orders.js summary.invoice): a company (name, CNPJ, state registration) and its buyer, or the buyer
+// alone. The CPF arrives masked.
+function invoiceLines(copy, invoice) {
+  if (!invoice) return [];
+  const person = `${invoice.name}${invoice.cpf ? ` · CPF ${invoice.cpf}` : ''}`;
+  if (!invoice.company) return [{html: `<strong>${esc(invoice.name)}</strong>`, text: invoice.name}, ...(invoice.cpf ? [{html: esc(`CPF ${invoice.cpf}`), text: `CPF ${invoice.cpf}`}] : [])];
+  const c = invoice.company, ids = `CNPJ ${c.cnpj}${c.stateRegistration ? ` · IE ${c.stateRegistration}` : ''}`;
+  return [{html: `<strong>${esc(c.name)}</strong>`, text: c.name}, {html: esc(ids), text: ids}, {html: esc(`${copy.buyer}: ${person}`), text: `${copy.buyer}: ${person}`}];
+}
+
 function renderOwnerEmail({summary, test = false, assetUrl}) {
   const copy = OWNER;
   const inner = [
     `<tr><td class="px" align="center" style="padding:18px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:16px;line-height:25px;">${esc(copy.intro)}</p></td></tr>`,
-    section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`) + line(`${esc(copy.mpOrder)}: ${esc(summary.id)}`, `color:${C.muted};font-size:13px;`)),
+    section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`) + (summary.id ? line(`${esc(copy.mpOrder)}: ${esc(summary.id)}`, `color:${C.muted};font-size:13px;`) : '')),
     section(copy.pieces, itemsTable(copy, summary, 'pt-BR')),
     section(copy.payment, line(esc(methodLabel(copy, summary.method)))),
+    summary.invoice ? section(copy.invoice, invoiceLines(copy, summary.invoice).map(l => line(l.html)).join('') + (summary.invoice.cpf ? line(esc(copy.invoiceNote), `color:${C.muted};font-size:12px;margin-top:4px;`) : '')) : '',
     section(copy.deliverTo, addressBlock(summary, {contact: true})),
     summary.notes ? section(copy.notes, line(esc(summary.notes))) : ''
   ].join('\n');
   const subject = copy.subject(summary.reference, money(summary.total), test);
-  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference} (${copy.mpOrder}: ${summary.id})`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference}${summary.id ? ` (${copy.mpOrder}: ${summary.id})` : ''}`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', ...(summary.invoice ? [copy.invoice, ...invoiceLines(copy, summary.invoice).map(l => l.text), ''] : []), copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
   return {subject, html: frame({lang: 'pt-BR', title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
