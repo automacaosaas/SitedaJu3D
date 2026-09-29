@@ -49,6 +49,7 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     const bad = checkCommon(params, init); if (bad) return bad;
     const service = CODES[code5]; if (!service) return refused(403, 'Serviço não contratado');
     if (!params.get('nuContrato')) return refused(400, 'PRC-010: informe o contrato para o preço de contrato');
+    if (!params.get('nuDR')) return refused(400, 'PRC-011: informe a DR (nuDR) junto com o contrato');
     const grams = Number(params.get('psObjeto')), [l, w, h] = ['comprimento', 'largura', 'altura'].map(k => Number(params.get(k)));
     if (params.get('tpObjeto') !== '2' || !(grams >= 1) || !(l >= 16 && w >= 11 && h >= 2) || l < w) return refused(400, 'PRC-140: objeto fora das medidas aceitas.');
     const cents = service.base + service.perZone * zone(params.get('cepOrigem'), params.get('cepDestino')) + Math.ceil(grams / 1000) * service.perKg;
@@ -76,7 +77,7 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     fetchImpl, calls,
     setDown(value = true) { down = value; },          // every call answers 503
     expireTokens() { tokens.clear(); },               // the next authenticated call is answered 403, like an expired token
-    creds: {CORREIOS_USER: user, CORREIOS_CODE: code, CORREIOS_CARD: card, CORREIOS_CONTRACT: '9912345678', SHIP_FROM_CEP: '30140071'},
+    creds: {CORREIOS_USER: user, CORREIOS_CODE: code, CORREIOS_CARD: card, CORREIOS_CONTRACT: '9912345678', CORREIOS_DR: '20', SHIP_FROM_CEP: '30140071'},
     tokenCalls: () => calls.filter(c => c.path.startsWith('/token')).length
   };
 }

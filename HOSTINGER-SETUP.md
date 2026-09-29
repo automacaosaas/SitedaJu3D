@@ -118,7 +118,7 @@ regras e como conferir estão em `FRETE-SETUP.md` e `FRETE-CORREIOS-passo-a-pass
 | `CORREIOS_CODE` | código de acesso da API | **sim** |
 | `CORREIOS_CONTRACT` | número do contrato | não |
 | `CORREIOS_CARD` | número do cartão de postagem | não |
-| `CORREIOS_DR` | DR, se aparecer na tela do cartão | não |
+| `CORREIOS_DR` | DR (a "Unidade Gestora" do contrato); obrigatória, sem ela o frete real fica desligado | não |
 | `SHIP_FROM_CEP` | CEP de onde a Ju despacha | não |
 
 `/api/health` mostra `"shipping":"off"` (faltam variáveis), `"pending"` (variáveis ok, dados da loja incompletos) ou

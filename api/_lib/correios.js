@@ -20,7 +20,7 @@ const digits = value => text(value).replace(/\D/g, '');
 function settings(env = process.env) {
   const user = text(env.CORREIOS_USER), code = text(env.CORREIOS_CODE), card = digits(env.CORREIOS_CARD), contract = digits(env.CORREIOS_CONTRACT);
   const dr = digits(env.CORREIOS_DR), originCep = digits(env.SHIP_FROM_CEP);
-  return {user, code, card, contract, dr, originCep, ready: Boolean(user && code && card && contract && /^\d{8}$/.test(originCep))};
+  return {user, code, card, contract, dr, originCep, ready: Boolean(user && code && card && contract && dr && /^\d{8}$/.test(originCep))};
 }
 
 // "23,45", "1.234,56" or 23.45 → cents; NaN when it is not a positive amount.
@@ -88,7 +88,7 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
 
   // Contract price of one volume (cents).
   async function price({code, cepDestino, box}) {
-    const params = {cepOrigem: config.originCep, cepDestino, ...boxParams(box), nuContrato: config.contract, ...(config.dr ? {nuDR: config.dr} : {})};
+    const params = {cepOrigem: config.originCep, cepDestino, ...boxParams(box), nuContrato: config.contract, nuDR: config.dr};   // the API wants the DR whenever the contract is sent
     const data = await get(`/preco/v1/nacional/${encodeURIComponent(code)}`, params);
     const cents = parseMoney(data?.pcFinal);
     if (!(cents > 0)) throw fail('correios_rejected', {messages: ['no price in the answer']});

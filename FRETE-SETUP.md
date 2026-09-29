@@ -28,7 +28,7 @@ Correios Empresa; este guia cobre só a **cotação**.
 | `CORREIOS_CODE` | código de acesso da API (mesma tela, "Gerar código") | **sim** |
 | `CORREIOS_CONTRACT` | número do contrato | não |
 | `CORREIOS_CARD` | número do cartão de postagem | não |
-| `CORREIOS_DR` | DR (Diretoria Regional), se aparecer na tela do cartão | não |
+| `CORREIOS_DR` | DR (Diretoria Regional): a "Unidade Gestora" na tela do contrato (Correios Empresas → Consultar Contratos). **Obrigatória**: a API dos Correios exige a DR junto com o contrato | não |
 | `SHIP_FROM_CEP` | CEP de onde a Ju despacha | não |
 
 Passo a passo de onde tirar cada dado nos Correios: `FRETE-CORREIOS-passo-a-passo.md`. O código de acesso nunca vai por chat, e-mail

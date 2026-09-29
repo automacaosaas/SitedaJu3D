@@ -44,7 +44,7 @@ for (const bad of ['', '0,00', 'abc', null, undefined, -5, NaN]) assert(Number.i
 assert.deepEqual(boxParams({length: 10, width: 20, height: 1, weightG: 0.4}), {psObjeto: '1', tpObjeto: '2', comprimento: '20', largura: '11', altura: '2'}, 'longest side first, at least 16 × 11 × 2');
 assert.deepEqual(boxParams({length: 20.2, width: 15, height: 8, weightG: 320.1}), {psObjeto: '321', tpObjeto: '2', comprimento: '21', largura: '15', altura: '8'}, 'centimetres and grams rounded up');
 assert.deepEqual(correiosSettings({CORREIOS_USER: ' u ', CORREIOS_CODE: 'c', CORREIOS_CARD: '00 675', CORREIOS_CONTRACT: '99123-45', SHIP_FROM_CEP: '30140-071', CORREIOS_DR: '74'}), {user: 'u', code: 'c', card: '00675', contract: '9912345', dr: '74', originCep: '30140071', ready: true});
-for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS_CONTRACT', 'SHIP_FROM_CEP']) assert.equal(correiosSettings({...fresh().creds, [drop]: ''}).ready, false, `${drop} is needed`);
+for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS_CONTRACT', 'CORREIOS_DR', 'SHIP_FROM_CEP']) assert.equal(correiosSettings({...fresh().creds, [drop]: ''}).ready, false, `${drop} is needed`);
 
 // the shop's data: nothing is guessed
 assert.deepEqual(missing(baseConfig), [], 'the shipped config is complete: with the Correios credentials the real quote is on');
@@ -102,7 +102,7 @@ assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 4}]), [[1, 
   assert.deepEqual(Object.keys(publicOption(q.options[0])).sort(), ['days', 'free', 'label', 'priceCents', 'service'], 'the browser never sees the contract code or the shop\'s cost');
   const price = fake.calls.find(c => c.path.startsWith('/preco')).params;
   assert.deepEqual([price.cepOrigem, price.cepDestino, price.tpObjeto, price.nuContrato], ['30140071', '90010000', '2', '9912345678'], 'origin from the settings, destination digits only, contract sent');
-  assert(!('nuDR' in price), 'no DR configured, none sent');
+  assert.equal(price.nuDR, '20', 'the DR always goes with the contract');
   assert.equal(fake.tokenCalls(), 1, 'one token serves every call');
   const callsBefore = fake.calls.length;
   await ship.quote({lines: LINES, cep: '90010-000', subtotalCents: 54700});
@@ -231,6 +231,7 @@ const ITEMS = [{productId: 'borboletoscopio', quantity: 3, selection: {body: 'pi
   const read = async env => { const res = makeRes(); await health.create({env})({}, res); return res.json(); };
   assert.equal((await read({})).shipping, 'off');
   assert.equal((await read(fake.creds)).shipping, 'correios', 'credentials and the shipped shop data: quoting');
+  assert.equal((await read({...fake.creds, CORREIOS_DR: ''})).shipping, 'off', 'without the DR the real quote stays off');
   const text = JSON.stringify(await read(fake.creds)); for (const secret of [fake.creds.CORREIOS_CODE, fake.creds.CORREIOS_CARD, fake.creds.CORREIOS_CONTRACT, fake.creds.SHIP_FROM_CEP]) assert(!text.includes(secret));
 }
 
