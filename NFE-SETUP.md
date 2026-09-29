@@ -159,8 +159,10 @@ conferir no DANFE:
    formas de pagamento Pix e cartão, certificado A1 e o ambiente de homologação.
 2. **Site:** o código dessa natureza (`bling.natureId` em `api/_lib/fiscal.js`), que o painel mostra depois de
    conectar o Bling. É o único dado fiscal que falta.
-3. **CNAE (sem resposta ainda):** o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só
-   lista a 1813-0/01 como secundária. Confirmar com o contador se precisa ajustar na SEFAZ-MG.
+
+CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
+inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não
+precisa incluir nada.
 
 ## CEP conferido antes de cobrar
 
