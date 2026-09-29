@@ -11,10 +11,10 @@ const {isProduction} = require('./runtime');
 const PENDING = what => `[PREENCHER: ${what}]`;
 
 const FISCAL = {
-  issuerState: PENDING('UF da empresa'),
-  crt: PENDING('regime tributário (CRT): 1 = Simples Nacional'),
-  stateRegistration: PENDING('inscrição estadual da empresa'),
-  series: PENDING('série da NF-e'),
+  issuerState: 'MG',
+  crt: '1',   // Simples Nacional (ME, não MEI), conforme a inscrição estadual na SEFAZ-MG
+  stateRegistration: '0055757470062',   // 005575747.00-62
+  series: PENDING('série da NF-e (seguir a numeração do emissor do SEBRAE ou série nova)'),
   nature: 'Venda de produção do estabelecimento',
   cfop: {sameState: PENDING('CFOP de venda dentro do estado'), otherState: PENDING('CFOP de venda para outros estados')},
   icms: {origin: '0', csosn: PENDING('CSOSN do ICMS')},

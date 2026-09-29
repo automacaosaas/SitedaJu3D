@@ -77,7 +77,10 @@ function order(over = {}) {
 
   // Problems are listed, nothing is sent.
   const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', env: ENV});
-  assert.equal(pending.ok, false); assert(pending.problems.some(p => p.includes('Dados fiscais a preencher')) && pending.problems.some(p => p.includes('Dados da empresa')));
+  assert.equal(pending.ok, false); assert(pending.problems.some(p => p.includes('Dados fiscais a preencher')));
+  assert(!pending.problems.some(p => p.includes('Dados da empresa')), 'the company data in legal.js is filled');
+  const noCompany = buildInvoice({order: order(), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE, company: {legalName: '[PREENCHER: razão social]', cnpj: '[PREENCHER: CNPJ]'}});
+  assert(noCompany.problems.some(p => p.includes('Dados da empresa')), 'a company still to be filled blocks the note');
   const problems = input => buildInvoice({environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE, ...input}).problems || [];
   assert(problems({order: order(), city: null}).some(p => p.includes('CEP 30140071 não encontrado')));
   assert(problems({order: order(), city: SP}).some(p => p.includes('é de SP, mas o endereço diz MG')), 'CEP and state must agree');
