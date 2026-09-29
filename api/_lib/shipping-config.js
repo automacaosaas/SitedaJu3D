@@ -17,8 +17,8 @@ const PACKAGING = Object.freeze({length: 22, width: 20, height: 7, weightG: 257}
 
 module.exports = Object.freeze({
   services: Object.freeze([
-    Object.freeze({id: 'pac', label: 'PAC', code: null}),
-    Object.freeze({id: 'sedex', label: 'SEDEX', code: null})
+    Object.freeze({id: 'pac', label: 'PAC', code: '03298'}),
+    Object.freeze({id: 'sedex', label: 'SEDEX', code: '03220'})
   ]),
   production: Object.freeze({minDays: null, maxDays: null}),
   labelFeeCents: 0,
