@@ -5,7 +5,7 @@
 //
 //   status()  'off' (no Correios credentials) · 'pending' (credentials, but the shop data in shipping-config.js is
 //             incomplete) · 'correios' (quoting for real). Anything but 'correios' keeps the fixed example fee.
-//   volumes() the boxes an order needs (each product fills its own boxes; see shipping-config.js)
+//   volumes() the boxes an order needs (one shared box for every product, or each product filling its own; see shipping-config.js)
 //   quote()   the options, cheapest first: {service, label, priceCents, days:{min,max}, free, …}
 const baseConfig = require('./shipping-config');
 const {createCorreios, settings: correiosSettings} = require('./correios');
@@ -16,6 +16,10 @@ const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extr
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const validBox = box => Boolean(box) && [box.length, box.width, box.height, box.weightG].every(positive) && box.weightG <= 30000
   && Math.max(box.length, box.width, box.height) <= 105 && box.length + box.width + box.height <= 200;
+// One box any product fits in: the same size for 1..maxPieces pieces, and the packed weight for each piece count (weightsG[n - 1]).
+const validShared = shared => Boolean(shared) && Number.isInteger(shared.maxPieces) && shared.maxPieces >= 1 && Array.isArray(shared.weightsG)
+  && shared.weightsG.length === shared.maxPieces && shared.weightsG.every((g, i) => positive(g) && (i === 0 || g >= shared.weightsG[i - 1]))
+  && validBox({length: shared.length, width: shared.width, height: shared.height, weightG: shared.weightsG[shared.maxPieces - 1]});
 
 // What is still missing in the shop's data (names of the missing pieces; empty when complete).
 function missing(config) {
@@ -23,7 +27,8 @@ function missing(config) {
   if (!config.services.some(s => /^\d{5}$/.test(String(s.code || '')))) gaps.push('services');
   const {minDays, maxDays} = config.production || {};
   if (!Number.isInteger(minDays) || !Number.isInteger(maxDays) || minDays < 0 || maxDays < minDays) gaps.push('production');
-  for (const id of Object.keys(PRODUCTS)) {
+  if (config.sharedBox) { if (!validShared(config.sharedBox)) gaps.push('sharedBox'); }
+  else for (const id of Object.keys(PRODUCTS)) {
     const box = config.boxes?.[id];
     if (!validBox(box?.unit) || !Number.isInteger(box?.perBox) || box.perBox < 1 || (box.perBox > 1 && !validBox(box.full))) gaps.push(`boxes.${id}`);
   }
@@ -32,8 +37,11 @@ function missing(config) {
   return gaps;
 }
 
-// Lines → volumes, grouped by identical box: [{box, count}]. A full box holds `perBox` pieces; a box left partly full with
-// more than one piece is sent as a full-size box (the safe side); a single leftover piece goes in its own small box.
+// Lines → volumes, grouped by identical box: [{box, count}].
+//   sharedBox  every piece of the order, whatever the product, goes in boxes of up to `maxPieces`; the last box is weighed for the
+//              pieces it really holds (weightsG[pieces - 1]).
+//   boxes      each product fills its own boxes: a full box holds `perBox` pieces; a box left partly full with more than one piece
+//              is sent as a full-size box (the safe side); a single leftover piece goes in its own small box.
 function volumesFor(lines, config) {
   const pieces = new Map();
   for (const line of lines) pieces.set(line.productId, (pieces.get(line.productId) || 0) + line.quantity);
@@ -43,6 +51,12 @@ function volumesFor(lines, config) {
     const key = [box.length, box.width, box.height, box.weightG].join('x');
     groups.set(key, {box: {length: box.length, width: box.width, height: box.height, weightG: box.weightG}, count: (groups.get(key)?.count || 0) + count});
   };
+  if (config.sharedBox) {
+    const {length, width, height, maxPieces, weightsG} = config.sharedBox, total = [...pieces.values()].reduce((sum, n) => sum + n, 0), rest = total % maxPieces;
+    add(Math.floor(total / maxPieces), {length, width, height, weightG: weightsG[maxPieces - 1]});
+    if (rest) add(1, {length, width, height, weightG: weightsG[rest - 1]});
+    return [...groups.values()];
+  }
   for (const [productId, quantity] of pieces) {
     const spec = config.boxes[productId], full = spec.perBox > 1 ? spec.full : spec.unit;
     add(Math.floor(quantity / spec.perBox), full);

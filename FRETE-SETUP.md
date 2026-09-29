@@ -44,12 +44,13 @@ Fica no código (não no hPanel), preenchido a partir das respostas da Ju:
 | `production` | `minDays` e `maxDays`: dias úteis de produção, somados ao prazo dos Correios |
 | `labelFeeCents` | taxa extra por etiqueta (volume), em centavos; `0` se a etiqueta custa só o frete |
 | `freeShipping` | `null` ou `{fromCents, service}`: a partir desse subtotal, o serviço indicado é grátis para o cliente (a Ju continua pagando a etiqueta; o painel mostra o custo) |
-| `boxes` | por produto: `unit` (1 peça embalada), `perBox` (quantas cabem numa caixa) e `full` (a caixa cheia). Medidas em cm, peso em gramas, **com a embalagem** |
+| `sharedBox` | **uma caixa para qualquer mistura de produtos**: as medidas (cm), `maxPieces` (quantas peças cabem) e `weightsG` (o peso da caixa embalada, em gramas, com 1, 2, … `maxPieces` peças) |
+| `boxes` | alternativa, usada só se não houver `sharedBox`: por produto, `unit` (1 peça embalada), `perBox` (quantas cabem numa caixa) e `full` (a caixa cheia). Medidas em cm, peso em gramas, **com a embalagem** |
 
 Regras: nenhum lado acima de 105 cm, soma dos três lados até 200 cm, peso até 30 kg (limites dos Correios; o arquivo é
-recusado se passar). Menos que 16 × 11 × 2 cm, o site usa o mínimo dos Correios. **Produtos diferentes não dividem caixa**: cada
-produto forma os seus volumes, e a API cota cada volume (caixas idênticas são cotadas uma vez e multiplicadas). Uma caixa que
-sobra com mais de uma peça, mas não cheia, é cotada como caixa cheia (lado seguro).
+recusado se passar). Menos que 16 × 11 × 2 cm, o site usa o mínimo dos Correios. Com `sharedBox`, **todos os produtos do pedido vão na mesma caixa**, até `maxPieces` peças; passou disso, vira mais uma caixa, e a última
+é pesada pelas peças que ela leva de fato. Com `boxes`, cada produto forma os seus volumes e uma caixa que sobra com mais de uma peça, mas
+não cheia, é cotada como caixa cheia (lado seguro). Nos dois casos a API cota cada volume (caixas idênticas são cotadas uma vez e multiplicadas).
 
 Enquanto qualquer valor obrigatório estiver `null` ou inválido, o frete real fica **desligado** (`pending`): nada é chutado.
 
@@ -87,6 +88,5 @@ nenhum segredo. Se todos os serviços falharem por erro dos Correios, a compra *
 ## Fora deste passo
 
 - Comprar a etiqueta e mandar o código de rastreio por e-mail (a etiqueta segue no Correios Empresa).
-- Caixa compartilhada entre produtos diferentes.
 - Valor declarado (seguro) e serviços adicionais.
 - Antes de cobrar de verdade (`MP_MODE=live`), confirme `"shipping":"correios"`: sem isso o site cobra o frete fixo de exemplo.

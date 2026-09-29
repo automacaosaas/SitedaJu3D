@@ -47,8 +47,16 @@ assert.deepEqual(correiosSettings({CORREIOS_USER: ' u ', CORREIOS_CODE: 'c', COR
 for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS_CONTRACT', 'SHIP_FROM_CEP']) assert.equal(correiosSettings({...fresh().creds, [drop]: ''}).ready, false, `${drop} is needed`);
 
 // the shop's data: nothing is guessed
-assert.deepEqual(missing(baseConfig), ['production'], 'the shipped config has the real boxes and service codes but not yet the production days: the real quote stays off until they are filled in (update when they arrive)');
-for (const id of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) assert.deepEqual([baseConfig.boxes[id].unit, baseConfig.boxes[id].perBox], [{length: 22, width: 20, height: 7, weightG: 257}, 1], id + ': one piece per box, the packaging registered at the Correios Empresa');
+assert.deepEqual(missing(baseConfig), ['sharedBox'], 'the shipped config has the contract data, PAC, production days and the box size, but not yet how many pieces fit or their weights: the real quote stays off until they are filled in (update when they arrive)');
+assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG only; 3 to 5 days of production');
+assert.deepEqual([baseConfig.sharedBox.length, baseConfig.sharedBox.width, baseConfig.sharedBox.height, baseConfig.sharedBox.weightsG[0]], [22, 20, 7, 257], 'the packaging registered at the Correios Empresa');
+const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, weightsG: [257, 480, 700]};
+assert.deepEqual(missing({...baseConfig, sharedBox: SHARED}), [], 'a complete shared box is enough: no per-product boxes needed');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, maxPieces: null}}), ['sharedBox'], 'how many pieces fit is missing');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480]}}), ['sharedBox'], 'a weight for every piece count');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480, 700, 900]}}), ['sharedBox'], 'no weight left over: it would mean a wrong number of pieces');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 200, 700]}}), ['sharedBox'], 'more pieces never weigh less');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480, 31000]}}), ['sharedBox'], 'over 30 kg');
 assert.deepEqual(missing(EXAMPLE_CONFIG), []);
 assert.deepEqual(missing(withConfig({production: {minDays: 7, maxDays: 5}})), ['production']);
 assert.deepEqual(missing(withConfig({boxes: {...EXAMPLE_CONFIG.boxes, aviaoscopia: {unit: {length: 25, width: 14, height: 6, weightG: 31000}, perBox: 1, full: null}}})), ['boxes.aviaoscopia'], 'over 30 kg');
@@ -66,6 +74,15 @@ assert.deepEqual(vol([{productId: 'dinossauroscopio', quantity: 4}]), [[1, 800],
 assert.deepEqual(vol([{productId: 'dinossauroscopio', quantity: 5}]), [[2, 800]], '3 + 2: the box with two pieces is priced as a full one (the safe side)');
 assert.deepEqual(vol([{productId: 'aviaoscopia', quantity: 3}]), [[3, 350]], 'one piece per box: identical volumes are grouped');
 assert.deepEqual(vol(LINES), [[1, 600], [1, 320], [1, 350]]);
+
+// one shared box for any mix of products, up to maxPieces pieces
+const sharedVol = lines => volumesFor(lines, {...EXAMPLE_CONFIG, sharedBox: SHARED}).map(v => [v.count, v.box.weightG]);
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}]), [[1, 257]], 'one piece');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}]), [[1, 700]], 'three different products share the box');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 2}]), [[1, 480]], 'two pieces of the same product');
+assert.deepEqual(sharedVol(LINES), [[1, 700], [1, 257]], '4 pieces: a full box of 3 and a box with the fourth');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 5}]), [[1, 700], [1, 480]], '3 + 2, the last box weighed for its 2 pieces');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 700]], 'identical full boxes are grouped');
 
 // ── the engine against the Correios simulator ────────────────────────────────────────────────────────
 {
@@ -94,6 +111,13 @@ assert.deepEqual(vol(LINES), [[1, 600], [1, 320], [1, 350]]);
   assert.deepEqual(triple.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 3), 3], ['sedex', sedex(6, 1, 3), 3]], 'a group of 3 identical volumes costs 3 times one');
   assert.equal(fake.calls.filter(c => c.path.startsWith('/preco') && c.params.cepDestino === '90010000' && c.params.psObjeto === '350').length, 2, 'one price request per service and box, not per label');
 
+  // one shared box: three different products are ONE volume (a 700 g box), not three
+  const oneBox = createShipping({env, fetchImpl: fake.fetchImpl, config: withConfig({sharedBox: SHARED})});
+  const mixed = await oneBox.quote({lines: [{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}], cep: '90010-000'});
+  assert.deepEqual(mixed.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 1), 1], ['sedex', sedex(6, 1, 1), 1]], 'one label for the whole order');
+  const four = await oneBox.quote({lines: LINES, cep: '90010-000'});
+  assert.deepEqual(four.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 2), 2], ['sedex', sedex(6, 1, 2), 2]], '4 pieces: two labels');
+
   // a heavier box changes the price by the weight brackets; DR is sent when configured
   const heavy = createShipping({env: {...env, CORREIOS_DR: '74'}, fetchImpl: fake.fetchImpl, config: withConfig({boxes: {...EXAMPLE_CONFIG.boxes, aviaoscopia: {unit: {length: 25, width: 14, height: 6, weightG: 1500}, perBox: 1, full: null}}})});
   const h = await heavy.quote({lines: [{productId: 'aviaoscopia', quantity: 1}], cep: '20040-020'});   // zone 1 (3 → 2)
@@ -103,7 +127,7 @@ assert.deepEqual(vol(LINES), [[1, 600], [1, 320], [1, 350]]);
   // token renewal: an expired token is answered 403 and renewed once, transparently
   fake.expireTokens();
   const renewed = await ship.quote({lines: LINES, cep: '01310-100'});   // a new CEP, so no cache
-  assert.equal(renewed.options.length, 2); assert.equal(fake.tokenCalls(), 3, 'the expired token was renewed (1 first + 1 for the heavy engine + 1 renewal)');
+  assert.equal(renewed.options.length, 2); assert.equal(fake.tokenCalls(), 4, 'the expired token was renewed (1 first + 1 for the shared-box engine + 1 for the heavy engine + 1 renewal)');
 
   // a service missing from the contract is left out; the others are still offered
   const partial = createShipping({env, fetchImpl: fake.fetchImpl, config: withConfig({services: [{id: 'pac', label: 'PAC', code: '03298'}, {id: 'sedex', label: 'SEDEX', code: '03158'}]})});
