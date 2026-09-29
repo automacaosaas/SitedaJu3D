@@ -38,7 +38,10 @@ function order(over = {}) {
 // ── tax data and the switch ───────────────────────────────────────────
 {
   assert.deepEqual(Object.keys(fiscal.FISCAL.products).sort(), Object.keys(catalog.PRODUCTS).sort(), 'one tax entry (NCM) per product of the catalog');
-  assert(fiscal.missing().length > 0, 'still waiting for the accountant');
+  assert.deepEqual(fiscal.missing(), [], "the accountant's data is complete");
+  assert.deepEqual(fiscal.missing(fiscal.FISCAL, {provider: 'bling'}), ['bling.natureId'], 'with Bling, only the nature id is left (the panel shows it once connected)');
+  assert.deepEqual([fiscal.FISCAL.cfop.sameState, fiscal.FISCAL.cfop.otherState, fiscal.FISCAL.cfop.otherStateConsumer, fiscal.FISCAL.icms.csosn, fiscal.FISCAL.pis.cst, fiscal.FISCAL.cofins.cst], ['5101', '6101', '6107', '102', '49', '49']);
+  assert(Object.values(fiscal.FISCAL.products).every(p => p.ncm === '39269090'), 'NCM 3926.90.90 for the three pieces');
   assert.deepEqual(fiscal.missing(fiscal.EXAMPLE.fiscal), [], 'the example set is complete (tests and local demo only)');
   assert.equal(fiscal.nfeSettings({}).mode, 'off');
   assert.deepEqual(fiscal.nfeSettings({APP_ENV: 'preview', NFE_PROVIDER: 'focusnfe', NFE_TOKEN: 't'}), {mode: 'test', blocked: false, provider: 'focusnfe', environment: 'homologacao', token: 't', example: false});
@@ -68,7 +71,14 @@ function order(over = {}) {
   assert.equal(buildInvoice({order: order({method: 'debit'}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice.payment.code, '04');
 
   const sp = buildInvoice({order: order({shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
-  assert.equal(sp.destination, '2'); assert.equal(sp.items[0].cfop, '6101', 'other state');
+  assert.equal(sp.destination, '2'); assert.equal(sp.items[0].cfop, '6107', 'a person in another state: production sold to a non-taxpayer');
+  assert.match(sp.additionalInfo, /DIFAL da UF destino R\$ 0,00 \+ FCP R\$ 0,00; DIFAL da UF Origem R\$ 0,00\. Pedido JU-/, 'the interstate ICMS line (zero in the Simples)');
+  assert(!i.additionalInfo.includes('DIFAL'), 'not inside MG');
+  const spCompany = {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: '110042490114'}};
+  const taxpayer = buildInvoice({order: order({buyer: spCompany, shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
+  assert.equal(taxpayer.items[0].cfop, '6101', 'a company with a state registration in another state'); assert(!taxpayer.additionalInfo.includes('DIFAL'));
+  const exemptSp = buildInvoice({order: order({buyer: {...spCompany, company: {...spCompany.company, stateRegistration: 'ISENTO'}}, shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
+  assert.equal(exemptSp.items[0].cfop, '6107', 'a company without a state registration is a non-taxpayer');
 
   const company = buildInvoice({order: order({buyer: {name: 'Ana Souza Lima', email: 'ana@example.com', company: {cnpj: '12ABC34501DE35', name: 'Clínica Olhar', stateRegistration: '0620012345678'}}}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(company.recipient.cnpj, '12ABC34501DE35'); assert.equal(company.recipient.name, 'Clínica Olhar'); assert.equal(company.recipient.ieIndicator, '1'); assert(!('cpf' in company.recipient), 'a company note carries the CNPJ, not the CPF');
@@ -76,7 +86,7 @@ function order(over = {}) {
   assert.equal(exempt.recipient.ieIndicator, '2'); assert.equal(exempt.recipient.stateRegistration, '');
 
   // Problems are listed, nothing is sent.
-  const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', env: ENV});
+  const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV});
   assert.equal(pending.ok, false); assert(pending.problems.some(p => p.includes('Dados fiscais a preencher')));
   assert(!pending.problems.some(p => p.includes('Dados da empresa')), 'the company data in legal.js is filled');
   const noCompany = buildInvoice({order: order(), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE, company: {legalName: '[PREENCHER: razão social]', cnpj: '[PREENCHER: CNPJ]'}});
@@ -129,7 +139,7 @@ function order(over = {}) {
   assert.equal(retried.status, 'autorizada'); assert.equal(retried.attempts, 2); assert.equal(retried.id, refused.id);
 
   // Missing data, CEP not found, service down: saved as errors with a readable reason, never an exception.
-  const pendingData = createInvoicing({store, env: {...ENV, NFE_EXAMPLE_DATA: ''}, fetchImpl, provider: spy, lookup: lookupFrom({'30140071': BH})});
+  const pendingData = createInvoicing({store, env: {...ENV, NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: ''}, fetchImpl, provider: spy, lookup: lookupFrom({'30140071': BH})});
   const {order: o2} = await store.orders.create(order());
   assert.match((await pendingData.issue(o2)).message, /Dados fiscais a preencher/);
   const {order: o3} = await store.orders.create(order({shipTo: {...order().shipTo, cep: '99999999'}}));

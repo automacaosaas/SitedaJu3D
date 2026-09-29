@@ -159,7 +159,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert.equal((await call(verifyEndpoint.create({env: {...onlyKey, RESEND_API_KEY: 're_other_key_456'}, store}), {body: proof})).json().error, 'invalid_code', 'another key cannot verify it');
   assert.equal((await call(verifyEndpoint.create({env: onlyKey, store}), {body: proof})).statusCode, 200);
   const healthRes = makeRes(); await health.create({env: onlyKey})({}, healthRes);
-  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', nfe: 'off', fiscal: 'pending', bling: 'off'});
+  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', nfe: 'off', fiscal: 'ok', bling: 'off'});
 }
 
 // limiter
@@ -174,7 +174,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
 {
   const res = makeRes(); await health.create({env: ENV})({}, res);
   // Production without a database or data keys: accounts are off and the keys are reported missing (never shown).
-  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', nfe: 'off', fiscal: 'pending', bling: 'off'});
+  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', nfe: 'off', fiscal: 'ok', bling: 'off'});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
   const off = makeRes(); await health.create({env: {}})({}, off);
   assert.equal(off.json().mail, 'off');

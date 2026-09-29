@@ -121,21 +121,46 @@ Bling. **No Bling, a série 1 continua na nº 11.** Ela usou:
 
 - CSOSN **102** e origem **0** (já no site);
 - CFOP **6107** (venda de produção a não contribuinte de outro estado): a regra da natureza no Bling deve dar o mesmo;
-- NCM **3923.10.90** para o item "CAIXA 21 × 29 × 17", que não é uma das três peças do site;
+- NCM **3923.10.90** para o item "CAIXA 21 × 29 × 17", que não é uma das três peças (para elas o contador indicou 3926.90.90);
 - o texto do Simples Nacional nas informações complementares (já no site). O emissor do SEBRAE ainda acrescentou a
   linha do DIFAL (R$ 0,00); se o Bling também acrescentar o texto do Simples sozinho, o site tira o dele para não repetir.
 
 Depois dos testes em homologação, confirmar no Bling que a próxima nota de produção continua sendo a nº 11. E não
 emitir mais pelo emissor do SEBRAE, senão a numeração se cruza.
 
-## Pendências com o contador
+## Dados fiscais definidos pelo contador (29/09/2026)
 
-1. Natureza de operação no Bling com as regras de imposto (e o código dela para o site).
-2. NCM de cada peça: Borboletoscópio, Dinossauroscópio e Aviãoscopia.
-3. DIFAL nas vendas a consumidor final de outros estados (na nota nº 10 saiu R$ 0,00).
-4. Frete destacado na nota, por conta do emitente.
-5. CNAE: o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só lista a 1813-0/01 como
-   secundária. Confirmar se precisa ajustar para vender as peças.
+Empresa no Simples Nacional que **fabrica** o que vende: por isso os CFOPs são os de "produção do estabelecimento".
+
+| Venda | CFOP | CSOSN | PIS/COFINS |
+|---|---|---|---|
+| Dentro de MG | 5101 | 102 | CST 49 |
+| Outro estado, pessoa física ou empresa sem inscrição estadual | 6107 | 102 | CST 49 |
+| Outro estado, empresa com inscrição estadual (contribuinte) | 6101 | 102 | CST 49 |
+
+- **NCM** das três peças: **3926.90.90** (outras obras de plásticos).
+- **DIFAL**: zerado. Nas vendas para pessoa física de outro estado, a nota traz a linha "Valores totais do ICMS
+  Interestadual: DIFAL da UF destino R$ 0,00 + FCP R$ 0,00; DIFAL da UF Origem R$ 0,00", como na nota nº 10.
+- **Frete**: modalidade 0 (por conta do emitente), com o valor destacado no campo do frete e somado ao total.
+- **Informações complementares**: "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NÃO GERA DIREITO A
+  CRÉDITO FISCAL DE ICMS, ISS E IPI." (mais o número do pedido).
+- Não usados: 5102, 6102 e 6108 são de revenda; o CSOSN 101 exige informar a alíquota do crédito, e o contador não
+  pediu isso.
+
+Tudo isso já está em `api/_lib/fiscal.js`. **Com o Bling, CFOP, CSOSN e PIS/COFINS precisam estar na natureza de
+operação dentro do Bling, com estas mesmas regras**, porque é ela que manda. No primeiro teste em homologação,
+conferir no DANFE:
+- o CFOP de cada caso;
+- se o Bling já escreve sozinho o texto do Simples ou a linha do DIFAL; se escrever, o site tira os dele para não repetir.
+
+## O que ainda falta
+
+1. **Contador, no Bling:** a natureza de operação de venda com as regras da tabela acima, série 1 com próximo número 11,
+   formas de pagamento Pix e cartão, certificado A1 e o ambiente de homologação.
+2. **Site:** o código dessa natureza (`bling.natureId` em `api/_lib/fiscal.js`), que o painel mostra depois de
+   conectar o Bling. É o único dado fiscal que falta.
+3. **CNAE (sem resposta ainda):** o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só
+   lista a 1813-0/01 como secundária. Confirmar com o contador se precisa ajustar na SEFAZ-MG.
 
 ## CEP conferido antes de cobrar
 

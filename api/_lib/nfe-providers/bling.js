@@ -21,6 +21,7 @@ const PROBLEM = {
 };
 const money = cents => Math.round(Number(cents) || 0) / 100;
 const cep = value => String(value || '').replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
+const ncm = value => String(value || '').replace(/\D/g, '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3');   // Bling writes the NCM as 9999.99.99
 const https = value => /^https:\/\//.test(String(value || '')) ? String(value) : null;
 
 // Bling's body for the note (API v3, POST/PUT /nfe).
@@ -34,7 +35,7 @@ function toBling(invoice, paymentMethodId) {
       ...(r.stateRegistration ? {ie: r.stateRegistration} : {}), ...(r.email ? {email: r.email} : {}),
       endereco: {endereco: a.street, numero: a.number, complemento: a.complement || '', bairro: a.district, cep: cep(a.cep), municipio: a.city, uf: a.state, pais: 'Brasil'}
     },
-    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: i.ncm, origem: Number(i.icms.origin)})),
+    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin)})),
     parcelas: [{data: invoice.issuedAt.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
     transporte: {fretePorConta: Number(invoice.freight.mode), frete: money(invoice.freight.cents)},
     observacoes: invoice.additionalInfo

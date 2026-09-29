@@ -70,7 +70,7 @@ const creations = () => fake.calls.filter(c => c.method === 'POST' && c.path ===
   assert.equal(person.tipo, 1); assert.equal(person.naturezaOperacao.id, 1);
   assert.deepEqual({...person.contato, endereco: undefined}, {nome: 'Ana Souza Lima', tipoPessoa: 'F', numeroDocumento: '52998224725', contribuinte: 9, email: 'ana@example.com', endereco: undefined});
   assert.deepEqual(person.contato.endereco, {endereco: 'Praça da Sé', numero: '100', complemento: '', bairro: 'Sé', cep: '01001-000', municipio: 'São Paulo', uf: 'SP', pais: 'Brasil'});
-  assert.equal(person.itens[0].valor, 129); assert.equal(person.itens[0].quantidade, 2); assert.equal(person.itens[0].classificacaoFiscal, '39269090'); assert.equal(person.itens[0].origem, 0);
+  assert.equal(person.itens[0].valor, 129); assert.equal(person.itens[0].quantidade, 2); assert.equal(person.itens[0].classificacaoFiscal, '3926.90.90', 'NCM as Bling writes it'); assert.equal(person.itens[0].origem, 0);
   assert.match(person.itens[0].descricao, /^Borboletoscópio \(/);
   assert.deepEqual(person.transporte, {fretePorConta: 0, frete: 18});
   assert.equal(person.parcelas[0].valor, 276); assert.deepEqual(person.parcelas[0].formaPagamento, {id: 501});

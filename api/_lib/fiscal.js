@@ -1,9 +1,9 @@
 'use strict';
 // Tax data for the NF-e (nota fiscal eletrônica) and the switch for issuing it. Everything marked "[PREENCHER: …]" comes
 // from the accountant (see NFE-SETUP.md); while anything is left, no invoice is sent and the panel says what is missing.
-// Reference: the last note the company issued before the site (nº 10, série 1, 19/09/2026, emissor do SEBRAE) used
-// CSOSN 102, origin 0, CFOP 6107 for a buyer in another state who is not an ICMS taxpayer, and the Simples Nacional text
-// below. The next note is nº 11 (set in Bling).
+// Filled with the accountant's answers of 29/09/2026 and the last note issued before the site (nº 10, série 1,
+// 19/09/2026, emissor do SEBRAE); the next note is nº 11 (set in Bling). The store makes what it sells, so the CFOPs are
+// the "produção do estabelecimento" ones (5101/6101/6107), never the resale ones (5102/6102/6108).
 // The store's own identification (CNPJ, name, address) lives in api/_lib/legal.js.
 //
 // Issuing is switched on by NFE_PROVIDER (the NF-e service with an API) and NFE_TOKEN. Outside production, and in
@@ -19,19 +19,21 @@ const FISCAL = {
   stateRegistration: '0055757470062',   // 005575747.00-62
   series: '1',
   nature: 'Venda de produção do estabelecimento',
-  cfop: {sameState: PENDING('CFOP de venda dentro do estado'), otherState: PENDING('CFOP de venda para outros estados')},
+  // Inside MG 5101; another state: 6101 for a buyer with a state registration (ICMS taxpayer), 6107 for a person or a
+  // company without one (as on note nº 10).
+  cfop: {sameState: '5101', otherState: '6101', otherStateConsumer: '6107'},
   icms: {origin: '0', csosn: '102'},   // Simples Nacional sem permissão de crédito, como na nota nº 10
-  pis: {cst: PENDING('CST do PIS')},
-  cofins: {cst: PENDING('CST do COFINS')},
+  pis: {cst: '49'},   // outras operações de saída: in the Simples Nacional, PIS/COFINS are paid through the DAS
+  cofins: {cst: '49'},
   // One entry per product of api/_lib/catalog.js (tests/nfe.mjs checks they match).
   products: {
-    borboletoscopio: {ncm: PENDING('NCM do Borboletoscópio')},
-    dinossauroscopio: {ncm: PENDING('NCM do Dinossauroscópio')},
-    aviaoscopia: {ncm: PENDING('NCM da Aviãoscopia')}
+    borboletoscopio: {ncm: '39269090'},   // 3926.90.90, outras obras de plásticos
+    dinossauroscopio: {ncm: '39269090'},
+    aviaoscopia: {ncm: '39269090'}
   },
   unit: 'UN',
   freightMode: '0',   // 0 = frete por conta do emitente (CIF): the store pays the carrier and charges it in the order
-  additionalInfo: 'Empresa optante pelo Simples Nacional. Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito fiscal de ICMS, ISS e IPI.',
+  additionalInfo: 'DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NÃO GERA DIREITO A CRÉDITO FISCAL DE ICMS, ISS E IPI.',
   // With Bling (NFE_PROVIDER=bling) the series and the tax rules (CFOP, CSOSN, PIS/COFINS, DIFAL) are set up by the
   // accountant inside Bling, in a "natureza de operação"; the site sends only its id. The panel lists the ids once the
   // Bling account is connected.
@@ -44,7 +46,7 @@ const EXAMPLE = Object.freeze({
   company: {legalName: 'EMPRESA EXEMPLO LTDA (dados de teste)', cnpj: '11.222.333/0001-81'},
   fiscal: {
     ...FISCAL, issuerState: 'MG', crt: '1', stateRegistration: '0010000000001', series: '1',
-    cfop: {sameState: '5101', otherState: '6101'}, icms: {origin: '0', csosn: '102'}, pis: {cst: '49'}, cofins: {cst: '49'},
+    cfop: {sameState: '5101', otherState: '6101', otherStateConsumer: '6107'}, icms: {origin: '0', csosn: '102'}, pis: {cst: '49'}, cofins: {cst: '49'},
     products: {borboletoscopio: {ncm: '39269090'}, dinossauroscopio: {ncm: '39269090'}, aviaoscopia: {ncm: '39269090'}},
     additionalInfo: 'Dados fiscais de exemplo, sem valor fiscal.',
     bling: {natureId: '1'}

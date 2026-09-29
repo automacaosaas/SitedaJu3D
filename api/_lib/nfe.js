@@ -50,8 +50,11 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
   if (productsCents + freightCents !== cents(order.totalCents)) problems.push('Os itens mais o frete não somam o total do pedido');
   if (problems.length) return {ok: false, problems};
 
-  const sameState = city.state === fiscal.issuerState;
-  const cfop = sameState ? fiscal.cfop.sameState : fiscal.cfop.otherState;
+  // Another state: a buyer with a state registration (ICMS taxpayer) gets the taxpayer CFOP; a person or a company without
+  // one gets the consumer CFOP, and the note states the interstate ICMS (DIFAL), which is zero in the Simples Nacional.
+  const sameState = city.state === fiscal.issuerState, taxpayer = recipient.ieIndicator === '1';
+  const cfop = sameState ? fiscal.cfop.sameState : taxpayer ? fiscal.cfop.otherState : fiscal.cfop.otherStateConsumer || fiscal.cfop.otherState;
+  const difal = !sameState && !taxpayer ? ' Valores totais do ICMS Interestadual: DIFAL da UF destino R$ 0,00 + FCP R$ 0,00; DIFAL da UF Origem R$ 0,00.' : '';
   return {ok: true, invoice: {
     reference: order.reference, environment, issuedAt: new Date(now).toISOString(),
     nature: fiscal.nature, series: fiscal.series,
@@ -62,7 +65,7 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
     freight: {mode: fiscal.freightMode, cents: freightCents},
     payment: {code: PAYMENT_CODE[order.method] || '99', cents: cents(order.totalCents)},
     totals: {productsCents, freightCents, totalCents: cents(order.totalCents)},
-    additionalInfo: `${fiscal.additionalInfo} Pedido ${order.reference}.`,
+    additionalInfo: `${fiscal.additionalInfo}${difal} Pedido ${order.reference}.`,
     ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId}} : {})
   }};
 }
