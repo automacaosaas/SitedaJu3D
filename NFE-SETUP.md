@@ -114,15 +114,27 @@ Roteiro:
 - `/api/health` mostra `"bling"`: `off`, `not_configured` (faltam as variáveis), `disconnected`, `connected` ou
   `paused`.
 
+## Referência: a última nota antes do site
+
+A nota **nº 10, série 1** (19/09/2026, emissor do SEBRAE, natureza "Venda Fora do Estado") foi a última emitida antes do
+Bling. **No Bling, a série 1 continua na nº 11.** Ela usou:
+
+- CSOSN **102** e origem **0** (já no site);
+- CFOP **6107** (venda de produção a não contribuinte de outro estado): a regra da natureza no Bling deve dar o mesmo;
+- NCM **3923.10.90** para o item "CAIXA 21 × 29 × 17", que não é uma das três peças do site;
+- o texto do Simples Nacional nas informações complementares (já no site). O emissor do SEBRAE ainda acrescentou a
+  linha do DIFAL (R$ 0,00); se o Bling também acrescentar o texto do Simples sozinho, o site tira o dele para não repetir.
+
+Depois dos testes em homologação, confirmar no Bling que a próxima nota de produção continua sendo a nº 11. E não
+emitir mais pelo emissor do SEBRAE, senão a numeração se cruza.
+
 ## Pendências com o contador
 
-1. Série e próximo número, seguindo a numeração do emissor do SEBRAE.
-2. Natureza de operação no Bling com as regras de imposto (e o código dela para o site).
-3. NCM de cada peça: Borboletoscópio, Dinossauroscópio e Aviãoscopia.
-4. DIFAL nas vendas a consumidor final de outros estados.
-5. Frete destacado na nota, por conta do emitente.
-6. Texto obrigatório de informações complementares.
-7. CNAE: o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só lista a 1813-0/01 como
+1. Natureza de operação no Bling com as regras de imposto (e o código dela para o site).
+2. NCM de cada peça: Borboletoscópio, Dinossauroscópio e Aviãoscopia.
+3. DIFAL nas vendas a consumidor final de outros estados (na nota nº 10 saiu R$ 0,00).
+4. Frete destacado na nota, por conta do emitente.
+5. CNAE: o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só lista a 1813-0/01 como
    secundária. Confirmar se precisa ajustar para vender as peças.
 
 ## CEP conferido antes de cobrar

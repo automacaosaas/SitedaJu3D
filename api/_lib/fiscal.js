@@ -1,6 +1,9 @@
 'use strict';
 // Tax data for the NF-e (nota fiscal eletrônica) and the switch for issuing it. Everything marked "[PREENCHER: …]" comes
 // from the accountant (see NFE-SETUP.md); while anything is left, no invoice is sent and the panel says what is missing.
+// Reference: the last note the company issued before the site (nº 10, série 1, 19/09/2026, emissor do SEBRAE) used
+// CSOSN 102, origin 0, CFOP 6107 for a buyer in another state who is not an ICMS taxpayer, and the Simples Nacional text
+// below. The next note is nº 11 (set in Bling).
 // The store's own identification (CNPJ, name, address) lives in api/_lib/legal.js.
 //
 // Issuing is switched on by NFE_PROVIDER (the NF-e service with an API) and NFE_TOKEN. Outside production, and in
@@ -14,10 +17,10 @@ const FISCAL = {
   issuerState: 'MG',
   crt: '1',   // Simples Nacional (ME, não MEI), conforme a inscrição estadual na SEFAZ-MG
   stateRegistration: '0055757470062',   // 005575747.00-62
-  series: PENDING('série da NF-e (seguir a numeração do emissor do SEBRAE ou série nova)'),
+  series: '1',
   nature: 'Venda de produção do estabelecimento',
   cfop: {sameState: PENDING('CFOP de venda dentro do estado'), otherState: PENDING('CFOP de venda para outros estados')},
-  icms: {origin: '0', csosn: PENDING('CSOSN do ICMS')},
+  icms: {origin: '0', csosn: '102'},   // Simples Nacional sem permissão de crédito, como na nota nº 10
   pis: {cst: PENDING('CST do PIS')},
   cofins: {cst: PENDING('CST do COFINS')},
   // One entry per product of api/_lib/catalog.js (tests/nfe.mjs checks they match).
@@ -28,7 +31,7 @@ const FISCAL = {
   },
   unit: 'UN',
   freightMode: '0',   // 0 = frete por conta do emitente (CIF): the store pays the carrier and charges it in the order
-  additionalInfo: PENDING('informações complementares obrigatórias (ex.: optante pelo Simples Nacional)'),
+  additionalInfo: 'Empresa optante pelo Simples Nacional. Documento emitido por ME ou EPP optante pelo Simples Nacional. Não gera direito a crédito fiscal de ICMS, ISS e IPI.',
   // With Bling (NFE_PROVIDER=bling) the series and the tax rules (CFOP, CSOSN, PIS/COFINS, DIFAL) are set up by the
   // accountant inside Bling, in a "natureza de operação"; the site sends only its id. The panel lists the ids once the
   // Bling account is connected.
