@@ -27,3 +27,4 @@
 .ship-main{display:grid;gap:3px}.ship-main small{font-size:11px;color:var(--muted)}
 .ship-price{margin-left:auto;font-weight:650;white-space:nowrap}.ship-price em{font-style:normal;color:#25664c}
 .amounts dd small,.amounts dt small{font-weight:400}.amounts dd em{font-style:normal;color:#25664c;font-weight:650}
+.field .field-hint{font-size:12px;line-height:1.4}.field .field-hint:empty{display:none}

@@ -6,6 +6,7 @@
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
+//   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
 // Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -63,7 +64,7 @@ async function main() {
     if (!env.RESEND_API_KEY.startsWith('re_')) console.warn('Aviso: chaves do Resend começam com "re_". Confira se copiou a chave inteira.');
     else console.log(`Chave recebida (${env.RESEND_API_KEY.length} caracteres).`);
   }
-  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios');
+  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios'), fakeCep = process.argv.includes('--fake-cep');
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
     env.MP_ACCESS_TOKEN = await askHidden('Cole o Access Token de teste e tecle Enter (não aparece na tela): ');
@@ -114,6 +115,7 @@ async function main() {
     '/api/payments/config': require('../api/payments/config').create({env}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
+    '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
