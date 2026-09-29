@@ -33,7 +33,7 @@ for (const name of pages().filter(n => !internal.has(n))) {
 // ── the documents ─────────────────────────────────────────────────────
 const docs = {
   'termos.html': ['Termos de Uso', 'Código de Defesa do Consumidor', 'maiores de 18 anos', 'Cada CPF pode ter uma conta', 'Propriedade intelectual', 'foro do domicílio do consumidor', 'href="trocas.html"', 'href="privacidade.html"', 'Excluir minha conta'],
-  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Melhor Envio', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'Não usamos cookies de publicidade', 'não recebemos nem guardamos o número'],
+  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'Não usamos cookies de publicidade', 'não recebemos nem guardamos o número'],
   'trocas.html': ['Trocas e Devoluções', 'até 7 dias', 'art. 49', 'inclusive o frete', '90 dias', 'art. 26', '30 dias', 'art. 18', 'Decreto nº 7.962/2013', 'Pix', 'Cartão de crédito']
 };
 for (const [file, musts] of Object.entries(docs)) {
@@ -43,6 +43,7 @@ for (const [file, musts] of Object.entries(docs)) {
   assert(/<p class="legal-language">/.test(html), `${file}: English and Spanish readers are told the text is Portuguese`);
   assert(html.includes(`<span data-terms-date>${legal.termsDate()}</span>`), `${file}: shows the date of TERMS_VERSION`);
   for (const text of musts) assert(html.includes(text), `${file}: mentions "${text}"`);
+  assert(!html.includes('Melhor Envio'), `${file}: no Melhor Envio (the shop ships with its own Correios contract)`);
   const ids = [...html.matchAll(/<a href="#([\w-]+)">/g)].map(m => m[1]);
   for (const id of ids) assert(html.includes(`id="${id}"`), `${file}: table of contents points to #${id}`);
   assert(!/<script(?![^>]*\bsrc=)/.test(html.replace(/<script type="importmap"[\s\S]*?<\/script>/, '')), `${file}: no inline scripts`);

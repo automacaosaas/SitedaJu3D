@@ -9,15 +9,15 @@ const PENDING = what => `[PREENCHER: ${what}]`;
 
 const COMPANY = {
   tradeName: 'Ju, imprime pra mim?',
-  legalName: PENDING('razão social'),
-  cnpj: PENDING('CNPJ'),
-  address: PENDING('endereço completo com CEP'),
+  legalName: 'JU IMPRIME PARA MIM LTDA',
+  cnpj: '67.771.044/0001-96',
+  address: 'Rua Presidente Castelo Branco, 61, Nossa Senhora de Lourdes, Ouro Preto/MG, CEP 35404-450',
   email: PENDING('e-mail de atendimento'),
   phone: PENDING('telefone ou WhatsApp'),
   website: 'https://juimprimepramim.com.br'
 };
 
-const TERMS_VERSION = '2026-09-28';
+const TERMS_VERSION = '2026-09-29';
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const termsDate = (version = TERMS_VERSION) => { const [y, m, d] = version.split('-').map(Number); return `${d} de ${MONTHS[m - 1]} de ${y}`; };
