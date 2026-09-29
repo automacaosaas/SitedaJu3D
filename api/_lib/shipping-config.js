@@ -8,9 +8,9 @@
 //   production     business days the shop needs before posting; added to the carrier's delivery time in what the buyer sees
 //   labelFeeCents  extra cost per label on top of the carrier's price (0 when a label costs only the freight)
 //   freeShipping   null, or {fromCents, service}: orders whose subtotal reaches `fromCents` ship free on that service
-//   sharedBox      ONE box for any mix of products: its size in cm, `maxPieces` (how many pieces fit) and `weightsG`, the packed weight in
-//                  grams for 1, 2, … maxPieces pieces (the box as it goes to the Correios, packaging included). An order with more
-//                  pieces than fit makes more boxes; the Correios API prices each volume.
+//   sharedBox      ONE box for any mix of products: its size in cm, `maxPieces` (how many pieces fit) and `pieceG`, the packed weight in
+//                  grams of one piece of each product. A box weighs the sum of its pieces; an order with more pieces than fit makes
+//                  more boxes, and the Correios API prices each volume.
 //   boxes          alternative to sharedBox (used only when there is no sharedBox): per product, the packed size of ONE piece (`unit`),
 //                  how many fit in one box (`perBox`) and the size of that full box (`full`; not needed when perBox is 1). Different
 //                  products then never share a box.
@@ -23,10 +23,11 @@ module.exports = Object.freeze({
   ]),
   production: Object.freeze({minDays: 3, maxDays: 5}),
   labelFeeCents: 0,
-  freeShipping: null,
+  // Free shipping (PAC) when the subtotal reaches R$ 500,00, all over Brazil; the shop still pays the label (the admin shows its cost).
+  freeShipping: Object.freeze({fromCents: 50000, service: 'pac'}),
   // Everything of an order goes in the one box registered at the Correios Empresa (Pré-postagem Web → Embalagens) as "BORBOLETA E DINO":
-  // 22 × 20 × 7 cm. Still to fill in: how many pieces fit (`maxPieces`) and the packed weight with 1, 2, … pieces. 257 g is what the
-  // registered packaging shows; to confirm that it is the box WITH one piece (the price changes by weight bracket). Until they are
-  // complete the real quote stays 'pending'.
-  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: null, weightsG: Object.freeze([257])})
+  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces: butterfly and dinosaur 257 g each,
+  // airplane 257 + 220 = 477 g (the shop's numbers). If the 257 g already include the box, the sum counts it once per piece: the first
+  // real quote, compared with the Correios Empresa for the same box, shows whether that matters.
+  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 257, dinossauroscopio: 257, aviaoscopia: 477})})
 });

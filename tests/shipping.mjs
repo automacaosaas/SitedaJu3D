@@ -47,16 +47,16 @@ assert.deepEqual(correiosSettings({CORREIOS_USER: ' u ', CORREIOS_CODE: 'c', COR
 for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS_CONTRACT', 'SHIP_FROM_CEP']) assert.equal(correiosSettings({...fresh().creds, [drop]: ''}).ready, false, `${drop} is needed`);
 
 // the shop's data: nothing is guessed
-assert.deepEqual(missing(baseConfig), ['sharedBox'], 'the shipped config has the contract data, PAC, production days and the box size, but not yet how many pieces fit or their weights: the real quote stays off until they are filled in (update when they arrive)');
+assert.deepEqual(missing(baseConfig), [], 'the shipped config is complete: with the Correios credentials the real quote is on');
 assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG only; 3 to 5 days of production');
-assert.deepEqual([baseConfig.sharedBox.length, baseConfig.sharedBox.width, baseConfig.sharedBox.height, baseConfig.sharedBox.weightsG[0]], [22, 20, 7, 257], 'the packaging registered at the Correios Empresa');
-const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, weightsG: [257, 480, 700]};
-assert.deepEqual(missing({...baseConfig, sharedBox: SHARED}), [], 'a complete shared box is enough: no per-product boxes needed');
+assert.deepEqual([baseConfig.freeShipping, baseConfig.labelFeeCents], [{fromCents: 50000, service: 'pac'}, 0], 'free PAC from R$ 500, no extra label fee');
+const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 257, dinossauroscopio: 257, aviaoscopia: 477}};
+assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; the airplane weighs 220 g more than the others');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, maxPieces: null}}), ['sharedBox'], 'how many pieces fit is missing');
-assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480]}}), ['sharedBox'], 'a weight for every piece count');
-assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480, 700, 900]}}), ['sharedBox'], 'no weight left over: it would mean a wrong number of pieces');
-assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 200, 700]}}), ['sharedBox'], 'more pieces never weigh less');
-assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, weightsG: [257, 480, 31000]}}), ['sharedBox'], 'over 30 kg');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {borboletoscopio: 257, dinossauroscopio: 257}}}), ['sharedBox'], 'a weight for every product');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {...SHARED.pieceG, aviaoscopia: 0}}}), ['sharedBox'], 'weights are positive');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {...SHARED.pieceG, aviaoscopia: 11000}}}), ['sharedBox'], 'a full box over 30 kg');
+assert.deepEqual(missing({...baseConfig, boxes: undefined, sharedBox: undefined}).slice(0, 1), ['boxes.borboletoscopio'], 'without a shared box the per-product boxes are needed');
 assert.deepEqual(missing(EXAMPLE_CONFIG), []);
 assert.deepEqual(missing(withConfig({production: {minDays: 7, maxDays: 5}})), ['production']);
 assert.deepEqual(missing(withConfig({boxes: {...EXAMPLE_CONFIG.boxes, aviaoscopia: {unit: {length: 25, width: 14, height: 6, weightG: 31000}, perBox: 1, full: null}}})), ['boxes.aviaoscopia'], 'over 30 kg');
@@ -75,21 +75,23 @@ assert.deepEqual(vol([{productId: 'dinossauroscopio', quantity: 5}]), [[2, 800]]
 assert.deepEqual(vol([{productId: 'aviaoscopia', quantity: 3}]), [[3, 350]], 'one piece per box: identical volumes are grouped');
 assert.deepEqual(vol(LINES), [[1, 600], [1, 320], [1, 350]]);
 
-// one shared box for any mix of products, up to maxPieces pieces
+// one shared box for any mix of products, up to maxPieces pieces; a box weighs the sum of its pieces
 const sharedVol = lines => volumesFor(lines, {...EXAMPLE_CONFIG, sharedBox: SHARED}).map(v => [v.count, v.box.weightG]);
-assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}]), [[1, 257]], 'one piece');
-assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}]), [[1, 700]], 'three different products share the box');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 2}]), [[1, 480]], 'two pieces of the same product');
-assert.deepEqual(sharedVol(LINES), [[1, 700], [1, 257]], '4 pieces: a full box of 3 and a box with the fourth');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 5}]), [[1, 700], [1, 480]], '3 + 2, the last box weighed for its 2 pieces');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 700]], 'identical full boxes are grouped');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}]), [[1, 257]], 'one butterfly');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 1}]), [[1, 477]], 'the airplane is 220 g heavier');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}]), [[1, 991]], 'three different products share one box: 257 + 257 + 477');
+assert.deepEqual(sharedVol(LINES), [[1, 991], [1, 257]], '4 pieces (3 butterflies + 1 airplane): a box of 3, heaviest first, and a box with the last butterfly');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 5}]), [[1, 1431], [1, 954]], '3 + 2 airplanes');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 1431]], 'identical full boxes are grouped');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 4}]), [[1, 771], [1, 257]], '3 + 1 butterflies');
 
 // ── the engine against the Correios simulator ────────────────────────────────────────────────────────
 {
   const fake = fresh(), env = ENV_OF(fake), ship = createShipping({env, fetchImpl: fake.fetchImpl, config: EXAMPLE_CONFIG});
   assert.equal(ship.status().mode, 'correios');
   assert.equal(createShipping({env: {}, fetchImpl: fake.fetchImpl, config: EXAMPLE_CONFIG}).status().mode, 'off', 'no credentials: off');
-  assert.equal(createShipping({env, fetchImpl: fake.fetchImpl}).status().mode, 'pending', 'credentials but the template config: pending');
+  assert.equal(createShipping({env, fetchImpl: fake.fetchImpl, config: {...baseConfig, sharedBox: {...SHARED, maxPieces: null}}}).status().mode, 'pending', 'credentials but the shop\'s data incomplete: pending');
+  assert.equal(createShipping({env, fetchImpl: fake.fetchImpl}).status().mode, 'correios', 'credentials and the shipped config: on');
   await assert.rejects(createShipping({env: {}, fetchImpl: fake.fetchImpl, config: EXAMPLE_CONFIG}).quote({lines: LINES, cep: '90010000'}), {code: 'shipping_off'});
   await assert.rejects(ship.quote({lines: LINES, cep: '9001'}), {code: 'invalid_cep'});
 
@@ -111,7 +113,7 @@ assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 700]
   assert.deepEqual(triple.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 3), 3], ['sedex', sedex(6, 1, 3), 3]], 'a group of 3 identical volumes costs 3 times one');
   assert.equal(fake.calls.filter(c => c.path.startsWith('/preco') && c.params.cepDestino === '90010000' && c.params.psObjeto === '350').length, 2, 'one price request per service and box, not per label');
 
-  // one shared box: three different products are ONE volume (a 700 g box), not three
+  // one shared box: three different products are ONE volume (991 g), not three
   const oneBox = createShipping({env, fetchImpl: fake.fetchImpl, config: withConfig({sharedBox: SHARED})});
   const mixed = await oneBox.quote({lines: [{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}], cep: '90010-000'});
   assert.deepEqual(mixed.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 1), 1], ['sedex', sedex(6, 1, 1), 1]], 'one label for the whole order');
@@ -181,7 +183,7 @@ const ITEMS = [{productId: 'borboletoscopio', quantity: 3, selection: {body: 'pi
   const handler = quoteHandler.create({env, fetchImpl: fake.fetchImpl, shippingConfig: EXAMPLE_CONFIG});
   assert.equal((await call(handler, {method: 'PUT'})).statusCode, 405);
   assert.deepEqual((await call(quoteHandler.create({env: {SITE_URL: SITE}, fetchImpl: fake.fetchImpl}), {method: 'GET'})).json(), {mode: 'off'});
-  assert.deepEqual((await call(quoteHandler.create({env, fetchImpl: fake.fetchImpl}), {method: 'GET'})).json(), {mode: 'off'}, 'credentials with the template config look "off" from outside');
+  assert.deepEqual((await call(quoteHandler.create({env, fetchImpl: fake.fetchImpl, shippingConfig: {...baseConfig, production: {minDays: null, maxDays: null}}}), {method: 'GET'})).json(), {mode: 'off'}, 'credentials but incomplete shop data look off from outside');
   assert.deepEqual((await call(handler, {method: 'GET'})).json(), {mode: 'correios', production: {minDays: 5, maxDays: 7}});
   assert.deepEqual((await call(quoteHandler.create({env: {SITE_URL: SITE}, fetchImpl: fake.fetchImpl}), {body: {items: ITEMS, cep: '90010000'}})).json(), {mode: 'off'}, 'off: the checkout keeps its fixed example fee');
 
@@ -212,12 +214,23 @@ const ITEMS = [{productId: 'borboletoscopio', quantity: 3, selection: {body: 'pi
   noSecrets(fake);
 }
 
+// ── the shop's shipped data end to end: PAC only, free from R$ 500 ─────────────────────────────────────
+{
+  const fake = fresh(), shop = createShipping({env: ENV_OF(fake), fetchImpl: fake.fetchImpl, config: baseConfig});
+  assert.equal(shop.status().mode, 'correios');
+  const under = await shop.quote({lines: LINES, cep: '90010-000', subtotalCents: 49999}), over = await shop.quote({lines: LINES, cep: '90010-000', subtotalCents: 50000});
+  assert.deepEqual(under.options.map(o => [o.service, o.free, o.volumes, o.priceCents]), [['pac', false, 2, pac(6, 1, 2)]], 'PAC only; 3 butterflies + 1 airplane are two boxes; R$ 499,99 pays the freight');
+  assert.deepEqual(over.options.map(o => [o.service, o.free, o.priceCents, o.costCents]), [['pac', true, 0, pac(6, 1, 2)]], 'R$ 500,00 ships free; the shop still pays the label');
+  assert.deepEqual(under.options[0].days, {min: 3 + 15, max: 5 + 15}, 'production 3 to 5 days + the carrier\'s 15');
+  assert(!fake.calls.some(c => c.path.includes('03220')), 'SEDEX is never asked for');
+}
+
 // ── health says where shipping stands, never a value ─────────────────────────────────────────────────
 {
   const fake = fresh();
   const read = async env => { const res = makeRes(); await health.create({env})({}, res); return res.json(); };
   assert.equal((await read({})).shipping, 'off');
-  assert.equal((await read(fake.creds)).shipping, 'pending');
+  assert.equal((await read(fake.creds)).shipping, 'correios', 'credentials and the shipped shop data: quoting');
   const text = JSON.stringify(await read(fake.creds)); for (const secret of [fake.creds.CORREIOS_CODE, fake.creds.CORREIOS_CARD, fake.creds.CORREIOS_CONTRACT, fake.creds.SHIP_FROM_CEP]) assert(!text.includes(secret));
 }
 
@@ -313,7 +326,7 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
   const plainSaved = await plainStore.orders.findByReference(plain.json().reference);
   assert.deepEqual([plainSaved.shippingCents, plainSaved.shippingInfo], [1800, null]);
   const pendingStore = createMemoryStore(), pendingBuyer = await signedInBuyer(pendingStore, env);
-  const pending = await call(createHandler.create({env, fetchImpl: net.fetchImpl, store: pendingStore}), {body: order(null), ...pendingBuyer});   // credentials, template config
+  const pending = await call(createHandler.create({env, fetchImpl: net.fetchImpl, store: pendingStore, shippingConfig: {...baseConfig, production: {minDays: null, maxDays: null}}}), {body: order(null), ...pendingBuyer});   // credentials, shop data incomplete
   assert.equal(pending.statusCode, 201, pending.body); assert.equal((await pendingStore.orders.findByReference(pending.json().reference)).shippingCents, 1800);
   noSecrets(correios);
 }
