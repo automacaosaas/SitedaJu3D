@@ -1,7 +1,7 @@
 'use strict';
 // Bling (API v3), the NF-e service chosen by the accountant. The store's Bling account is connected once from the panel
 // (OAuth 2.0 authorization code: someone signs in at Bling and allows the app), and the site keeps the tokens encrypted
-// with DATA_KEY in the integrations table (db/migrations/007_bling.sql), renewing them by itself. The access token lasts
+// with DATA_KEY in the integrations table (db/migrations/008_bling.sql), renewing them by itself. The access token lasts
 // about 6 hours; the refresh token 30 days from its last use, so the panel renews it at least once a week (keepAlive).
 // Tokens never leave the server and are never logged.
 //

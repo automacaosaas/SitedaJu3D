@@ -71,7 +71,7 @@ Bling → **Central de Extensões → Área do Integrador → Criar aplicativo**
 2. O Bling abre: entrar com a conta da empresa e **permitir** o aplicativo.
 3. O Bling volta para o painel, que mostra "Bling conectado" e a lista de **naturezas de operação** com os códigos.
 
-O site guarda a autorização criptografada no banco (tabela `integrations`, migração `007_bling.sql`) e renova sozinho.
+O site guarda a autorização criptografada no banco (tabela `integrations`, migração `008_bling.sql`) e renova sozinho.
 A renovação vale 30 dias, e abrir o painel renova toda semana. Se ficar um mês sem ninguém abrir o painel, o cartão
 avisa "A conexão com o Bling expirou" e é só conectar de novo. **Desconectar o Bling** apaga a autorização do site e pede
 ao Bling para revogá-la.

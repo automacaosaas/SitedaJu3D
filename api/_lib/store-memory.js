@@ -73,7 +73,7 @@ function createMemoryStore() {
       // Accepts a TOTP step only if it is newer than the last one used: true for exactly one caller.
       async useStep(id, step) { const row = admins.get(id); if (!row || (row.totpLastStep !== null && row.totpLastStep >= step)) return false; row.totpLastStep = step; return true; }
     },
-    // NF-e: one per order (db/migrations/006_notas_fiscais.sql).
+    // NF-e: one per order (db/migrations/007_notas_fiscais.sql).
     invoices: {
       async create(data) {
         const existing = [...invoices.values()].find(i => i.orderId === data.orderId);
@@ -87,7 +87,7 @@ function createMemoryStore() {
       async update(id, patch) { const row = invoices.get(id); if (!row) return null; Object.assign(row, patch, {updatedAt: new Date()}); return copy(row); },
       async listByOrders(orderIds) { const ids = new Set(orderIds); return copy([...invoices.values()].filter(i => ids.has(i.orderId))); }
     },
-    // Connections to outside services, one row per name (db/migrations/007_bling.sql): tokens encrypted, dates, pause.
+    // Connections to outside services, one row per name (db/migrations/008_bling.sql): tokens encrypted, dates, pause.
     integrations: {
       async get(name) { return copy(integrations.get(name) || null); },
       async save(name, patch) {
