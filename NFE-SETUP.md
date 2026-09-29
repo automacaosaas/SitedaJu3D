@@ -29,38 +29,101 @@ autorizada não emite outra.
 | "Nota fiscal com problema: …" | Recusada ou faltando dado (a mensagem diz o quê) | Corrigir e clicar em **Tentar de novo** |
 | "Pedido recusado com nota emitida" | A nota saiu e depois o pedido foi recusado | Cancelar a nota no painel do serviço (a Fazenda aceita em até 24 horas) |
 
-## O que falta para ligar
+## Emissor: Bling
 
-1. **Contador:** escolher o serviço de NF-e e informar os dados fiscais (a mensagem pronta está na conversa e abaixo).
-2. **Dados fiscais:** trocar cada `[PREENCHER: …]` de `api/_lib/fiscal.js`: UF da empresa, regime (CRT), inscrição
-   estadual, série, CFOP dentro e fora do estado, CSOSN, CST de PIS e COFINS, NCM de cada peça e o texto de
-   informações complementares. Os dados da empresa (razão social, CNPJ) ficam em `api/_lib/legal.js`.
-3. **Conector do serviço escolhido:** um arquivo em `api/_lib/nfe-providers/` que traduz a nota para a API dele. O resto
-   (montagem, registro, painel, e-mails, testes) já está pronto e testado com um serviço simulado.
-4. **Certificado A1:** enviado por vocês direto no painel do serviço.
-5. **Variáveis na Hostinger:**
+O contador escolheu o **Bling** (API v3). No Bling ficam a empresa, o certificado, a numeração e as regras de imposto; o
+site manda cada venda e lê de volta a nota autorizada. O conector é `api/_lib/nfe-providers/bling.js`, e a conexão com
+a conta (autorização e tokens) é `api/_lib/bling.js`.
+
+### 1. O que o contador configura no Bling
+
+- Cadastro da empresa e **certificado A1** (enviado direto no Bling, nunca para o site).
+- **Série e próximo número** das NF-e. A empresa já emitiu pelo emissor do SEBRAE: a numeração continua de onde parou
+  (ou numa série nova), senão a Fazenda recusa por duplicidade.
+- Uma **natureza de operação** de venda ("venda de produção do estabelecimento") com as regras de CFOP, CSOSN,
+  PIS/COFINS e DIFAL: dentro de MG, outro estado para consumidor final e outro estado para empresa com inscrição estadual.
+- **Formas de pagamento** com o tipo certo: Pix (17), cartão de crédito (03) e cartão de débito (04). O site escolhe
+  sozinho a forma ativa de cada tipo.
+- **Ambiente**: homologação enquanto testamos; produção só no lançamento (veja o passo 5).
+
+### 2. Aplicativo do site no Bling (uma vez, por quem administra a conta)
+
+Bling → **Central de Extensões → Área do Integrador → Criar aplicativo**:
+
+- Visibilidade: privada (só para esta conta), se o Bling oferecer.
+- **Link de redirecionamento**: o endereço do painel, exatamente como o site mostra no cartão "Nota fiscal · Bling":
+  - site de teste: `https://wheat-llama-936569.hostingersite.com/admin.html`;
+  - loja: `https://juimprimepramim.com.br/admin.html`.
+- Escopos: **Notas fiscais eletrônicas (NF-e)**, **Naturezas de operação** e **Formas de pagamento**.
+- Ao salvar, o Bling mostra o **Client ID** e o **Client Secret**. Eles vão direto para a Hostinger (tabela abaixo),
+  nunca por WhatsApp nem por e-mail.
 
 | Nome | Valor | Secreta |
 |---|---|---|
-| `NFE_PROVIDER` | o nome do serviço (ex.: `focusnfe`) | não |
-| `NFE_TOKEN` | a chave da API do serviço | **sim** |
-| `NFE_ENVIRONMENT` | `producao` só no site de verdade, quando for vender | não |
+| `NFE_PROVIDER` | `bling` | não |
+| `BLING_CLIENT_ID` | o Client ID do aplicativo | não |
+| `BLING_CLIENT_SECRET` | o Client Secret do aplicativo | **sim** |
+| `NFE_ENVIRONMENT` | `producao` só na loja, no lançamento | não |
 
-Sem `NFE_ENVIRONMENT=producao`, e sempre no site de teste, as notas vão para a **homologação** da Fazenda, que não tem
-valor fiscal: o painel mostra a etiqueta "homologação" e o e-mail avisa. É a mesma regra de dois passos das chaves do
-Mercado Pago. `/api/health` mostra `"nfe"` (`off`, `test` ou `live`) e `"fiscal"` (`pending` enquanto faltar dado).
+### 3. Conectar a conta (pelo Painel da Ju)
 
-## Perguntas para o contador
+1. Painel da Ju → cartão **Nota fiscal · Bling** (embaixo do calendário) → **Conectar ao Bling**.
+2. O Bling abre: entrar com a conta da empresa e **permitir** o aplicativo.
+3. O Bling volta para o painel, que mostra "Bling conectado" e a lista de **naturezas de operação** com os códigos.
 
-1. Qual serviço de NF-e com API você usa ou recomenda (Focus NFe, NFE.io, Nuvem Fiscal, PlugNotas, Bling…)?
-2. Regime tributário (Simples Nacional?), inscrição estadual e CNAE.
-3. NCM das peças impressas em 3D.
-4. CFOP para venda dentro do estado e para outros estados (produção própria?).
-5. CSOSN do ICMS e CST de PIS e COFINS.
-6. Série e número inicial das notas; testar antes em homologação.
-7. Texto obrigatório de informações complementares.
-8. DIFAL nas vendas para consumidor final de outros estados.
-9. Frete na nota como por conta do emitente.
+O site guarda a autorização criptografada no banco (tabela `integrations`, migração `007_bling.sql`) e renova sozinho.
+A renovação vale 30 dias, e abrir o painel renova toda semana. Se ficar um mês sem ninguém abrir o painel, o cartão
+avisa "A conexão com o Bling expirou" e é só conectar de novo. **Desconectar o Bling** apaga a autorização do site e pede
+ao Bling para revogá-la.
+
+### 4. Dados fiscais no site (`api/_lib/fiscal.js`)
+
+Com o Bling, o site só precisa de:
+
+- `bling.natureId`: o **código da natureza de venda**, que o painel mostra depois de conectar;
+- o **NCM** de cada peça;
+- o texto de **informações complementares**.
+
+Série, CFOP, CSOSN e PIS/COFINS ficam no Bling, e o site não pede. UF (MG), regime (Simples Nacional, CRT 1) e
+inscrição estadual já estão preenchidos. Enquanto faltar algum dado, nenhuma nota sai e o pedido mostra o que falta.
+
+### 5. Homologação e produção
+
+No Bling, o ambiente é uma configuração da **conta**, não de cada nota. Por isso o site confere o ambiente no XML de
+cada nota que envia:
+
+- Se o **site de teste** receber uma nota em **produção** (valor fiscal de verdade), ele registra a nota como é, avisa
+  no pedido e **pausa a emissão**. Aí é conferir com o contador (dá para cancelar no Bling em até 24 horas) e clicar em
+  **Liberar a emissão** no cartão do Bling.
+- Se a **loja** (com `NFE_ENVIRONMENT=producao`) receber uma nota em **homologação**, dá erro no pedido: mudar o
+  ambiente no Bling e clicar em **Tentar de novo**, que sai uma nota nova.
+
+Roteiro:
+1. **Testes:** Bling em homologação, site de teste conectado. Concluir pedidos de teste e o contador conferir XML e DANFE.
+2. **Lançamento:** desconectar o site de teste, colocar o Bling em produção, conectar a loja e pôr
+   `NFE_ENVIRONMENT=producao` na Hostinger da loja.
+
+### Como o site conversa com o Bling
+
+- Pedido concluído → `POST /nfe` (a nota com o comprador, as peças, o frete e a forma de pagamento) →
+  `POST /nfe/{id}/enviar` (sem o e-mail do Bling; quem avisa o cliente é o site) → `GET /nfe/{id}` (número, chave,
+  PDF e XML).
+- O código da nota no Bling fica guardado no pedido. "Tentar de novo" corrige e reenvia **a mesma nota**
+  (`PUT /nfe/{id}`), nunca cria outra. Uma nota cancelada no Bling é substituída por uma nova.
+- Uma rejeição da Fazenda aparece no pedido com as palavras do Bling (ex.: "Rejeição 539: …").
+- `/api/health` mostra `"bling"`: `off`, `not_configured` (faltam as variáveis), `disconnected`, `connected` ou
+  `paused`.
+
+## Pendências com o contador
+
+1. Série e próximo número, seguindo a numeração do emissor do SEBRAE.
+2. Natureza de operação no Bling com as regras de imposto (e o código dela para o site).
+3. NCM de cada peça: Borboletoscópio, Dinossauroscópio e Aviãoscopia.
+4. DIFAL nas vendas a consumidor final de outros estados.
+5. Frete destacado na nota, por conta do emitente.
+6. Texto obrigatório de informações complementares.
+7. CNAE: o cartão CNPJ tem a 22.29-3-99 (artefatos de plástico), mas a inscrição estadual só lista a 1813-0/01 como
+   secundária. Confirmar se precisa ajustar para vender as peças.
 
 ## CEP conferido antes de cobrar
 
@@ -72,9 +135,11 @@ estiver errado, a nota daquele pedido precisa ser feita à mão no serviço.
 ## Testar localmente
 
 ```bash
-node tools/dev-server.cjs --fake-mp --fake-nfe
+node tools/dev-server.cjs --fake-mp --fake-nfe     # serviço de NF-e genérico simulado
+node tools/dev-server.cjs --fake-mp --fake-bling   # Bling simulado: conectar no painel e concluir um pedido
 ```
 
 Mercado Pago e serviço de NF-e simulados, com **dados fiscais de exemplo** (sem valor fiscal; nunca usados em produção).
 No simulador, um comprador com "REJEITAR" no nome tem a nota recusada e um com "DEMORAR" fica em "emitindo…" até
-clicar em Atualizar. `node tests/nfe.mjs` cobre a montagem, as regras de ambiente, a consulta de CEP e o fluxo inteiro.
+clicar em Atualizar. `node tests/nfe.mjs` cobre a montagem, as regras de ambiente, a consulta de CEP e o fluxo inteiro; `node tests/bling.mjs`
+cobre a conexão com o Bling, a nota enviada, as novas tentativas, a renovação da autorização e a conferência do ambiente.

@@ -30,9 +30,9 @@ function recipientOf(order, env) {
   return {name: order.buyer?.name || '', cpf, ieIndicator: '9'};
 }
 
-function buildInvoice({order, city, environment, env = process.env, company = COMPANY, fiscal = FISCAL, now = Date.now()}) {
+function buildInvoice({order, city, environment, provider, env = process.env, company = COMPANY, fiscal = FISCAL, now = Date.now()}) {
   const problems = [];
-  const gaps = missing(fiscal);
+  const gaps = missing(fiscal, {provider});
   if (gaps.length) problems.push(`Dados fiscais a preencher (api/_lib/fiscal.js): ${gaps.join(', ')}`);
   for (const key of ['legalName', 'cnpj']) if (pending(company[key])) problems.push(`Dados da empresa a preencher (api/_lib/legal.js): ${key}`);
   const recipient = recipientOf(order, env);
@@ -62,7 +62,8 @@ function buildInvoice({order, city, environment, env = process.env, company = CO
     freight: {mode: fiscal.freightMode, cents: freightCents},
     payment: {code: PAYMENT_CODE[order.method] || '99', cents: cents(order.totalCents)},
     totals: {productsCents, freightCents, totalCents: cents(order.totalCents)},
-    additionalInfo: `${fiscal.additionalInfo} Pedido ${order.reference}.`
+    additionalInfo: `${fiscal.additionalInfo} Pedido ${order.reference}.`,
+    ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId}} : {})
   }};
 }
 

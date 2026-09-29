@@ -29,7 +29,7 @@ export async function logout(options) { try { await request('/api/admin/logout',
 
 export async function loadOrders(options) {
   const {status, data} = await request('/api/admin/orders', options);
-  if (status === 200 && Array.isArray(data?.orders)) return {orders: data.orders, invoicing: data.invoicing || 'off'};
+  if (status === 200 && Array.isArray(data?.orders)) return {orders: data.orders, invoicing: data.invoicing || 'off', provider: data.invoicingProvider || null};
   throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
 }
 // "Conferir estorno" / "Tentar estorno de novo" on a declined order.
@@ -56,6 +56,20 @@ export async function revealDocument(id, options) {
   const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});
   if (answer.status === 200 && typeof answer.data?.cpf === 'string') return answer.data.cpf;
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
+// The Bling connection (NF-e service): where it stands, and the actions. 'start' answers the address of Bling's
+// authorization page; the others answer the new state.
+export async function loadBling(options) {
+  const answer = await request('/api/admin/bling', options);
+  if (answer.status === 200 && answer.data?.bling) return answer.data.bling;
+  throw Object.assign(new Error('unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+export async function blingAction(action, extra = {}, options) {
+  const answer = await request('/api/admin/bling', {method: 'POST', body: {action, ...extra}, ...options});
+  if (answer.status === 200 && action === 'start' && /^https?:\/\//.test(answer.data?.url || '')) return answer.data.url;
+  if (answer.status === 200 && answer.data?.bling) return answer.data.bling;
+  throw Object.assign(new Error('unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable', field: answer.data?.field});
 }
 
 // The secret in groups of four, for typing into the app when the QR code cannot be scanned.

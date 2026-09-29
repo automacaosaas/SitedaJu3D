@@ -10,10 +10,21 @@ const mp = require('./_lib/mercadopago');
 const admin = require('./_lib/admin-auth');
 const legal = require('./_lib/legal');
 const fiscal = require('./_lib/fiscal');
+const {createBling} = require('./_lib/bling');
+
+async function blingState(env, nfe) {
+  if (nfe.provider !== 'bling') return 'off';
+  const store = storeFor(env);
+  if (!store) return 'off';
+  try {
+    const status = await createBling({store, env}).status();
+    return !status.configured ? 'not_configured' : !status.connected ? 'disconnected' : status.pausedReason ? 'paused' : 'connected';
+  } catch { return 'error'; }
+}
 
 function createHandler({env = process.env} = {}) {
   return async function handler(req, res) {
-    const settings = config(env), pay = mp.settings(env);
+    const settings = config(env), pay = mp.settings(env), nfe = fiscal.nfeSettings(env);
     let dataKeys = 'ok';
     try { keys(env); if (!env.DATA_KEY || !env.INDEX_KEY) dataKeys = 'dev'; } catch { dataKeys = 'missing'; }
     json(res, 200, {
@@ -22,7 +33,8 @@ function createHandler({env = process.env} = {}) {
       payments: pay.mode, paymentsBlocked: pay.blocked, mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
       admin: await admin.status(storeFor(env), env),
       legal: legal.pending() ? 'pending' : 'ok',   // store details still marked [PREENCHER] in api/_lib/legal.js
-      nfe: fiscal.nfeSettings(env).mode, fiscal: fiscal.missing().length ? 'pending' : 'ok'   // NF-e issuing (off, test, live) and the tax data of api/_lib/fiscal.js
+      nfe: nfe.mode, fiscal: fiscal.missing(fiscal.FISCAL, {provider: nfe.provider}).length ? 'pending' : 'ok',   // NF-e issuing (off, test, live) and the tax data of api/_lib/fiscal.js
+      bling: await blingState(env, nfe)   // off, not_configured (app variables missing), disconnected, connected or paused
     });
   };
 }

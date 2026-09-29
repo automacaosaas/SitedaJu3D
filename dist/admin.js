@@ -1,4 +1,4 @@
-import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, retryRefund, revealDocument, retryInvoice, groupSecret} from './admin-auth.js';
+import {login, verifyCode, currentSession, logout, loadOrders, changeStatus, retryRefund, revealDocument, retryInvoice, loadBling, blingAction, groupSecret} from './admin-auth.js';
 import {listByStatus, dailyTotals, ordersForDay, summary, dayKey, replaceOrder, STATUSES} from './admin-store.js';
 import qrcode from './vendor/qrcode-generator.js';
 import {PRODUCTS, color} from './products.js';
@@ -94,10 +94,43 @@ function nfeLine(o) {
   if (nfe.status === 'autorizada') {
     const links = [nfe.pdfUrl && `<a href="${esc(nfe.pdfUrl)}" target="_blank" rel="noopener">PDF</a>`, nfe.xmlUrl && `<a href="${esc(nfe.xmlUrl)}" target="_blank" rel="noopener">XML</a>`].filter(Boolean).join(' · ');
     const warn = o.status === 'recusado' ? '<br><strong>Pedido recusado com nota emitida:</strong> cancele a nota no emissor (a Fazenda aceita em até 24 horas).' : '';
-    return `<p class="admin-invoice is-ok">Nota fiscal nº ${esc(nfe.number)}${nfe.series ? ` · série ${esc(nfe.series)}` : ''}${test}${links ? ` · ${links}` : ''}${warn}</p>`;
+    const notice = nfe.message ? `<br><strong>Atenção:</strong> ${esc(nfe.message)}` : '';
+    return `<p class="admin-invoice ${notice ? 'is-error' : 'is-ok'}">Nota fiscal nº ${esc(nfe.number)}${nfe.series ? ` · série ${esc(nfe.series)}` : ''}${test}${links ? ` · ${links}` : ''}${notice}${warn}</p>`;
   }
   if (nfe.status === 'processando') return `<p class="admin-invoice is-waiting">Nota fiscal: emitindo…${test} Clique em Atualizar em alguns instantes.</p>`;
   return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${o.status === 'concluido' ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
+}
+
+// "Nota fiscal · Bling": the store's connection to the NF-e service (only with NFE_PROVIDER=bling). Connecting sends
+// Ju to Bling's authorization page; Bling sends her back here with a one-minute code (see start()).
+let invoicingProvider = null, bling = null, blingNote = '';
+const BLING_MESSAGES = {
+  bling_code_invalid: 'O Bling não aceitou a autorização (ela vale um minuto). Clique em Conectar ao Bling de novo.',
+  invalid_request: 'Por segurança, a conexão não foi confirmada. Clique em Conectar ao Bling de novo.',
+  bling_not_configured: 'Faltam as variáveis BLING_CLIENT_ID e BLING_CLIENT_SECRET na Hostinger.',
+  bling_unavailable: 'O Bling não respondeu. Tente de novo em alguns minutos.'
+};
+const blingMessage = code => BLING_MESSAGES[code] || 'Não foi possível falar com o Bling agora. Tente de novo.';
+function naturesList(b) {
+  if (b.naturesError) return `<p class="panel-sub">Não foi possível listar as naturezas de operação: ${esc(b.naturesError)}</p>`;
+  if (!b.natures) return '';
+  if (!b.natures.length) return '<p class="panel-sub">Nenhuma natureza de operação no Bling ainda. O contador cria a de venda.</p>';
+  const items = b.natures.map(n => `<li><code translate="no">${esc(n.id)}</code> ${esc(n.description)}${n.id === b.natureId ? ' <span class="admin-tag source-live">usada nas notas</span>' : ''}${n.active ? '' : ' <span class="admin-tag">inativa</span>'}</li>`).join('');
+  return `<p class="panel-sub">Naturezas de operação cadastradas no Bling (o código da natureza de venda vai nos dados fiscais do site):</p><ul class="admin-natures">${items}</ul>${b.natureId ? '' : '<p class="admin-bling-note">Nenhuma natureza escolhida no site ainda: as notas só saem depois disso.</p>'}`;
+}
+function blingView() {
+  if (invoicingProvider !== 'bling' || !bling) return '';
+  const b = bling, note = blingNote ? `<p class="admin-bling-note" role="status">${esc(blingNote)}</p>` : '';
+  const redirect = `<p class="panel-sub">Link de redirecionamento do aplicativo no Bling: <code translate="no">${esc(b.redirectUri || '')}</code></p>`;
+  let body;
+  if (b.error) body = '<p>Não foi possível consultar a conexão com o Bling agora. Clique em Atualizar.</p>';
+  else if (!b.configured) body = `<p>Falta configurar o aplicativo do Bling: variáveis <code>BLING_CLIENT_ID</code> e <code>BLING_CLIENT_SECRET</code> na Hostinger.</p>${redirect}`;
+  else if (!b.connected) body = `<p>${b.expired ? '<strong>A conexão com o Bling expirou.</strong> ' : ''}Conecte a conta do Bling para as notas fiscais saírem sozinhas quando você concluir um pedido.</p><div class="admin-bling-actions"><button type="button" class="btn-bling" data-action="bling-connect">Conectar ao Bling</button></div>${redirect}`;
+  else body = `<p>Conectado${b.connectedBy ? ` por ${esc(b.connectedBy)}` : ''} em ${esc(formatWhen(b.connectedAt))}. A conexão se renova sozinha${b.refreshExpiresAt ? ` (vale até ${esc(formatWhen(b.refreshExpiresAt))}, e abrir o painel renova)` : ''}.</p>
+    ${b.pausedReason ? `<p class="admin-invoice is-error"><strong>Emissão pausada:</strong> ${esc(b.pausedReason)} <button type="button" class="admin-reveal" data-action="bling-resume">Liberar a emissão</button></p>` : ''}
+    ${naturesList(b)}
+    <div class="admin-bling-actions"><button type="button" class="btn-reopen" data-action="bling-disconnect">Desconectar o Bling</button></div>`;
+  return `<section class="admin-panel admin-bling" aria-labelledby="admin-bling-title"><h2 id="admin-bling-title">Nota fiscal · Bling</h2>${note}${body}</section>`;
 }
 
 const REFUND_ERRORS = {payments_off: 'os pagamentos estão desligados neste ambiente', mode_mismatch: 'o pedido é de outro ambiente (teste × real)', no_mp_order: 'o pedido não tem código do Mercado Pago', refund_rejected: 'o Mercado Pago recusou o estorno', network: 'sem resposta do Mercado Pago'};
@@ -196,7 +229,8 @@ function dashboardView() {
       <div class="admin-kpi"><span>Faturamento no mês</span><strong>${esc(money(s.monthRevenue))}</strong></div>
     </div>
     ${ordersView(orders)}
-    <div class="admin-panels">${chartView(orders)}${calendarView(orders)}</div>`;
+    <div class="admin-panels">${chartView(orders)}${calendarView(orders)}</div>
+    ${blingView()}`;
 }
 
 function loginView() {
@@ -273,7 +307,8 @@ function signedOut() { session = null; orders = []; setup = null; revealed.clear
 
 async function openDashboard() {
   const loaded = await loadOrders();
-  orders = loaded.orders; invoicingMode = loaded.invoicing;
+  orders = loaded.orders; invoicingMode = loaded.invoicing; invoicingProvider = loaded.provider;
+  bling = invoicingProvider === 'bling' ? await loadBling().catch(error => { if (error.code === 'unauthorized') throw error; return {error: true}; }) : null;
   screen = 'dashboard';
 }
 
@@ -342,6 +377,21 @@ content.addEventListener('click', event => {
     try { revealed.set(id, await revealDocument(id)); announce('CPF completo exibido. A consulta fica registrada.'); }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível buscar o CPF agora. Tente novamente.'); }
   });
+  if (action.dataset.action === 'bling-connect') run('Abrindo o Bling…', async () => {
+    blingNote = '';
+    try { location.assign(await blingAction('start')); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } blingNote = blingMessage(error.code); }
+  });
+  if (action.dataset.action === 'bling-disconnect' && confirm('Desconectar o Bling? As notas fiscais param de sair até alguém conectar de novo.')) run('Desconectando o Bling…', async () => {
+    blingNote = '';
+    try { bling = await blingAction('disconnect'); blingNote = 'Bling desconectado.'; announce(blingNote); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } blingNote = blingMessage(error.code); }
+  });
+  if (action.dataset.action === 'bling-resume') run('Liberando a emissão…', async () => {
+    blingNote = '';
+    try { bling = await blingAction('resume'); blingNote = 'Emissão de notas liberada.'; announce(blingNote); }
+    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } blingNote = blingMessage(error.code); }
+  });
   if (action.dataset.action === 'restart') { setup = null; screen = 'login'; render(); }
   if (action.dataset.action === 'retry') start();
 });
@@ -354,6 +404,19 @@ tools.addEventListener('click', async event => {
 
 content.addEventListener('input', event => { if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = ''; });
 
+// Back from Bling's authorization page (/admin.html?code=…&state=…): the code comes off the address at once and goes
+// to the server as soon as the panel is open. Bling gives it one minute, so a signed-out return asks to start over.
+const returned = new URLSearchParams(location.search);
+let blingReturn = returned.has('state') && (returned.has('code') || returned.has('error')) ? {code: returned.get('code'), state: returned.get('state'), error: returned.get('error')} : null;
+if (blingReturn) history.replaceState(null, '', location.pathname);
+
+async function finishBling() {
+  const back = blingReturn; blingReturn = null; blingNote = '';
+  if (!back.code) { blingNote = back.error === 'access_denied' ? 'A conexão foi cancelada no Bling.' : 'O Bling não autorizou a conexão.'; return; }
+  try { bling = await blingAction('connect', {code: back.code, state: back.state}); blingNote = 'Bling conectado. As notas fiscais saem sozinhas quando você concluir um pedido.'; announce(blingNote); await busyDialog.success('Bling conectado!'); }
+  catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } blingNote = blingMessage(error.code); }
+}
+
 async function start() {
   screen = 'loading'; render(false);
   try {
@@ -363,6 +426,8 @@ async function start() {
     if (error.code === 'unauthorized') { session = null; screen = 'login'; }
     else { screen = 'offline'; feedback = error.code === 'admin_unavailable' ? messageFor('admin_unavailable') : 'Não foi possível falar com o servidor. Verifique a conexão.'; }
   }
+  if (blingReturn && screen === 'login') { blingReturn = null; feedback = 'Para conectar o Bling, entre no painel e clique em Conectar ao Bling de novo.'; }
   render();
+  if (blingReturn && screen === 'dashboard') { await run('Conectando ao Bling…', finishBling); content.querySelector('.admin-bling')?.scrollIntoView({block: 'center'}); }
 }
 start();

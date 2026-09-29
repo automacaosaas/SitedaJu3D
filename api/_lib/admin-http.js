@@ -6,7 +6,7 @@ const {config} = require('./mail');
 const {storeFor, STATUS} = require('./account-http');
 const {createAdminAuth, sessionCookie, clearCookie, readCookie} = require('./admin-auth');
 
-const ADMIN_STATUS = {...STATUS, not_found: 404, invoicing_off: 409, refunded: 409};
+const ADMIN_STATUS = {...STATUS, not_found: 404, invoicing_off: 409, refunded: 409, bling_off: 409, bling_not_configured: 409, bling_code_invalid: 400, bling_unavailable: 502};
 
 function adminEndpoint({methods, open = false, handle}) {
   function create({env = process.env, store, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox} = {}) {

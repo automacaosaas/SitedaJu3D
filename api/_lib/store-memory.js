@@ -3,7 +3,7 @@
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
 function createMemoryStore() {
   const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
-  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map();
+  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map();
   let eventSerial = 0, auditSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
@@ -78,7 +78,7 @@ function createMemoryStore() {
       async create(data) {
         const existing = [...invoices.values()].find(i => i.orderId === data.orderId);
         if (existing) return {invoice: copy(existing), created: false};
-        const row = {number: null, series: null, accessKey: null, pdfUrl: null, xmlUrl: null, message: null, attempts: 0, authorizedAt: null, customerNotifiedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data};
+        const row = {providerId: null, number: null, series: null, accessKey: null, pdfUrl: null, xmlUrl: null, message: null, attempts: 0, authorizedAt: null, customerNotifiedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data};
         invoices.set(row.id, row);
         return {invoice: copy(row), created: true};
       },
@@ -86,6 +86,17 @@ function createMemoryStore() {
       async findByOrder(orderId) { return copy([...invoices.values()].find(i => i.orderId === orderId) || null); },
       async update(id, patch) { const row = invoices.get(id); if (!row) return null; Object.assign(row, patch, {updatedAt: new Date()}); return copy(row); },
       async listByOrders(orderIds) { const ids = new Set(orderIds); return copy([...invoices.values()].filter(i => ids.has(i.orderId))); }
+    },
+    // Connections to outside services, one row per name (db/migrations/007_bling.sql): tokens encrypted, dates, pause.
+    integrations: {
+      async get(name) { return copy(integrations.get(name) || null); },
+      async save(name, patch) {
+        const row = integrations.get(name) || {name, tokensEnc: null, accessExpiresAt: null, refreshExpiresAt: null, connectedBy: null, connectedAt: null, refreshedAt: null, pausedReason: null};
+        Object.assign(row, patch, {name, updatedAt: new Date()});
+        integrations.set(name, row);
+        return copy(row);
+      },
+      async remove(name) { integrations.delete(name); }
     },
     adminSessions: {
       async create(session) { adminSessions.set(key(session.tokenHash), {mfaAt: null, attempts: 0, revokedAt: null, createdAt: new Date(), ...session}); },

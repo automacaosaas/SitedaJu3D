@@ -144,6 +144,19 @@ async function contract(store, label) {
   assert.equal((await store.invoices.findByOrder(orderId)).id, invoiceId);
   assert.deepEqual((await store.invoices.listByOrders([orderId, crypto.randomUUID()])).map(i => i.id), [invoiceId]);
   assert.deepEqual(await store.invoices.listByOrders([]), []);
+  assert.equal(authorized.providerId, null);
+  assert.equal((await store.invoices.update(invoiceId, {providerId: '987654321'})).providerId, '987654321', `${label}: the note's code at the NF-e service`);
+
+  // Integrations: one row per name, partial saves keep the other fields, binary tokens survive, remove clears.
+  const integration = `test-${crypto.randomUUID().slice(0, 8)}`, blob = crypto.randomBytes(3000);
+  assert.equal(await store.integrations.get(integration), null);
+  const saved = await store.integrations.save(integration, {tokensEnc: blob, accessExpiresAt: new Date(Date.now() + 3600e3), connectedBy: 'ju@site.test', connectedAt: new Date()});
+  assert.equal(saved.name, integration); assert.equal(saved.connectedBy, 'ju@site.test'); assert(Buffer.from(saved.tokensEnc).equals(blob), `${label}: tokens kept byte for byte`);
+  const paused = await store.integrations.save(integration, {pausedReason: 'teste'});
+  assert.equal(paused.pausedReason, 'teste'); assert.equal(paused.connectedBy, 'ju@site.test', 'a partial save keeps the rest'); assert(Buffer.from(paused.tokensEnc).equals(blob));
+  assert.equal((await store.integrations.save(integration, {pausedReason: null})).pausedReason, null);
+  await store.integrations.remove(integration);
+  assert.equal(await store.integrations.get(integration), null);
 
   // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
   const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();

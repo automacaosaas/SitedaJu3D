@@ -175,6 +175,16 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-secret code{display:block;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--bg);color:var(--ink);font-size:15px;letter-spacing:1px;word-break:break-all}
 .admin-field input[name=code]{font-size:22px;letter-spacing:6px;text-align:center;font-variant-numeric:tabular-nums}
 .admin-link{display:block;margin:14px auto 0;border:0;background:none;color:var(--muted);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+/* "Nota fiscal · Bling": the store's connection to the NF-e service, below the chart and the calendar. */
+.admin-bling{margin-top:20px}
+.admin-bling p{font-size:14px;line-height:1.55;margin:0 0 12px}
+.admin-bling code{font-size:12px;background:#f6efef;border-radius:6px;padding:2px 6px;word-break:break-all}
+.admin-bling-actions{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+.btn-bling{border:0;border-radius:999px;padding:11px 18px;font-size:14px;font-weight:700;color:#fff;background:var(--g-solid);cursor:pointer}
+.btn-bling:hover{background:var(--g-solid-hover)}
+.admin-bling-note{font-weight:650}
+.admin-natures{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:6px;font-size:13px}
+.admin-natures li{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 /* "Ver CPF completo": a quiet link-style button inside the invoice block. */
 .admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* NF-e line on each order: issued (green), being issued (yellow), problem (red, with a retry button). */

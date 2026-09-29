@@ -1,7 +1,7 @@
 'use strict';
 // Simulated NF-e service for tests and the local server (NFE_PROVIDER=fake, never in production). Same contract as a
-// real adapter: emit(invoice) and check(reference) answer {status: 'autorizada' | 'processando' | 'erro', number, series,
-// accessKey, pdfUrl, xmlUrl, message}. Idempotent by reference, like the real services: sending the same order twice
+// real adapter: emit(invoice, {providerId}) and check({reference, providerId}) answer {status: 'autorizada' | 'processando' |
+// 'erro', number, series, accessKey, pdfUrl, xmlUrl, message, providerId}. Idempotent by reference, like the real services: sending the same order twice
 // returns the same note. A recipient named with "REJEITAR" is refused; one with "DEMORAR" stays processing once.
 function createFakeProvider() {
   const notes = new Map();
@@ -18,11 +18,11 @@ function createFakeProvider() {
         notes.set(invoice.reference, refused); return {...refused};
       }
       const number = String(++serial);
-      const note = {status: /DEMORAR/i.test(invoice.recipient.name) ? 'processando' : 'autorizada', number, series: invoice.series, accessKey: key(number), pdfUrl: `https://nfe.exemplo.test/danfe/${invoice.reference}.pdf`, xmlUrl: `https://nfe.exemplo.test/xml/${invoice.reference}.xml`, message: null, invoice};
+      const note = {status: /DEMORAR/i.test(invoice.recipient.name) ? 'processando' : 'autorizada', providerId: `fake-${number}`, number, series: invoice.series, accessKey: key(number), pdfUrl: `https://nfe.exemplo.test/danfe/${invoice.reference}.pdf`, xmlUrl: `https://nfe.exemplo.test/xml/${invoice.reference}.xml`, message: null, invoice};
       notes.set(invoice.reference, note);
       return {...note};
     },
-    async check(reference) {
+    async check({reference} = {}) {
       const note = notes.get(reference);
       if (!note) return {status: 'erro', message: 'Nota não encontrada no emissor'};
       if (note.status === 'processando') note.status = 'autorizada';

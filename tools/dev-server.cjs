@@ -6,6 +6,7 @@
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
+//   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
 // Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -13,6 +14,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const {createFakeMercadoPago} = require('./fake-mercadopago.cjs');
+const {createFakeBling} = require('./fake-bling.cjs');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
@@ -66,6 +68,9 @@ async function main() {
   const fakeMp = process.argv.includes('--fake-mp');
   // --fake-nfe: simulated NF-e service with example tax data (never in production), to see the whole invoice flow locally.
   if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
+  // --fake-bling: the NF-e goes through a simulated Bling, with example tax data; its authorization page is local.
+  const fakeBling = process.argv.includes('--fake-bling') ? createFakeBling() : null;
+  if (fakeBling) Object.assign(env, {NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', BLING_CLIENT_ID: fakeBling.clientId, BLING_CLIENT_SECRET: fakeBling.clientSecret, BLING_AUTHORIZE_URL: `http://localhost:${PORT}/__fake-bling/authorize`});
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
     env.MP_ACCESS_TOKEN = await askHidden('Cole o Access Token de teste e tecle Enter (não aparece na tela): ');
@@ -104,7 +109,8 @@ async function main() {
   // Calls to Mercado Pago go to the simulator with --fake-mp, otherwise to the real API (only the status is logged, never a body).
   const mpFetch = async (url, init) => { const response = await fetch(url, init); console.log(`[mp] ${init.method} ${String(url).replace('https://api.mercadopago.com', '')} → ${response.status}`); return response; };
   let fake = null;
-  const routed = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : loggedFetch(url, init);
+  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : loggedFetch(url, init);
+  const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
   const routes = {
     '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
     '/api/health': require('../api/health').create({env}),
@@ -114,7 +120,7 @@ async function main() {
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
-  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
 
@@ -138,6 +144,13 @@ async function main() {
       if (routes[url.pathname]) return await routes[url.pathname](req, res);
       if (fake && url.pathname === '/__fake-mp/sdk.js') { res.setHeader('Content-Type', TYPES['.js']); return res.end(fs.readFileSync(path.join(__dirname, 'fake-brick.js'))); }
       if (fake && url.pathname === '/__fake-mp/pay') { const ok = await fake.pay(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({paid: ok})); }
+      // The simulated Bling "allows" at once and sends the browser back to the panel with a code, like the real page.
+      if (fakeBling && url.pathname === '/__fake-bling/authorize') {
+        const allowed = fakeBling.authorize(url.href);
+        res.statusCode = allowed ? 302 : 400;
+        if (allowed) res.setHeader('Location', `${env.SITE_URL}/admin.html?code=${encodeURIComponent(allowed.code)}&state=${encodeURIComponent(allowed.state || '')}`);
+        return res.end();
+      }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }

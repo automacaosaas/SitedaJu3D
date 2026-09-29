@@ -39,12 +39,19 @@ function toAdmin(row) {
   if (admin.totpLastStep !== null) admin.totpLastStep = Number(admin.totpLastStep);
   return admin;
 }
-const INVOICE_COLUMNS = {id: 'id', orderId: 'order_id', provider: 'provider', environment: 'environment', reference: 'reference', status: 'status', number: 'number', series: 'series', accessKey: 'access_key', pdfUrl: 'pdf_url', xmlUrl: 'xml_url', message: 'message', attempts: 'attempts', authorizedAt: 'authorized_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at', updatedAt: 'updated_at'};
+const INVOICE_COLUMNS = {id: 'id', orderId: 'order_id', provider: 'provider', providerId: 'provider_id', environment: 'environment', reference: 'reference', status: 'status', number: 'number', series: 'series', accessKey: 'access_key', pdfUrl: 'pdf_url', xmlUrl: 'xml_url', message: 'message', attempts: 'attempts', authorizedAt: 'authorized_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at', updatedAt: 'updated_at'};
 function toInvoice(row) {
   if (!row) return null;
   const invoice = {};
   for (const [field, column] of Object.entries(INVOICE_COLUMNS)) invoice[field] = row[column] ?? null;
   return invoice;
+}
+const INTEGRATION_COLUMNS = {name: 'name', tokensEnc: 'tokens_enc', accessExpiresAt: 'access_expires_at', refreshExpiresAt: 'refresh_expires_at', connectedBy: 'connected_by', connectedAt: 'connected_at', refreshedAt: 'refreshed_at', pausedReason: 'paused_reason', updatedAt: 'updated_at'};
+function toIntegration(row) {
+  if (!row) return null;
+  const integration = {};
+  for (const [field, column] of Object.entries(INTEGRATION_COLUMNS)) integration[field] = row[column] ?? null;
+  return integration;
 }
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
@@ -166,6 +173,18 @@ function createMysqlStore(pool) {
         return this.findById(id);
       },
       async listByOrders(orderIds) { if (!orderIds.length) return []; return (await all(`SELECT * FROM invoices WHERE order_id IN (${orderIds.map(() => '?').join(', ')})`, orderIds)).map(toInvoice); }
+    },
+    integrations: {
+      get: async name => toIntegration(await one('SELECT * FROM integrations WHERE name = ?', [name])),
+      // Insert or update only the given fields.
+      async save(name, patch) {
+        const fields = Object.keys(patch).filter(f => INTEGRATION_COLUMNS[f] && !['name', 'updatedAt'].includes(f));
+        const columns = fields.map(f => INTEGRATION_COLUMNS[f]);
+        const update = columns.length ? columns.map(c => `${c} = VALUES(${c})`).join(', ') : 'name = name';
+        await run(`INSERT INTO integrations (name${columns.map(c => ', ' + c).join('')}) VALUES (?${columns.map(() => ', ?').join('')}) ON DUPLICATE KEY UPDATE ${update}`, [name, ...fields.map(f => patch[f] ?? null)]);
+        return this.get(name);
+      },
+      remove: name => run('DELETE FROM integrations WHERE name = ?', [name])
     },
     adminSessions: {
       create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),

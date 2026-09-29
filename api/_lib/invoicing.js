@@ -22,6 +22,7 @@ const clean = value => String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' '
 function createInvoicing({store, env = process.env, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox, provider: injected, lookup = lookupCep}) {
   const settings = nfeSettings(env), date = () => new Date(now());
   const orders = createOrders({store, env, now});
+  const provider = () => injected || providerFor(settings, {store, env, now, fetchImpl});
 
   async function record(invoice, patch, order, event) {
     const updated = await store.invoices.update(invoice.id, patch);
@@ -42,12 +43,16 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
     } catch (error) { console.error(`invoicing: e-mail with the invoice failed for ${order.reference} —`, error.status || '', error.message); return false; }
   }
 
+  // A result may also carry the note's id at the service (providerId, kept even on an error so a retry reuses the note),
+  // the environment the service really used, and a warning worth showing next to an authorized note.
   async function apply(invoice, order, result, actor) {
     const status = ['autorizada', 'processando'].includes(result.status) ? result.status : 'erro';
-    const patch = {status, message: status === 'erro' ? clean(result.message || 'O emissor recusou a nota') : null};
+    const patch = {status, message: status === 'erro' ? clean(result.message || 'O emissor recusou a nota') : result.warning ? clean(result.warning) : null};
+    if ('providerId' in result) patch.providerId = result.providerId ? String(result.providerId).slice(0, 40) : null;
+    if (['producao', 'homologacao'].includes(result.environment)) patch.environment = result.environment;
     if (status !== 'erro') Object.assign(patch, {number: result.number || invoice.number, series: result.series || invoice.series, accessKey: result.accessKey || invoice.accessKey, pdfUrl: httpsOnly(result.pdfUrl) || invoice.pdfUrl, xmlUrl: httpsOnly(result.xmlUrl) || invoice.xmlUrl});
     if (status === 'autorizada' && !invoice.authorizedAt) patch.authorizedAt = date();
-    const event = status === invoice.status && status !== 'erro' ? null : {kind: `nfe:${status}`, detail: status === 'autorizada' ? `nº ${patch.number}` : patch.message, actor};
+    const event = status === invoice.status && status !== 'erro' ? null : {kind: `nfe:${status}`, detail: status === 'autorizada' ? `nº ${patch.number}${patch.message ? ` · ${patch.message}` : ''}` : patch.message, actor};
     const updated = await record(invoice, patch, order, event);
     if (updated.status === 'autorizada') await notifyCustomer(updated, order);
     return store.invoices.findById(invoice.id);
@@ -67,11 +72,11 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
       let city = null;
       try { city = await lookup(order.shipTo?.cep, {fetchImpl}); }
       catch (error) { return record(invoice, {status: 'erro', message: `Não foi possível consultar o CEP agora (${error.message}). Tente de novo.`}, order, {kind: 'nfe:erro', detail: 'CEP', actor}); }
-      const built = buildInvoice({order, city, environment: settings.environment, env, now: now(), ...(settings.example ? EXAMPLE : {})});
+      const built = buildInvoice({order, city, environment: settings.environment, provider: settings.provider, env, now: now(), ...(settings.example ? EXAMPLE : {})});
       if (!built.ok) return record(invoice, {status: 'erro', message: clean(built.problems.join(' · '))}, order, {kind: 'nfe:erro', detail: clean(built.problems[0]), actor});
 
       let result;
-      try { result = await (injected || providerFor(settings)).emit(built.invoice); }
+      try { result = await provider().emit(built.invoice, {providerId: invoice.providerId || null}); }
       catch (error) {
         console.error(`invoicing: the NF-e service failed for ${order.reference} —`, error.status || '', error.code || '', error.message);
         return record(invoice, {status: 'erro', message: error.code === 'provider_not_supported' ? `Emissor "${settings.provider}" ainda não integrado` : 'O emissor de notas não respondeu. Tente de novo em alguns minutos.'}, order, {kind: 'nfe:erro', detail: 'emissor', actor});
@@ -82,7 +87,7 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
     // For notes the service is still processing: asks again and saves the answer.
     async refresh(invoice, order) {
       if (settings.mode === 'off' || invoice?.status !== 'processando') return invoice;
-      try { return apply(invoice, order, await (injected || providerFor(settings)).check(invoice.reference), 'emissor'); }
+      try { return apply(invoice, order, await provider().check({reference: invoice.reference, providerId: invoice.providerId || null}), 'emissor'); }
       catch (error) { console.error(`invoicing: could not check ${invoice.reference} —`, error.message); return invoice; }
     },
 

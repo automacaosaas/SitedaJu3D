@@ -1,10 +1,12 @@
 'use strict';
 // GET /api/admin/orders — paid orders for Ju's panel (pendente, concluido, recusado), newest first, with what is needed
 // to produce and ship, and the NF-e of each (status, number, links; notes the service is still processing are asked
-// again here). The CPF only masked. Orders still waiting for payment or cancelled are not shown.
+// again here). The CPF only masked. Orders still waiting for payment or cancelled are not shown. With Bling, opening the
+// panel also renews the connection once a week, so it never lapses in a quiet month.
 const {adminEndpoint} = require('../_lib/admin-http');
 const {createOrders, PAID} = require('../_lib/orders');
 const {createInvoicing} = require('../_lib/invoicing');
+const {createBling} = require('../_lib/bling');
 
 module.exports = adminEndpoint({methods: ['GET'], async handle({store, env, now, fetchImpl, outbox}) {
   const orders = createOrders({store, env, now}), invoicing = createInvoicing({store, env, now, fetchImpl, outbox});
@@ -14,5 +16,6 @@ module.exports = adminEndpoint({methods: ['GET'], async handle({store, env, now,
     const invoice = invoices.get(order.id);
     if (invoice?.status === 'processando') invoices.set(order.id, await invoicing.refresh(invoice, order));
   }
-  return {body: {orders: list.map(order => ({...orders.adminView(order), invoice: invoicing.view(invoices.get(order.id))})), invoicing: invoicing.settings.mode}};
+  if (invoicing.settings.provider === 'bling') await createBling({store, env, now, fetchImpl}).keepAlive();
+  return {body: {orders: list.map(order => ({...orders.adminView(order), invoice: invoicing.view(invoices.get(order.id))})), invoicing: invoicing.settings.mode, invoicingProvider: invoicing.settings.mode === 'off' ? null : invoicing.settings.provider}};
 }});
