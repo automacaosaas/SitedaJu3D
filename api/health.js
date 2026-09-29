@@ -11,6 +11,7 @@ const admin = require('./_lib/admin-auth');
 const legal = require('./_lib/legal');
 const fiscal = require('./_lib/fiscal');
 const {createBling} = require('./_lib/bling');
+const shipping = require('./_lib/shipping');
 
 async function blingState(env, nfe) {
   if (nfe.provider !== 'bling') return 'off';
@@ -32,6 +33,7 @@ function createHandler({env = process.env} = {}) {
       accounts: storeKind(env), db: await ping(env), dataKeys,
       payments: pay.mode, paymentsBlocked: pay.blocked, mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
       admin: await admin.status(storeFor(env), env),
+      shipping: shipping.forEnv(env).status().mode,   // off (no Correios credentials) · pending (shop data incomplete) · correios
       legal: legal.pending() ? 'pending' : 'ok',   // store details still marked [PREENCHER] in api/_lib/legal.js
       nfe: nfe.mode, fiscal: fiscal.missing(fiscal.FISCAL, {provider: nfe.provider}).length ? 'pending' : 'ok',   // NF-e issuing (off, test, live) and the tax data of api/_lib/fiscal.js
       bling: await blingState(env, nfe)   // off, not_configured (app variables missing), disconnected, connected or paused

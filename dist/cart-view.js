@@ -24,26 +24,27 @@ function itemCard(item, selected) {
   </article>`;
 }
 
-function orderSummary(chosen) {
-  const amount = totals(chosen), units = chosen.reduce((sum, item) => sum + item.quantity, 0);
+// realShipping: the delivery is priced later, by CEP, so this summary says so instead of adding a made-up fee.
+function orderSummary(chosen, realShipping = false, productionLabel = '') {
+  const amount = totals(chosen, realShipping ? 0 : undefined), units = chosen.reduce((sum, item) => sum + item.quantity, 0);
   return `<aside class="cart-order-summary" aria-labelledby="cart-summary-title"><h2 id="cart-summary-title">Resumo do pedido</h2><p class="cart-selection-note">${units} ${units === 1 ? 'peça selecionada' : 'peças selecionadas'}</p>
-    <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div><div><dt>Entrega${COMMERCE.mode === 'demo' ? ' <small>(exemplo)</small>' : ''}</dt><dd>${money(amount.shipping)}</dd></div><div class="grand-total"><dt>Total</dt><dd>${money(amount.total)}</dd></div></dl>
+    <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div>${realShipping ? '<div><dt>Entrega</dt><dd><small>calculada pelo CEP</small></dd></div>' : `<div><dt>Entrega${COMMERCE.mode === 'demo' ? ' <small>(exemplo)</small>' : ''}</dt><dd>${money(amount.shipping)}</dd></div>`}<div class="grand-total"><dt>Total${realShipping ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(amount.total)}</dd></div></dl>
     <div class="cart-checkout-bar" role="group" aria-label="Resumo da compra e finalização">
       <a class="cart-checkout-total" href="#cart-summary-title"><span>Total <span aria-hidden="true">⌃</span></span><strong>${money(amount.total)}</strong><small>${chosen.length ? 'Ver resumo' : 'Selecione uma peça'}</small></a>
       <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
     </div>
     ${!chosen.length ? '<p class="cart-selection-help">Selecione uma peça para continuar.</p>' : ''}
-    <div class="cart-reassurance"><div>${icon('lock')}<p><strong>Compra segura</strong><span>Seus dados protegidos</span></p></div><div>${icon('truck')}<p><strong>Produção sob demanda</strong><span>${esc(COMMERCE.productionLabel)}</span></p></div></div>
+    <div class="cart-reassurance"><div>${icon('lock')}<p><strong>Compra segura</strong><span>Seus dados protegidos</span></p></div><div>${icon('truck')}<p><strong>Produção sob demanda</strong><span>${esc(productionLabel || COMMERCE.productionLabel)}</span></p></div></div>
     <div class="accepted-methods" aria-label="Meios de pagamento${COMMERCE.mode === 'demo' ? ' em demonstração' : ''}"><span>${icon('pix')} Pix</span><span>${icon('card')} Cartão</span></div>
   </aside>`;
 }
 
-export function renderCart(cart, selected) {
+export function renderCart(cart, selected, {realShipping = false, productionLabel = ''} = {}) {
   const chosen = selectedItems(cart, selected);
   const introduction = `<div class="shop-heading cart-heading"><button type="button" class="cart-back" data-action="return" aria-label="Voltar à página anterior">${icon('arrow')}</button><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
   if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
     <div class="cart-select-tools"><label class="select-label"><input type="checkbox" id="select-all" aria-label="Selecionar todos os produtos" ${chosen.length === cart.length ? 'checked' : ''}>Selecionar todos (${cart.length})</label><button type="button" class="remove-selected" data-action="remove-selected" aria-label="Remover produtos selecionados" ${chosen.length ? '' : 'disabled'}>${icon('trash')}<span>Remover selecionados</span></button></div>
     <div class="cart-products">${cart.map(item => itemCard(item, selected.has(item.id))).join('')}</div><a class="collection-link cart-continue" href="produtos.html">← Continuar escolhendo</a>
-    </section>${orderSummary(chosen)}</div>`;
+    </section>${orderSummary(chosen, realShipping, productionLabel)}</div>`;
 }

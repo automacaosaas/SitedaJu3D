@@ -11,7 +11,8 @@ const CUSTOMER = {
     intro: 'Seu pagamento foi confirmado e a Ju já vai começar a preparar suas peças, uma a uma.',
     order: 'PEDIDO', pieces: 'SUAS PEÇAS', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGA', notes: 'SUA OBSERVAÇÃO',
     pix: 'Pix', credit: n => n > 1 ? `Cartão de crédito · ${n}x` : 'Cartão de crédito', debit: 'Cartão de débito',
-    next: 'Quando as peças estiverem a caminho, avisamos por aqui.', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.'
+    next: 'Quando as peças estiverem a caminho, avisamos por aqui.', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.',
+    eta: (a, b) => `Prazo estimado: ${a === b ? a : `${a} a ${b}`} dias úteis (produção + envio).`
   },
   en: {
     subject: ref => `Payment confirmed · ${ref} · Ju, imprime pra mim?`, preheader: 'We received your payment. Ju will start preparing your pieces.',
@@ -19,7 +20,8 @@ const CUSTOMER = {
     intro: 'Your payment is confirmed and Ju will start preparing your pieces, one by one.',
     order: 'ORDER', pieces: 'YOUR PIECES', piece: n => n === 1 ? '1 piece' : `${n} pieces`, subtotal: 'Subtotal', delivery: 'Delivery', total: 'Total', payment: 'PAYMENT', deliverTo: 'DELIVERY', notes: 'YOUR NOTE',
     pix: 'Pix', credit: n => n > 1 ? `Credit card · ${n}x` : 'Credit card', debit: 'Debit card',
-    next: 'We will let you know here when your pieces are on their way.', test: 'TEST ENVIRONMENT · no real money was charged.'
+    next: 'We will let you know here when your pieces are on their way.', test: 'TEST ENVIRONMENT · no real money was charged.',
+    eta: (a, b) => `Estimated delivery: ${a === b ? a : `${a} to ${b}`} business days (production + shipping).`
   },
   es: {
     subject: ref => `Pago confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Recibimos tu pago. Ju empezará a preparar tus piezas.',
@@ -27,7 +29,8 @@ const CUSTOMER = {
     intro: 'Tu pago fue confirmado y Ju empezará a preparar tus piezas, una por una.',
     order: 'PEDIDO', pieces: 'TUS PIEZAS', piece: n => n === 1 ? '1 pieza' : `${n} piezas`, subtotal: 'Subtotal', delivery: 'Entrega', total: 'Total', payment: 'PAGO', deliverTo: 'ENTREGA', notes: 'TU OBSERVACIÓN',
     pix: 'Pix', credit: n => n > 1 ? `Tarjeta de crédito · ${n}x` : 'Tarjeta de crédito', debit: 'Tarjeta de débito',
-    next: 'Cuando tus piezas estén en camino, te avisaremos por aquí.', test: 'ENTORNO DE PRUEBA · no se cobró ningún valor real.'
+    next: 'Cuando tus piezas estén en camino, te avisaremos por aquí.', test: 'ENTORNO DE PRUEBA · no se cobró ningún valor real.',
+    eta: (a, b) => `Plazo estimado: ${a === b ? a : `${a} a ${b}`} días hábiles (producción + envío).`
   }
 };
 
@@ -37,6 +40,7 @@ const OWNER = Object.freeze({
   order: 'PEDIDO', pieces: 'PEÇAS E CORES', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGAR PARA', notes: 'OBSERVAÇÃO DO CLIENTE',
   pix: 'Pix', credit: n => n > 1 ? `Cartão de crédito · ${n}x` : 'Cartão de crédito', debit: 'Cartão de débito', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.',
   contact: 'CONTATO', mpOrder: 'Pedido no Mercado Pago',
+  shipping: 'ENVIO', shippingLine: (info, charged, volumes) => `${info.label} · ${volumes} ${volumes === 1 ? 'volume' : 'volumes'} · prazo ${info.days.min} a ${info.days.max} dias úteis · cobrado do cliente ${charged} · custo da etiqueta ${info.cost}`,
   invoice: 'NOTA FISCAL', buyer: 'Comprador', invoiceNote: 'O CPF completo está no painel da Ju (por segurança, não vai por e-mail).'
 });
 
@@ -49,6 +53,9 @@ function methodLabel(copy, method) {
   return method.type === 'debit_card' ? copy.debit : copy.credit(method.installments || 1);
 }
 
+const deliveryName = (copy, summary) => summary.shippingInfo?.label ? `${copy.delivery} · ${summary.shippingInfo.label}` : copy.delivery;
+const etaLine = (copy, summary) => summary.shippingInfo?.days && copy.eta ? line(esc(copy.eta(summary.shippingInfo.days.min, summary.shippingInfo.days.max)), `color:${C.muted};font-size:13px;line-height:20px;margin-top:8px;`) : '';
+const costLine = summary => { const info = summary.shippingInfo; return info?.days ? line(esc(OWNER.shippingLine({...info, cost: money(info.costCents)}, money(summary.shipping), info.volumes || 1)), `color:${C.muted};font-size:13px;line-height:20px;margin-top:8px;`) : ''; };
 function itemsTable(copy, summary, lang) {
   const rows = summary.items.map(item => {
     const colors = describeSelection(item.productId, item.selection, lang).map(entry => `${esc(entry.part)}: <strong>${esc(entry.color)}</strong>`).join(' · ');
@@ -56,7 +63,7 @@ function itemsTable(copy, summary, lang) {
   }).join('');
   const subtotal = summary.items.reduce((sum, item) => sum + item.unitCents * item.quantity, 0);
   const total = (name, value, strong) => `<tr><td style="padding:${strong ? '12px' : '8px'} 0 0;font-family:${SANS};color:${strong ? C.ink : C.muted};font-size:${strong ? 16 : 14}px;font-weight:${strong ? 700 : 400};">${esc(name)}</td><td align="right" style="padding:${strong ? '12px' : '8px'} 0 0;font-family:${SANS};color:${strong ? C.rose : C.muted};font-size:${strong ? 17 : 14}px;font-weight:${strong ? 700 : 400};">${esc(value)}</td></tr>`;
-  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">${rows}${total(copy.subtotal, money(subtotal))}${total(copy.delivery, money(summary.shipping))}${total(copy.total, money(summary.total), true)}</table>`;
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">${rows}${total(copy.subtotal, money(subtotal))}${total(deliveryName(copy, summary), money(summary.shipping))}${total(copy.total, money(summary.total), true)}</table>`;
 }
 
 function addressBlock(summary, {contact} = {}) {
@@ -123,12 +130,12 @@ function renderCustomerEmail({summary, lang = 'pt-BR', test = false, assetUrl}) 
     section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`)),
     section(copy.pieces, itemsTable(copy, summary, language)),
     section(copy.payment, line(esc(methodLabel(copy, summary.method)))),
-    section(copy.deliverTo, addressBlock(summary)),
+    section(copy.deliverTo, addressBlock(summary) + etaLine(copy, summary)),
     summary.notes ? section(copy.notes, line(esc(summary.notes))) : '',
     `<tr><td class="px" align="center" style="padding:24px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:14px;line-height:22px;">${esc(copy.next)}</p></td></tr>`
   ].join('\n');
   const subject = (test ? '[TESTE] ' : '') + copy.subject(summary.reference);
-  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, '', copy.pieces, plainItems(summary, language, copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', copy.deliverTo, plainAddress(summary), summary.notes ? `\n${copy.notes}: ${summary.notes}` : '', '', copy.next].filter(part => part !== '').join('\n');
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, '', copy.pieces, plainItems(summary, language, copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', copy.deliverTo, plainAddress(summary), summary.shippingInfo?.days && copy.eta ? copy.eta(summary.shippingInfo.days.min, summary.shippingInfo.days.max) : '', summary.notes ? `\n${copy.notes}: ${summary.notes}` : '', '', copy.next].filter(part => part !== '').join('\n');
   return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
@@ -151,10 +158,11 @@ function renderOwnerEmail({summary, test = false, assetUrl}) {
     section(copy.payment, line(esc(methodLabel(copy, summary.method)))),
     summary.invoice ? section(copy.invoice, invoiceLines(copy, summary.invoice).map(l => line(l.html)).join('') + (summary.invoice.cpf ? line(esc(copy.invoiceNote), `color:${C.muted};font-size:12px;margin-top:4px;`) : '')) : '',
     section(copy.deliverTo, addressBlock(summary, {contact: true})),
+    summary.shippingInfo?.days ? section(copy.shipping, costLine(summary)) : '',
     summary.notes ? section(copy.notes, line(esc(summary.notes))) : ''
   ].join('\n');
   const subject = copy.subject(summary.reference, money(summary.total), test);
-  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference}${summary.id ? ` (${copy.mpOrder}: ${summary.id})` : ''}`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', ...(summary.invoice ? [copy.invoice, ...invoiceLines(copy, summary.invoice).map(l => l.text), ''] : []), copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference}${summary.id ? ` (${copy.mpOrder}: ${summary.id})` : ''}`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', ...(summary.invoice ? [copy.invoice, ...invoiceLines(copy, summary.invoice).map(l => l.text), ''] : []), copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, ...(summary.shippingInfo?.days ? ['', copy.shipping, OWNER.shippingLine({...summary.shippingInfo, cost: money(summary.shippingInfo.costCents)}, money(summary.shipping), summary.shippingInfo.volumes || 1)] : []), summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
   return {subject, html: frame({lang: 'pt-BR', title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 

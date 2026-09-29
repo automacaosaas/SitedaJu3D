@@ -36,7 +36,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       subtotalCents: priced.subtotal, shippingCents: priced.shipping, totalCents: priced.total,
       buyer: {name: `${customer.firstName} ${customer.lastName}`, email: customer.email, company},
       buyerDocEnc: customer.cpfEnc, phoneEnc: fields.encrypt(env, recipient.phone),
-      shipTo: {recipient: recipient.name, ...address}, notes, lang, termsVersion: TERMS_VERSION, termsAcceptedAt: date(),
+      shipTo: {recipient: recipient.name, ...address}, shippingInfo: priced.shippingInfo || null, notes, lang, termsVersion: TERMS_VERSION, termsAcceptedAt: date(),
       items: priced.lines.map(line => ({productId: line.productId, title: line.title, quantity: line.quantity, unitCents: line.unitCents, selection: line.selection}))
     };
     const {order, created} = await store.orders.create(draft);
@@ -82,7 +82,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
 
   function summary(order) {
     return {
-      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, total: order.totalCents,
+      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, shippingInfo: order.shippingInfo || null, total: order.totalCents,
       invoice: invoice(order),
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       address: {cep: order.shipTo?.cep || '', street: order.shipTo?.street || '', number: order.shipTo?.number || '', district: order.shipTo?.district || '', city: order.shipTo?.city || '', state: order.shipTo?.state || '', complement: order.shipTo?.complement || ''},
@@ -128,6 +128,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       buyer: {name: order.buyer?.name || '', cpf: cpf ? fields.maskCpf(cpf) : '', company: order.buyer?.company || null},
       address: summary(order).address, notes: order.notes || '',
+      shipping: order.shippingInfo ? {service: order.shippingInfo.service, label: order.shippingInfo.label, days: order.shippingInfo.days, deliveryDays: order.shippingInfo.deliveryDays, chargedCents: order.shippingCents, costCents: order.shippingInfo.costCents, volumes: order.shippingInfo.volumes} : null,
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       decidedAt: order.decidedAt ? new Date(order.decidedAt).toISOString() : null, declineReason: order.declineReason || '',
       refund: {state: order.refundState || null, at: order.refundedAt ? new Date(order.refundedAt).toISOString() : null, error: order.refundError || null}
