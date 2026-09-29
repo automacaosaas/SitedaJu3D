@@ -26,8 +26,8 @@ module.exports = Object.freeze({
   // Free shipping (PAC) when the subtotal reaches R$ 500,00, all over Brazil; the shop still pays the label (the admin shows its cost).
   freeShipping: Object.freeze({fromCents: 50000, service: 'pac'}),
   // Everything of an order goes in the one box registered at the Correios Empresa (Pré-postagem Web → Embalagens) as "BORBOLETA E DINO":
-  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces: butterfly and dinosaur 257 g each,
-  // airplane 257 + 220 = 477 g (the shop's numbers). If the 257 g already include the box, the sum counts it once per piece: the first
-  // real quote, compared with the Correios Empresa for the same box, shows whether that matters.
-  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 257, dinossauroscopio: 257, aviaoscopia: 477})})
+  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces. The shop's measures, packed: butterfly +
+  // dinosaur together 257 g (so about half each), the airplane about 250 g on top (all three about 507 g). APPROXIMATE: weigh the real packed
+  // boxes and edit the three numbers below (nothing else changes). The three pieces together sit right at 500 g, so that one matters most.
+  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250})})
 });

@@ -50,10 +50,10 @@ for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS
 assert.deepEqual(missing(baseConfig), [], 'the shipped config is complete: with the Correios credentials the real quote is on');
 assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG only; 3 to 5 days of production');
 assert.deepEqual([baseConfig.freeShipping, baseConfig.labelFeeCents], [{fromCents: 50000, service: 'pac'}, 0], 'free PAC from R$ 500, no extra label fee');
-const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 257, dinossauroscopio: 257, aviaoscopia: 477}};
-assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; the airplane weighs 220 g more than the others');
+const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250}};
+assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; butterfly + dinosaur weigh 257 g together, the airplane about 250 g');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, maxPieces: null}}), ['sharedBox'], 'how many pieces fit is missing');
-assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {borboletoscopio: 257, dinossauroscopio: 257}}}), ['sharedBox'], 'a weight for every product');
+assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {borboletoscopio: 129, dinossauroscopio: 128}}}), ['sharedBox'], 'a weight for every product');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {...SHARED.pieceG, aviaoscopia: 0}}}), ['sharedBox'], 'weights are positive');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {...SHARED.pieceG, aviaoscopia: 11000}}}), ['sharedBox'], 'a full box over 30 kg');
 assert.deepEqual(missing({...baseConfig, boxes: undefined, sharedBox: undefined}).slice(0, 1), ['boxes.borboletoscopio'], 'without a shared box the per-product boxes are needed');
@@ -77,13 +77,14 @@ assert.deepEqual(vol(LINES), [[1, 600], [1, 320], [1, 350]]);
 
 // one shared box for any mix of products, up to maxPieces pieces; a box weighs the sum of its pieces
 const sharedVol = lines => volumesFor(lines, {...EXAMPLE_CONFIG, sharedBox: SHARED}).map(v => [v.count, v.box.weightG]);
-assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}]), [[1, 257]], 'one butterfly');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 1}]), [[1, 477]], 'the airplane is 220 g heavier');
-assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}]), [[1, 991]], 'three different products share one box: 257 + 257 + 477');
-assert.deepEqual(sharedVol(LINES), [[1, 991], [1, 257]], '4 pieces (3 butterflies + 1 airplane): a box of 3, heaviest first, and a box with the last butterfly');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 5}]), [[1, 1431], [1, 954]], '3 + 2 airplanes');
-assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 1431]], 'identical full boxes are grouped');
-assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 4}]), [[1, 771], [1, 257]], '3 + 1 butterflies');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}]), [[1, 129]], 'one butterfly');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 1}]), [[1, 250]], 'the airplane');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}]), [[1, 257]], 'butterfly + dinosaur: the 257 g the shop measured');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}]), [[1, 507]], 'three different products share one box: 129 + 128 + 250');
+assert.deepEqual(sharedVol(LINES), [[1, 508], [1, 129]], '4 pieces (3 butterflies + 1 airplane): a box of 3, heaviest first, and a box with the last butterfly');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 5}]), [[1, 750], [1, 500]], '3 + 2 airplanes');
+assert.deepEqual(sharedVol([{productId: 'aviaoscopia', quantity: 6}]), [[2, 750]], 'identical full boxes are grouped');
+assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 4}]), [[1, 387], [1, 129]], '3 + 1 butterflies');
 
 // ── the engine against the Correios simulator ────────────────────────────────────────────────────────
 {
@@ -113,7 +114,7 @@ assert.deepEqual(sharedVol([{productId: 'borboletoscopio', quantity: 4}]), [[1, 
   assert.deepEqual(triple.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 3), 3], ['sedex', sedex(6, 1, 3), 3]], 'a group of 3 identical volumes costs 3 times one');
   assert.equal(fake.calls.filter(c => c.path.startsWith('/preco') && c.params.cepDestino === '90010000' && c.params.psObjeto === '350').length, 2, 'one price request per service and box, not per label');
 
-  // one shared box: three different products are ONE volume (991 g), not three
+  // one shared box: three different products are ONE volume (507 g), not three
   const oneBox = createShipping({env, fetchImpl: fake.fetchImpl, config: withConfig({sharedBox: SHARED})});
   const mixed = await oneBox.quote({lines: [{productId: 'borboletoscopio', quantity: 1}, {productId: 'dinossauroscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1}], cep: '90010-000'});
   assert.deepEqual(mixed.options.map(o => [o.service, o.priceCents, o.volumes]), [['pac', pac(6, 1, 1), 1], ['sedex', sedex(6, 1, 1), 1]], 'one label for the whole order');
