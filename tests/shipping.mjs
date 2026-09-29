@@ -47,7 +47,8 @@ assert.deepEqual(correiosSettings({CORREIOS_USER: ' u ', CORREIOS_CODE: 'c', COR
 for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS_CONTRACT', 'SHIP_FROM_CEP']) assert.equal(correiosSettings({...fresh().creds, [drop]: ''}).ready, false, `${drop} is needed`);
 
 // the shop's data: nothing is guessed
-assert.deepEqual(missing(baseConfig), ['services', 'production', 'boxes.borboletoscopio', 'boxes.dinossauroscopio', 'boxes.aviaoscopia'], 'the shipped config is a template: the real quote stays off until it is filled in');
+assert.deepEqual(missing(baseConfig), ['services', 'production'], 'the shipped config has the real boxes but not yet the service codes and production days: the real quote stays off until they are filled in (update when they arrive)');
+for (const id of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) assert.deepEqual([baseConfig.boxes[id].unit, baseConfig.boxes[id].perBox], [{length: 22, width: 20, height: 7, weightG: 257}, 1], id + ': one piece per box, the packaging registered at the Correios Empresa');
 assert.deepEqual(missing(EXAMPLE_CONFIG), []);
 assert.deepEqual(missing(withConfig({production: {minDays: 7, maxDays: 5}})), ['production']);
 assert.deepEqual(missing(withConfig({boxes: {...EXAMPLE_CONFIG.boxes, aviaoscopia: {unit: {length: 25, width: 14, height: 6, weightG: 31000}, perBox: 1, full: null}}})), ['boxes.aviaoscopia'], 'over 30 kg');

@@ -13,6 +13,8 @@
 //                  it goes to the Correios (packaging included). Different products never share a box: each product makes its
 //                  own volumes, and the Correios API prices each volume.
 //   Example of one entry: {unit: {length: 20, width: 15, height: 8, weightG: 320}, perBox: 2, full: {length: 24, width: 20, height: 10, weightG: 600}}
+const PACKAGING = Object.freeze({length: 22, width: 20, height: 7, weightG: 257});
+
 module.exports = Object.freeze({
   services: Object.freeze([
     Object.freeze({id: 'pac', label: 'PAC', code: null}),
@@ -21,9 +23,12 @@ module.exports = Object.freeze({
   production: Object.freeze({minDays: null, maxDays: null}),
   labelFeeCents: 0,
   freeShipping: null,
+  // The three pieces ship one per box, in the same packaging registered at the Correios Empresa (Pré-postagem Web →
+  // Embalagens) as "BORBOLETA E DINO": 22 × 20 × 7 cm, 257 g. Still to confirm with the shop: that 257 g is the box WITH a piece
+  // (the price changes by weight bracket), and whether two pieces ever go together in one box (then `perBox`/`full` change).
   boxes: Object.freeze({
-    borboletoscopio: Object.freeze({unit: null, perBox: null, full: null}),
-    dinossauroscopio: Object.freeze({unit: null, perBox: null, full: null}),
-    aviaoscopia: Object.freeze({unit: null, perBox: null, full: null})
+    borboletoscopio: Object.freeze({unit: PACKAGING, perBox: 1, full: null}),
+    dinossauroscopio: Object.freeze({unit: PACKAGING, perBox: 1, full: null}),
+    aviaoscopia: Object.freeze({unit: PACKAGING, perBox: 1, full: null})
   })
 });
