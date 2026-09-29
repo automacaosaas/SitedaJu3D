@@ -1,7 +1,9 @@
 'use strict';
 // POST /api/payments/create
 //   {attempt, items:[{productId, quantity, selection}], customer:{name,email,phone}, address:{cep,street,number,district,city,state,complement},
-//    notes, lang, acceptTerms: true, payment:{selectedPaymentMethod, formData}}
+//    notes, lang, acceptTerms: true, shipping:{service, priceCents}, payment:{selectedPaymentMethod, formData}}
+// With the real shipping quote on (Correios contract), `shipping` is required: the server quotes the delivery itself and accepts only
+// the option the buyer saw (same service, same price); if the price moved it answers 409 shipping_changed with the new options.
 // Needs a signed-in buyer with a complete identification (invoice and shipping label). Validates the cart, recomputes
 // every price on the server, records the order in the database, then creates it at Mercado Pago and answers with a small
 // status object (and, for Pix, the QR code). Card data never comes through here: the Payment Brick turns it into a token.
@@ -14,6 +16,7 @@ const {createAccounts} = require('../_lib/accounts');
 const {createOrders} = require('../_lib/orders');
 const fields = require('../_lib/fields');
 const mp = require('../_lib/mercadopago');
+const shipping = require('../_lib/shipping');
 
 const MAX_BODY = 16 * 1024;
 const EMAIL = /^[^\s@<>()[\],;:"\\]+@[^\s@<>()[\],;:"\\]+\.[^\s@<>()[\],;:"\\]+$/;
@@ -35,7 +38,7 @@ function readCustomer(body) {
   return {customer: {name, email, phone}, address, notes: clean(body.notes, 500)};
 }
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox, shippingConfig} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'POST') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'POST'});
     const settings = mp.settings(env), site = config(env);
@@ -59,6 +62,23 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     for (const [key, limit, windowMs] of [['pay-ip:' + clientIp(req), 20, 10 * 60 * 1000], ['pay-account:' + buyer.id, 8, 10 * 60 * 1000]]) {
       const taken = await store.rateLimit(key, limit, windowMs, now());
       if (!taken.ok) return json(res, 429, {error: 'too_many_requests', retryAfter: taken.retryAfter}, {'Retry-After': String(taken.retryAfter)});
+    }
+
+    const engine = shipping.forEnv(env, {fetchImpl, config: shippingConfig});
+    if (engine.status().mode === 'correios') {
+      const chosen = body.shipping && typeof body.shipping === 'object' ? body.shipping : {};
+      let quoted;
+      try { quoted = await engine.quote({lines: priced.lines, cep: form.address.cep, subtotalCents: priced.subtotal}); }
+      catch (error) {
+        if (error.code === 'no_service') return json(res, 422, {error: 'no_service'});
+        console.error('payments/create: shipping quote failed —', error.code || error.message);
+        return json(res, 503, {error: 'shipping_unavailable'});
+      }
+      const option = quoted.options.find(o => o.service === chosen.service);
+      if (!option) return json(res, 400, {error: 'invalid_request', field: 'shipping'});
+      if (option.priceCents !== chosen.priceCents) return json(res, 409, {error: 'shipping_changed', options: quoted.options.map(shipping.publicOption)});
+      priced = {...priced, shipping: option.priceCents, total: priced.subtotal + option.priceCents,
+        shippingInfo: {service: option.service, label: option.label, code: option.code, days: option.days, deliveryDays: option.deliveryDays, priceCents: option.priceCents, costCents: option.costCents, volumes: option.volumes, source: 'correios'}};
     }
 
     const lang = LANGUAGES.includes(body.lang) ? body.lang : 'pt-BR';

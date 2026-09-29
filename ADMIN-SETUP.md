@@ -18,6 +18,8 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
   nem concluído. Um estorno feito direto no painel do Mercado Pago também aparece aqui (pelo webhook ou consulta).
 - **Gráfico** dos últimos 14 dias e **calendário** com os pedidos de cada dia. O faturamento não conta os recusados.
 - Etiqueta de origem em cada pedido: **Teste Mercado Pago** ou **Pedido real**.
+- Com o frete real ligado (`FRETE-SETUP.md`), cada pedido mostra **Envio**: serviço, volumes, prazo, quanto foi cobrado do cliente e o
+  **custo da etiqueta**, para conferir na hora de gerar a etiqueta no Correios Empresa.
 - Pedidos aguardando pagamento ou cancelados não aparecem, e a equipe não consegue mudar o status deles.
 
 ## Como entrar: senha e código do celular

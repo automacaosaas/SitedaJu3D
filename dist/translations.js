@@ -663,4 +663,20 @@ Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e dec
 Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By creating your account, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al crear tu cuenta, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
 Para pagar, aceite os Termos de Uso e a Política de Trocas e Devoluções na etapa de entrega.|To pay, accept the Terms of Use and the Exchanges and Returns Policy in the delivery step.|Para pagar, acepta los Términos de Uso y la Política de Cambios y Devoluciones en la etapa de entrega.
 Este documento está disponível só em português. Em caso de dúvida, vale a versão em português.|This document is available in Portuguese only. In case of doubt, the Portuguese version prevails.|Este documento está disponible solo en portugués. En caso de duda, prevalece la versión en portugués.
+Como quer receber?|How would you like to receive it?|¿Cómo quieres recibirlo?
+Digite o CEP para calcular o frete.|Enter your CEP (postal code) to calculate shipping.|Escribe tu CEP (código postal) para calcular el envío.
+Calculando o frete…|Calculating shipping…|Calculando el envío…
+Não encontramos envio para esse CEP. Confira o CEP ou fale com a Ju.|We could not find a shipping option for this CEP. Check the CEP or talk to Ju.|No encontramos envío para este CEP. Revisa el CEP o habla con Ju.
+Não conseguimos calcular o frete agora. Tente de novo em instantes.|We could not calculate shipping right now. Please try again in a moment.|No pudimos calcular el envío ahora. Inténtalo de nuevo en unos instantes.
+Muitas consultas seguidas. Aguarde alguns instantes e tente de novo.|Too many requests in a row. Wait a moment and try again.|Demasiadas consultas seguidas. Espera unos instantes e inténtalo de nuevo.
+O valor do frete mudou. Confira o novo valor antes de pagar.|The shipping price changed. Check the new price before paying.|El precio del envío cambió. Revisa el nuevo precio antes de pagar.
+Escolha uma forma de envio.|Choose a shipping option.|Elige una forma de envío.
+Aguarde o cálculo do frete.|Wait for the shipping calculation.|Espera el cálculo del envío.
+Opções de envio|Shipping options|Opciones de envío
+Tentar de novo|Try again|Intentar de nuevo
+Grátis|Free|Gratis
+calculada pelo CEP|calculated from your CEP|calculada según tu CEP
+(sem entrega)|(without delivery)|(sin envío)
+Envio|Shipping|Envío
+Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.|Prices are examples for evaluation. Shipping is calculated by CEP, using the Correios rates.|Los precios son ejemplos para evaluación. El envío se calcula por CEP, con la tarifa de Correios.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

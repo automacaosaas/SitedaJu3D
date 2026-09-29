@@ -120,6 +120,7 @@ function orderCard(o) {
       <div><strong>Entrega</strong>${esc(o.address.street)}, ${esc(o.address.number)}${o.address.complement ? ' — ' + esc(o.address.complement) : ''}<br>${esc(o.address.district)} · ${esc(o.address.city)}/${esc(o.address.state)} · CEP ${esc(cep)}</div>
       <div><strong>Nota fiscal</strong>${invoiceLine(o)}</div>
     </div>
+    ${o.shipping ? `<p class="admin-order-shipping"><strong>Envio</strong> ${esc(o.shipping.label)} · ${o.shipping.volumes || 1} ${(o.shipping.volumes || 1) === 1 ? 'volume' : 'volumes'} · prazo ${esc(o.shipping.days?.min)} a ${esc(o.shipping.days?.max)} dias úteis · cobrado do cliente ${esc(money(o.shipping.chargedCents))} · custo da etiqueta ${esc(money(o.shipping.costCents))}</p>` : ''}
     ${o.notes ? `<p class="admin-order-notes">${esc(o.notes)}</p>` : ''}
     <div class="admin-order-foot"><span class="admin-order-total">${esc(money(o.totalCents))}</span>${actions}</div>
   </article>`;

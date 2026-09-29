@@ -5,6 +5,7 @@ import {readCart, writeCart, totals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCa
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
+import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep} from './shipping-client.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
@@ -18,6 +19,8 @@ function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getIte
 const main = document.querySelector('#shop-main'), liveRegion = document.querySelector('#shop-live');
 // Real payments (Mercado Pago) are on only when the server says so; otherwise everything below behaves as the demo.
 const live = await loadPaymentConfig();
+// Real shipping (Correios contract) is on only when the server says so; otherwise the fixed example fee stays.
+const shipCfg = await loadShippingConfig(), real = shipCfg.mode === 'correios';
 const banner = document.querySelector('.demo-banner');
 if (live.mode === 'test' && banner) banner.innerHTML = 'AMBIENTE DE TESTE <span>Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado</span>';
 else if (live.mode === 'live' && banner) banner.remove();
@@ -27,24 +30,79 @@ let profile = null;
 let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || ''}, timer = null, busy = false, noticeTimer = null;
 let selected = new Set(cart.map(i=>i.id));
 const purchaseItems = () => selectedItems(cart, selected);
+// ── real shipping (Correios contract) ───────────────────────────────────
+// `ship` holds the CEP asked, the options the server answered and the one chosen (the cheapest until the buyer picks another).
+// The browser never sends a price to be trusted: the server quotes again when the order is paid and compares.
+let ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}, shipToken = 0, shipTimer = null;
+const shipKey = () => purchaseItems().map(i => `${i.productId}:${i.quantity}`).sort().join(',');
+const activeShipping = () => (stage === 'payment' || stage === 'confirmation') && order ? order.shipping || null : ship.chosen;
+const shippingCents = () => real ? (activeShipping() ? activeShipping().priceCents : null) : COMMERCE.shippingCents;
+const productionText = () => { const s = activeShipping(); return s ? `Prazo estimado: ${formatDays(s.days)}` : real && shipCfg.production ? `Produção: ${formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays})}` : `Produção: ${COMMERCE.productionLabel}`; };
+function shippingInner() {
+  if (ship.status === 'loading') return '<p class="ship-note" role="status">Calculando o frete…</p>';
+  if (ship.status === 'ready') return `<div class="ship-options" role="radiogroup" aria-label="Opções de envio">${ship.options.map(o => `<label class="ship-option"><input type="radio" name="shipping-service" value="${esc(o.service)}" ${ship.chosen?.service === o.service ? 'checked' : ''}><span class="ship-main"><strong>${esc(o.label)}</strong><small>Entrega em ${formatDays(o.days)}</small></span><span class="ship-price">${o.free ? '<em>Grátis</em>' : money(o.priceCents)}</span></label>`).join('')}</div>`;
+  if (ship.status === 'none' || ship.status === 'error') return `<p class="ship-note ship-problem" role="alert">${shippingMessage(ship.error)}</p>${ship.status === 'error' && ship.error !== 'invalid_cep' ? '<button type="button" class="text-button" data-action="retry-shipping">Tentar de novo</button>' : ''}`;
+  return '<p class="ship-note">Digite o CEP para calcular o frete.</p>';
+}
+const shippingSection = () => real
+  ? `<div class="shipping-choice"><p class="ship-title"><strong>Como quer receber?</strong></p><div id="shipping-choice" aria-live="polite">${shippingInner()}</div></div>`
+  : `<div class="shipping-option"><span aria-hidden="true">↗</span><div><strong>Entrega no seu endereço</strong><p>Frete e prazo finais serão definidos na integração.</p></div><strong>${money(COMMERCE.shippingCents)}<small>exemplo</small></strong></div>`;
+function paintShipping() {
+  const box = main.querySelector('#shipping-choice');
+  if (box) box.innerHTML = shippingInner();
+  const aside = main.querySelector('.order-summary');
+  if (aside && stage === 'delivery') aside.outerHTML = summary(purchaseItems());
+}
+async function requestShipping(cep) {
+  const token = ++shipToken, previous = ship.chosen?.service;
+  ship = {cep, key: shipKey(), status: 'loading', options: [], chosen: null, error: null};
+  paintShipping();
+  const result = await quoteShipping({items: purchaseItems(), cep});
+  if (token !== shipToken) return;   // the CEP or the cart changed meanwhile
+  ship = result.ok
+    ? {...ship, status: 'ready', options: result.options, chosen: result.options.find(o => o.service === previous) || result.options[0]}
+    : {...ship, status: result.error === 'no_service' || result.error === 'invalid_cep' ? 'none' : 'error', error: result.error};
+  paintShipping();
+  if (!result.ok) announce(shippingMessage(result.error));
+}
+// Called whenever the delivery step is drawn: (re)quote when the CEP is filled in and nothing current is known for this cart.
+function ensureShipping() {
+  if (!real || stage !== 'delivery') return;
+  const cep = String(draft.cep ?? '').replace(/\D/g, '');
+  if (!isCep(cep)) { if (ship.status !== 'idle') ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}; return; }
+  if (ship.cep === cep && ship.key === shipKey() && ship.status !== 'idle' && ship.status !== 'loading') return;
+  setTimeout(() => requestShipping(cep), 0);
+}
+const shippingGuard = () => ship.status === 'loading' || (ship.status === 'idle' && isCep(draft.cep)) ? 'Aguarde o cálculo do frete.' : ship.status === 'ready' && !ship.chosen ? 'Escolha uma forma de envio.' : shippingMessage(ship.status === 'idle' ? 'invalid_cep' : ship.error);
+// The server refused the delivery at payment time (price moved, no service, Correios down): back to the delivery step.
+function backToDelivery(result) {
+  ship = result.options?.length ? {...ship, status: 'ready', options: result.options, chosen: null, error: null} : {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null};
+  stage = 'delivery'; order = null; render();
+  announce(shippingMessage(result.error, result.field));
+}
 const count = items => items.reduce((n, i) => n + i.quantity, 0);
 const announce = message => {clearTimeout(noticeTimer);liveRegion.textContent = message;noticeTimer=setTimeout(()=>{liveRegion.textContent='';},7000);};
 const primary = (text, action, extra = '') => `<button class="primary shop-primary" data-action="${action}" ${extra}>${text}<span aria-hidden="true">↗</span></button>`;
 function heading(kicker, title, description) { return `<div class="shop-heading"><p class="eyebrow">${kicker}</p><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`; }
 function chips(item) { return `<ul class="color-chips">${PRODUCTS[item.productId].parts.map(p => {const c = color(item.selection[p.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${p.name}: <strong>${c.name}</strong></span></li>`;}).join('')}</ul>`; }
 function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${color(item.selection.body).hex}40"><img src="${esc(item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`)}" alt="${esc(item.title)} — ${item.thumbnail ? 'prévia 3D da combinação' : 'imagem nas cores originais'}"><small>${item.thumbnail ? 'Sua combinação · prévia 3D' : 'Foto nas cores originais'}</small></div>`; }
-function amounts(items) {const t = totals(items); return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>Entrega <small>(exemplo)</small></dt><dd>${money(t.shipping)}</dd></div><div class="grand-total"><dt>Total</dt><dd>${money(t.total)}</dd></div></dl>`;}
-function summary(items, action = '') {return `<aside class="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>Produção: ${COMMERCE.productionLabel}</strong></p>${action}${live.mode === 'live' ? '' : '<p class="small-note">Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.</p>'}</aside>`;}
+function amounts(items) {
+  const cents = shippingCents(), t = totals(items, cents ?? 0), chosen = activeShipping();
+  const label = !real ? 'Entrega <small>(exemplo)</small>' : chosen ? `Entrega <small>(${esc(chosen.label)})</small>` : 'Entrega';
+  const value = cents === null ? '<small>calculada pelo CEP</small>' : cents === 0 && chosen?.free ? '<em>Grátis</em>' : money(cents);
+  return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>${label}</dt><dd>${value}</dd></div><div class="grand-total"><dt>Total${cents === null ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(t.total)}</dd></div></dl>`;
+}
+function summary(items, action = '') {return `<aside class="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>${productionText()}</strong></p>${action}${live.mode === 'live' ? '' : `<p class="small-note">${real ? 'Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.' : 'Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.'}</p>`}</aside>`;}
 function field(name, label, options = {}) {return `<label class="field ${options.wide ? 'wide' : ''}"><span>${label}${options.optional ? ' <small>(opcional)</small>' : ''}</span><input name="${name}" value="${esc(draft[name])}" type="${options.type || 'text'}" ${options.optional ? '' : 'required'} autocomplete="${options.auto || 'off'}" ${options.inputmode ? `inputmode="${options.inputmode}"` : ''} ${options.pattern ? `pattern="${options.pattern}"` : ''} maxlength="${options.max || 100}" ${options.placeholder ? `placeholder="${options.placeholder}"` : ''}></label>`;}
 // Identification (FARM Rio reference): e-mail from the account, name, surname, CPF, phone and optional company data.
 function identificationView() {return `${heading(direct?'COMPRAR AGORA':'IDENTIFICAÇÃO', 'Quem está<br><em>comprando?</em>', 'Seus dados para a nota fiscal e a entrega.')}<div class="shop-layout"><section class="identification-panel">${identificationForm({email:getSession()?.email || '', profile, submitLabel:'Ir para a entrega'})}<button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button></section>${summary(purchaseItems())}</div>`;}
-function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000'})}${field('city','Cidade',{auto:'address-level2'})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('district','Bairro',{max:80})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div><div class="shipping-option"><span aria-hidden="true">↗</span><div><strong>Entrega no seu endereço</strong><p>Frete e prazo finais serão definidos na integração.</p></div><strong>${money(COMMERCE.shippingCents)}<small>exemplo</small></strong></div></div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? '<p class="small-note">Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.</p>' : ''}<fieldset class="payment-choice" ${live.mode !== 'off' ? 'hidden disabled' : ''}><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset>${live.mode === 'off' ? '<p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>' : ''}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
+function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000'})}${field('city','Cidade',{auto:'address-level2'})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('district','Bairro',{max:80})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div>${shippingSection()}</div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? '<p class="small-note">Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.</p>' : ''}<fieldset class="payment-choice" ${live.mode !== 'off' ? 'hidden disabled' : ''}><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset>${live.mode === 'off' ? '<p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>' : ''}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
 // Decorative matrix, deliberately NOT a payable QR code.
 function qrIllustration() {let cells = '';for(let y=0;y<21;y++)for(let x=0;x<21;x++){const inFinder = (x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(inFinder){const a=x>13?x-14:x,b=y>13?y-14:y;if(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}else if((x*13+y*7+x*y)%5<2)cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}return `<div class="demo-qr"><svg viewBox="-2 -2 25 25" role="img" aria-label="QR Code ilustrativo, sem valor de pagamento"><g fill="#49303b">${cells}</g></svg><span>DEMONSTRAÇÃO</span></div>`;}
 function progress() {const approved = order.status === 'approved';return `<ol class="order-progress" aria-label="Andamento do pedido">${['Pedido criado','Aguardando pagamento','Pagamento confirmado','Em preparação','Pronto para envio'].map((s,i)=>`<li class="${i < (approved?2:1) ? 'done' : i === (approved?2:1) ? 'current' : ''}" ${i === (approved?2:1) ? 'aria-current="step"' : ''}><i aria-hidden="true">${i < (approved?2:1) ? '✓' : i+1}</i><span>${s}</span></li>`).join('')}</ol>`;}
 function paymentView() {if(order.live)return livePaymentView();const expired =paymentStatus(order) === 'expired', pix = order.method === 'pix';return `${heading('PEDIDO ' + order.id, expired ? 'O tempo passou.<br><em>Suas escolhas ficaram.</em>' : 'Falta só<br><em>um pequeno passo.</em>', 'Pagamento de demonstração. Nenhum valor será movimentado.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento por ${pix?'Pix':'cartão'}">${progress()}${pix ? `<div class="payment-state"><span class="status-pill ${expired?'expired':''}">${expired?'Código expirado':'<i class="waiting-dot" aria-hidden="true"></i>Aguardando pagamento'}</span><h2>${expired?'Gere um novo código.':'Pague do seu jeito, com Pix.'}</h2><p>${expired?'Seu pedido e suas cores continuam aqui.':'No celular, copie o código. Em outro dispositivo, você usaria o QR Code.'}</p></div>${expired ? '<div class="expired-art" aria-hidden="true">↻</div>' : `${qrIllustration()}<p class="qr-note">Imagem ilustrativa • não permite pagamentos</p><p class="countdown">Válido por <strong id="pix-time" role="timer"></strong></p><label class="pix-code-label" for="pix-code">Pix copia e cola <small>demonstrativo</small></label><div class="pix-copy"><input id="pix-code" readonly value="${demoPixCode(order)}"><button data-action="copy-pix">Copiar código</button></div>`}<div class="payment-buttons">${expired?primary('Gerar novo código de demonstração','renew'):primary('Já realizei o pagamento · simular','approve')}</div>${!expired?'<details class="demo-controls"><summary>Testar outro cenário</summary><button class="text-button" data-action="expire">Simular expiração do Pix</button></details>':''}` : `<div class="payment-state"><span class="status-pill">Cartão · demonstração</span><h2>Seu cartão, em boas mãos.</h2><p>Na versão final, o intermediador de pagamentos cuidará dos dados do seu cartão.</p></div><div class="card-illustration" aria-hidden="true"><span>Ju, imprime pra mim?</span><i>▥</i><strong>•••• &nbsp; •••• &nbsp; •••• &nbsp; ••••</strong><small>PRÉVIA DE PAGAMENTO</small></div><p class="card-explanation">Você não precisa digitar número, validade ou código de segurança para testar esta etapa.</p>${primary('Simular aprovação no cartão','approve')}<details class="demo-controls"><summary>Testar outro cenário</summary><button class="text-button" data-action="decline">Simular cartão recusado</button></details><p id="card-error" class="inline-error" role="alert"></p>`}<button class="text-button payment-back" data-action="delivery">← Alterar dados ou pagamento</button></section>${summary(order.items)}</div>`;}
 function confirmationView() {const message = `Olá, Ju! Gostaria de falar sobre o pedido ${order.id}${order.live ? '' : ' (demonstração)'}.\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+PRODUCTS[i.productId].parts.map(p=>`${p.name}: ${color(i.selection[p.id]).name}`).join('\n')).join('\n\n');const whatsapp = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? `<a class="primary shop-primary" href="https://wa.me/${COMMERCE.whatsapp}?text=${encodeURIComponent(message)}" target="_blank" rel="noopener">Falar com a Ju no WhatsApp ↗</a>` : '<button class="secondary-button" disabled>WhatsApp da Ju · em breve</button><p class="small-note">O contato será habilitado quando o número da loja for definido.</p>';
-return `${heading('PEDIDO ' + order.id, 'Suas cores.<br><em>Um novo começo.</em>', confirmationLead())}<div class="shop-layout"><section class="confirmation-panel"><div class="success-mark" aria-hidden="true">✓</div><h2>Seu pedido ganhou vida.</h2><p>${order.live ? 'A Ju recebeu todos os detalhes do seu pedido para preparar suas peças.' : 'Na loja final, a confirmação chega por aqui e a Ju recebe todos os detalhes para preparar suas peças.'}</p>${progress()}<div class="confirmation-facts"><div><small>Forma de pagamento</small><strong>${order.method==='pix'?'Pix':'Cartão'}</strong></div><div><small>Produção estimada</small><strong>${COMMERCE.productionLabel}</strong></div></div>${whatsapp}<button class="text-button" data-action="copy-order">Copiar resumo para conversar com a Ju</button><a class="primary shop-primary" href="index.html">Continuar explorando <span aria-hidden="true">↗</span></a></section>${summary(order.items)}</div>`;}
+return `${heading('PEDIDO ' + order.id, 'Suas cores.<br><em>Um novo começo.</em>', confirmationLead())}<div class="shop-layout"><section class="confirmation-panel"><div class="success-mark" aria-hidden="true">✓</div><h2>Seu pedido ganhou vida.</h2><p>${order.live ? 'A Ju recebeu todos os detalhes do seu pedido para preparar suas peças.' : 'Na loja final, a confirmação chega por aqui e a Ju recebe todos os detalhes para preparar suas peças.'}</p>${progress()}<div class="confirmation-facts"><div><small>Forma de pagamento</small><strong>${order.method==='pix'?'Pix':'Cartão'}</strong></div>${order.shipping ? `<div><small>Envio</small><strong>${esc(order.shipping.label)}</strong><small>${formatDays(order.shipping.days)}</small></div>` : `<div><small>Produção estimada</small><strong>${COMMERCE.productionLabel}</strong></div>`}</div>${whatsapp}<button class="text-button" data-action="copy-order">Copiar resumo para conversar com a Ju</button><a class="primary shop-primary" href="index.html">Continuar explorando <span aria-hidden="true">↗</span></a></section>${summary(order.items)}</div>`;}
 // ── real payments (Mercado Pago) ───────────────────────────────────────
 const lang = () => document.documentElement.lang || 'pt-BR';
 const deliveryNote = () => live.mode === 'off' ? 'Use dados fictícios neste protótipo. Eles não são enviados nem salvos pelo formulário.' : live.mode === 'test' ? 'Ambiente de teste: use dados de teste. Eles servem só para criar o pedido de teste; nenhum valor real é cobrado.' : 'Usamos estes dados só para entregar o seu pedido.';
@@ -52,7 +110,7 @@ const confirmationLead = () => order.live ? (order.mode === 'test' ? 'Pagamento 
 function createLiveOrder(items) {
   const snapshot = normalizeCart(items);
   if (!snapshot.length) throw new Error('Adicione uma peça ao carrinho.');
-  return {live: true, mode: live.mode, id: null, mpId: null, phase: 'form', method: null, status: 'pending', items: snapshot, amounts: totals(snapshot), createdAt: Date.now(), pix: null, expiresAt: null};
+  return {live: true, mode: live.mode, id: null, mpId: null, phase: 'form', method: null, status: 'pending', items: snapshot, amounts: totals(snapshot, shippingCents() ?? undefined), shipping: real ? ship.chosen : null, createdAt: Date.now(), pix: null, expiresAt: null};
 }
 function testHelp() {
   if (live.mode !== 'test') return '';
@@ -114,6 +172,7 @@ function submitFromBrick(data) {
     try {
       const {status, data: result} = await createPayment({
         attempt: newAttempt(), lang: lang(), notes: draft.notes || '', acceptTerms: draft.terms === 'on',
+        shipping: order.shipping ? {service: order.shipping.service, priceCents: order.shipping.priceCents} : undefined,
         items: order.items.map(({productId, quantity, selection}) => ({productId, quantity, selection})),
         customer: {name: draft.name, email: draft.email, phone: draft.phone},
         address: {cep: draft.cep, street: draft.street, number: draft.number, district: draft.district, city: draft.city, state: draft.state, complement: draft.complement || ''},
@@ -122,6 +181,7 @@ function submitFromBrick(data) {
       // The session ended or the identification is missing (both checked again by the server): back to that step.
       if (status === 401) { reject(new Error('unauthorized')); location.assign(signInPage()); return; }
       if (result?.error === 'profile_incomplete') { reject(new Error('profile_incomplete')); setTimeout(() => toIdentification().then(() => announce(paymentMessage(status, result))), 0); return; }
+      if (['shipping_changed', 'shipping_unavailable', 'no_service'].includes(result?.error) || (result?.error === 'invalid_request' && result?.field === 'shipping')) { reject(new Error('shipping')); setTimeout(() => backToDelivery(result), 0); return; }
       if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), result?.detail); return reject(new Error('payment_failed')); }
       if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusedMessage(), result.statusDetail); return reject(new Error('payment_refused')); }
       const pix = result.method?.type === 'bank_transfer' || result.method?.id === 'pix';
@@ -175,9 +235,10 @@ function render(focus = true) {
   const steps = document.querySelector('.shop-steps');
   main.before(steps);
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
-  main.innerHTML = stage === 'cart' ? renderCart(cart, selected) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
+  main.innerHTML = stage === 'cart' ? renderCart(cart, selected, {realShipping: real, productionLabel: real && shipCfg.production ? formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays}) : ''}) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
   if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
+  ensureShipping();
   if (previousStage && previousStage !== stage && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
     main.getAnimations().forEach(animation => animation.cancel());
     main.animate([{opacity:0,translate:'0 6px'},{opacity:1,translate:'0 0'}], {duration:220,easing:'ease-out'});
@@ -230,7 +291,7 @@ main.addEventListener('submit', async e => {
     showIdentificationError(form, {field: problem.field, message: problem.message});
   }
 });
-main.addEventListener('submit', e=>{if(e.target.id!=='delivery-form')return;e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;draft=Object.fromEntries(new FormData(form));if(!draft.name.trim()||!draft.street.trim()||!draft.city.trim()||!draft.number.trim()||!draft.district.trim()){announce('Preencha os dados de entrega, sem deixar campos em branco.');return;}method=draft.payment;try{order=live.mode!=='off'?createLiveOrder(purchaseItems()):createDemoOrder(purchaseItems(),method);stage='payment';render();}catch(error){announce(error.message);}});
+main.addEventListener('submit', e=>{if(e.target.id!=='delivery-form')return;e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;draft=Object.fromEntries(new FormData(form));if(!draft.name.trim()||!draft.street.trim()||!draft.city.trim()||!draft.number.trim()||!draft.district.trim()){announce('Preencha os dados de entrega, sem deixar campos em branco.');return;}method=draft.payment;if(real&&(ship.status!=='ready'||!ship.chosen||ship.cep!==String(draft.cep).replace(/\D/g,''))){announce(shippingGuard());form.querySelector('[name=cep]')?.focus();return;}try{order=live.mode!=='off'?createLiveOrder(purchaseItems()):{...createDemoOrder(purchaseItems(),method,Date.now(),shippingCents()??undefined),shipping:real?ship.chosen:null};stage='payment';render();}catch(error){announce(error.message);}});
 main.addEventListener('change',e=>{
   if(e.target.name==='payment')method=e.target.value;
   if(e.target.id==='select-all'||e.target.dataset.selectId){
@@ -288,3 +349,22 @@ window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=re
 // Coming back from the account page (#identificacao) or starting a direct purchase: go straight to identification.
 if ((location.hash === '#identificacao' || stage === 'delivery') && purchaseItems().length) { history.replaceState(null, '', location.pathname + location.search); await toIdentification(); }
 else render(false);
+// Real shipping: typing a CEP quotes it (after a short pause); picking an option updates the summary.
+main.addEventListener('input', e => {
+  if (!real || stage !== 'delivery' || e.target.name !== 'cep') return;
+  const cep = e.target.value.replace(/\D/g, '');
+  if (cep === ship.cep) return;
+  clearTimeout(shipTimer); shipToken++;
+  if (!isCep(cep)) { ship = {cep, key: '', status: 'idle', options: [], chosen: null, error: null}; paintShipping(); return; }
+  shipTimer = setTimeout(() => requestShipping(cep), 300);
+});
+main.addEventListener('change', e => {
+  if (!real || e.target.name !== 'shipping-service') return;
+  const option = ship.options.find(o => o.service === e.target.value);
+  if (option) { ship = {...ship, chosen: option}; paintShipping(); }
+});
+main.addEventListener('click', e => {
+  if (!real || !e.target.closest('[data-action="retry-shipping"]')) return;
+  const form = main.querySelector('#delivery-form'), cep = String(form?.elements.cep?.value ?? draft.cep ?? '').replace(/\D/g, '');
+  if (isCep(cep)) requestShipping(cep);
+});

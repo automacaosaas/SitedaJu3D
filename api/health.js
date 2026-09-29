@@ -9,6 +9,7 @@ const {keys} = require('./_lib/fields');
 const mp = require('./_lib/mercadopago');
 const admin = require('./_lib/admin-auth');
 const legal = require('./_lib/legal');
+const shipping = require('./_lib/shipping');
 
 function createHandler({env = process.env} = {}) {
   return async function handler(req, res) {
@@ -20,6 +21,7 @@ function createHandler({env = process.env} = {}) {
       accounts: storeKind(env), db: await ping(env), dataKeys,
       payments: pay.mode, paymentsBlocked: pay.blocked, mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
       admin: await admin.status(storeFor(env), env),
+      shipping: shipping.forEnv(env).status().mode,   // off (no Correios credentials) · pending (shop data incomplete) · correios
       legal: legal.pending() ? 'pending' : 'ok'   // store details still marked [PREENCHER] in api/_lib/legal.js
     });
   };

@@ -63,7 +63,7 @@ async function main() {
     if (!env.RESEND_API_KEY.startsWith('re_')) console.warn('Aviso: chaves do Resend começam com "re_". Confira se copiou a chave inteira.');
     else console.log(`Chave recebida (${env.RESEND_API_KEY.length} caracteres).`);
   }
-  const fakeMp = process.argv.includes('--fake-mp');
+  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios');
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
     env.MP_ACCESS_TOKEN = await askHidden('Cole o Access Token de teste e tecle Enter (não aparece na tela): ');
@@ -101,13 +101,19 @@ async function main() {
   // Calls to Mercado Pago go to the simulator with --fake-mp, otherwise to the real API (only the status is logged, never a body).
   const mpFetch = async (url, init) => { const response = await fetch(url, init); console.log(`[mp] ${init.method} ${String(url).replace('https://api.mercadopago.com', '')} → ${response.status}`); return response; };
   let fake = null;
-  const routed = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : loggedFetch(url, init);
+  // Shipping: with --fake-correios the quote runs against a simulator and example shop data (NOT the real boxes).
+  const {createFakeCorreios, EXAMPLE_CONFIG} = require('./fake-correios.cjs');
+  const fakeCorreiosApi = fakeCorreios ? createFakeCorreios() : null;
+  if (fakeCorreiosApi) Object.assign(env, fakeCorreiosApi.creds);
+  const shippingConfig = fakeCorreiosApi ? EXAMPLE_CONFIG : undefined;
+  const routed = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
   const routes = {
     '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
     '/api/health': require('../api/health').create({env}),
     '/api/email-preview': require('../api/email-preview').create({env}),
     '/api/payments/config': require('../api/payments/config').create({env}),
-    '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox}),
+    '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
+    '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };

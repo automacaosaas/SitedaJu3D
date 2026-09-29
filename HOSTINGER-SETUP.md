@@ -106,6 +106,24 @@ No checkout, a prevenção de fraude avançada do SDK fica desligada enquanto fo
 política de segurança do site não permite. Antes de cobrar de verdade, enviar o identificador do aparelho do jeito documentado
 pelo Mercado Pago (`security.js` + cabeçalho `X-meli-session-id` no servidor), sem afrouxar a política.
 
+### 4.2 Frete real (Correios)
+
+Sem estas variáveis o checkout cobra o frete fixo de exemplo. Com elas (e com os dados da loja preenchidos em
+`api/_lib/shipping-config.js`), o frete é calculado por CEP com o contrato da Ju. Onde tirar cada valor, os dados da loja, as
+regras e como conferir estão em `FRETE-SETUP.md` e `FRETE-CORREIOS-passo-a-passo.md`.
+
+| Nome | Valor | Secreta |
+|---|---|---|
+| `CORREIOS_USER` | usuário da API dos Correios | não |
+| `CORREIOS_CODE` | código de acesso da API | **sim** |
+| `CORREIOS_CONTRACT` | número do contrato | não |
+| `CORREIOS_CARD` | número do cartão de postagem | não |
+| `CORREIOS_DR` | DR, se aparecer na tela do cartão | não |
+| `SHIP_FROM_CEP` | CEP de onde a Ju despacha | não |
+
+`/api/health` mostra `"shipping":"off"` (faltam variáveis), `"pending"` (variáveis ok, dados da loja incompletos) ou
+`"correios"` (cotando). O código de acesso não vai por chat, e-mail nem GitHub.
+
 ## 5. Conferir
 
 - `https://<endereço temporário>/api/health` responde `{"ok":true,...}` com `"accounts":"mysql"`, `"db":"ok"` e

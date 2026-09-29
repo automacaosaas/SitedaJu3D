@@ -15,3 +15,15 @@
 .terms-check{margin-top:22px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fffcfb}.terms-check label{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;cursor:pointer}.terms-check input{width:18px;height:18px;margin:1px 0 0;flex-shrink:0;accent-color:var(--rose)}.terms-links{display:flex;flex-wrap:wrap;gap:4px 16px;margin:8px 0 0 28px;font-size:12px}.terms-links a{color:var(--rose);text-decoration:underline;text-underline-offset:3px}
 /* Four steps (with Identificação) do not fit a phone: the steps not in progress show only their number; the name stays for screen readers. */
 @media(max-width:480px){.shop-steps>span:not([aria-current]){font-size:0;gap:0}.shop-steps>span:not([aria-current]) b{font-size:9px}}
+/* Real shipping (Correios): the options for the CEP, one card each, the cheapest chosen from the start. */
+.shipping-choice{margin-top:22px}.ship-title{margin:0 0 10px;font-size:13px}
+.ship-note{margin:0;padding:14px 16px;border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--muted);background:var(--bg)}
+.ship-problem{border-style:solid;color:#98364e;background:#fdeef1}
+.ship-options{display:grid;gap:10px}
+.ship-option{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);background:var(--bg);border-radius:12px;font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
+.ship-option input{accent-color:var(--rose);width:18px;height:18px;flex:none;margin:0}
+.ship-option:has(input:checked){border-color:var(--rose);background:#fff}
+.ship-option:has(input:focus-visible){outline:2px solid var(--rose);outline-offset:3px}
+.ship-main{display:grid;gap:3px}.ship-main small{font-size:11px;color:var(--muted)}
+.ship-price{margin-left:auto;font-weight:650;white-space:nowrap}.ship-price em{font-style:normal;color:#25664c}
+.amounts dd small,.amounts dt small{font-weight:400}.amounts dd em{font-style:normal;color:#25664c;font-weight:650}

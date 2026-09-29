@@ -105,6 +105,7 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 - [ ] **3D Secure** para cartões (`config.online.transaction_security` na API de Orders) e regras de **parcelamento** (hoje até 12x).
 - [x] **Banco de pedidos** com histórico, painel da Ju e "Meus pedidos". Faltam rastreio, nota fiscal e reenvio de e-mails pelo painel.
 - [ ] Conferir as **taxas** vigentes no Mercado Pago.
+- [ ] Frete real ligado: `/api/health` mostra `"shipping":"correios"` (ver `FRETE-SETUP.md`). Sem isso o site cobra o frete fixo de exemplo (R$ 18,00).
 - [ ] Só então salvar as credenciais de produção **e** `MP_MODE=live` na Production, e fazer uma compra real de valor baixo com estorno.
 
 ## O que o código garante
