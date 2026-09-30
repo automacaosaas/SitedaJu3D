@@ -247,3 +247,5 @@
 .auth-terms { margin: 14px 0 4px; font-size: 12px; line-height: 1.5; color: var(--auth-muted); }
 .auth-terms-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; font-size: 12px; }
 .auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+/* Sign-up: the password is optional (without one, the buyer always signs in with an e-mailed code). */
+.auth-hint { margin: -4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--auth-muted); }

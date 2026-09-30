@@ -683,4 +683,16 @@ Endereço preenchido pelo CEP. Confira e complete o número.|Address filled in f
 Cidade e estado preenchidos pelo CEP. Complete o endereço.|City and state filled in from the CEP. Complete the address.|Ciudad y estado completados con el CEP. Completa la dirección.
 Não encontramos esse CEP. Preencha o endereço manualmente.|We could not find this CEP. Fill in the address manually.|No encontramos este CEP. Completa la dirección manualmente.
 Não foi possível buscar o endereço agora. Preencha manualmente.|We could not look up the address right now. Fill it in manually.|No pudimos buscar la dirección ahora. Complétala manualmente.
+Calcule o frete|Calculate shipping|Calcula el envío
+Calcular|Calculate|Calcular
+Sem frete · ver resumo|Without shipping · see summary|Sin envío · ver resumen
+sem frete|without shipping|sin envío
+Faltam|Add|Faltan
+Parcelas neste cartão|Installments on this card|Cuotas con esta tarjeta
+Parcelas|Installments|Cuotas
+Juros|Interest|Intereses
+sem juros|interest-free|sin intereses
+Valores do Mercado Pago para este cartão. O que passa do preço à vista são os juros do parcelamento.|Amounts from Mercado Pago for this card. Anything above the upfront price is installment interest.|Valores de Mercado Pago para esta tarjeta. Lo que supera el precio al contado son los intereses de las cuotas.
+Crie uma senha (opcional)|Create a password (optional)|Crea una contraseña (opcional)
+Sem senha, você entra sempre com um código enviado para o seu e-mail.|Without a password, you always sign in with a code sent to your e-mail.|Sin contraseña, siempre entras con un código enviado a tu correo.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

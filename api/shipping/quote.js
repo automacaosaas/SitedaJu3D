@@ -1,5 +1,6 @@
 'use strict';
-// GET  /api/shipping/quote   → {mode: 'off'} or {mode: 'correios', production: {minDays, maxDays}}   (is the real quote on?)
+// GET  /api/shipping/quote   → {mode: 'off'} or {mode: 'correios', production: {minDays, maxDays}, freeShipping: {fromCents, label} | null}
+//                              (is the real quote on? and from which subtotal is the delivery free, on which service)
 // POST /api/shipping/quote   {items: [{productId, quantity, selection?}], cep}
 //        → {mode: 'correios', cep, options: [{service, label, priceCents, free, days: {min, max}}]}, cheapest first
 // The price of every option comes from the Correios contract, computed here from the cart (product and quantity only):
@@ -19,7 +20,10 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     const engine = shipping.forEnv(env, {fetchImpl, config: shippingConfig}), state = engine.status();
     // "pending" (credentials saved but the shop's data incomplete) looks like "off" from outside: the fixed example fee stays.
     if (state.mode !== 'correios') return json(res, 200, {mode: 'off'});
-    if (req.method === 'GET') return json(res, 200, {mode: 'correios', production: engine.config.production});
+    if (req.method === 'GET') {
+      const free = engine.config.freeShipping, service = free && engine.config.services.find(s => s.id === free.service && s.code);
+      return json(res, 200, {mode: 'correios', production: engine.config.production, freeShipping: service ? {fromCents: free.fromCents, label: service.label} : null});
+    }
     if (!sameOrigin(req, {...env, SITE_URL: mailConfig(env).siteUrl})) return json(res, 403, {error: 'forbidden'});
 
     let body;

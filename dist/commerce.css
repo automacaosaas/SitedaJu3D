@@ -28,3 +28,15 @@
 .ship-price{margin-left:auto;font-weight:650;white-space:nowrap}.ship-price em{font-style:normal;color:#25664c}
 .amounts dd small,.amounts dt small{font-weight:400}.amounts dd em{font-style:normal;color:#25664c;font-weight:650}
 .field .field-hint{font-size:12px;line-height:1.4}.field .field-hint:empty{display:none}
+/* Free shipping: how far the order is from it (cart and checkout summaries). */
+.free-ship{margin:14px 0 4px;padding:12px 14px;border:1px solid #25664c24;border-radius:12px;background:#f1f8f4;font-size:12px;line-height:1.45;color:#25463a}.free-ship p{margin:0 0 8px}.free-ship strong{font-weight:650}
+.free-ship-track{display:block;height:6px;border-radius:99px;background:#25664c1f;overflow:hidden}.free-ship-track i{display:block;height:100%;width:calc(var(--free-ship) * 100%);border-radius:inherit;background:#2f7d5c;transition:width .3s ease}
+.free-ship.is-reached{border-color:#25664c40}.free-ship.is-reached strong{color:#1f5a42}
+@media(prefers-reduced-motion:reduce){.free-ship-track i{transition:none}}
+/* Installments of the typed card: each one, the total and the interest on top of the price. */
+.installments-info{margin:14px 0 4px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fffcfb}
+.installments-title{margin:0 0 8px;font-size:13px;font-weight:650}
+.installments-table{width:100%;border-collapse:collapse;font-size:12px}.installments-table th,.installments-table td{padding:7px 4px;border-top:1px solid var(--line);text-align:right;vertical-align:top}.installments-table thead th{border-top:0;color:var(--muted);font-weight:500}
+.installments-table th[scope=row],.installments-table thead th:first-child{text-align:left;font-weight:600}.installments-table td em{font-style:normal;color:#25664c;font-weight:650}.installments-table td small{display:block;color:var(--muted);font-size:10px}
+.installments-info .small-note{margin:10px 0 0}
+.mobile-order-bar small{font-weight:400;opacity:.8}

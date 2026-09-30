@@ -130,3 +130,19 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-product:hover { border-color: #b64c6838; }
   .cart-edit-link:hover { color: #963b55; }
 }
+/* The cart's CEP box: price the delivery before signing in (the same CEP goes on to the delivery step). */
+.cart-ship { margin: 4px 0 16px; }
+.cart-ship label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.cart-ship-row { display: flex; gap: 8px; }
+.cart-ship-row input { flex: 1; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 14px; background: #fff; }
+.cart-ship-row input:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+.cart-ship-button { min-height: 44px; padding: 0 16px; border: 1px solid var(--rose); border-radius: 999px; background: #fff; color: var(--rose); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.cart-ship-button:hover { background: #fdf1f4; }
+.cart-ship-result:empty { display: none; }
+.cart-ship-note { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.cart-ship-note.is-problem { color: #98364e; }
+.cart-ship-options { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.cart-ship-options li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.cart-ship-options li small { display: block; color: var(--muted); font-size: 11px; }
+.cart-ship-options em { font-style: normal; color: #25664c; font-weight: 650; }
+.cart-order-summary .free-ship { margin: 14px 0 2px; }

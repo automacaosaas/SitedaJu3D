@@ -184,7 +184,9 @@ const ITEMS = [{productId: 'borboletoscopio', quantity: 3, selection: {body: 'pi
   assert.equal((await call(handler, {method: 'PUT'})).statusCode, 405);
   assert.deepEqual((await call(quoteHandler.create({env: {SITE_URL: SITE}, fetchImpl: fake.fetchImpl}), {method: 'GET'})).json(), {mode: 'off'});
   assert.deepEqual((await call(quoteHandler.create({env, fetchImpl: fake.fetchImpl, shippingConfig: {...baseConfig, production: {minDays: null, maxDays: null}}}), {method: 'GET'})).json(), {mode: 'off'}, 'credentials but incomplete shop data look off from outside');
-  assert.deepEqual((await call(handler, {method: 'GET'})).json(), {mode: 'correios', production: {minDays: 5, maxDays: 7}});
+  assert.deepEqual((await call(handler, {method: 'GET'})).json(), {mode: 'correios', production: {minDays: 5, maxDays: 7}, freeShipping: null});
+  const withFree = quoteHandler.create({env, fetchImpl: fake.fetchImpl, shippingConfig: {...EXAMPLE_CONFIG, freeShipping: {fromCents: 50000, service: 'pac'}}});
+  assert.deepEqual((await call(withFree, {method: 'GET'})).json().freeShipping, {fromCents: 50000, label: 'PAC'}, 'the pages learn the free-shipping threshold and its service');
   assert.deepEqual((await call(quoteHandler.create({env: {SITE_URL: SITE}, fetchImpl: fake.fetchImpl}), {body: {items: ITEMS, cep: '90010000'}})).json(), {mode: 'off'}, 'off: the checkout keeps its fixed example fee');
 
   assert.equal((await call(handler, {origin: '', body: {items: ITEMS, cep: '90010000'}})).statusCode, 403, 'no Origin');
@@ -336,7 +338,9 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
 {
   const client = await site('shipping-client.js'), {translate} = await site('i18n-core.js');
   const answer = (status, body) => async () => ({ok: status >= 200 && status < 300, status, json: async () => body});
-  assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 5, maxDays: 7}})}), {mode: 'correios', production: {minDays: 5, maxDays: 7}});
+  assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 5, maxDays: 7}})}), {mode: 'correios', production: {minDays: 5, maxDays: 7}, freeShipping: null});
+  assert.deepEqual((await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 3, maxDays: 5}, freeShipping: {fromCents: 50000, label: 'PAC'}})})).freeShipping, {fromCents: 50000, label: 'PAC'});
+  assert.equal((await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', freeShipping: {fromCents: -1}})})).freeShipping, null, 'a nonsense threshold is ignored');
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'off'})}), {mode: 'off'});
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(500, {})}), {mode: 'off'});
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: async () => { throw new Error('offline'); }}), {mode: 'off'}, 'a dead network keeps the fixed example fee');
