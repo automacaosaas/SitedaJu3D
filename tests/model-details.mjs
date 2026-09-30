@@ -32,6 +32,15 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
   for(const sx of [-1,1]){
    assert.equal(materialAt(sx*.083,.549),'eyes','Round pupils remain visible');
    assert.equal(materialAt(sx*.083,.601),'face','The former long black eye tip is face colored');
+   // Eyes a little larger than the approved .0285 x .0305 (about +15%), still round.
+   assert.equal(materialAt(sx*(.083+.031),.549),'eyes','Eye width grew a little');
+   assert.equal(materialAt(sx*(.083+.036),.549),'face','Eye width stays modest');
+   assert.equal(materialAt(sx*.083,.549+.033),'eyes','Eye height grew a little');
+   assert.equal(materialAt(sx*.083,.549+.038),'face','Eye height stays modest');
+   // A thin arched eyebrow above each eye, in the same fixed black as the pupils and the smile.
+   for(const [x,y] of [[.084,.6065],[.068,.6045],[.100,.6045]])assert.equal(materialAt(sx*x,y),'eyes','Eyebrow stroke');
+   assert.equal(materialAt(sx*.084,.6105),'face','The eyebrow is thin (above it)');
+   assert.equal(materialAt(sx*.084,.6025),'face','The eyebrow is thin (below it), apart from the eye');
    assert.equal(materialAt(sx*.464,.063),'details','Front wing dots remain yellow');
    assert.equal(materialAt(sx*.463,.062,true),'details','Back wing dots remain yellow');
    // The small dots are real, discreet domes on both faces (not flat painted circles).
