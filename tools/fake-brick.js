@@ -3,6 +3,15 @@
    real one does, so the checkout can be tried end to end without credentials. */
 (function () {
   function MercadoPago(publicKey, options) { this.publicKey = publicKey; this.options = options || {}; }
+  // Like mp.getInstallments: 1x without interest, 2x to 12x at 2.99% a month (Price table), with a CET label.
+  MercadoPago.prototype.getInstallments = function (params) {
+    var amount = Number(params && params.amount) || 0, rate = 0.0299, costs = [];
+    for (var n = 1; n <= 12; n++) {
+      var each = n === 1 ? amount : amount * rate / (1 - Math.pow(1 + rate, -n)), total = Math.round(each * n * 100) / 100;
+      costs.push({installments: n, installment_rate: n === 1 ? 0 : rate * 100, installment_amount: Math.round(each * 100) / 100, total_amount: total, labels: n === 1 ? ['recommended_installment'] : ['CFT_' + (Math.pow(1 + rate, 12) * 100 - 100).toFixed(2).replace('.', ',') + '%|TEA_' + (Math.pow(1 + rate, 12) * 100 - 100).toFixed(2).replace('.', ',') + '%']});
+    }
+    return Promise.resolve([{payment_method_id: 'master', payment_type_id: 'credit_card', issuer: {id: 24, name: 'Mastercard'}, payer_costs: costs}]);
+  };
   MercadoPago.prototype.bricks = function () {
     return {
       create: function (name, containerId, settings) {
@@ -13,10 +22,12 @@
           '<label><input type="radio" name="fake-method" value="credit_card" checked> Cartão de crédito</label>' +
           '<label><input type="radio" name="fake-method" value="bank_transfer"> Pix</label>' +
           '<label data-card>Nome do titular <input name="holder" value="APRO" autocomplete="off" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px"><small style="display:block;color:#7b7076">APRO aprova · CONT deixa em análise · OTHE recusa</small></label>' +
-          '<label data-card>Parcelas <select name="installments" style="padding:6px"><option value="1">1x</option><option value="3">3x</option><option value="6">6x</option></select></label>' +
+          '<label data-card>Parcelas <select name="installments" style="padding:6px"><option value="1">1x</option><option value="3">3x</option><option value="6">6x</option><option value="12">12x</option></select></label>' +
           '<button type="submit" style="padding:12px;border:0;border-radius:999px;background:#b64c68;color:#fff;font-weight:700;cursor:pointer">Pagar R$ ' + Number(amount).toFixed(2).replace('.', ',') + '</button></form>';
         var form = box.querySelector('form'), busy = false;
-        form.addEventListener('change', function () { var pix = form.elements['fake-method'].value === 'bank_transfer'; form.querySelectorAll('[data-card]').forEach(function (el) { el.style.display = pix ? 'none' : ''; }); });
+        var bin = function (value) { if (settings.callbacks.onBinChange) settings.callbacks.onBinChange(value); };
+        form.addEventListener('change', function () { var pix = form.elements['fake-method'].value === 'bank_transfer'; form.querySelectorAll('[data-card]').forEach(function (el) { el.style.display = pix ? 'none' : ''; }); bin(pix ? undefined : '54808328'); });
+        setTimeout(function () { bin('54808328'); }, 80);
         form.addEventListener('submit', function (event) {
           event.preventDefault(); if (busy) return; busy = true;
           var pix = form.elements['fake-method'].value === 'bank_transfer', email = settings.initialization.payer && settings.initialization.payer.email;

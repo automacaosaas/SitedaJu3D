@@ -17,17 +17,19 @@
 //   Example of one boxes entry: {unit: {length: 20, width: 15, height: 8, weightG: 320}, perBox: 2, full: {length: 24, width: 20, height: 10, weightG: 600}}
 module.exports = Object.freeze({
   services: Object.freeze([
-    // The shop ships with PAC CONTRATO AG only. SEDEX CONTRATO AG is 03220: put it here as `code` to offer it too.
+    // PAC CONTRATO AG and SEDEX CONTRATO AG (Correios Empresas → Consultar Contratos → Serviços do Contrato). The buyer chooses; the free
+    // shipping below applies to PAC only, so SEDEX is the paid, faster option.
     Object.freeze({id: 'pac', label: 'PAC', code: '03298'}),
-    Object.freeze({id: 'sedex', label: 'SEDEX', code: null})
+    Object.freeze({id: 'sedex', label: 'SEDEX', code: '03220'})
   ]),
   production: Object.freeze({minDays: 3, maxDays: 5}),
   labelFeeCents: 0,
-  // Free shipping (PAC) when the subtotal reaches R$ 500,00, all over Brazil; the shop still pays the label (the admin shows its cost).
+  // Free shipping on PAC when the subtotal reaches R$ 500,00, all over Brazil; the shop still pays the label (the admin shows its cost).
+  // SEDEX is never free: a buyer who wants it pays its full price.
   freeShipping: Object.freeze({fromCents: 50000, service: 'pac'}),
   // Everything of an order goes in the one box registered at the Correios Empresa (Pré-postagem Web → Embalagens) as "BORBOLETA E DINO":
-  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces: butterfly and dinosaur 257 g each,
-  // airplane 257 + 220 = 477 g (the shop's numbers). If the 257 g already include the box, the sum counts it once per piece: the first
-  // real quote, compared with the Correios Empresa for the same box, shows whether that matters.
-  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 257, dinossauroscopio: 257, aviaoscopia: 477})})
+  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces. The shop's measures, packed: butterfly +
+  // dinosaur together 257 g (so about half each), the airplane about 250 g on top (all three about 507 g). APPROXIMATE: weigh the real packed
+  // boxes and edit the three numbers below (nothing else changes). The three pieces together sit right at 500 g, so that one matters most.
+  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250})})
 });

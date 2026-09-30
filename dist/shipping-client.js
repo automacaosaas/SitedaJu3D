@@ -10,7 +10,8 @@ export async function loadShippingConfig({fetchImpl = globalThis.fetch, timeout 
     const response = await fetchImpl('/api/shipping/quote', {cache: 'no-store', signal: controller.signal});
     if (!response.ok) return {mode: 'off'};
     const data = await response.json();
-    return data.mode === 'correios' ? {mode: 'correios', production: data.production || null} : {mode: 'off'};
+    const free = data.freeShipping && Number.isInteger(data.freeShipping.fromCents) && data.freeShipping.fromCents > 0 ? {fromCents: data.freeShipping.fromCents, label: String(data.freeShipping.label || 'PAC')} : null;
+    return data.mode === 'correios' ? {mode: 'correios', production: data.production || null, freeShipping: free} : {mode: 'off'};
   } catch { return {mode: 'off'}; }
   finally { clearTimeout(timer); }
 }

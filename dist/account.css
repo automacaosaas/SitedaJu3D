@@ -249,3 +249,5 @@
 .auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
 /* "Ver nota fiscal": the NF-e of the order, once authorized. */
 .order-invoice { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+/* Sign-up: the password is optional (without one, the buyer always signs in with an e-mailed code). */
+.auth-hint { margin: -4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--auth-muted); }

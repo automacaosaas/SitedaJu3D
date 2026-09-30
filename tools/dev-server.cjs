@@ -7,6 +7,7 @@
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
 //   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
+//   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
 // Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -65,7 +66,7 @@ async function main() {
     if (!env.RESEND_API_KEY.startsWith('re_')) console.warn('Aviso: chaves do Resend começam com "re_". Confira se copiou a chave inteira.');
     else console.log(`Chave recebida (${env.RESEND_API_KEY.length} caracteres).`);
   }
-  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios');
+  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios'), fakeCep = process.argv.includes('--fake-cep');
   // --fake-nfe: simulated NF-e service with example tax data (never in production), to see the whole invoice flow locally.
   if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
   // --fake-bling: the NF-e goes through a simulated Bling, with example tax data; its authorization page is local.
@@ -123,6 +124,7 @@ async function main() {
     '/api/payments/config': require('../api/payments/config').create({env}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
+    '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };

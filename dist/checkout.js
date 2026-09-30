@@ -6,34 +6,42 @@ import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} fro
 import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep} from './shipping-client.js';
+import {lookupCep, cepMessage} from './cep-client.js';
+import {freeShippingBar} from './free-shipping.js';
+import {installmentRows, installmentsTable} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 
-await refreshSession();
 import {refreshHeader} from './site-shell.js';
-import {renderCart} from './cart-view.js';
+import {renderCart, cartSummary} from './cart-view.js';
 
 const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
 const main = document.querySelector('#shop-main'), liveRegion = document.querySelector('#shop-live');
 // Real payments (Mercado Pago) are on only when the server says so; otherwise everything below behaves as the demo.
-const live = await loadPaymentConfig();
 // Real shipping (Correios contract) is on only when the server says so; otherwise the fixed example fee stays.
-const shipCfg = await loadShippingConfig(), real = shipCfg.mode === 'correios';
+// The session, the payment keys and the shipping settings are asked at once: the cart shows after a single round trip.
+const [, live, shipCfg] = await Promise.all([refreshSession(), loadPaymentConfig(), loadShippingConfig()]);
+const real = shipCfg.mode === 'correios';
 const banner = document.querySelector('.demo-banner');
 if (live.mode === 'test' && banner) banner.innerHTML = 'AMBIENTE DE TESTE <span>Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado</span>';
 else if (live.mode === 'live' && banner) banner.remove();
 let brick = null, brickToken = 0, pollTimer = null, clockTimer = null;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let profile = null;
-let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || ''}, timer = null, busy = false, noticeTimer = null;
+const CEP_KEY = 'ju.cep.v1';
+const formatCep = value => { const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8); return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits; };
+const savedCep = () => { try { return formatCep(sessionStorage.getItem(CEP_KEY) || ''); } catch { return ''; } };
+const saveCep = cep => { try { sessionStorage.setItem(CEP_KEY, String(cep).replace(/\D/g, '')); } catch {} };
+let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || '', cep: savedCep()}, timer = null, busy = false, noticeTimer = null;
 let selected = new Set(cart.map(i=>i.id));
 const purchaseItems = () => selectedItems(cart, selected);
 // ── real shipping (Correios contract) ───────────────────────────────────
 // `ship` holds the CEP asked, the options the server answered and the one chosen (the cheapest until the buyer picks another).
 // The browser never sends a price to be trusted: the server quotes again when the order is paid and compares.
 let ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}, shipToken = 0, shipTimer = null;
+let cepTimer = null, cepToken = 0, cepDone = '';
 const shipKey = () => purchaseItems().map(i => `${i.productId}:${i.quantity}`).sort().join(',');
 const activeShipping = () => (stage === 'payment' || stage === 'confirmation') && order ? order.shipping || null : ship.chosen;
 const shippingCents = () => real ? (activeShipping() ? activeShipping().priceCents : null) : COMMERCE.shippingCents;
@@ -47,11 +55,24 @@ function shippingInner() {
 const shippingSection = () => real
   ? `<div class="shipping-choice"><p class="ship-title"><strong>Como quer receber?</strong></p><div id="shipping-choice" aria-live="polite">${shippingInner()}</div></div>`
   : `<div class="shipping-option"><span aria-hidden="true">↗</span><div><strong>Entrega no seu endereço</strong><p>Frete e prazo finais serão definidos na integração.</p></div><strong>${money(COMMERCE.shippingCents)}<small>exemplo</small></strong></div>`;
+const cartOptions = () => ({realShipping: real, productionLabel: real && shipCfg.production ? formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays}) : '', freeShipping: real ? shipCfg.freeShipping : null, estimate: ship});
 function paintShipping() {
+  if (stage === 'cart') {
+    const aside = main.querySelector('.cart-order-summary');
+    if (!aside) return;
+    const focused = document.activeElement?.id, typed = main.querySelector('#cart-cep')?.value;
+    aside.outerHTML = cartSummary(purchaseItems(), cartOptions());
+    const input = main.querySelector('#cart-cep');
+    if (input && typed !== undefined && focused === 'cart-cep') { input.value = typed; input.focus({preventScroll: true}); }
+    else if (focused) main.querySelector('#' + focused)?.focus({preventScroll: true});
+    return;
+  }
   const box = main.querySelector('#shipping-choice');
   if (box) box.innerHTML = shippingInner();
   const aside = main.querySelector('.order-summary');
   if (aside && stage === 'delivery') aside.outerHTML = summary(purchaseItems());
+  const bar = main.querySelector('.mobile-order-bar');
+  if (bar && stage === 'delivery') bar.innerHTML = mobileBar(purchaseItems());
 }
 async function requestShipping(cep) {
   const token = ++shipToken, previous = ship.chosen?.service;
@@ -67,6 +88,11 @@ async function requestShipping(cep) {
 }
 // Called whenever the delivery step is drawn: (re)quote when the CEP is filled in and nothing current is known for this cart.
 function ensureShipping() {
+  if (real && stage === 'cart') {
+    const cep = isCep(ship.cep) ? ship.cep : String(draft.cep ?? '').replace(/\D/g, '');
+    if (isCep(cep) && purchaseItems().length && (ship.cep !== cep || ship.key !== shipKey()) && ship.status !== 'loading') { clearTimeout(shipTimer); shipTimer = setTimeout(() => requestShipping(cep), 400); }   // one quote after a burst of +/− clicks
+    return;
+  }
   if (!real || stage !== 'delivery') return;
   const cep = String(draft.cep ?? '').replace(/\D/g, '');
   if (!isCep(cep)) { if (ship.status !== 'idle') ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}; return; }
@@ -81,6 +107,11 @@ function backToDelivery(result) {
   announce(shippingMessage(result.error, result.field));
 }
 const count = items => items.reduce((n, i) => n + i.quantity, 0);
+// The phone's sticky total: the same amount as the summary (the delivery once known, "sem frete" before), never the example fee.
+function mobileBar(items) {
+  const barShipping = shippingCents();
+  return `<span>${count(items)} ${count(items)===1?'peça':'peças'} · <strong>${money(totals(items, barShipping ?? 0).total)}</strong>${barShipping === null ? ' <small>sem frete</small>' : ''}</span><span>Ver resumo ↓</span>`;
+}
 const announce = message => {clearTimeout(noticeTimer);liveRegion.textContent = message;noticeTimer=setTimeout(()=>{liveRegion.textContent='';},7000);};
 const primary = (text, action, extra = '') => `<button class="primary shop-primary" data-action="${action}" ${extra}>${text}<span aria-hidden="true">↗</span></button>`;
 function heading(kicker, title, description) { return `<div class="shop-heading"><p class="eyebrow">${kicker}</p><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`; }
@@ -92,11 +123,12 @@ function amounts(items) {
   const value = cents === null ? '<small>calculada pelo CEP</small>' : cents === 0 && chosen?.free ? '<em>Grátis</em>' : money(cents);
   return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>${label}</dt><dd>${value}</dd></div><div class="grand-total"><dt>Total${cents === null ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(t.total)}</dd></div></dl>`;
 }
-function summary(items, action = '') {return `<aside class="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>${productionText()}</strong></p>${action}${live.mode === 'live' ? '' : `<p class="small-note">${real ? 'Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.' : 'Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.'}</p>`}</aside>`;}
-function field(name, label, options = {}) {return `<label class="field ${options.wide ? 'wide' : ''}"><span>${label}${options.optional ? ' <small>(opcional)</small>' : ''}</span><input name="${name}" value="${esc(draft[name])}" type="${options.type || 'text'}" ${options.optional ? '' : 'required'} autocomplete="${options.auto || 'off'}" ${options.inputmode ? `inputmode="${options.inputmode}"` : ''} ${options.pattern ? `pattern="${options.pattern}"` : ''} maxlength="${options.max || 100}" ${options.placeholder ? `placeholder="${options.placeholder}"` : ''}></label>`;}
+const summaryFreeShipping = items => real && ['identification', 'delivery'].includes(stage) ? freeShippingBar(shipCfg.freeShipping, totals(items, 0).subtotal) : '';
+function summary(items, action = '') {return `<aside class="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${summaryFreeShipping(items)}${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>${productionText()}</strong></p>${action}${live.mode === 'live' ? '' : `<p class="small-note">${real ? 'Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.' : 'Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.'}</p>`}</aside>`;}
+function field(name, label, options = {}) {return `<label class="field ${options.wide ? 'wide' : ''}"><span>${label}${options.optional ? ' <small>(opcional)</small>' : ''}</span><input name="${name}" value="${esc(draft[name])}" type="${options.type || 'text'}" ${options.optional ? '' : 'required'} autocomplete="${options.auto || 'off'}" ${options.inputmode ? `inputmode="${options.inputmode}"` : ''} ${options.pattern ? `pattern="${options.pattern}"` : ''} maxlength="${options.max || 100}" ${options.placeholder ? `placeholder="${options.placeholder}"` : ''}>${options.hint ? '<small class="field-hint" data-hint role="status"></small>' : ''}</label>`;}
 // Identification (FARM Rio reference): e-mail from the account, name, surname, CPF, phone and optional company data.
 function identificationView() {return `${heading(direct?'COMPRAR AGORA':'IDENTIFICAÇÃO', 'Quem está<br><em>comprando?</em>', 'Seus dados para a nota fiscal e a entrega.')}<div class="shop-layout"><section class="identification-panel">${identificationForm({email:getSession()?.email || '', profile, submitLabel:'Ir para a entrega'})}<button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button></section>${summary(purchaseItems())}</div>`;}
-function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000'})}${field('city','Cidade',{auto:'address-level2'})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('district','Bairro',{max:80})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div>${shippingSection()}</div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? '<p class="small-note">Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.</p>' : ''}<fieldset class="payment-choice" ${live.mode !== 'off' ? 'hidden disabled' : ''}><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset>${live.mode === 'off' ? '<p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>' : ''}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
+function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000',hint:true})}${field('city','Cidade',{auto:'address-level2'})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('district','Bairro',{max:80})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div>${shippingSection()}</div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? '<p class="small-note">Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.</p>' : ''}<fieldset class="payment-choice" ${live.mode !== 'off' ? 'hidden disabled' : ''}><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset>${live.mode === 'off' ? '<p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>' : ''}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
 // Decorative matrix, deliberately NOT a payable QR code.
 function qrIllustration() {let cells = '';for(let y=0;y<21;y++)for(let x=0;x<21;x++){const inFinder = (x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(inFinder){const a=x>13?x-14:x,b=y>13?y-14:y;if(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}else if((x*13+y*7+x*y)%5<2)cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}return `<div class="demo-qr"><svg viewBox="-2 -2 25 25" role="img" aria-label="QR Code ilustrativo, sem valor de pagamento"><g fill="#49303b">${cells}</g></svg><span>DEMONSTRAÇÃO</span></div>`;}
 function progress() {const approved = order.status === 'approved';return `<ol class="order-progress" aria-label="Andamento do pedido">${['Pedido criado','Aguardando pagamento','Pagamento confirmado','Em preparação','Pronto para envio'].map((s,i)=>`<li class="${i < (approved?2:1) ? 'done' : i === (approved?2:1) ? 'current' : ''}" ${i === (approved?2:1) ? 'aria-current="step"' : ''}><i aria-hidden="true">${i < (approved?2:1) ? '✓' : i+1}</i><span>${s}</span></li>`).join('')}</ol>`;}
@@ -127,7 +159,7 @@ function livePaymentView() {
   if (phase === 'review') {
     return `${heading('PEDIDO ' + order.id, 'Estamos<br><em>confirmando.</em>', 'O pagamento está em análise. Costuma levar poucos minutos.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento em análise">${progress()}<div class="payment-state"><span class="status-pill"><i class="waiting-dot" aria-hidden="true"></i>Em análise</span><h2>Só mais um instante.</h2><p>Você não precisa fazer nada. Quando o pagamento for confirmado, esta página avança sozinha.</p></div><div class="payment-buttons"><button class="secondary-button" data-action="check-now">Verificar agora</button></div></section>${summary(order.items)}</div>`;
   }
-  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true"></div><p id="card-error" class="inline-error" role="alert"></p>${back}</section>${summary(order.items)}</div>`;
+  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true"></div><div id="installments-info" class="installments-info" aria-live="polite" hidden></div><p id="card-error" class="inline-error" role="alert"></p>${back}</section>${summary(order.items)}</div>`;
 }
 function disposeLive() {
   brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null;
@@ -146,12 +178,14 @@ async function mountBrick() {
   try {
     const MercadoPago = await loadSdk();
     if (token !== brickToken) return;
-    const controller = await new MercadoPago(live.publicKey, SDK_OPTIONS(lang())).bricks().create('payment', 'payment-brick', {
+    const mp = new MercadoPago(live.publicKey, SDK_OPTIONS(lang()));
+    const controller = await mp.bricks().create('payment', 'payment-brick', {
       initialization: {amount: order.amounts.total / 100, payer: {email: draft.email}},
       customization: {paymentMethods: {creditCard: 'all', debitCard: 'all', bankTransfer: 'all', maxInstallments: 12}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
       callbacks: {
         onReady: () => { box.removeAttribute('aria-busy'); main.querySelector('#brick-loading')?.remove(); },
         onSubmit: data => submitFromBrick(data),
+        onBinChange: bin => showInstallments(mp, bin),
         onError: error => { console.error('Payment Brick:', error?.type, error?.cause || error?.message); if (error?.type === 'critical') showPaymentError('Não foi possível carregar o pagamento. Recarregue a página e tente de novo.'); }
       }
     });
@@ -164,6 +198,25 @@ async function mountBrick() {
     box.removeAttribute('aria-busy');
     box.innerHTML = '<p class="inline-error" role="alert">Não foi possível carregar as formas de pagamento. Verifique sua conexão e tente de novo.</p><button class="primary shop-primary" data-action="retry-brick">Tentar novamente</button>';
   }
+}
+// With the card's first digits, Mercado Pago tells every installment option for this card and amount: the table shows
+// each installment, the total and the interest on top of the price. Asked once per card and amount.
+let binToken = 0;
+const installmentCache = new Map();
+async function showInstallments(mp, bin) {
+  const box = main.querySelector('#installments-info'), token = ++binToken, digits = String(bin ?? '').replace(/\D/g, '').slice(0, 8);
+  if (!box) return;
+  if (digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; return; }
+  const key = `${digits}:${order.amounts.total}`;
+  let rows = installmentCache.get(key);
+  if (!rows) {
+    try { rows = installmentRows(await mp.getInstallments({amount: (order.amounts.total / 100).toFixed(2), bin: digits, locale: brickLocale(lang())}), order.amounts.total); }
+    catch { rows = []; }
+    installmentCache.set(key, rows);
+  }
+  if (token !== binToken || !box.isConnected) return;
+  box.innerHTML = installmentsTable(rows);
+  box.hidden = !box.innerHTML;
 }
 // Called by the Brick when the customer presses its pay button. The promise tells the Brick when to stop spinning.
 function submitFromBrick(data) {
@@ -235,10 +288,11 @@ function render(focus = true) {
   const steps = document.querySelector('.shop-steps');
   main.before(steps);
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
-  main.innerHTML = stage === 'cart' ? renderCart(cart, selected, {realShipping: real, productionLabel: real && shipCfg.production ? formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays}) : ''}) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
+  main.innerHTML = stage === 'cart' ? renderCart(cart, selected, cartOptions()) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
   if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
   ensureShipping();
+  if (stage === 'delivery') setTimeout(autofillKnownCep, 0);
   if (previousStage && previousStage !== stage && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
     main.getAnimations().forEach(animation => animation.cancel());
     main.animate([{opacity:0,translate:'0 6px'},{opacity:1,translate:'0 0'}], {duration:220,easing:'ease-out'});
@@ -248,7 +302,7 @@ function render(focus = true) {
     summaryPanel.id='order-summary';
     const items=['identification','delivery'].includes(stage)?purchaseItems():order.items;
     const quick=document.createElement('a');quick.className='mobile-order-bar';quick.href='#order-summary';
-    quick.innerHTML=`<span>${count(items)} ${count(items)===1?'peça':'peças'} · <strong>${money(totals(items).total)}</strong></span><span>Ver resumo ↓</span>`;
+    quick.innerHTML=mobileBar(items);
     main.querySelector('.shop-heading').after(quick);
   }
   document.title = `${stage==='cart'?'Seu carrinho':stage==='confirmation'?(order?.live?'Pedido confirmado':'Pedido confirmado · demonstração'):'Finalizar pedido'} · Ju imprime pra mim`;
@@ -349,6 +403,53 @@ window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=re
 // Coming back from the account page (#identificacao) or starting a direct purchase: go straight to identification.
 if ((location.hash === '#identificacao' || stage === 'delivery') && purchaseItems().length) { history.replaceState(null, '', location.pathname + location.search); await toIdentification(); }
 else render(false);
+// Address by CEP: a complete CEP fills street, district, city and state. A field is only written when it is empty or still holds
+// what the last lookup wrote (`data-autofill`), so nothing the buyer typed is ever overwritten. Any failure just leaves the form as it is.
+const cepHint = () => main.querySelector('[data-hint]');
+function showCepHint(message) { const hint = cepHint(); if (hint) hint.textContent = message; }
+function autofillKnownCep() {
+  const form = main.querySelector('#delivery-form'), cep = String(form?.elements.cep?.value ?? '').replace(/\D/g, '');
+  if (form && isCep(cep) && cep !== cepDone && !form.elements.street.value && !form.elements.city.value) fillAddressFromCep(cep);
+}
+async function fillAddressFromCep(cep) {
+  const token = ++cepToken, result = await lookupCep(cep);
+  const form = main.querySelector('#delivery-form');
+  if (token !== cepToken || !form || stage !== 'delivery') return;   // the CEP changed or the buyer left the step meanwhile
+  showCepHint(cepMessage(result));
+  if (!result.ok) return;
+  cepDone = cep;
+  for (const name of ['street', 'district', 'city', 'state']) {
+    const input = form.elements[name], value = result.address[name] || '';
+    if (!input || (input.value && input.value !== input.dataset.autofill)) continue;   // typed by the buyer: leave it
+    input.value = value; input.dataset.autofill = input.value;   // a CEP without street or district clears what the previous CEP wrote; for the state list, what the browser really selected
+  }
+  const number = form.elements.number;
+  if (result.address.street && number && !number.value && document.activeElement === form.elements.cep) number.focus();
+}
+main.addEventListener('input', e => {
+  if (stage !== 'delivery' || e.target.name !== 'cep') return;
+  const cep = e.target.value.replace(/\D/g, '');
+  clearTimeout(cepTimer);
+  if (!isCep(cep)) { cepToken++; cepDone = ''; showCepHint(''); return; }
+  if (cep === cepDone) return;
+  cepTimer = setTimeout(() => fillAddressFromCep(cep), 300);
+});
+// CEP boxes show 00000-000 while typing (the listeners below read the digits only).
+main.addEventListener('input', e => {
+  if (e.target.name !== 'cep' || e.inputType?.startsWith('delete')) return;
+  const formatted = formatCep(e.target.value);
+  if (formatted !== e.target.value) e.target.value = formatted;
+});
+// Shipping estimate in the cart: the CEP is kept for the delivery step, and the same quote is reused there.
+main.addEventListener('submit', e => {
+  if (e.target.id !== 'cart-ship-form') return;
+  e.preventDefault();
+  const cep = String(e.target.elements.cep.value).replace(/\D/g, '');
+  if (!isCep(cep)) { ship = {cep, key: '', status: 'none', options: [], chosen: null, error: 'invalid_cep'}; paintShipping(); announce(shippingMessage('invalid_cep')); return; }
+  draft = {...draft, cep: formatCep(cep)}; saveCep(cep);
+  if (ship.cep === cep && ship.key === shipKey() && ship.status === 'ready') return;
+  requestShipping(cep);
+});
 // Real shipping: typing a CEP quotes it (after a short pause); picking an option updates the summary.
 main.addEventListener('input', e => {
   if (!real || stage !== 'delivery' || e.target.name !== 'cep') return;
@@ -356,6 +457,7 @@ main.addEventListener('input', e => {
   if (cep === ship.cep) return;
   clearTimeout(shipTimer); shipToken++;
   if (!isCep(cep)) { ship = {cep, key: '', status: 'idle', options: [], chosen: null, error: null}; paintShipping(); return; }
+  saveCep(cep);
   shipTimer = setTimeout(() => requestShipping(cep), 300);
 });
 main.addEventListener('change', e => {

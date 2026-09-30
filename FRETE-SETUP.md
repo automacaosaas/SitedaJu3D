@@ -85,6 +85,21 @@ Enquanto qualquer valor obrigatório estiver `null` ou inválido, o frete real f
 Um serviço fora do contrato (403 dos Correios) some das opções sem derrubar os outros; o motivo fica no log do servidor, sem
 nenhum segredo. Se todos os serviços falharem por erro dos Correios, a compra **não avança**: nunca se cobra um frete inventado.
 
+## Endereço preenchido pelo CEP
+
+Na etapa de entrega, ao digitar um CEP completo, o site preenche **rua, bairro, cidade e estado** e leva o cursor para o número. Não há
+nada a configurar: funciona sozinho depois de publicado.
+
+- **Como:** o navegador só fala com o próprio site (`GET /api/cep/lookup?cep=01310100`). O servidor consulta o **ViaCEP** e, se ele falhar
+  ou não conhecer o CEP, o **BrasilAPI**; nada além do CEP sai do servidor. As respostas ficam guardadas (um dia para CEP encontrado, uma
+  hora para CEP que ninguém conhece), então o mesmo CEP não é consultado duas vezes. Limite: 60 consultas por endereço a cada 10 minutos.
+- **Só preenche o que o cliente não digitou:** um campo vazio, ou que ainda tem o que o CEP anterior escreveu, é atualizado. O que o cliente
+  digitou fica como está. Se o CEP cobre a cidade toda (sem rua e sem bairro), só cidade e estado são preenchidos.
+- **Se não der:** CEP que não existe ou serviços fora do ar só mostram um aviso sob o campo ("Preencha o endereço manualmente") e o cliente
+  digita tudo, como antes. O cálculo do frete não depende disso.
+- **Testar no computador sem internet:** `node tools/dev-server.cjs --fake-cep` (CEPs de exemplo: 01310100, 20040020, 40020000 e 35400000, este
+  último da cidade inteira). Automáticos: `node tests/cep.mjs`.
+
 ## Fora deste passo
 
 - Comprar a etiqueta e mandar o código de rastreio por e-mail (a etiqueta segue no Correios Empresa).
