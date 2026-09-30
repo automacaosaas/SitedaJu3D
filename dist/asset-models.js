@@ -2,10 +2,13 @@ import * as T from 'three';
 import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
 
 const ASSETS={
-  borboletoscopio:new URL('./assets/models/borboletoscopio.glb',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=rodin6-pintura',import.meta.url)
+  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=relevo-bolinhas',import.meta.url),
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=olhos-dentes-crista',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=turbinas-separadas',import.meta.url)
 };
+// Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
+// at that height, so it alone is presented larger (proportions, camera and lighting unchanged).
+export const PRESENTATION_SCALE={borboletoscopio:1.25};
 
 export function disposeAsset(group){
   const geometries=new Set(),materials=new Set(),textures=new Set(),images=new Set();
@@ -30,7 +33,7 @@ export async function createAssetModel(key,colors,signal){
   if(signal?.aborted){disposeAsset(group);signal.throwIfAborted();}
   const bounds=new T.Box3().setFromObject(group),size=bounds.getSize(new T.Vector3());
   if(!Number.isFinite(size.y)||size.y<=0){disposeAsset(group);throw new Error('Dimensões do modelo inválidas');}
-  const center=bounds.getCenter(new T.Vector3()),scale=4.1/size.y;
+  const center=bounds.getCenter(new T.Vector3()),scale=4.1*(PRESENTATION_SCALE[key]||1)/size.y;
   const wrapper=new T.Group();wrapper.name=key;wrapper.add(group);
   wrapper.scale.setScalar(scale);wrapper.position.set(-center.x*scale,-1.9-bounds.min.y*scale,-center.z*scale);
   const parts=new Map();
