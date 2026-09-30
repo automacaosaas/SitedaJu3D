@@ -2,7 +2,7 @@
 // Server-side settings and the Resend call. The API key only ever lives in server environment variables.
 const crypto = require('node:crypto');
 const {isProduction} = require('./runtime');
-const DEFAULT_SITE = 'https://siteda-ju3-d.vercel.app';
+const DEFAULT_SITE = 'https://wheat-llama-936569.hostingersite.com';
 const DEFAULT_FROM = 'Ju imprime pra mim <onboarding@resend.dev>';
 const SEND_TIMEOUT_MS = 10000;
 const MIN_SECRET = 32;

@@ -6,7 +6,7 @@ registerHooks({resolve(specifier,context,next){return next(specifier==='three'?n
 const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
 const {PRODUCTS,PALETTE}=await import('../dist/products.js');
-const {createAssetModel}=await import('../dist/asset-models.js');
+const {createAssetModel,PRESENTATION_SCALE}=await import('../dist/asset-models.js');
 // The native renderer decodes images in browser checks; no image shim affects geometry.
 const originalParse=GLTFLoader.prototype.parseAsync;
 GLTFLoader.prototype.parseAsync=function(...args){this.register(()=>({name:'node-test-no-textures',loadTexture(){return Promise.resolve(null);}}));return originalParse.apply(this,args);};
@@ -16,7 +16,7 @@ try{
  for(const key of Object.keys(PRODUCTS)){
   const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
-  const expected={borboletoscopio:['body','details','face','eyes'],dinossauroscopio:['body','details','eyes'],aviaoscopia:['body','details','engines','fixed']}[key];
+  const expected={borboletoscopio:['body','details','face','eyes'],dinossauroscopio:['body','details','eyes','teeth'],aviaoscopia:['body','details','engines','fixed']}[key];
   assert.deepEqual(json.materials.map(m=>m.name).sort(),expected.sort(),'Logical material contract');
   for(const material of json.materials.filter(m=>['body','details','engines'].includes(m.name))){
    assert.equal(material.pbrMetallicRoughness?.baseColorTexture,undefined,'Selected colors never multiply the old color map');
@@ -39,7 +39,8 @@ try{
   model.group.updateMatrixWorld(true);
   const bounds=new T.Box3().setFromObject(model.group);
   assert.ok(Math.abs(bounds.min.y+1.9)<.001,'Model rests on the existing pedestal');
-  assert.ok(Math.abs(bounds.max.y-bounds.min.y-4.1)<.001,'Consistent fit across products');
+  assert.ok(Math.abs(bounds.max.y-bounds.min.y-4.1*(PRESENTATION_SCALE[key]||1))<.001,'Consistent fit across products (the butterfly alone is presented larger)');
+  for(const x of [bounds.min.x,bounds.max.x])for(const z of [bounds.min.z,bounds.max.z])assert.ok(Math.hypot(x,z)<1.9,'The whole product stands within the pedestal');
   if(key==='aviaoscopia'){
    // Rodin (6) contains actual through holes. Repainting must not close them.
    const ray=new T.Raycaster(),direction=new T.Vector3(0,0,-1);

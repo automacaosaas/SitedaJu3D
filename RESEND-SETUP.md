@@ -67,7 +67,7 @@ reais), `MAIL_FROM` (depois do domínio), `MAIL_REPLY_TO`.
 ## 3. Domínio de envio (para clientes reais)
 
 1. Tenha um domínio (ex.: `juimprimepramim.com.br`). O endereço
-   `siteda-ju3-d.vercel.app` **não** serve: o DNS dele não é seu.
+   temporário `wheat-llama-936569.hostingersite.com` **não** serve: o DNS dele não é seu.
 2. Resend → **Domains** → **Add domain** (um subdomínio como
    `mail.seudominio.com.br` isola a reputação de envio).
 3. Copie os registros DNS (SPF/DKIM) para o painel de onde o domínio é gerenciado.

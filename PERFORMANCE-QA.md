@@ -95,3 +95,25 @@ Antes do merge, conferir a prévia da Vercel e os cabeçalhos com `curl -I`.
 
 `git revert <commit>` desfaz tudo. Para voltar só os modelos, restaure os três `.glb` do commit `7b327c6` e remova o
 `setMeshoptDecoder` de `dist/asset-models.js`. Os PNG originais estão em `design/originais/`.
+
+## 30/09/2026: modelos corrigidos recomprimidos
+
+Os três `.glb` corrigidos na `main` (commits `8faccd9` a `4b71a54`: olhos, sobrancelhas, dentes e crista do dinossauro,
+turbinas do avião, relevo e rosto da borboleta) foram comprimidos com o mesmo processo de cima: `meshopt` do
+gltf-transform 4.5.1, nível `high`, `--quantize-position 16`, seguido de `unpartition()`.
+
+| Modelo | Sem compressão | Meshopt |
+|---|---|---|
+| Aviãoscopia | 14,98 MB | 2,51 MB |
+| Borboletoscópio | 9,72 MB | 1,54 MB |
+| Dinossauroscópio | 5,22 MB | 0,81 MB |
+
+Mesmos materiais e o mesmo número de triângulos por material. Renderizados lado a lado com os originais, nos closes do
+rosto, da crista, das turbinas e das bolinhas, a diferença média ficou abaixo de 0,2 nível de cinza (em 255), ou seja,
+ruído de renderização. As URLs passaram para `?v=meshopt2-…`.
+
+Nesta máquina o Windows (Controle de Aplicativo) bloqueia o módulo nativo `sharp`, que a CLI carrega ao iniciar. Como os
+modelos não têm textura, a compressão foi feita com as mesmas bibliotecas da CLI (`@gltf-transform/core`, `extensions`,
+`functions` e `meshoptimizer`), com o mesmo passo a passo do comando `meshopt`, sem carregar o `sharp`.
+
+O Aviãoscopia comprimido tem 2.452 KB, perto do limite de 2.500 KB de `tests/assets.mjs`.
