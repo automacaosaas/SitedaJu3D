@@ -337,6 +337,16 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
 {
   const client = await site('shipping-client.js'), {translate} = await site('i18n-core.js');
   const answer = (status, body) => async () => ({ok: status >= 200 && status < 300, status, json: async () => body});
+  // which option starts marked: what the buyer already had, else PAC even when SEDEX is cheaper (a local CEP), else the cheapest
+  const opt = (service, priceCents) => ({service, label: service.toUpperCase(), priceCents, free: false, days: {min: 4, max: 6}});
+  const local = [opt('sedex', 1057), opt('pac', 1644)], usual = [opt('pac', 2201), opt('sedex', 4573)];
+  assert.equal(client.pickOption(local).service, 'pac', 'SEDEX cheaper and listed first: PAC is still the one marked');
+  assert.equal(client.pickOption(usual).service, 'pac');
+  assert.equal(client.pickOption(local, 'sedex').service, 'sedex', 'the buyer\'s own choice is kept when the options are quoted again');
+  assert.equal(client.pickOption(usual, 'gone').service, 'pac', 'a service that is no longer offered falls back to PAC');
+  assert.equal(client.pickOption([opt('sedex', 1057)]).service, 'sedex', 'only SEDEX offered: SEDEX');
+  assert.equal(client.pickOption([opt('x1', 500), opt('x2', 900)]).service, 'x1', 'no PAC at all: the first, the cheapest');
+  assert(/chosen: pickOption\(result\.options, previous\)/.test(fs.readFileSync(path.join(root, 'dist/checkout.js'), 'utf8')), 'the checkout marks the option with pickOption');
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 5, maxDays: 7}})}), {mode: 'correios', production: {minDays: 5, maxDays: 7}});
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'off'})}), {mode: 'off'});
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(500, {})}), {mode: 'off'});
