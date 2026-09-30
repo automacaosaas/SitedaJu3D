@@ -52,7 +52,7 @@ O envio de e-mails já usa a chave do Resend que está configurada (`RESEND_API_
 
 No painel: sua aplicação → **Webhooks** → **Configurar notificações**.
 
-- URL do modo de teste: `https://siteda-ju3-d.vercel.app/api/payments/webhook` (na Hostinger: `https://<endereço temporário>/api/payments/webhook`; ver `HOSTINGER-SETUP.md`, seção 4.1)
+- URL do modo de teste: `https://wheat-llama-936569.hostingersite.com/api/payments/webhook` (Hostinger; ver `HOSTINGER-SETUP.md`, seção 4.1)
 - Evento: **Order** (`orders`)
 - Copie a **assinatura secreta** e salve como `MP_WEBHOOK_SECRET` (passo 2).
 
