@@ -64,10 +64,11 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
    // Then enlarged a little more on request (about +10%, to .0495 x .0517), still under the original height.
    assert.equal(materialAt(sx*(.144+.047),.548),'eyes','Eyes a little larger (width)');
    assert.equal(materialAt(sx*.144,.548+.049),'eyes','Eyes a little larger (height)');
-   // A thin arched eyebrow just above each eye, in the same fixed black as the eyes.
-   for(const [x,y] of [[.144,.633],[.122,.629],[.166,.629]])assert.equal(materialAt(sx*x,y),'eyes','Eyebrow stroke');
-   assert.equal(materialAt(sx*.144,.639),'body','The eyebrow is thin (above it)');
-   assert.equal(materialAt(sx*.144,.6275),'body','The eyebrow is thin (below it), apart from the eye');
+   // A thin, clearly arched and raised eyebrow above each eye (surprised/happy), fixed black like the eyes.
+   for(const [x,y] of [[.144,.646],[.124,.6376],[.164,.6376]])assert.equal(materialAt(sx*x,y),'eyes','Eyebrow stroke');
+   assert.equal(materialAt(sx*.124,.646),'body','The ends drop well below the top: a real arch');
+   assert.equal(materialAt(sx*.144,.652),'body','The eyebrow is thin (above it)');
+   assert.equal(materialAt(sx*.144,.6395),'body','The eyebrow is thin (below it), apart from the eye');
    // Four triangular teeth hang from the real mouth line (z = .35 + .75 x^2), evenly spaced.
    for(const [x,y] of [[.046,.335],[.050,.305],[.135,.345],[.144,.325]])assert.equal(materialAt(sx*x,y),'teeth','Tooth body and tip on the mouth line');
    assert.equal(materialAt(sx*.0905,.345),'body','Even gap between the inner and outer teeth');
