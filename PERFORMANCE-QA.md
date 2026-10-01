@@ -117,3 +117,9 @@ modelos não têm textura, a compressão foi feita com as mesmas bibliotecas da 
 `functions` e `meshoptimizer`), com o mesmo passo a passo do comando `meshopt`, sem carregar o `sharp`.
 
 O Aviãoscopia comprimido tem 2.452 KB, perto do limite de 2.500 KB de `tests/assets.mjs`.
+
+### 01/10/2026: estrelas das asas e dentes do dinossauro
+
+Aviãoscopia com estrelas regulares e em pé (2,34 MB com Meshopt) e Dinossauroscópio com pontas dos dentes
+arredondadas (0,81 MB), comprimidos do mesmo jeito. URLs em `?v=meshopt3-…`. O avião agora fica a ~160 KB do limite
+de 2.500 KB de `tests/assets.mjs`.
