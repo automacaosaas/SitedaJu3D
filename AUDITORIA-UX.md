@@ -106,6 +106,27 @@ preço) → cores ou combinação pronta → Adicionar · R$ 129 (gaveta com “
 - L1 Médio: cards laterais esmaecidos com contraste baixo.
 - L2 Baixo: controles 3D com caracteres de texto (↶ ↷ + −).
 
+## Revisão 2 do layout (01/10/2026)
+
+Pedidos da Ju sobre os wireframes, já refletidos na versão interativa do relatório:
+
+- **Barra rotativa no topo (referência: Nike).** Três mensagens com ícones: envio para todo
+  o Brasil (frete pelo CEP), Pix e cartão (5% off no Pix ou 3x sem juros) e feito sob
+  encomenda em 5 a 7 dias úteis. Gira a cada 4 s, para com mouse ou foco, tem setas e botão
+  de pausa (WCAG 2.2.2) e fica parada com movimento reduzido. A cor acompanha o produto ativo.
+- **Banner limpo.** Só categoria, nome, uma frase e preço com selo verde do Pix. Uma ação
+  principal (“Personalizar o meu”, a seta avança ao passar o mouse) e uma secundária
+  (“▶ Ver encaixado”). Setas e indicador de posição; a faixa de confiança e o texto de
+  benefício saíram do banner.
+- **“O que os profissionais dizem”** mantido.
+- **Página de produto compacta, cabendo numa tela.** Galeria com Fotos/Encaixado/3D e selo
+  “Suas cores”; preço com selo do Pix; configurador compacto (parte em controle segmentado,
+  cores como grupo de opções navegável por setas, combinações prontas e “Surpreenda-me”);
+  um botão “Adicionar ao carrinho” com o preço; frete numa linha; ficha técnica em quatro
+  atalhos com ícone (Compatível, Medidas, Higienizar, Troca), cada um abre um painel lateral
+  com abas, no lugar da página longa de sanfonas.
+- **Checkout:** o cartão do Pix ganhou um destaque verde “5% OFF NO PIX · economize R$ 7,35”.
+
 ## Plano em fases
 
 - **Fase 0, até 1 semana:** medição (K1), Dinossauroscópio (B1), Open Graph (J1), CTA do
