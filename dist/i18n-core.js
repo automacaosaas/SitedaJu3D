@@ -56,11 +56,11 @@ const dynamic = [
   [/^\((\d+)% de desconto\)$/, '($1% off)', '($1% de descuento)'],
   [/^(\d+)% OFF NO PIX$/, '$1% OFF WITH PIX', '$1% DE DESCUENTO CON PIX'],
   [/^economize (R\$\s?[\d.,]+)$/, 'save $1', 'ahorra $1'],
-  [/^Na próxima etapa você escolhe entre Pix, com (\d+)% de desconto nas peças, ou cartão de crédito ou débito\. O pagamento é feito com segurança pelo Mercado Pago\.$/, 'In the next step you choose Pix, with $1% off the items, or a credit or debit card. Payment is processed securely by Mercado Pago.', 'En el siguiente paso eliges Pix, con $1% de descuento en las piezas, o tarjeta de crédito o débito. El pago se procesa de forma segura con Mercado Pago.'],
   [/^(R\$\s?[\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
   [/^Frete grátis \((.+)\) garantido!$/, 'Free shipping ($1) unlocked!', '¡Envío gratis ($1) garantizado!'],
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
+  [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
   [/^CET ([\d.,]+%) ao ano$/, 'Effective cost $1 a year', 'Costo efectivo $1 al año']
 ];
 export function translate(value, locale = 'en') {

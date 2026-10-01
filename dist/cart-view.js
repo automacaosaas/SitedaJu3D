@@ -1,6 +1,6 @@
 import {PRODUCTS, color} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
-import {totals, pixTotals} from './cart-store.js';
+import {totals, pixDiscount} from './cart-store.js';
 import {icon} from './icons.js';
 import {freeShippingBar} from './free-shipping.js';
 import {formatDays, shippingMessage} from './shipping-client.js';
@@ -47,7 +47,7 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
   const withoutDelivery = realShipping && !quoted;
   return `<aside class="cart-order-summary" aria-labelledby="cart-summary-title"><h2 id="cart-summary-title">Resumo do pedido</h2><p class="cart-selection-note">${units} ${units === 1 ? 'peça' : 'peças'}</p>
     ${realShipping && chosen.length ? freeShippingBar(freeShipping, amount.subtotal) : ''}
-    <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div>${delivery}<div class="grand-total"><dt>Total${withoutDelivery ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(amount.total)}</dd></div>${chosen.length ? `<div class="pix-total"><dt>No Pix <small>(${COMMERCE.pixDiscountPercent}% de desconto nas peças)</small></dt><dd>${money(amount.total - pixTotals(chosen, 0).discount)}</dd></div>` : ''}</dl>
+    <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div>${delivery}<div class="grand-total"><dt>Total${withoutDelivery ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(amount.total)}</dd></div>${chosen.length ? `<div class="pix-hint"><dt>No Pix <small>(5% off)</small></dt><dd>${money(amount.total - pixDiscount(chosen))}</dd></div>` : ''}</dl>
     ${realShipping && chosen.length ? shippingEstimate(estimate || {}) : ''}
     <div class="cart-checkout-bar" role="group" aria-label="Resumo da compra e finalização">
       <a class="cart-checkout-total" href="#cart-summary-title"><span>Total <span aria-hidden="true">⌃</span></span><strong>${money(amount.total)}</strong><small>${!chosen.length ? 'Selecione uma peça' : withoutDelivery ? 'Sem frete · ver resumo' : 'Ver resumo'}</small></a>

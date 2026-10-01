@@ -84,6 +84,8 @@ const spyErrors = () => { const lines = []; const original = console.error; cons
 {
   assert.deepEqual(Object.keys(catalog.PRODUCTS).sort(), Object.keys(SITE_PRODUCTS).sort(), 'same products');
   assert.equal(catalog.SHIPPING_CENTS, COMMERCE.shippingCents, 'same delivery fee');
+  assert.equal(catalog.PIX_DISCOUNT_BPS, COMMERCE.pixDiscountBps, 'same Pix discount on the server and in the shop');
+  assert.equal(catalog.PIX_DISCOUNT_BPS, 500, 'Pix pays 5% less');
   for (const [id, product] of Object.entries(SITE_PRODUCTS)) {
     const mine = catalog.PRODUCTS[id];
     assert.equal(mine.title, product.title, `${id}: title`);
@@ -170,6 +172,19 @@ const spyErrors = () => { const lines = []; const original = console.error; cons
 
 // ── payload: what Mercado Pago receives ───────────────────────────────
 const priced = catalog.priceOrder(ITEMS);
+{
+  // Pix discount: per unit, on the pieces only; card keeps the list price.
+  const pix = catalog.applyPixDiscount(priced);
+  assert.deepEqual(pix.lines.map(l => [l.unitCents, l.chargeUnitCents]), [[12900, 12255], [15900, 15105]]);
+  assert.equal(pix.subtotal, priced.subtotal, 'the subtotal keeps the list price'); assert.equal(pix.discount, 2085); assert.equal(pix.shipping, 1800);
+  assert.equal(pix.total, 41415); assert.equal(priced.total, 43500, 'the priced order itself is not changed');
+  for (const [id, cents] of [['borboletoscopio', 645], ['dinossauroscopio', 695], ['aviaoscopia', 795]]) assert.equal(catalog.pixUnitDiscount(catalog.PRODUCTS[id].price), cents, id);
+  const free = catalog.applyPixDiscount({...priced, shipping: 0, total: priced.subtotal});
+  assert.equal(free.total, 41700 - 2085, 'with free delivery the total is only the discounted pieces');
+  const payload = mp.buildOrderPayload({priced: pix, reference: 'JU-PIX', customer: {name: 'Ana Souza', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140071', street: 's', number: '1', district: 'd', city: 'c', state: 'MG'}, notes: '', lang: 'pt-BR', payment: {methodId: 'pix', type: 'bank_transfer'}});
+  assert.equal(payload.total_amount, '414.15');
+  assert.equal(payload.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'items add up to the discounted total');
+}
 const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-0123456789', customer: {name: 'Ana Souza Lima', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140-071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''}, notes: 'Escrever Ana', lang: 'en', payment});
 {
   const pix = payloadFor(mp.paymentFromBrick(BRICK_PIX));
@@ -286,9 +301,9 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const sent = net.mpCalls.at(-1);
     assert.equal(sent.method, 'POST'); assert.equal(sent.url, 'https://api.mercadopago.com/v1/orders');
     assert.equal(sent.headers.Authorization, `Bearer ${ENV.MP_ACCESS_TOKEN}`); assert.equal(sent.headers['X-Idempotency-Key'], body.attempt);
-    assert.equal(sent.body.total_amount, '414.15', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the R$ 417,00 of pieces, not the R$ 18,00 delivery)');
-    assert.deepEqual(sent.body.items.map(i => [i.unit_price, i.quantity]), [['122.55', 2], ['151.05', 1], ['18.00', 1]], 'each piece at its Pix price, so the items add up to the total');
-    assert.equal(sent.body.transactions.payments[0].amount, '414.15');
+    assert.equal(sent.body.total_amount, '414.15', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the pieces, 417.00 − 20.85 + 18.00 delivery)');
+    assert.deepEqual(sent.body.items.map(i => [i.external_code, i.unit_price, i.quantity]), [['borboletoscopio', '122.55', 2], ['aviaoscopia', '151.05', 1], ['shipping', '18.00', 1]], 'Pix items carry the discounted unit price; delivery is not discounted');
+    assert.equal(sent.body.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'the items add up to the Pix total');
     assert.equal(sent.body.payer.email, 'ana@example.com', 'the payer is the account'); assert.equal(sent.body.payer.first_name, 'Ana'); assert.equal(sent.body.payer.last_name, 'Souza Lima');
     assert.deepEqual(sent.body.payer.identification, {type: 'CPF', number: ana.cpf}, 'Pix carries the CPF from the identification (better approval and fraud checks)');
     assert.equal(sent.body.shipment.address.state, 'MG'); assert.equal(sent.body.shipment.address.zip_code, '30140071');
@@ -298,8 +313,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     // The order is in our database before and after Mercado Pago answers.
     const saved = await store.orders.findByReference(answer.reference);
     assert.equal(saved.customerId, ana.id); assert.equal(saved.status, 'aguardando_pagamento'); assert.equal(saved.paymentState, 'pending_pix'); assert.equal(saved.mpOrderId, answer.id); assert.equal(saved.method, 'pix');
-    assert.equal(saved.totalCents, 41415); assert.equal(saved.subtotalCents, 41700, 'the order keeps the full prices; the discount is subtotal + delivery − total');
-    assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
+    assert.equal(saved.subtotalCents, 41700, 'the subtotal stays at list price'); assert.equal(saved.totalCents, 41415, 'the total is what Pix charges'); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
     assert.deepEqual(saved.items[0].selection, {body: 'pink', details: 'lilac'}, 'the colors of each part are recorded');
     assert.equal(saved.shipTo.recipient, 'Ana Souza Lima'); assert.equal(saved.buyer.name, 'Ana Souza Lima'); assert.equal(saved.buyer.email, 'ana@example.com');
     assert.equal(saved.termsVersion, TERMS_VERSION, 'the order records which Termos the buyer accepted'); assert.ok(saved.termsAcceptedAt);
@@ -411,6 +425,9 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const {net, store, buyer, handler, create} = await build();
     const card = (await call(create, {body: request({payment: brickCard()}), ...as(buyer)})).json(), pix = (await call(create, {body: request(), ...as(buyer)})).json();
     assert.equal(net.mails.length, 2, 'the approved card already told Ju and the buyer');
+    assert.equal((await store.orders.findByMpId(card.id)).totalCents, 43500, 'card pays the list price (no Pix discount)');
+    assert.equal((await store.orders.findByMpId(pix.id)).totalCents, 41415, 'Pix pays 5% less on the pieces');
+    assert(!net.mails.at(-1).html.includes('Pix (5%)'), 'no discount line on a card receipt');
     assert.equal((await call(handler, {method: 'GET', origin: ''})).statusCode, 405);
     assert.equal((await notify(handler, pix.id, {signature: 'ts=1,v1=' + '0'.repeat(64)})).statusCode, 401, 'wrong signature');
     assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, secret: 'another-secret'})})).statusCode, 401, 'signed with another secret');
@@ -489,6 +506,13 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert.notEqual(renderCustomerEmail({summary, lang: 'en', assetUrl: SITE}).subject, renderCustomerEmail({summary, lang: 'es', assetUrl: SITE}).subject, 'each language has its own subject');
   assert(!renderCustomerEmail({summary, lang: 'en', test: false, assetUrl: SITE}).html.includes('TEST ENVIRONMENT'), 'no test banner for real orders');
   assert(renderCustomerEmail({summary, lang: 'xx', assetUrl: SITE}).subject.includes('Pagamento confirmado'), 'an unknown language falls back to Portuguese');
+  const discounted = {...summary, discount: 2085, total: summary.total - 2085};
+  for (const [lang, word] of [['pt-BR', 'Desconto no Pix (5%)'], ['en', 'Pix discount (5%)'], ['es', 'Descuento por Pix (5%)']]) {
+    const mail = renderCustomerEmail({summary: discounted, lang, assetUrl: SITE});
+    assert(mail.html.includes(word) && mail.text.includes(word), `${lang}: the receipt shows the Pix discount`);
+  }
+  assert(renderOwnerEmail({summary: discounted, assetUrl: SITE}).text.includes('Desconto no Pix (5%): − R$'), 'Ju sees the discount too');
+  assert(!renderCustomerEmail({summary, lang: 'pt-BR', assetUrl: SITE}).html.includes('Desconto no Pix'), 'no discount line without a discount');
   const owner = renderOwnerEmail({summary, test: false, assetUrl: SITE});
   assert(!owner.subject.includes('[TESTE]') && owner.subject.includes('R$') && !/<script|<img src=x/i.test(owner.html));
   assert(owner.html.includes('wa.me/5531999991234'));

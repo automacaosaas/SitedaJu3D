@@ -1,7 +1,7 @@
 import {goToCart} from './shopping-navigation.js';
 import {PRODUCTS} from './products.js';
 import {readCart, writeCart, putItem, EDIT_KEY, DIRECT_KEY} from './cart-store.js';
-import {COMMERCE, money, pixPrice} from './commerce-config.js';
+import {COMMERCE, money, pixPrice, pixPercent} from './commerce-config.js';
 import {icon} from './icons.js';
 import {loadShippingConfig} from './shipping-client.js';
 import {freeShippingNote} from './free-shipping.js';
@@ -27,7 +27,7 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
       document.querySelector('#product-price').textContent = money(COMMERCE.prices[key]);
       let pix = panel.querySelector('.purchase-pix');
       if (!pix) { pix = document.createElement('p'); pix.className = 'purchase-pix'; panel.querySelector('.purchase-price')?.after(pix); }
-      pix.innerHTML = `<strong>${money(pixPrice(COMMERCE.prices[key]))}</strong> no Pix <small>(${COMMERCE.pixDiscountPercent}% de desconto)</small>`;
+      pix.innerHTML = `<strong>${money(pixPrice(COMMERCE.prices[key]))}</strong> no Pix <small>(${pixPercent}% de desconto)</small>`;
     }
     // The free-shipping rule, right under the price (from the server; nothing while real shipping is off).
     let note = panel.querySelector('.purchase-free-ship');

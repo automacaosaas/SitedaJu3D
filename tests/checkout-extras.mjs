@@ -64,7 +64,7 @@ const {cartSummary} = await site('cart-view.js');
 // ── checkout.js and account.js: source guards ─────────────────────────
 {
   const checkout = read('dist/checkout.js'), account = read('dist/account.js'), fake = read('tools/fake-brick.js');
-  assert.match(checkout, /money\(orderTotals\(items, barShipping \?\? 0\)\.total\)/, 'the mobile bar adds the real delivery, never the example fee');
+  assert.match(checkout, /money\(totals\(items, barShipping \?\? 0\)\.total[ )]/, 'the mobile bar adds the real delivery, never the example fee');
   assert.match(checkout, /bar\.innerHTML = mobileBar\(purchaseItems\(\)\)/, 'and follows the delivery when it is quoted or changed');
   assert.doesNotMatch(checkout, /money\(totals\(items\)\.total\)/);
   assert.match(checkout, /await Promise\.all\(\[refreshSession\(\), loadPaymentConfig\(\), loadShippingConfig\(\)\]\)/, 'one round trip before the cart shows');

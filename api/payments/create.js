@@ -10,7 +10,7 @@
 // `customer` is who receives the parcel (the delivery form); the buyer comes from the account.
 const {json, readJson, clientIp, sameOrigin} = require('../_lib/http');
 const {config} = require('../_lib/mail');
-const {priceOrder, withPixDiscount} = require('../_lib/catalog');
+const {priceOrder, applyPixDiscount} = require('../_lib/catalog');
 const {storeFor, readCookie} = require('../_lib/account-http');
 const {createAccounts} = require('../_lib/accounts');
 const {createOrders} = require('../_lib/orders');
@@ -88,8 +88,9 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
         shippingInfo: {service: option.service, label: option.label, code: option.code, days: option.days, deliveryDays: option.deliveryDays, priceCents: option.priceCents, costCents: option.costCents, volumes: option.volumes, source: 'correios'}};
     }
 
-    // Pix: 5% off the pieces, decided here from the payment really chosen (never from what the page says).
-    if (payment.type === 'bank_transfer') priced = withPixDiscount(priced);
+    // Pix pays less: the discount follows the method the Brick reports, and the free-shipping rule above keeps using the
+    // full price of the pieces (the amount the buyer saw in the cart).
+    if (payment.type === 'bank_transfer') priced = applyPixDiscount(priced);
 
     const lang = LANGUAGES.includes(body.lang) ? body.lang : 'pt-BR';
     const reference = mp.referenceFor(attempt);

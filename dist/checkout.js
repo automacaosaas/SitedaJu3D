@@ -1,11 +1,11 @@
 import {returnFromCart} from './shopping-navigation.js';
 import {PRODUCTS, color} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
-import {readCart, writeCart, totals, pixTotals, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
+import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
-import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep} from './shipping-client.js';
+import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
 import {freeShippingBar} from './free-shipping.js';
 import {installmentRows, installmentsTable} from './installments.js';
@@ -34,10 +34,12 @@ const CEP_KEY = 'ju.cep.v1';
 const formatCep = value => { const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8); return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits; };
 const savedCep = () => { try { return formatCep(sessionStorage.getItem(CEP_KEY) || ''); } catch { return ''; } };
 const saveCep = cep => { try { sessionStorage.setItem(CEP_KEY, String(cep).replace(/\D/g, '')); } catch {} };
+// payMethod: the method chosen above the Mercado Pago Brick (pix | card). Pix pays 5% less on the pieces.
+let payMethod = 'pix';
 let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || '', cep: savedCep()}, timer = null, busy = false, noticeTimer = null;
 const purchaseItems = () => cart;   // the whole cart is bought (no checkboxes)
 // ── real shipping (Correios contract) ───────────────────────────────────
-// `ship` holds the CEP asked, the options the server answered and the one chosen (the cheapest until the buyer picks another).
+// `ship` holds the CEP asked, the options the server answered and the one chosen (PAC until the buyer picks another; see pickOption).
 // The browser never sends a price to be trusted: the server quotes again when the order is paid and compares.
 let ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}, shipToken = 0, shipTimer = null;
 let cepTimer = null, cepToken = 0, cepDone = '';
@@ -80,7 +82,7 @@ async function requestShipping(cep) {
   const result = await quoteShipping({items: purchaseItems(), cep});
   if (token !== shipToken) return;   // the CEP or the cart changed meanwhile
   ship = result.ok
-    ? {...ship, status: 'ready', options: result.options, chosen: result.options.find(o => o.service === previous) || result.options[0]}
+    ? {...ship, status: 'ready', options: result.options, chosen: pickOption(result.options, previous)}
     : {...ship, status: result.error === 'no_service' || result.error === 'invalid_cep' ? 'none' : 'error', error: result.error};
   paintShipping();
   if (!result.ok) announce(shippingMessage(result.error));
@@ -106,34 +108,30 @@ function backToDelivery(result) {
   announce(shippingMessage(result.error, result.field));
 }
 const count = items => items.reduce((n, i) => n + i.quantity, 0);
-// Pix pays less on the pieces: payment and confirmation follow the order; in the demo the delivery step already has the choice.
-const pixChosen = () => stage === 'delivery' ? live.mode === 'off' && method === 'pix' : (stage === 'payment' || stage === 'confirmation') ? order?.method === 'pix' : false;
-const orderTotals = (items, cents) => (pixChosen() ? pixTotals : totals)(items, cents);
 // The phone's sticky total: the same amount as the summary (the delivery once known, "sem frete" before), never the example fee.
 function mobileBar(items) {
   const barShipping = shippingCents();
-  return `<span>${count(items)} ${count(items)===1?'peça':'peças'} · <strong>${money(orderTotals(items, barShipping ?? 0).total)}</strong>${barShipping === null ? ' <small>sem frete</small>' : ''}</span><span>Ver resumo ↓</span>`;
+  return `<span>${count(items)} ${count(items)===1?'peça':'peças'} · <strong>${money(totals(items, barShipping ?? 0).total - (pixApplied() ? pixDiscount(items) : 0))}</strong>${barShipping === null ? ' <small>sem frete</small>' : ''}</span><span>Ver resumo ↓</span>`;
 }
 const announce = message => {clearTimeout(noticeTimer);liveRegion.textContent = message;noticeTimer=setTimeout(()=>{liveRegion.textContent='';},7000);};
 const primary = (text, action, extra = '') => `<button class="primary shop-primary" data-action="${action}" ${extra}>${text}<span aria-hidden="true">↗</span></button>`;
 function heading(kicker, title, description) { return `<div class="shop-heading"><p class="eyebrow">${kicker}</p><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`; }
 function chips(item) { return `<ul class="color-chips">${PRODUCTS[item.productId].parts.map(p => {const c = color(item.selection[p.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${p.name}: <strong>${c.name}</strong></span></li>`;}).join('')}</ul>`; }
 function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${color(item.selection.body).hex}40"><img src="${esc(item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`)}" alt="${esc(item.title)} — ${item.thumbnail ? 'prévia 3D da combinação' : 'imagem nas cores originais'}"><small>${item.thumbnail ? 'Suas cores' : 'Cores originais'}</small></div>`; }
+// The Pix discount counts once the payment is Pix: chosen above the Brick, or the method of the order already created.
+const pixApplied = () => (stage === 'payment' || stage === 'confirmation') && Boolean(order) && (order.live ? (order.phase === 'form' ? payMethod === 'pix' : order.method === 'pix') : order.method === 'pix');
 function amounts(items) {
-  const cents = shippingCents(), pix = pixChosen(), t = orderTotals(items, cents ?? 0), chosen = activeShipping();
+  const cents = shippingCents(), t = totals(items, cents ?? 0), chosen = activeShipping(), discount = pixDiscount(items), applied = pixApplied();
   const label = !real ? 'Entrega <small>(exemplo)</small>' : chosen ? `Entrega <small>(${esc(chosen.label)})</small>` : 'Entrega';
   const value = cents === null ? '<small>calculada pelo CEP</small>' : cents === 0 && chosen?.free ? '<em>Grátis</em>' : money(cents);
-  const discount = pix && t.discount ? `<div class="pix-discount"><dt>Desconto no Pix <small>(${COMMERCE.pixDiscountPercent}%)</small></dt><dd>− ${money(t.discount)}</dd></div>` : '';
-  // Before Pix is chosen (identification, or card picked at delivery): what the same order costs with Pix.
-  const hint = !pix && items.length && (stage === 'identification' || stage === 'delivery') ? `<div class="pix-total"><dt>No Pix <small>(${COMMERCE.pixDiscountPercent}% de desconto nas peças)</small></dt><dd>${money(pixTotals(items, cents ?? 0).total)}</dd></div>` : '';
-  return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>${label}</dt><dd>${value}</dd></div>${discount}<div class="grand-total"><dt>Total${cents === null ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(t.total)}</dd></div>${hint}</dl>`;
+  return `<dl class="amounts"><div><dt>Subtotal</dt><dd>${money(t.subtotal)}</dd></div><div><dt>${label}</dt><dd>${value}</dd></div>${applied ? `<div class="pix-discount"><dt>Desconto no Pix (5%)</dt><dd>− ${money(discount)}</dd></div>` : ''}<div class="grand-total"><dt>Total${cents === null ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(t.total - (applied ? discount : 0))}</dd></div>${!applied && stage !== 'confirmation' && items.length ? `<div class="pix-hint"><dt>No Pix <small>(5% off)</small></dt><dd>${money(t.total - discount)}</dd></div>` : ''}</dl>`;
 }
 const summaryFreeShipping = items => real && ['identification', 'delivery'].includes(stage) ? freeShippingBar(shipCfg.freeShipping, totals(items, 0).subtotal) : '';
 function summary(items, action = '') {return `<aside class="order-summary" id="order-summary"><p class="eyebrow">CADA DETALHE, DO SEU JEITO</p><h2>Resumo do pedido</h2>${summaryFreeShipping(items)}${items.map(i => `<article class="summary-item">${thumbnail(i)}<div><h3>${esc(i.title)}</h3><p>${i.quantity} ${i.quantity === 1 ? 'peça' : 'peças'} · ${money(i.unitPrice * i.quantity)}</p>${chips(i)}</div></article>`).join('')}${amounts(items)}<p class="production-note">Feito sob encomenda<br><strong>${productionText()}</strong></p>${action}${live.mode === 'live' ? '' : `<p class="small-note">${real ? 'Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.' : 'Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.'}</p>`}</aside>`;}
 function field(name, label, options = {}) {return `<label class="field ${options.wide ? 'wide' : ''}"><span>${label}${options.optional ? ' <small>(opcional)</small>' : ''}</span><input name="${name}" value="${esc(draft[name])}" type="${options.type || 'text'}" ${options.optional ? '' : 'required'} autocomplete="${options.auto || 'off'}" ${options.inputmode ? `inputmode="${options.inputmode}"` : ''} ${options.pattern ? `pattern="${options.pattern}"` : ''} maxlength="${options.max || 100}" ${options.placeholder ? `placeholder="${options.placeholder}"` : ''}>${options.hint ? '<small class="field-hint" data-hint role="status"></small>' : ''}</label>`;}
 // Identification (FARM Rio reference): e-mail from the account, name, surname, CPF, phone and optional company data.
 function identificationView() {return `${heading(direct?'COMPRAR AGORA':'IDENTIFICAÇÃO', 'Quem está<br><em>comprando?</em>', 'Seus dados para a nota fiscal e a entrega.')}<div class="shop-layout"><section class="identification-panel">${identificationForm({email:getSession()?.email || '', profile, submitLabel:'Ir para a entrega'})}<button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button></section>${summary(purchaseItems())}</div>`;}
-function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000',hint:true,wide:true})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}${field('district','Bairro',{max:80,wide:true})}${field('city','Cidade',{auto:'address-level2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div>${shippingSection()}</div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? `<p class="small-note">Na próxima etapa você escolhe entre Pix, com ${COMMERCE.pixDiscountPercent}% de desconto nas peças, ou cartão de crédito ou débito. O pagamento é feito com segurança pelo Mercado Pago.</p>` : `<fieldset class="payment-choice"><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>${COMMERCE.pixDiscountPercent}% de desconto nas peças</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset><p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>`}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
+function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS PERTO', 'Para onde vai<br><em>esse carinho?</em>', 'Preencha os dados de entrega e escolha como prefere pagar.')}<div class="shop-layout"><form id="delivery-form" class="delivery-form"><div class="form-section"><div class="section-label"><span>01</span><h2>Quem vai receber?</h2></div><p class="small-note">${deliveryNote()}</p><div class="form-grid">${field('name', 'Nome completo', {auto:'name',wide:true,max:120})}${field('email', 'E-mail', {type:'email',auto:'email',max:180})}${field('phone', 'WhatsApp com DDD', {type:'tel',auto:'tel',inputmode:'tel',max:20,placeholder:'(11) 99999-9999'})}</div></div><div class="form-section"><div class="section-label"><span>02</span><h2>Endereço de entrega</h2></div><div class="form-grid">${field('cep','CEP',{auto:'postal-code',inputmode:'numeric',pattern:'[0-9]{5}-?[0-9]{3}',max:9,placeholder:'00000-000',hint:true,wide:true})}${field('street','Rua ou avenida',{auto:'address-line1',wide:true})}${field('number','Número',{max:12})}${field('complement','Complemento',{optional:true,auto:'address-line2'})}${field('district','Bairro',{max:80,wide:true})}${field('city','Cidade',{auto:'address-level2'})}<label class="field"><span>Estado</span><select name="state" autocomplete="address-level1" required><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(s=>`<option ${draft.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label><label class="field wide"><span>Observações <small>(opcional)</small></span><textarea name="notes" rows="2" maxlength="500" placeholder="Algo que a Ju precisa saber?">${esc(draft.notes)}</textarea></label></div>${shippingSection()}</div><div class="form-section"><div class="section-label"><span>03</span><h2>Como prefere pagar?</h2></div>${live.mode !== 'off' ? '<p class="small-note">Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.</p>' : ''}<fieldset class="payment-choice" ${live.mode !== 'off' ? 'hidden disabled' : ''}><legend class="sr-only">Forma de pagamento</legend><label><input type="radio" name="payment" value="pix" ${method === 'pix' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><span><strong>Pix</strong><small>Copia e cola ou QR Code · 5% off</small></span></label><label><input type="radio" name="payment" value="card" ${method === 'card' ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon('card')}</span><span><strong>Cartão</strong><small>Pagamento com intermediador</small></span></label></fieldset>${live.mode === 'off' ? '<p class="small-note">Aqui você pode experimentar a jornada completa, sem informar dados de cartão.</p>' : ''}</div><div class="terms-check"><label><input type="checkbox" name="terms" required ${draft.terms === 'on' ? 'checked' : ''}><span>Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.</span></label><p class="terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="trocas.html" target="_blank" rel="noopener">Trocas e Devoluções</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div><div class="form-footer"><button class="text-button" type="button" data-action="cart">${direct?'← Rever minha combinação':'← Voltar ao carrinho'}</button><button type="submit" class="primary shop-primary">Continuar para pagamento <span aria-hidden="true">↗</span></button></div></form>${summary(purchaseItems())}</div>`;}
 // Decorative matrix, deliberately NOT a payable QR code.
 function qrIllustration() {let cells = '';for(let y=0;y<21;y++)for(let x=0;x<21;x++){const inFinder = (x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(inFinder){const a=x>13?x-14:x,b=y>13?y-14:y;if(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}else if((x*13+y*7+x*y)%5<2)cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}return `<div class="demo-qr"><svg viewBox="-2 -2 25 25" role="img" aria-label="QR Code ilustrativo, sem valor de pagamento"><g fill="#49303b">${cells}</g></svg><span>DEMONSTRAÇÃO</span></div>`;}
 function progress() {const approved = order.status === 'approved';return `<ol class="order-progress" aria-label="Andamento do pedido">${['Pedido criado','Aguardando pagamento','Pagamento confirmado','Em preparação','Pronto para envio'].map((s,i)=>`<li class="${i < (approved?2:1) ? 'done' : i === (approved?2:1) ? 'current' : ''}" ${i === (approved?2:1) ? 'aria-current="step"' : ''}><i aria-hidden="true">${i < (approved?2:1) ? '✓' : i+1}</i><span>${s}</span></li>`).join('')}</ol>`;}
@@ -144,11 +142,10 @@ return `${heading('PEDIDO ' + order.id, 'Suas cores.<br><em>Um novo começo.</em
 const lang = () => document.documentElement.lang || 'pt-BR';
 const deliveryNote = () => live.mode === 'off' ? 'Use dados fictícios neste protótipo. Eles não são enviados nem salvos pelo formulário.' : live.mode === 'test' ? 'Ambiente de teste: use dados de teste. Eles servem só para criar o pedido de teste; nenhum valor real é cobrado.' : 'Usamos estes dados só para entregar o seu pedido.';
 const confirmationLead = () => order.live ? (order.mode === 'test' ? 'Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.' : 'Pagamento confirmado. A Ju já recebeu o seu pedido.') : 'Pagamento aprovado na demonstração. Nenhuma cobrança ou produção foi iniciada.';
-function createLiveOrder(items, chosen) {
+function createLiveOrder(items) {
   const snapshot = normalizeCart(items);
   if (!snapshot.length) throw new Error('Adicione uma peça ao carrinho.');
-  const pix = chosen !== 'card';
-  return {live: true, mode: live.mode, id: null, mpId: null, phase: 'form', method: pix ? 'pix' : 'card', status: 'pending', items: snapshot, amounts: (pix ? pixTotals : totals)(snapshot, shippingCents() ?? undefined), shipping: real ? ship.chosen : null, createdAt: Date.now(), pix: null, expiresAt: null};
+  return {live: true, mode: live.mode, id: null, mpId: null, phase: 'form', method: null, status: 'pending', items: snapshot, amounts: totals(snapshot, shippingCents() ?? undefined), shipping: real ? ship.chosen : null, createdAt: Date.now(), pix: null, expiresAt: null};
 }
 function testHelp() {
   if (live.mode !== 'test') return '';
@@ -165,14 +162,13 @@ function livePaymentView() {
   if (phase === 'review') {
     return `${heading('PEDIDO ' + order.id, 'Estamos<br><em>confirmando.</em>', 'O pagamento está em análise. Costuma levar poucos minutos.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento em análise">${progress()}<div class="payment-state"><span class="status-pill"><i class="waiting-dot" aria-hidden="true"></i>Em análise</span><h2>Só mais um instante.</h2><p>Você não precisa fazer nada. Quando o pagamento for confirmado, esta página avança sozinha.</p></div><div class="payment-buttons"><button class="secondary-button" data-action="check-now">Verificar agora</button></div></section>${summary(order.items)}</div>`;
   }
-  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'O pagamento é feito com segurança pelo Mercado Pago.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${payOptions()}${order.method === 'pix' ? '' : testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true"></div><div id="installments-info" class="installments-info" aria-live="polite" hidden></div><p id="card-error" class="inline-error" role="alert"></p>${back}</section>${summary(order.items)}</div>`;
+  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${payChoice()}${testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true"></div><div id="installments-info" class="installments-info" aria-live="polite" hidden></div><p id="card-error" class="inline-error" role="alert"></p>${back}</section>${summary(order.items)}</div>`;
 }
-// Pix and card side by side above the Brick, each with its own total (Ju's layout, revision 2 of the audit). The Brick is
-// mounted with the chosen method only; picking the other one remounts it with that method and amount.
-function payOptions() {
-  const shipping = order.amounts.shipping, pix = pixTotals(order.items, shipping), card = totals(order.items, shipping);
-  const option = (value, title, note, total, band) => `<label class="pay-option is-${value}"><input type="radio" name="pay-method" value="${value}" ${order.method === value ? 'checked' : ''}><span class="method-symbol" aria-hidden="true">${icon(value)}</span><span class="pay-main"><strong>${title}</strong><small>${note}</small></span><strong class="pay-total">${money(total)}</strong><span class="pay-band">${band}</span></label>`;
-  return `<fieldset class="pay-options"><legend class="sr-only">Forma de pagamento</legend>${option('pix', 'Pix', 'Copia e cola ou QR Code', pix.total, `<b>${COMMERCE.pixDiscountPercent}% OFF NO PIX</b> · <span>economize ${money(pix.discount)}</span>`)}${option('card', 'Cartão', 'Crédito ou débito', card.total, '<b>ATÉ 12X NO CRÉDITO</b> · <span>veja as parcelas</span>')}</fieldset>`;
+// Pix and card side by side, above the Brick. The Brick then opens with only the chosen method and its amount.
+function payChoice() {
+  const full = order.amounts.total, discount = pixDiscount(order.items), pix = payMethod === 'pix';
+  const option = (value, checked, inner) => `<button type="button" class="pay-option pay-${value}" role="radio" aria-checked="${checked}" tabindex="${checked ? 0 : -1}" data-action="pay-method" data-method="${value}">${inner}</button>`;
+  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off"><strong>3X SEM JUROS</strong><span>ou até 12x no crédito</span></span>`)}</div>`;
 }
 function disposeLive() {
   brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null;
@@ -193,8 +189,9 @@ async function mountBrick() {
     if (token !== brickToken) return;
     const mp = new MercadoPago(live.publicKey, SDK_OPTIONS(lang()));
     const controller = await mp.bricks().create('payment', 'payment-brick', {
-      initialization: {amount: order.amounts.total / 100, payer: {email: draft.email}},
-      customization: {paymentMethods: order.method === 'pix' ? {bankTransfer: 'all'} : {creditCard: 'all', debitCard: 'all', maxInstallments: 12}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
+      // The server prices the order again (and applies the Pix discount itself); this amount is what the Brick shows.
+      initialization: {amount: (order.amounts.total - (payMethod === 'pix' ? pixDiscount(order.items) : 0)) / 100, payer: {email: draft.email}},
+      customization: {paymentMethods: payMethod === 'pix' ? {bankTransfer: 'all'} : {creditCard: 'all', debitCard: 'all', maxInstallments: 12}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
       callbacks: {
         onReady: () => { box.removeAttribute('aria-busy'); main.querySelector('#brick-loading')?.remove(); },
         onSubmit: data => submitFromBrick(data),
@@ -219,7 +216,7 @@ const installmentCache = new Map();
 async function showInstallments(mp, bin) {
   const box = main.querySelector('#installments-info'), token = ++binToken, digits = String(bin ?? '').replace(/\D/g, '').slice(0, 8);
   if (!box) return;
-  if (digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; return; }
+  if (payMethod === 'pix' || digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; return; }
   const key = `${digits}:${order.amounts.total}`;
   let rows = installmentCache.get(key);
   if (!rows) {
@@ -355,16 +352,21 @@ main.addEventListener('submit', async e => {
     showIdentificationError(form, {field: problem.field, message: problem.message});
   }
 });
-main.addEventListener('submit', e=>{if(e.target.id!=='delivery-form')return;e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;draft=Object.fromEntries(new FormData(form));if(!draft.name.trim()||!draft.street.trim()||!draft.city.trim()||!draft.number.trim()||!draft.district.trim()){announce('Preencha os dados de entrega, sem deixar campos em branco.');return;}if(live.mode==='off')method=draft.payment==='card'?'card':'pix';if(real&&(ship.status!=='ready'||!ship.chosen||ship.cep!==String(draft.cep).replace(/\D/g,''))){announce(shippingGuard());form.querySelector('[name=cep]')?.focus();return;}try{order=live.mode!=='off'?createLiveOrder(purchaseItems(),method):{...createDemoOrder(purchaseItems(),method,Date.now(),shippingCents()??undefined),shipping:real?ship.chosen:null};stage='payment';render();}catch(error){announce(error.message);}});
+main.addEventListener('submit', e=>{if(e.target.id!=='delivery-form')return;e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;draft=Object.fromEntries(new FormData(form));if(!draft.name.trim()||!draft.street.trim()||!draft.city.trim()||!draft.number.trim()||!draft.district.trim()){announce('Preencha os dados de entrega, sem deixar campos em branco.');return;}method=draft.payment;if(real&&(ship.status!=='ready'||!ship.chosen||ship.cep!==String(draft.cep).replace(/\D/g,''))){announce(shippingGuard());form.querySelector('[name=cep]')?.focus();return;}try{order=live.mode!=='off'?createLiveOrder(purchaseItems()):{...createDemoOrder(purchaseItems(),method,Date.now(),shippingCents()??undefined),shipping:real?ship.chosen:null};stage='payment';render();}catch(error){announce(error.message);}});
 main.addEventListener('change',e=>{
-  if(e.target.name==='payment'){method=e.target.value;if(stage==='delivery')paintShipping();}
-  if(e.target.name==='pay-method'&&stage==='payment'&&order?.live&&order.phase==='form'){method=e.target.value==='card'?'card':'pix';order={...order,method,amounts:(method==='pix'?pixTotals:totals)(order.items,order.amounts.shipping)};render(false);main.querySelector(`input[name="pay-method"][value="${method}"]`)?.focus({preventScroll:true});}
+  if(e.target.name==='payment')method=e.target.value;
 });
 main.addEventListener('input',e=>{
   if(e.target.name==='phone'){
     const digits=e.target.value.replace(/\D/g,'');
     e.target.setCustomValidity(/^(?:55)?[1-9]\d{9,10}$/.test(digits)?'':'Informe um WhatsApp com DDD, por exemplo (11) 99999-9999.');
   }
+});
+main.addEventListener('keydown', e => {
+  const option = e.target.closest?.('[data-action="pay-method"]');
+  if (!option || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  e.preventDefault();
+  main.querySelector(`[data-method="${option.dataset.method === 'pix' ? 'card' : 'pix'}"]`)?.click();
 });
 main.addEventListener('click',async e=>{
   const button=e.target.closest('[data-action]');if(!button||busy)return;
@@ -378,6 +380,7 @@ main.addEventListener('click',async e=>{
     if(action==='cart'){const form=document.querySelector('#delivery-form');if(form)draft=Object.fromEntries(new FormData(form));stage='cart';order=null;render();}
     if(action==='delivery'){stage='delivery';order=null;render();}
     if(action==='retry-brick'){render(false);}
+    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
     if(action==='new-pix'){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending'};render();}
     if(action==='copy-live-pix'){try{await navigator.clipboard.writeText(order.pix.qrCode);announce('Código Pix copiado.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código Pix.');}}
     if(action==='check-now'){await checkNow(button);}

@@ -9,7 +9,7 @@ const CUSTOMER = {
     subject: ref => `Pagamento confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Recebemos o seu pagamento. A Ju já vai preparar suas peças.',
     eyebrow: 'PAGAMENTO CONFIRMADO', title: ['Recebemos seu pedido,', 'obrigada!'], hello: name => name ? `Olá, ${name}.` : 'Olá!',
     intro: 'Seu pagamento foi confirmado e a Ju já vai começar a preparar suas peças, uma a uma.',
-    order: 'PEDIDO', pieces: 'SUAS PEÇAS', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Desconto no Pix', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGA', notes: 'SUA OBSERVAÇÃO',
+    order: 'PEDIDO', pieces: 'SUAS PEÇAS', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Desconto no Pix (5%)', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGA', notes: 'SUA OBSERVAÇÃO',
     pix: 'Pix', credit: n => n > 1 ? `Cartão de crédito · ${n}x` : 'Cartão de crédito', debit: 'Cartão de débito',
     next: 'Quando as peças estiverem a caminho, avisamos por aqui.', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.',
     eta: (a, b) => `Prazo estimado: ${a === b ? a : `${a} a ${b}`} dias úteis (produção + envio).`
@@ -18,7 +18,7 @@ const CUSTOMER = {
     subject: ref => `Payment confirmed · ${ref} · Ju, imprime pra mim?`, preheader: 'We received your payment. Ju will start preparing your pieces.',
     eyebrow: 'PAYMENT CONFIRMED', title: ['We received your order,', 'thank you!'], hello: name => name ? `Hello, ${name}.` : 'Hello!',
     intro: 'Your payment is confirmed and Ju will start preparing your pieces, one by one.',
-    order: 'ORDER', pieces: 'YOUR PIECES', piece: n => n === 1 ? '1 piece' : `${n} pieces`, subtotal: 'Subtotal', delivery: 'Delivery', discount: 'Pix discount', total: 'Total', payment: 'PAYMENT', deliverTo: 'DELIVERY', notes: 'YOUR NOTE',
+    order: 'ORDER', pieces: 'YOUR PIECES', piece: n => n === 1 ? '1 piece' : `${n} pieces`, subtotal: 'Subtotal', delivery: 'Delivery', discount: 'Pix discount (5%)', total: 'Total', payment: 'PAYMENT', deliverTo: 'DELIVERY', notes: 'YOUR NOTE',
     pix: 'Pix', credit: n => n > 1 ? `Credit card · ${n}x` : 'Credit card', debit: 'Debit card',
     next: 'We will let you know here when your pieces are on their way.', test: 'TEST ENVIRONMENT · no real money was charged.',
     eta: (a, b) => `Estimated delivery: ${a === b ? a : `${a} to ${b}`} business days (production + shipping).`
@@ -27,7 +27,7 @@ const CUSTOMER = {
     subject: ref => `Pago confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Recibimos tu pago. Ju empezará a preparar tus piezas.',
     eyebrow: 'PAGO CONFIRMADO', title: ['Recibimos tu pedido,', '¡gracias!'], hello: name => name ? `Hola, ${name}.` : '¡Hola!',
     intro: 'Tu pago fue confirmado y Ju empezará a preparar tus piezas, una por una.',
-    order: 'PEDIDO', pieces: 'TUS PIEZAS', piece: n => n === 1 ? '1 pieza' : `${n} piezas`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Descuento Pix', total: 'Total', payment: 'PAGO', deliverTo: 'ENTREGA', notes: 'TU OBSERVACIÓN',
+    order: 'PEDIDO', pieces: 'TUS PIEZAS', piece: n => n === 1 ? '1 pieza' : `${n} piezas`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Descuento por Pix (5%)', total: 'Total', payment: 'PAGO', deliverTo: 'ENTREGA', notes: 'TU OBSERVACIÓN',
     pix: 'Pix', credit: n => n > 1 ? `Tarjeta de crédito · ${n}x` : 'Tarjeta de crédito', debit: 'Tarjeta de débito',
     next: 'Cuando tus piezas estén en camino, te avisaremos por aquí.', test: 'ENTORNO DE PRUEBA · no se cobró ningún valor real.',
     eta: (a, b) => `Plazo estimado: ${a === b ? a : `${a} a ${b}`} días hábiles (producción + envío).`
@@ -37,7 +37,7 @@ const CUSTOMER = {
 const OWNER = Object.freeze({
   subject: (ref, total, test) => `${test ? '[TESTE] ' : ''}Novo pedido pago · ${ref} · ${total}`, preheader: 'Pagamento confirmado. Confira as cores e o endereço.',
   eyebrow: 'NOVO PEDIDO', title: ['Pedido pago,', 'pronto para produzir.'], intro: 'O Mercado Pago confirmou este pagamento. Abaixo estão as peças, as cores escolhidas e para onde enviar.',
-  order: 'PEDIDO', pieces: 'PEÇAS E CORES', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Desconto no Pix', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGAR PARA', notes: 'OBSERVAÇÃO DO CLIENTE',
+  order: 'PEDIDO', pieces: 'PEÇAS E CORES', piece: n => n === 1 ? '1 peça' : `${n} peças`, subtotal: 'Subtotal', delivery: 'Entrega', discount: 'Desconto no Pix (5%)', total: 'Total', payment: 'PAGAMENTO', deliverTo: 'ENTREGAR PARA', notes: 'OBSERVAÇÃO DO CLIENTE',
   pix: 'Pix', credit: n => n > 1 ? `Cartão de crédito · ${n}x` : 'Cartão de crédito', debit: 'Cartão de débito', test: 'AMBIENTE DE TESTE · nenhum valor real foi cobrado.',
   contact: 'CONTATO', mpOrder: 'Pedido no Mercado Pago',
   shipping: 'ENVIO', shippingLine: (info, charged, volumes) => `${info.label} · ${volumes} ${volumes === 1 ? 'volume' : 'volumes'} · prazo ${info.days.min} a ${info.days.max} dias úteis · cobrado do cliente ${charged} · custo da etiqueta ${info.cost}`,
@@ -61,9 +61,9 @@ function itemsTable(copy, summary, lang) {
     const colors = describeSelection(item.productId, item.selection, lang).map(entry => `${esc(entry.part)}: <strong>${esc(entry.color)}</strong>`).join(' · ');
     return `<tr><td style="padding:12px 0;border-bottom:1px solid ${C.rule};font-family:${SANS};"><p style="margin:0;color:${C.ink};font-size:15px;line-height:22px;font-weight:700;">${esc(item.title)} <span style="color:${C.muted};font-weight:400;">× ${item.quantity}</span></p><p style="margin:4px 0 0;color:${C.muted};font-size:13px;line-height:20px;">${colors}</p></td><td align="right" valign="top" style="padding:12px 0 12px 12px;border-bottom:1px solid ${C.rule};font-family:${SANS};color:${C.ink};font-size:15px;white-space:nowrap;">${esc(money(item.unitCents * item.quantity))}</td></tr>`;
   }).join('');
-  const subtotal = summary.items.reduce((sum, item) => sum + item.unitCents * item.quantity, 0), discount = subtotal + summary.shipping - summary.total;
+  const subtotal = summary.items.reduce((sum, item) => sum + item.unitCents * item.quantity, 0);
   const total = (name, value, strong) => `<tr><td style="padding:${strong ? '12px' : '8px'} 0 0;font-family:${SANS};color:${strong ? C.ink : C.muted};font-size:${strong ? 16 : 14}px;font-weight:${strong ? 700 : 400};">${esc(name)}</td><td align="right" style="padding:${strong ? '12px' : '8px'} 0 0;font-family:${SANS};color:${strong ? C.rose : C.muted};font-size:${strong ? 17 : 14}px;font-weight:${strong ? 700 : 400};">${esc(value)}</td></tr>`;
-  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">${rows}${total(copy.subtotal, money(subtotal))}${total(deliveryName(copy, summary), money(summary.shipping))}${discount > 0 ? total(copy.discount || 'Desconto no Pix', '− ' + money(discount)) : ''}${total(copy.total, money(summary.total), true)}</table>`;
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">${rows}${total(copy.subtotal, money(subtotal))}${total(deliveryName(copy, summary), money(summary.shipping))}${summary.discount > 0 ? total(copy.discount, '− ' + money(summary.discount)) : ''}${total(copy.total, money(summary.total), true)}</table>`;
 }
 
 function addressBlock(summary, {contact} = {}) {
@@ -119,9 +119,6 @@ ${inner}
 `;
 }
 
-// The Pix discount in the plain-text version, when there is one.
-const plainDiscount = (summary, copy) => { const discount = summary.items.reduce((sum, item) => sum + item.unitCents * item.quantity, 0) + summary.shipping - summary.total; return discount > 0 ? `
-${copy.discount || 'Desconto no Pix'}: − ${money(discount)}` : ''; };
 const plainItems = (summary, lang, copy) => summary.items.map(item => `- ${item.title} × ${item.quantity} · ${money(item.unitCents * item.quantity)}\n  ${describeSelection(item.productId, item.selection, lang).map(entry => `${entry.part}: ${entry.color}`).join(' · ')}`).join('\n');
 const plainAddress = summary => { const a = summary.address; return `${summary.customer.name}\n${a.street}, ${a.number}${a.complement ? ' — ' + a.complement : ''}\n${a.district} · ${a.city}/${a.state} · CEP ${a.cep}`; };
 
@@ -138,7 +135,7 @@ function renderCustomerEmail({summary, lang = 'pt-BR', test = false, assetUrl}) 
     `<tr><td class="px" align="center" style="padding:24px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:14px;line-height:22px;">${esc(copy.next)}</p></td></tr>`
   ].join('\n');
   const subject = (test ? '[TESTE] ' : '') + copy.subject(summary.reference);
-  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, '', copy.pieces, plainItems(summary, language, copy), `${copy.delivery}: ${money(summary.shipping)}${plainDiscount(summary, copy)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', copy.deliverTo, plainAddress(summary), summary.shippingInfo?.days && copy.eta ? copy.eta(summary.shippingInfo.days.min, summary.shippingInfo.days.max) : '', summary.notes ? `\n${copy.notes}: ${summary.notes}` : '', '', copy.next].filter(part => part !== '').join('\n');
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', `${hello} ${copy.intro}`, '', `${copy.order}: ${summary.reference}`, '', copy.pieces, plainItems(summary, language, copy), `${copy.delivery}: ${money(summary.shipping)}`, summary.discount > 0 ? `${copy.discount}: − ${money(summary.discount)}` : '', `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', copy.deliverTo, plainAddress(summary), summary.shippingInfo?.days && copy.eta ? copy.eta(summary.shippingInfo.days.min, summary.shippingInfo.days.max) : '', summary.notes ? `\n${copy.notes}: ${summary.notes}` : '', '', copy.next].filter(part => part !== '').join('\n');
   return {subject, html: frame({lang: language, title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 
@@ -165,7 +162,7 @@ function renderOwnerEmail({summary, test = false, assetUrl}) {
     summary.notes ? section(copy.notes, line(esc(summary.notes))) : ''
   ].join('\n');
   const subject = copy.subject(summary.reference, money(summary.total), test);
-  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference}${summary.id ? ` (${copy.mpOrder}: ${summary.id})` : ''}`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}${plainDiscount(summary, copy)}`, `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', ...(summary.invoice ? [copy.invoice, ...invoiceLines(copy, summary.invoice).map(l => l.text), ''] : []), copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, ...(summary.shippingInfo?.days ? ['', copy.shipping, OWNER.shippingLine({...summary.shippingInfo, cost: money(summary.shippingInfo.costCents)}, money(summary.shipping), summary.shippingInfo.volumes || 1)] : []), summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
+  const text = [copy.eyebrow, `${copy.title[0]} ${copy.title[1]}`, test ? copy.test : '', '', copy.intro, '', `${copy.order}: ${summary.reference}${summary.id ? ` (${copy.mpOrder}: ${summary.id})` : ''}`, '', copy.pieces, plainItems(summary, 'pt-BR', copy), `${copy.delivery}: ${money(summary.shipping)}`, summary.discount > 0 ? `${copy.discount}: − ${money(summary.discount)}` : '', `${copy.total}: ${money(summary.total)}`, '', `${copy.payment}: ${methodLabel(copy, summary.method)}`, '', ...(summary.invoice ? [copy.invoice, ...invoiceLines(copy, summary.invoice).map(l => l.text), ''] : []), copy.deliverTo, plainAddress(summary), `${summary.customer.email} · ${summary.customer.phone}`, ...(summary.shippingInfo?.days ? ['', copy.shipping, OWNER.shippingLine({...summary.shippingInfo, cost: money(summary.shippingInfo.costCents)}, money(summary.shipping), summary.shippingInfo.volumes || 1)] : []), summary.notes ? `\n${copy.notes}: ${summary.notes}` : ''].filter(part => part !== '').join('\n');
   return {subject, html: frame({lang: 'pt-BR', title: copy.title, eyebrow: copy.eyebrow, preheader: copy.preheader, subject, inner, banner: test ? copy.test : '', assetUrl}), text};
 }
 

@@ -23,6 +23,15 @@ A aplicação no painel do Mercado Pago precisa ser do tipo **Checkout Transpare
 
 Os pedidos ficam no banco (MySQL: `orders`, `order_items` e `order_events`, em `db/migrations/002_pedidos.sql`), com um retrato do comprador e da entrega no momento da compra; CPF e telefone vão criptografados. A resposta do pagamento, o webhook e a consulta do Pix atualizam o mesmo pedido, e quem chega primeiro faz a mudança: o pedido é marcado como pago uma vez só e cada e-mail sai uma vez só. O cliente vê os pedidos em "Meus pedidos" (conta) e a Ju no painel `/admin.html` (ver `ADMIN-SETUP.md`). Se a conta for excluída, o pedido continua guardado para a nota fiscal, sem o vínculo com a conta.
 
+## Desconto no Pix (5%)
+
+Quem paga com Pix paga 5% a menos **nas peças** (o frete não tem desconto, e o frete grátis continua contando o valor cheio das peças, que é o que o cliente vê no carrinho).
+
+- No passo de pagamento, dois cartões ficam acima do Brick: **Pix** (com a faixa verde "5% OFF NO PIX · economize R$ X") e **Cartão** (crédito ou débito, até 12x). O Brick abre só com a forma escolhida e com o valor dela.
+- Quem decide o desconto é o **servidor**: ele aplica só quando o Brick informa Pix (`api/_lib/catalog.js`, `applyPixDiscount`). O desconto é calculado por unidade (R$ 129,00 → R$ 122,55; R$ 139,00 → R$ 132,05; R$ 159,00 → R$ 151,05), então os itens enviados ao Mercado Pago continuam somando exatamente o total cobrado.
+- O pedido guarda o subtotal pelo preço de tabela e o total cobrado; o desconto é a diferença. Os e-mails da Ju e do cliente mostram a linha "Desconto no Pix (5%)". Não há mudança no banco.
+- Para mudar a porcentagem, altere `PIX_DISCOUNT_BPS` em `api/_lib/catalog.js` **e** `pixDiscountBps` em `dist/commerce-config.js` (em pontos-base: 500 = 5%). `tests/payments.mjs` falha se os dois ficarem diferentes.
+
 ## Ligar em modo de teste (passo a passo)
 
 ### 1. Credenciais de teste (no painel do Mercado Pago)
