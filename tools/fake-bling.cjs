@@ -7,7 +7,7 @@
 // produção, '2' (default) as homologação. Nothing here talks to the real Bling.
 const crypto = require('node:crypto');
 
-const NATURES = [{id: 1, situacao: 1, padrao: 1, descricao: 'Venda de produção do estabelecimento'}, {id: 2, situacao: 1, padrao: 0, descricao: 'Remessa para conserto'}];
+const NATURES = [{id: 1, situacao: 1, padrao: 1, descricao: 'Venda de produção do estabelecimento'}, {id: 2, situacao: 1, padrao: 0, descricao: 'Remessa para conserto'}, {id: 3, situacao: 1, padrao: 0, descricao: 'Venda de produção do estabelecimento – contribuinte'}];
 const PAYMENTS = [{id: 500, descricao: 'Dinheiro', tipoPagamento: 1, situacao: 1, padrao: 1}, {id: 501, descricao: 'Pix', tipoPagamento: 17, situacao: 1, padrao: 0},
   {id: 502, descricao: 'Cartão de crédito', tipoPagamento: 3, situacao: 1, padrao: 0}, {id: 503, descricao: 'Cartão de débito', tipoPagamento: 4, situacao: 1, padrao: 0}, {id: 504, descricao: 'Pix antigo', tipoPagamento: 17, situacao: 0, padrao: 1}];
 

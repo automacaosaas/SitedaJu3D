@@ -69,7 +69,7 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
     payment: {code: PAYMENT_CODE[order.method] || '99', cents: cents(order.totalCents)},
     totals: {productsCents, freightCents, discountCents, totalCents: cents(order.totalCents)},
     additionalInfo: `${fiscal.additionalInfo}${difal} Pedido nº: ${order.reference}`,
-    ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId}} : {})
+    ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId?.[taxpayer ? 'taxpayer' : 'nonTaxpayer']}} : {})   // the nature for this kind of buyer
   }};
 }
 

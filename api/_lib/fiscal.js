@@ -36,10 +36,12 @@ const FISCAL = {
   // The accountant's text (01/10/2026); api/_lib/nfe.js adds the DIFAL line when due and "Pedido nº: <pedido>". The
   // "Informações complementares" field of the nature in Bling stays empty, so the text is not repeated.
   additionalInfo: 'DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI.',
-  // With Bling (NFE_PROVIDER=bling) the series and the tax rules (CFOP, CSOSN, PIS/COFINS, DIFAL) are set up by the
-  // accountant inside Bling, in a "natureza de operação"; the site sends only its id. The panel lists the ids once the
-  // Bling account is connected.
-  bling: {natureId: PENDING('id da natureza de operação no Bling (o painel mostra a lista depois de conectar)')}
+  // With Bling (NFE_PROVIDER=bling) the series and the tax rules (CFOP, CSOSN, PIS/COFINS, DIFAL) are set up inside
+  // Bling, in a "natureza de operação"; the site sends only its id. Bling's rules split by state, not by kind of buyer,
+  // so there are two natures (01/10/2026, NFE-SETUP.md): "Venda de produção do estabelecimento" for a person or a company
+  // without a state registration (MG 5101, other states 6107) and "… – contribuinte" for a company with one (MG 5101,
+  // other states 6101). The panel lists the ids once the Bling account is connected.
+  bling: {natureId: {nonTaxpayer: '15111617940', taxpayer: '15111617959'}}
 };
 
 // EXAMPLE values, only to run the whole flow with the simulator (tests, local server with NFE_EXAMPLE_DATA=1). Never
@@ -51,12 +53,12 @@ const EXAMPLE = Object.freeze({
     cfop: {sameState: '5101', otherState: '6101', otherStateConsumer: '6107'}, icms: {origin: '0', csosn: '102'}, pis: {cst: '49'}, cofins: {cst: '49'},
     products: {borboletoscopio: {ncm: '39269090'}, dinossauroscopio: {ncm: '39269090'}, aviaoscopia: {ncm: '39269090'}},
     additionalInfo: 'Dados fiscais de exemplo, sem valor fiscal.',
-    bling: {natureId: '1'}
+    bling: {natureId: {nonTaxpayer: '1', taxpayer: '3'}}
   }
 });
 
-// Paths still to be filled for the chosen service, e.g. ["products.aviaoscopia.ncm", "bling.natureId"]. Bling keeps
-// the series and the tax rules itself; the other services get them from here and have no use for bling.natureId.
+// Paths still to be filled for the chosen service, e.g. ["products.aviaoscopia.ncm", "bling.natureId.taxpayer"]. Bling
+// keeps the series and the tax rules itself; the other services get them from here and have no use for bling.natureId.
 const NOT_NEEDED = {bling: ['series', 'cfop.', 'icms.csosn', 'pis.', 'cofins.'], other: ['bling.']};
 function pendingPaths(fiscal, prefix = '') {
   return Object.entries(fiscal).flatMap(([key, value]) => value && typeof value === 'object' ? pendingPaths(value, `${prefix}${key}.`) : String(value).startsWith('[PREENCHER') ? [`${prefix}${key}`] : []);

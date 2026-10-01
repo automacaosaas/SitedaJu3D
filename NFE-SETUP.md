@@ -158,17 +158,21 @@ conferir no DANFE:
 - o CFOP de cada caso;
 - se o Bling já escreve sozinho o texto do Simples ou a linha do DIFAL; se escrever, o site tira os dele para não repetir.
 
-## A natureza de operação no Bling (orientação da contadora, 01/10/2026)
+## As naturezas de operação no Bling (01/10/2026)
 
-Uma natureza só, que o site usa em todas as vendas:
+A orientação da contadora era uma natureza com três regras, mas no Bling as regras separam só por **estado** (e produto),
+não por tipo de cliente. Por isso são **duas** naturezas, e o site escolhe a de cada venda (`bling.natureId` em
+`api/_lib/fiscal.js`); o painel marca cada uma como "usada nas notas · cliente sem IE / com IE":
 
-- **Dados gerais:** descrição "Venda de produção do estabelecimento", série 1, tipo saída, regime Simples Nacional,
-  indicador de presença 2 (operação não presencial, pela internet). Informações complementares: **vazio**.
-- **Aba ICMS**, três regras ("+ Adicionar regra"), todas com produto "Qualquer" e CSOSN 102:
-  1. destino o mesmo estado (MG): CFOP 5101;
-  2. outros estados, cliente **não contribuinte** (sem IE): CFOP 6107;
-  3. outros estados, cliente **contribuinte** (com IE): CFOP 6101.
-- **Abas PIS e COFINS**, em cada regra: CST 49 (outras operações de saída).
+| Natureza (id no Bling) | Para quem | MG | Outros 26 estados |
+|---|---|---|---|
+| Venda de produção do estabelecimento (`15111617940`) | pessoa física e empresa **sem** inscrição estadual | 5101 | **6107** |
+| Venda de produção do estabelecimento – contribuinte (`15111617959`) | empresa **com** inscrição estadual | 5101 | **6101** |
+
+Nas duas: série 1, tipo saída, Simples Nacional, indicador de presença 2 (não presencial, pela internet),
+**consumidor final ligado**, CSOSN 102 em todas as regras (sem alíquotas, FCP, benefício, ST nem partilha), PIS e COFINS
+CST 49 (alíquota 0, base 100), aba IPI no padrão do Bling e **informações complementares vazias**. "Exterior" (EX) fica
+fora das regras. As naturezas "5101" e "6101" criadas antes não são usadas pelo site.
 
 O site informa o tipo de cliente em cada nota: pessoa física e empresa sem inscrição estadual vão como não contribuinte
 (9), empresa com inscrição estadual como contribuinte (1).
@@ -179,10 +183,10 @@ padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastr
 
 ## O que ainda falta
 
-1. **Contadora, no Bling:** criar a natureza acima e as formas de pagamento, e deixar a conta em homologação para o
-   primeiro teste. Série 1 com próximo número 11 e o certificado A1 já estão feitos (01/10/2026).
-2. **Site:** o código dessa natureza (`bling.natureId` em `api/_lib/fiscal.js`), que o painel mostra depois de
-   conectar o Bling. É o único dado fiscal que falta.
+1. **No Bling:** as formas de pagamento (Pix 17, crédito 03, débito 04) e a conta em homologação para o primeiro teste.
+   As duas naturezas, a série 1 com próximo número 11 e o certificado A1 já estão feitos (01/10/2026).
+2. **Contadora:** revisar as duas naturezas e, no teste em homologação, os DANFEs (CFOP de cada caso, texto sem
+   repetir, linha do DIFAL) e confirmar "ME OU EPP" no texto.
 
 CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
 inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não

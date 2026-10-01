@@ -39,7 +39,8 @@ function order(over = {}) {
 {
   assert.deepEqual(Object.keys(fiscal.FISCAL.products).sort(), Object.keys(catalog.PRODUCTS).sort(), 'one tax entry (NCM) per product of the catalog');
   assert.deepEqual(fiscal.missing(), [], "the accountant's data is complete");
-  assert.deepEqual(fiscal.missing(fiscal.FISCAL, {provider: 'bling'}), ['bling.natureId'], 'with Bling, only the nature id is left (the panel shows it once connected)');
+  assert.deepEqual(fiscal.missing(fiscal.FISCAL, {provider: 'bling'}), [], 'with Bling, nothing is left');
+  assert.deepEqual(fiscal.FISCAL.bling.natureId, {nonTaxpayer: '15111617940', taxpayer: '15111617959'}, 'the two Bling natures, by kind of buyer (01/10/2026)');
   assert.deepEqual([fiscal.FISCAL.cfop.sameState, fiscal.FISCAL.cfop.otherState, fiscal.FISCAL.cfop.otherStateConsumer, fiscal.FISCAL.icms.csosn, fiscal.FISCAL.pis.cst, fiscal.FISCAL.cofins.cst], ['5101', '6101', '6107', '102', '49', '49']);
   assert(Object.values(fiscal.FISCAL.products).every(p => p.ncm === '39269090'), 'NCM 3926.90.90 for the three pieces');
   assert.deepEqual(fiscal.missing(fiscal.EXAMPLE.fiscal), [], 'the example set is complete (tests and local demo only)');
@@ -91,7 +92,7 @@ function order(over = {}) {
   assert.equal(exempt.recipient.ieIndicator, '9'); assert.equal(exempt.recipient.stateRegistration, '');
 
   // Problems are listed, nothing is sent.
-  const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV});
+  const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV, fiscal: {...fiscal.FISCAL, bling: {natureId: {nonTaxpayer: '[PREENCHER: id]', taxpayer: '[PREENCHER: id]'}}}});
   assert.equal(pending.ok, false); assert(pending.problems.some(p => p.includes('Dados fiscais a preencher')));
   assert(!pending.problems.some(p => p.includes('Dados da empresa')), 'the company data in legal.js is filled');
   const noCompany = buildInvoice({order: order(), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE, company: {legalName: '[PREENCHER: razão social]', cnpj: '[PREENCHER: CNPJ]'}});
@@ -146,7 +147,10 @@ function order(over = {}) {
   // Missing data, CEP not found, service down: saved as errors with a readable reason, never an exception.
   const pendingData = createInvoicing({store, env: {...ENV, NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: ''}, fetchImpl, provider: spy, lookup: lookupFrom({'30140071': BH})});
   const {order: o2} = await store.orders.create(order());
-  assert.match((await pendingData.issue(o2)).message, /Dados fiscais a preencher/);
+  // Every tax datum is filled now, so a pending one is simulated for this check and put back right after.
+  const realNatures = fiscal.FISCAL.bling.natureId;
+  fiscal.FISCAL.bling.natureId = {nonTaxpayer: '[PREENCHER: id]', taxpayer: '[PREENCHER: id]'};
+  try { assert.match((await pendingData.issue(o2)).message, /Dados fiscais a preencher/); } finally { fiscal.FISCAL.bling.natureId = realNatures; }
   const {order: o3} = await store.orders.create(order({shipTo: {...order().shipTo, cep: '99999999'}}));
   assert.match((await invoicing.issue(o3)).message, /CEP 99999999 não encontrado/);
   const down = createInvoicing({store, env: ENV, fetchImpl, provider: {emit: async () => { throw new Error('ECONNRESET'); }}, lookup: lookupFrom({'30140071': BH})});
