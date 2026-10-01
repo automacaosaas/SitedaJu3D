@@ -5,7 +5,7 @@ import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
-import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep} from './shipping-client.js';
+import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
 import {freeShippingBar} from './free-shipping.js';
 import {installmentRows, installmentsTable} from './installments.js';
@@ -40,7 +40,7 @@ let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().le
 let selected = new Set(cart.map(i=>i.id));
 const purchaseItems = () => selectedItems(cart, selected);
 // ── real shipping (Correios contract) ───────────────────────────────────
-// `ship` holds the CEP asked, the options the server answered and the one chosen (the cheapest until the buyer picks another).
+// `ship` holds the CEP asked, the options the server answered and the one chosen (PAC until the buyer picks another; see pickOption).
 // The browser never sends a price to be trusted: the server quotes again when the order is paid and compares.
 let ship = {cep: '', key: '', status: 'idle', options: [], chosen: null, error: null}, shipToken = 0, shipTimer = null;
 let cepTimer = null, cepToken = 0, cepDone = '';
@@ -83,7 +83,7 @@ async function requestShipping(cep) {
   const result = await quoteShipping({items: purchaseItems(), cep});
   if (token !== shipToken) return;   // the CEP or the cart changed meanwhile
   ship = result.ok
-    ? {...ship, status: 'ready', options: result.options, chosen: result.options.find(o => o.service === previous) || result.options[0]}
+    ? {...ship, status: 'ready', options: result.options, chosen: pickOption(result.options, previous)}
     : {...ship, status: result.error === 'no_service' || result.error === 'invalid_cep' ? 'none' : 'error', error: result.error};
   paintShipping();
   if (!result.ok) announce(shippingMessage(result.error));

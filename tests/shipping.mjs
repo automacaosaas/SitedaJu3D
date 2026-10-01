@@ -48,7 +48,7 @@ for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS
 
 // the shop's data: nothing is guessed
 assert.deepEqual(missing(baseConfig), [], 'the shipped config is complete: with the Correios credentials the real quote is on');
-assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG only; 3 to 5 days of production');
+assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298'], ['sedex', '03220']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG and SEDEX CONTRATO AG; 3 to 5 days of production');
 assert.deepEqual([baseConfig.freeShipping, baseConfig.labelFeeCents], [{fromCents: 50000, service: 'pac'}, 0], 'free PAC from R$ 500, no extra label fee');
 const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250}};
 assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; butterfly + dinosaur weigh 257 g together, the airplane about 250 g');
@@ -217,15 +217,15 @@ const ITEMS = [{productId: 'borboletoscopio', quantity: 3, selection: {body: 'pi
   noSecrets(fake);
 }
 
-// ── the shop's shipped data end to end: PAC only, free from R$ 500 ─────────────────────────────────────
+// ── the shop's shipped data end to end: PAC and SEDEX, PAC free from R$ 500 ─────────────────────────────────────
 {
   const fake = fresh(), shop = createShipping({env: ENV_OF(fake), fetchImpl: fake.fetchImpl, config: baseConfig});
   assert.equal(shop.status().mode, 'correios');
   const under = await shop.quote({lines: LINES, cep: '90010-000', subtotalCents: 49999}), over = await shop.quote({lines: LINES, cep: '90010-000', subtotalCents: 50000});
-  assert.deepEqual(under.options.map(o => [o.service, o.free, o.volumes, o.priceCents]), [['pac', false, 2, pac(6, 1, 2)]], 'PAC only; 3 butterflies + 1 airplane are two boxes; R$ 499,99 pays the freight');
-  assert.deepEqual(over.options.map(o => [o.service, o.free, o.priceCents, o.costCents]), [['pac', true, 0, pac(6, 1, 2)]], 'R$ 500,00 ships free; the shop still pays the label');
-  assert.deepEqual(under.options[0].days, {min: 3 + 15, max: 5 + 15}, 'production 3 to 5 days + the carrier\'s 15');
-  assert(!fake.calls.some(c => c.path.includes('03220')), 'SEDEX is never asked for');
+  assert.deepEqual(under.options.map(o => [o.service, o.free, o.volumes, o.priceCents]), [['pac', false, 2, pac(6, 1, 2)], ['sedex', false, 2, sedex(6, 1, 2)]], 'PAC and SEDEX, cheapest first; 3 butterflies + 1 airplane are two boxes; R$ 499,99 pays both');
+  assert.deepEqual(over.options.map(o => [o.service, o.free, o.priceCents, o.costCents]), [['pac', true, 0, pac(6, 1, 2)], ['sedex', false, sedex(6, 1, 2), sedex(6, 1, 2)]], 'R$ 500,00: PAC ships free (the shop still pays the label) and SEDEX keeps its full price');
+  assert.deepEqual(under.options.map(o => o.days), [{min: 3 + 15, max: 5 + 15}, {min: 3 + 7, max: 5 + 7}], 'production 3 to 5 days + the carrier\'s time, each service its own');
+  assert.deepEqual(under.options.map(o => o.code), ['03298', '03220'], 'the contract codes of PAC CONTRATO AG and SEDEX CONTRATO AG');
 }
 
 // ── health says where shipping stands, never a value ─────────────────────────────────────────────────
@@ -339,6 +339,16 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
 {
   const client = await site('shipping-client.js'), {translate} = await site('i18n-core.js');
   const answer = (status, body) => async () => ({ok: status >= 200 && status < 300, status, json: async () => body});
+  // which option starts marked: what the buyer already had, else PAC even when SEDEX is cheaper (a local CEP), else the cheapest
+  const opt = (service, priceCents) => ({service, label: service.toUpperCase(), priceCents, free: false, days: {min: 4, max: 6}});
+  const local = [opt('sedex', 1057), opt('pac', 1644)], usual = [opt('pac', 2201), opt('sedex', 4573)];
+  assert.equal(client.pickOption(local).service, 'pac', 'SEDEX cheaper and listed first: PAC is still the one marked');
+  assert.equal(client.pickOption(usual).service, 'pac');
+  assert.equal(client.pickOption(local, 'sedex').service, 'sedex', 'the buyer\'s own choice is kept when the options are quoted again');
+  assert.equal(client.pickOption(usual, 'gone').service, 'pac', 'a service that is no longer offered falls back to PAC');
+  assert.equal(client.pickOption([opt('sedex', 1057)]).service, 'sedex', 'only SEDEX offered: SEDEX');
+  assert.equal(client.pickOption([opt('x1', 500), opt('x2', 900)]).service, 'x1', 'no PAC at all: the first, the cheapest');
+  assert(/chosen: pickOption\(result\.options, previous\)/.test(fs.readFileSync(path.join(root, 'dist/checkout.js'), 'utf8')), 'the checkout marks the option with pickOption');
   assert.deepEqual(await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 5, maxDays: 7}})}), {mode: 'correios', production: {minDays: 5, maxDays: 7}, freeShipping: null});
   assert.deepEqual((await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', production: {minDays: 3, maxDays: 5}, freeShipping: {fromCents: 50000, label: 'PAC'}})})).freeShipping, {fromCents: 50000, label: 'PAC'});
   assert.equal((await client.loadShippingConfig({fetchImpl: answer(200, {mode: 'correios', freeShipping: {fromCents: -1}})})).freeShipping, null, 'a nonsense threshold is ignored');

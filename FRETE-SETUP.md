@@ -10,7 +10,9 @@ Correios Empresa; este guia cobre só a **cotação**.
 1. Na etapa de entrega, o cliente digita o CEP. O navegador manda ao servidor só **o que pesar** (produto e quantidade) e o CEP:
    `POST /api/shipping/quote`. Nenhum preço sai do navegador.
 2. O servidor monta os **volumes** (caixas) do pedido, consulta a API dos Correios (Preço e Prazo de cada serviço) e devolve as
-   opções, da mais barata para a mais cara. O prazo mostrado é o **prazo de produção da Ju + o dos Correios**.
+   opções, da mais barata para a mais cara. O prazo mostrado é o **prazo de produção da Ju + o dos Correios**. A opção que já vem
+   **marcada é o PAC**, mesmo quando o SEDEX sai mais barato (acontece em CEPs da cidade da Ju); o cliente troca se quiser, e a
+   escolha dele é mantida quando o frete é cotado de novo.
 3. Na hora de pagar, `POST /api/payments/create` **cota de novo no servidor** e só aceita a opção que o cliente viu (mesmo
    serviço e mesmo valor). Se o valor mudou, responde `409 shipping_changed` com as opções novas; o checkout volta à entrega,
    avisa e o cliente escolhe de novo. O Mercado Pago cobra itens + o frete calculado pelo servidor.

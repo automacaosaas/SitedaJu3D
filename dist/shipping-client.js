@@ -36,6 +36,11 @@ export async function quoteShipping({items, cep}, {fetchImpl = globalThis.fetch,
   finally { clearTimeout(timer); }
 }
 
+// The option marked when the options arrive: the one the buyer already had, else PAC (the shop's standard service, free above
+// R$ 500), else the first one (the cheapest). The buyer can always pick another: a CEP where SEDEX is cheaper still starts on PAC.
+export const DEFAULT_SERVICE = 'pac';
+export const pickOption = (options, previous) => options.find(o => o.service === previous) || options.find(o => o.service === DEFAULT_SERVICE) || options[0];
+
 // "20 a 22 dias úteis" · "5 dias úteis" (the site translates the phrase as a whole).
 export const formatDays = ({min, max}) => min === max ? `${min} dias úteis` : `${min} a ${max} dias úteis`;
 
