@@ -59,7 +59,11 @@ const {translate} = await site('i18n-core.js');
 // ── checkout: Pix or card before the Brick, amounts that match ────────
 {
   const checkout = read('dist/checkout.js');
-  assert.doesNotMatch(checkout, /<fieldset class="payment-choice" \$\{live\.mode/, 'the choice shows with real payments too');
+  assert.match(checkout, /function payOptions\(\)/, 'real payments: Pix and card side by side on the payment step, above the Brick');
+  assert.match(checkout, /\$\{progress\(\)\}\$\{payOptions\(\)\}/);
+  assert.match(checkout, /% OFF NO PIX<\/b> · <span>economize \$\{money\(pix\.discount\)\}/, 'the Pix band says how much is saved');
+  assert.match(checkout, /if\(e\.target\.name==='pay-method'&&stage==='payment'&&order\?\.live&&order\.phase==='form'\)\{method=[^}]*amounts:\(method==='pix'\?pixTotals:totals\)\(order\.items,order\.amounts\.shipping\)\};render\(false\)/, 'switching remounts the Brick with the new method and amount');
+  assert.match(checkout, /if\(live\.mode==='off'\)method=draft\.payment/, 'with real payments the delivery step does not choose');
   assert.match(checkout, /createLiveOrder\(purchaseItems\(\),method\)/);
   assert.match(checkout, /amounts: \(pix \? pixTotals : totals\)\(snapshot, shippingCents\(\) \?\? undefined\)/, 'the Brick gets the discounted amount for Pix');
   assert.match(checkout, /paymentMethods: order\.method === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: 12\}/, 'the Brick offers only the method chosen');
@@ -80,7 +84,10 @@ const {translate} = await site('i18n-core.js');
   assert.equal(translate('5% de desconto nas peças', 'es'), '5% de descuento en las piezas');
   assert.equal(translate('Pix · 5% de desconto nas peças', 'en'), 'Pix · 5% off the items');
   assert.equal(translate('(5% de desconto)', 'es'), '(5% de descuento)');
-  for (const text of ['No Pix', 'no Pix', 'Desconto no Pix', 'Crédito ou débito, em até 12x', 'O pagamento é feito com segurança pelo Mercado Pago.', 'Cartão de crédito ou débito', 'Trocar forma de pagamento'])
+  assert.equal(translate('5% OFF NO PIX', 'en'), '5% OFF WITH PIX');
+  assert.equal(translate('economize R$ 20,85', 'es'), 'ahorra R$ 20,85');
+  assert.match(translate('Na próxima etapa você escolhe entre Pix, com 5% de desconto nas peças, ou cartão de crédito ou débito. O pagamento é feito com segurança pelo Mercado Pago.', 'en'), /^In the next step you choose Pix, with 5% off/);
+  for (const text of ['No Pix', 'no Pix', 'Desconto no Pix', 'O pagamento é feito com segurança pelo Mercado Pago.', 'Crédito ou débito', 'ATÉ 12X NO CRÉDITO', 'veja as parcelas', 'Copia e cola ou QR Code'])
     for (const locale of ['en', 'es']) assert.notEqual(translate(text, locale), text, `${locale}: ${text}`);
   assert.match(read('dist/termos.html'), /No Pix, as peças têm 5% de desconto \(o frete não entra no desconto\)/, 'the Termos tell the rule');
 }

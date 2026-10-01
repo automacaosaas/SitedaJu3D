@@ -688,10 +688,10 @@ Calcule o frete|Calculate shipping|Calcula el envío
 no Pix|with Pix|con Pix
 No Pix|With Pix|Con Pix
 Desconto no Pix|Pix discount|Descuento Pix
-Crédito ou débito, em até 12x|Credit or debit, up to 12 installments|Crédito o débito, hasta 12 cuotas
 O pagamento é feito com segurança pelo Mercado Pago.|Payment is processed securely by Mercado Pago.|El pago se procesa de forma segura con Mercado Pago.
-Cartão de crédito ou débito|Credit or debit card|Tarjeta de crédito o débito
-Trocar forma de pagamento|Change payment method|Cambiar forma de pago
+Crédito ou débito|Credit or debit|Crédito o débito
+ATÉ 12X NO CRÉDITO|UP TO 12 INSTALLMENTS ON CREDIT|HASTA 12 CUOTAS CON CRÉDITO
+veja as parcelas|see the installments|ver las cuotas
 Calcular|Calculate|Calcular
 Sem frete · ver resumo|Without shipping · see summary|Sin envío · ver resumen
 sem frete|without shipping|sin envío
