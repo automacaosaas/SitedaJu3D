@@ -15,6 +15,8 @@ for (const file of (await readdir(dist)).filter(f => /\.(html|js|css)$/.test(f))
 }
 // Names that code joins with "assets/" at runtime (product images, showcase layers and tools).
 for (const product of Object.values(PRODUCTS)) for (const name of [product.image, product.catalogImage].filter(Boolean)) referenced.add(name);
+// The showcase cards load a light preview first (catalog.js builds `card-preview-<id>.webp` next to each card-<id>.webp).
+for (const id of Object.keys(PRODUCTS)) if (await exists(`card-${id}.webp`)) referenced.add(`card-preview-${id}.webp`);
 const productsSource = await readFile(new URL('products.js', dist), 'utf8');
 for (const [, name] of productsSource.matchAll(/'([\w-]+\.(?:webp|png|jpe?g|svg))'/g)) referenced.add(name);
 

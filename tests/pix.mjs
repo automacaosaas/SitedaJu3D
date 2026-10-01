@@ -45,10 +45,10 @@ const {translate} = await site('i18n-core.js');
   const cart = normalizeCart([{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaoscopia', quantity: 1}]);
   assert.match(cartSummary(cart, {}), /<div class="pix-hint"><dt>No Pix <small>\(5% off\)<\/small><\/dt><dd>R\$\s?414,15<\/dd><\/div>/, 'cart: the Pix total under the total');
 
-  // product cards: the script and the pre-rendered copy in produtos.html carry the same Pix price
+  // product cards: the showcase carousel (catalog.js) and the Produtos grid (pre-rendered in produtos.html) carry the Pix price
   const page = read('dist/produtos.html'), script = read('dist/catalog.js');
   assert.match(script, /<span class="product-rail-pix">\$\{money\(pixPrice\(COMMERCE\.prices\[id\]\)\)\} no Pix<\/span>/);
-  for (const price of Object.values(COMMERCE.prices)) assert(page.includes(`<span class="product-rail-pix">${money(pixPrice(price)).replace(/ /g, '&nbsp;')} no Pix</span>`), `produtos.html: ${money(pixPrice(price))} no Pix`);
+  for (const price of Object.values(COMMERCE.prices)) assert(page.includes(`<span class="product-grid-pix">${money(pixPrice(price))} no Pix</span>`), `produtos.html grid: ${money(pixPrice(price))} no Pix`);
   assert.match(read('dist/carousel.js'), /<span class="copy-pix">5% off no Pix<\/span>/, 'banner: price with the Pix badge');
   assert.match(read('dist/controller.js'), /\$\('#product-pix'\)\.textContent=`\$\{money\(pixPrice\(price\)\)\} no Pix`/, 'product page: the Pix price');
 }

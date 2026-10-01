@@ -13,10 +13,12 @@ const {PRODUCTS, defaults, color} = await site('products.js');
 const {COMMERCE, money, pixPrice} = await site('commerce-config.js');
 const html = string => string.replace(/ /g, '&nbsp;');
 
-// ── B1: pre-rendered cards = the default combination ──────────────────
+// ── B1, B2, B5: the Produtos grid (pre-rendered) = the default combination, price, Pix and production time ──
 {
   const page = read('dist/produtos.html');
-  const cards = page.split('<article class="product-rail-card').slice(1);
+  assert.match(page, /<div class="product-grid" data-product-grid data-category="oftalmologia" aria-label="Produtos de oftalmologia"><!-- grid -->/, 'a grid instead of the carousel (audit B2)');
+  assert.doesNotMatch(page, /data-product-carousel/);
+  const cards = page.split('<article class="product-grid-card"').slice(1);
   assert.equal(cards.length, Object.keys(PRODUCTS).length, 'one pre-rendered card per product');
   for (const card of cards) {
     const id = /data-product-id="([a-z]+)"/.exec(card)?.[1];
@@ -24,10 +26,12 @@ const html = string => string.replace(/ /g, '&nbsp;');
     const swatches = [...card.matchAll(/<i style="--swatch:(#[0-9a-f]{6})" title="([^"]+)"><\/i>/g)].map(m => [m[1], m[2]]);
     const expected = Object.values(defaults(id)).map(c => [color(c).hex, color(c).name]);
     assert.deepEqual(swatches, expected, `${id}: the dots show the default colors`);
-    assert(card.includes(`data-price-cents="${COMMERCE.prices[id]}"`), `${id}: price data`);
-    assert(card.includes(`<strong>${html(money(COMMERCE.prices[id]))}</strong>`), `${id}: price`);
-    assert(card.includes(`${html(money(pixPrice(COMMERCE.prices[id])))} no Pix`), `${id}: Pix price`);
-    assert(card.includes(`data-product-title="${PRODUCTS[id].title}"`) && card.includes(`data-product-subtitle="${PRODUCTS[id].subtitle}"`), `${id}: title and subtitle`);
+    assert(card.includes(`<strong>${money(COMMERCE.prices[id])}</strong>`), `${id}: price`);
+    assert(card.includes(`${money(pixPrice(COMMERCE.prices[id]))} no Pix`), `${id}: Pix price`);
+    assert(card.includes(`<h2><a href="${id}.html">${PRODUCTS[id].title}</a></h2>`), `${id}: the name links to the product's own page`);
+    assert(card.includes(`Feito sob encomenda · ${COMMERCE.productionLabel}`), `${id}: production time on the card (audit B5)`);
+    assert(card.includes(`href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`), `${id}: customize`);
+    assert(card.includes(`data-add-product="${id}"`), `${id}: quick add (mini-cart)`);
   }
   // the card art of the dinosaur is the moss-green default (the old one was sky blue); every card image exists
   for (const id of Object.keys(PRODUCTS)) for (const name of [`card-${id}.webp`, `card-preview-${id}.webp`]) assert(fs.existsSync(path.join(root, 'dist/assets', name)), name);

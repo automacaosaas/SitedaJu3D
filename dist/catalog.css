@@ -15,3 +15,24 @@
 @media(max-width:760px){.product-carousel-stage{height:540px}.product-rail-card{width:62vw;min-height:450px;transform:translate(calc(-50% + var(--slot) * 61vw + var(--drag)),20px) scale(.9)}.product-rail-card.is-active{width:68vw;min-height:470px}.product-rail-art{height:205px}.product-rail-card.is-active .product-rail-art{height:218px}.product-rail-copy{padding:14px 15px 16px}.product-rail-copy h3{font-size:23px}.product-rail-bottom{margin-top:10px}.product-rail-actions{margin-top:10px}.product-carousel-arrow{width:38px;height:38px;top:41%}.product-carousel-arrow .icon{width:19px;height:19px}.product-carousel-prev{left:4px}.product-carousel-next{right:4px}}@media(max-width:390px){.product-carousel-stage{height:526px}.product-rail-card{width:64vw;transform:translate(calc(-50% + var(--slot) * 62vw + var(--drag)),20px) scale(.88)}.product-rail-card.is-active{width:70vw;min-height:462px}.product-rail-art{height:196px}.product-rail-card.is-active .product-rail-art{height:209px}.product-carousel-arrow{width:36px;height:36px}}
 /* Audit L1: side cards keep their depth (scale and shadow) but the text stays at full contrast; only the picture fades. */
 .product-rail-card{opacity:1;filter:none}.product-rail-card:not(.is-active) .product-rail-art img{opacity:.55;filter:saturate(.82);transition:opacity 360ms ease}
+/* Produtos page as a grid (product-grid.js, audits B2 and B5): every piece sharp, 3 columns on a computer, 2 on a phone. */
+.product-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:28px}
+.product-grid-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid #eadde1;border-radius:22px;background:#fff;box-shadow:0 16px 34px -24px #65364930}
+.product-grid-art{position:relative;background:linear-gradient(to bottom,var(--theme-wash,#fff7f5),#fff 85%)}
+.product-grid-art img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;padding:6%}
+.product-grid-art .product-cart{position:absolute;top:12px;right:12px}
+.product-grid-copy{display:flex;flex-direction:column;flex:1;padding:16px 20px 20px}
+.product-grid-category{margin:0;font-size:12px;font-weight:650;letter-spacing:.24em;text-transform:uppercase;color:var(--theme-accent,var(--rose))}
+.product-grid-copy h2{margin:6px 0 2px;font:500 26px/1.15 'Playfair Display',Georgia,serif}
+.product-grid-copy h2 a{color:inherit;text-decoration:none}.product-grid-copy h2 a:hover{text-decoration:underline;text-underline-offset:4px}
+.product-grid-sub{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.product-grid-colors{margin:0 0 12px}
+.product-grid-price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:0}
+.product-grid-price strong{font-size:20px;font-weight:700}
+.product-grid-pix{font-size:14px;color:#1f6b47;font-weight:600}
+.product-grid-made{display:flex;align-items:center;gap:8px;margin:10px 0 0;font-size:13px;color:var(--muted)}
+.product-grid-made .icon{width:18px;height:18px;flex-shrink:0;color:var(--theme-accent,var(--rose))}
+.product-grid-note{margin:4px 0 14px;font-size:12px;color:var(--muted)}
+.product-grid-copy .product-customize{margin-top:auto;justify-content:center;text-align:center}
+@media(max-width:900px){.product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}
+@media(max-width:600px){.product-grid{gap:10px;margin-left:-24px;margin-right:-24px}.product-grid-copy{padding:12px 12px 14px}.product-grid-copy h2{font-size:17px;overflow-wrap:anywhere}.product-grid-sub{display:none}.product-grid-category{font-size:12px;letter-spacing:.14em}.product-grid-price strong{font-size:17px}.product-grid-pix{font-size:13px}.product-grid-made{align-items:flex-start;font-size:12px}.product-grid-art .product-cart{top:8px;right:8px}.product-grid-copy .product-customize{padding-left:8px;padding-right:8px;font-size:13px}}

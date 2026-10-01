@@ -15,16 +15,14 @@ const {COMPANY} = require('../api/_lib/legal');
 const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const nbsp = text => text.replace(/ /g, '&nbsp;');
-const SVG = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
-const CLOCK = SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>');
 // Pages search engines may list (Sobre and Contato stay out while they are empty; account and checkout steps are private).
 const LISTED = ['', 'produtos.html', '{products}', 'termos.html', 'privacidade.html', 'trocas.html'];
 const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html', '/conta.html', '/email-preview.html'];
 
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
-  const [products, commerce, icons] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js')]);
-  return {...products, ...commerce, icon: icons.icon};
+  const [products, commerce, icons, grid] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js')]);
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid};
 }
 
 function page(id, data, base) {
@@ -64,7 +62,7 @@ function page(id, data, base) {
           <div class="pl-colors"><h2>Cores originais</h2><ul>${colors}</ul>${product.fixed ? `<p class="pl-fixed">${esc(product.fixed)}</p>` : ''}</div>
           <div class="pl-actions"><a class="primary pl-customize" href="index.html#produto/${id}/personalizar">${icon('palette')}<span>Personalizar o meu</span></a><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button></div>
           <ul class="pl-facts">
-            <li>${CLOCK}<span><strong>Feito sob encomenda</strong>Produção em ${esc(COMMERCE.productionLabel)}</span></li>
+            <li>${icon('clock')}<span><strong>Feito sob encomenda</strong>Produção em ${esc(COMMERCE.productionLabel)}</span></li>
             <li>${icon('truck')}<span><strong>Envio para todo o Brasil</strong>Frete calculado pelo CEP</span></li>
             <li>${icon('returns')}<span><strong>Trocas e Devoluções</strong><a href="trocas.html">Ver a política</a></span></li>
           </ul>
@@ -79,8 +77,11 @@ const sitemap = ids => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="h
 const robots = () => `User-agent: *\n${PRIVATE.map(p => `Disallow: ${p}`).join('\n')}\n\nSitemap: ${siteBase()}/sitemap.xml\n`;
 
 async function build() {
-  const data = await site(), base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8'), ids = Object.keys(data.PRODUCTS);
-  return [...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
+  const data = await site(), ids = Object.keys(data.PRODUCTS);
+  // produtos.html: the grid of products (audit B2), the same markup product-grid.js draws in the browser.
+  const base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n')
+    .replace(/(<div class="product-grid" data-product-grid data-category="([a-z]+)"[^>]*><!-- grid -->)[^]*?(<!-- \/grid -->)/, (all, open, key, close) => open + data.productGrid(key) + close);
+  return [{name: 'produtos.html', text: base}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
 }
 
 if (require.main === module) {
