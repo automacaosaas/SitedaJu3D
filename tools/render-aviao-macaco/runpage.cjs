@@ -14,4 +14,5 @@ withBrowser(async b => {
   if (results) for (const [name, url] of Object.entries(results)) fs.writeFileSync(out.replace(/\.png$/, '') + '-' + name + '.png', Buffer.from(url.split(',')[1], 'base64'));
   else fs.writeFileSync(out, Buffer.from((await b.eval('window.png')).split(',')[1], 'base64'));
   console.log('ok', Math.round((Date.now() - started) / 100) / 10 + 's', JSON.stringify(await b.eval('window.info || null')), b.consoleLog.filter(l => /error|exception/i.test(l)).slice(0, 3).join(' | '));
+  if (process.env.SHOWLOG) console.log(b.consoleLog.join('\n'));
 }, {webgl: true, port: 9341});

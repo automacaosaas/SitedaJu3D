@@ -90,7 +90,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
         '--tool-turn': `${turn}deg`, '--tool-shift': tool.shift || 0, [far[0]]: turn ? Math.min(.45, Math.abs(turn) * .04) : 0, [far[1]]: 0, '--tool-side': `${-Math.sign(turn) * Math.min(2, Math.abs(turn) * .16)}px`,
         '--demo-core': withAlpha(config.glow, .95), '--demo-halo': withAlpha(config.halo, .3), '--demo-halo-soft': withAlpha(config.halo, .1), '--demo-accent': withAlpha(config.accent, .12),
         '--demo-bounce': withAlpha(config.halo, .85), '--demo-vignette': withAlpha(config.shade, .16), '--demo-zoom': config.zoom || 1, '--front-src': `url("${front}")`,
-        '--cy-shift': `${config.cy?.wide ?? 0}%`, '--cy-shift-compact': `${config.cy?.compact ?? config.cy?.wide ?? 0}%`,
+        '--cy-shift': `${config.cy?.wide ?? 0}%`, '--cta-y-compact': config.ctaY?.compact ?? .78, '--cy-shift-compact': `${config.cy?.compact ?? config.cy?.wide ?? 0}%`,
         ...(config.head ? {'--head-w': config.head.width, '--head-top': config.head.top, '--head-ratio': config.head.ratio} : {})};
       // Camada de trás renderizada junto com a frente (depth 0) entra como veio; recortada de outra imagem (depth > 0) é
       // recuada, escurecida e mostrada só em volta da abertura para compensar a diferença.
@@ -149,15 +149,18 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     // encaixe simples · equipamento em duas partes (a cabeça desce depois que a base sobe) · montagem
     const T = asm ? {tool: 900, shade: 1660, labels: 2150, cta: 2260, glow: 2000, drop: 1900} : config.head ? {tool: 520, shade: 880, labels: 1650, cta: 1760, glow: 1700, drop: 1700, head: 1000} : {tool: 520, shade: 880, labels: 1120, cta: 1220, glow: 1220, drop: 1260};
     const assemble = () => {
-      // cada metade: z (px de perspectiva), x/y (% do quadrado) e giro em Y (graus) quando aberta; a da frente avança e sai para cima e para a esquerda, a de trás recua para baixo e para a direita
-      const at = ({z = 0, x = 0, y = 0, ry = 0} = {}) => `translate3d(${x}%, ${y}%, ${z}px) rotateY(${ry}deg)`;
-      // abrem, esperam o equipamento, fecham acelerando (o ímã puxa), batem (over: px além do ponto) e assentam
+      // cada metade quando aberta (vista explodida): z (px de perspectiva), x/y (% do quadrado) e giros em X/Y (graus); a da frente vem para perto, a de trás recua
+      const at = ({z = 0, x = 0, y = 0, rx = 0, ry = 0} = {}) => `translate3d(${x}%, ${y}%, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      const drift = (to, k) => Object.fromEntries(Object.entries(to).map(([name, value]) => [name, value * k]));
+      // abrem, seguem se afastando um pouco enquanto a régua sobe (nada fica parado), fecham acelerando (o ímã puxa), batem (over: px além do ponto) e assentam
       const shell = (to, over) => [
-        {offset: 0, transform: at(), easing: EASE.out}, {offset: .3, transform: at(to), easing: EASE.settle}, {offset: .58, transform: at(to), easing: 'cubic-bezier(.5, 0, .8, .4)'},
+        {offset: 0, transform: at(), easing: EASE.out}, {offset: .3, transform: at(to), easing: 'linear'}, {offset: .6, transform: at(drift(to, 1.06)), easing: 'cubic-bezier(.5, 0, .8, .4)'},
         {offset: .9, transform: at(), easing: EASE.out}, {offset: .95, transform: at({z: over}), easing: EASE.settle}, {offset: 1, transform: at()}];
       return [
         {el: d.sleeve, delay: 520, duration: 1360, keyframes: shell(asm.open, -5)},
         {el: back, delay: 520, duration: 1360, keyframes: shell(asm.apart, 5)},
+        // o estalo dos ímãs: as duas metades incham um fio e voltam (scale é outra propriedade: não briga com o transform acima nem com a inclinação)
+        ...[d.sleeve, back].map(el => ({el, delay: 1735, duration: 320, easing: EASE.settle, keyframes: [{scale: '1'}, {offset: .3, scale: '1.007'}, {scale: '1'}]})),
         // no estalo, um brilho atravessa a frente (sobreposição das camadas)
         {el: d.sheen, delay: 1790, duration: 760, easing: EASE.soft, keyframes: [{offset: 0, opacity: 0, transform: 'translateX(-130%) skewX(-16deg)'}, {offset: .15, opacity: 1}, {offset: .85, opacity: 1}, {offset: 1, opacity: 0, transform: 'translateX(330%) skewX(-16deg)'}]}
       ];

@@ -9,15 +9,15 @@ Voltar à vitrine|Back to showcase|Volver a la vitrina
 Retinoscópio|Retinoscope|Retinoscopio
 Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
 Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.
-Aviãoscopia fechada em volta da régua de grau.|Aviãoscopia closed around the lens rack.|Aviãoscopia cerrada alrededor de la regla de lentes.
+Aviãoscopia fechada em volta da régua de esquiascopia.|Aviãoscopia closed around the skiascopy rack.|Aviãoscopia cerrada alrededor de la regla de esquiascopia.
 Novidade · em breve|New · coming soon|Novedad · próximamente
 Em breve|Coming soon|Próximamente
-Capa para equipamento oftalmológico|Cover for ophthalmic equipment|Funda para equipo oftalmológico
-Equipamento|Equipment|Equipo
-Macacoscópio encaixado no equipamento.|Macacoscópio fitted on the equipment.|Macacoscópio encajado en el equipo.
+Capa para lâmpada de fenda portátil|Cover for a handheld slit lamp|Funda para lámpara de hendidura portátil
+Lâmpada de fenda|Slit lamp|Lámpara de hendidura
+Macacoscópio encaixado na lâmpada de fenda.|Macacoscópio fitted on the slit lamp.|Macacoscópio encajado en la lámpara de hendidura.
 Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca|Macacoscópio, a brown monkey cover holding a banana, on a white pedestal|Macacoscópio, funda de mono marrón con una banana, sobre un pedestal blanco
 Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
-Régua de grau|Lens rack|Regla de lentes
+Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
 Categorias de produtos|Product categories|Categorías de productos

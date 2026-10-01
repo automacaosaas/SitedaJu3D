@@ -1,185 +1,161 @@
 <!doctype html>
 <meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
-<body style="margin:0;background:#888"><script type="module">
-// Aviãoscopia renders from the real STL parts (Blender project of 21/08/2026) plus a model of the degree ruler. One camera for every layer, so
-// the layers register pixel for pixel:
-//   full  = both shells assembled (the vitrine cutout)    front = the front shell alone    back = the back shell alone, seen from its inner face
-//   ruler = the degree ruler at its assembled position, on a taller canvas (the handle hangs below the airplane)    ped = the assembled airplane on the white pillar
+<body style="margin:0;background:#777"><script type="module">
+// Aviãoscopia from the real STL parts (project of 21/08/2026) in the studio of studio.js, with the degree ruler of ruler.js. One camera for
+// every layer, so they register pixel for pixel:
+//   full = both shells assembled (vitrine and catalogue)   front = front shell with its parts   back = back shell, seen through the front
+//   ruler = the ruler at its assembled place, on a taller canvas (the grip hangs below)   inuse = assembled with the ruler inside (check view)
+// ?orbit=az,el turns the camera round the model to check where the small parts sit.
 import * as THREE from 'three';
 import {toCreasedNormals} from '/vendor/utils/BufferGeometryUtils.js';
+import {makeRenderer, studioEnvironment, renderStudio, finish, cropToContent, artBox} from './studio.js';
+import {buildRuler, RULER} from './ruler.js';
 
 const P = Object.fromEntries(new URLSearchParams(location.search));
-const SIZE = Number(P.size || 1254), SS = Number(P.ss || 2), RULER_H = Number(P.rulerh || 1850);
-const C = {body: P.body || '#0c3290', details: P.details || '#c4122e', engines: P.engines || '#f19c00', glass: P.glass || '#e8eef1'};
+const SIZE = Number(P.size || 1254), PASSES = Number(P.passes || 40), RULER_H = Number(P.rulerh || 1850);
+const C = {body: P.body || '#123aa6', details: P.details || '#d0142f', engines: P.engines || '#f5ae0a', glass: P.glass || '#eef3f6'};
 
 async function stl(name) {
   const buf = await (await fetch('/stl/Airplane Oftalmology_' + name + '.stl')).arrayBuffer(), dv = new DataView(buf), n = dv.getUint32(80, true), pos = new Float32Array(n * 9);
   for (let t = 0; t < n; t++) for (let v = 0; v < 3; v++) for (let k = 0; k < 3; k++) pos[t * 9 + v * 3 + k] = dv.getFloat32(84 + t * 50 + 12 + v * 12 + k * 4, true);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  return toCreasedNormals(g, Number(P.crease || 30) * Math.PI / 180);
-}
-function studio(renderer) {
-  const env = new THREE.Scene();
-  env.add(new THREE.Mesh(new THREE.BoxGeometry(12, 12, 12), new THREE.MeshBasicMaterial({color: 0x6e6e6e, side: THREE.BackSide})));
-  const panel = (w, h, pos, k) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({color: new THREE.Color(k, k, k), side: THREE.DoubleSide})); m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m); };
-  panel(5, 5, [-3.5, -4.5, 3.5], 5.5); panel(4, 5, [4.5, -3.5, 1], 2.4); panel(8, 8, [0, 0, 5.8], 2.2); panel(6, 3, [0, 5.5, 2.5], 1.6); panel(10, 3, [0, -5.8, -2], 0.9);
-  const pmrem = new THREE.PMREMGenerator(renderer), tex = pmrem.fromScene(env, .035).texture; pmrem.dispose(); return tex;
+  return toCreasedNormals(g, Number(P.crease || 32) * Math.PI / 180);
 }
 
-const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});
-renderer.setPixelRatio(SS); renderer.setSize(SIZE, SIZE); renderer.setClearColor(0x000000, 0);
-renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = Number(P.exposure || .95);
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = P.vsm ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap;
-document.body.append(renderer.domElement);
+const renderer = makeRenderer(SIZE, SIZE, {exposure: Number(P.exposure || 1.02)});
 const scene = new THREE.Scene();
-scene.environment = studio(renderer);
-const ENVI = Number(P.envi || .7);
-const plastic = (hex, rough = .55, coat = .2) => new THREE.MeshPhysicalMaterial({color: new THREE.Color(hex), roughness: rough, clearcoat: coat, clearcoatRoughness: .35, envMapIntensity: ENVI});
-const glass = () => new THREE.MeshPhysicalMaterial({color: new THREE.Color(C.glass), roughness: .38, clearcoat: .8, clearcoatRoughness: .2, envMapIntensity: ENVI * 1.1});
+scene.environment = studioEnvironment(renderer, {top: Number(P.top || 5.5), left: Number(P.left || 3), right: Number(P.right || 2.4), scrim: Number(P.scrim || 1.5), glint: Number(P.glint ?? 16)});
+const plastic = (hex, rough = .42, coat = .32) => new THREE.MeshPhysicalMaterial({color: new THREE.Color(hex), roughness: rough, clearcoat: coat, clearcoatRoughness: .38, envMapIntensity: .9});
+const glassMat = new THREE.MeshPhysicalMaterial({color: new THREE.Color(C.glass), roughness: .22, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.4});
 
-// STL frames: the shells are in body space (centre x = y = 90, front face y = 104); the small parts are modelled around the origin and placed by hand.
+// STL frames: the shells are in body space (centre x = y = 90, front face y = 104); the small parts are modelled round the origin and placed by hand
 const SPEC = {
   front:  {file: 'Airplane_BodyShell_001', mat: plastic(C.body), at: [0, 0, 0]},
   back:   {file: 'Airplane_BodyShellbACK_001', mat: plastic(C.body), at: [0, 0, 0]},
-  glass:  {file: 'Cockpit_Windshield', mat: glass(), at: [90, 122.2, -52]},
-  pylons: {file: 'Engine_Pylons', mat: plastic(C.engines, .5, .25), at: [90, 90, -50]},
-  stars:  {file: 'Wing_Stars', mat: plastic(C.details, .5, .25), at: [90, 112.5, -50]},
-  nosef:  {file: 'NoseCone_Front', mat: plastic(C.details, .5, .25), at: [0, 0, Number(P.nz || 205)]},
-  noseb:  {file: 'NoseCone_Back', mat: plastic(C.details, .5, .25), at: [0, 0, Number(P.nz || 205)]}
+  glass:  {file: 'Cockpit_Windshield', mat: glassMat, at: [90, 122.2, -52]},
+  pylons: {file: 'Engine_Pylons', mat: plastic(C.engines, .4, .4), at: [90, 90, -50]},
+  stars:  {file: 'Wing_Stars', mat: plastic(C.details, .4, .4), at: [90, 112.5, -50]},
+  nosef:  {file: 'NoseCone_Front', mat: plastic(C.details, .4, .4), at: [0, 0, Number(P.nz || 205)]},
+  noseb:  {file: 'NoseCone_Back', mat: plastic(C.details, .4, .4), at: [0, 0, Number(P.nz || 205)]}
 };
-const SKIP = new Set((P.skip || '').split(',').filter(Boolean));
-const root = new THREE.Group(); scene.add(root);
+const zUp = new THREE.Group(), root = new THREE.Group(); zUp.add(root);
 const mesh = {};
-for (const [key, s] of Object.entries(SPEC)) {
-  if (SKIP.has(key)) continue;
-  const m = new THREE.Mesh(await stl(s.file), s.mat); m.position.set(...s.at); m.castShadow = m.receiveShadow = true; root.add(m); mesh[key] = m;
-}
-// the camera looks along +y with z up: turn the model half a turn about its own vertical axis so its front face (y = 104) faces the camera
+for (const [key, s] of Object.entries(SPEC)) { const m = new THREE.Mesh(await stl(s.file), s.mat); m.position.set(...s.at); m.castShadow = m.receiveShadow = true; root.add(m); mesh[key] = m; }
+// the STL camera looked along +y with z up: half a turn about the vertical so the front face (y = 104) faces −y …
 root.position.set(90, 90, 0); root.rotation.z = Math.PI; root.children.forEach(m => m.position.sub(new THREE.Vector3(90, 90, 0)));
-root.updateMatrixWorld(true);
-// world frame from here on: camera at −y looking +y, screen right = +x, up = +z; body centre x = 90, front face y = 76, back face y = 104
-
-// ── measured on the STL (holes.cjs): 16 through holes, 2 columns × 8 rows, Ø 16.28, relative to the body centre (x = 90, z = 105.243) ──
-const CX = 90, CZ = 105.243, COL = [-9.68, 9.62], ROW0 = 47.55, PITCH = 19.49, HOLE_D = 16.28;
-const holeCenters = []; for (let r = 0; r < 8; r++) for (let c = 0; c < 2; c++) holeCenters.push([COL[c], ROW0 - r * PITCH]);
-const LABELS = [['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4'], ['5', '6', '7', '8', '9', '10', '12', '15']];
-
-// engraved-look numbers beside the holes (the STL has none): same plastic, shown only by bump + a hairline of shade
-function numbersDecal() {
-  const PXMM = 14, W = Math.round(90 * PXMM), H = Math.round(170 * PXMM), c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
-  x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.font = `600 ${6.4 * PXMM}px "Helvetica Neue", Arial, sans-serif`;
-  const gx = mm => W / 2 + mm * PXMM, gy = mm => H / 2 - (mm + 20) * PXMM;   // decal centred at sz = -20
-  for (let side = 0; side < 2; side++) for (let r = 0; r < 8; r++) {
-    x.textAlign = side === 0 ? 'right' : 'left';
-    x.fillText(LABELS[side][r], gx(COL[side] + (side === 0 ? -1 : 1) * (HOLE_D / 2 + 2.2)), gy(ROW0 - r * PITCH) + PXMM * .25);
+// … then the whole thing is turned to y up, the front toward +z (the camera of studio.js): (x, y, z) → (x, z, −y)
+zUp.rotation.x = -Math.PI / 2; zUp.position.set(-90, 0, 90); scene.add(zUp); scene.updateMatrixWorld(true);
+// The STL halves come in their print orientation: as placed so far the front half shows its flat inner face (magnet pockets, the shallow bed
+// for the ruler) and the back half its rounded outer face. Assembled, the flat faces meet in the middle round the ruler and both rounded faces
+// look out: turn each half a half turn about the vertical and slide it so its flat face sits on z = 0.
+scene.updateMatrixWorld(true);
+const FLAT = {front: new THREE.Box3().setFromObject(mesh.front).max.z, back: new THREE.Box3().setFromObject(mesh.back).min.z};
+function assemble(m, flat) {   // p → (−x, y, flat − z): the half turn, then the flat face back onto z = 0
+  const pivot = new THREE.Group(); scene.add(pivot); pivot.attach(m);
+  pivot.rotation.y = Math.PI; pivot.position.z = flat; pivot.updateMatrixWorld(true); return pivot;
+}
+assemble(mesh.front, FLAT.front); assemble(mesh.nosef, FLAT.front); assemble(mesh.back, FLAT.back); assemble(mesh.noseb, FLAT.back);
+// the small parts were only ever translated, so they still share the front half's print orientation: give them the same half turn
+for (const k of ["glass", "stars"]) assemble(mesh[k], FLAT.front);   // the engines stand on the wings either way: left as they were
+// small parts keep facing the viewer; they move onto the rounded front (offsets in world millimetres, checked on oblique renders)
+function nudge(m, dx, dy, dz) { const q = m.parent.getWorldQuaternion(new THREE.Quaternion()).invert(); m.position.add(new THREE.Vector3(dx, dy, dz).applyQuaternion(q)); }
+nudge(mesh.glass, 0, Number(P.gy || 0), Number(P.gz || 0)); nudge(mesh.stars, 0, Number(P.sy || 0), Number(P.sz || 0)); nudge(mesh.pylons, 0, Number(P.py || 0), Number(P.pz || 0));
+scene.updateMatrixWorld(true);
+// seat a part on the front: cast rays straight back from its vertices onto the front half and slide it along z until it just touches,
+// then sink it by `embed` (the windows and the stars sit in their recesses)
+function seat(m, embed) {
+  const ray = new THREE.Raycaster(), p = m.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / 400)); let gap = Infinity;
+  for (let i = 0; i < p.count; i += step) {
+    const v = new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld);
+    ray.set(new THREE.Vector3(v.x, v.y, 200), new THREE.Vector3(0, 0, -1)); const hit = ray.intersectObject(mesh.front, false)[0];
+    if (hit) gap = Math.min(gap, v.z - hit.point.z);
   }
-  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8; tex.colorSpace = THREE.NoColorSpace;
-  const mat = new THREE.MeshPhysicalMaterial({color: new THREE.Color(C.body).multiplyScalar(.55), roughness: .6, bumpMap: tex, bumpScale: Number(P.bump || 3), alphaMap: tex, transparent: true, opacity: .55, depthWrite: false, envMapIntensity: ENVI});
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(90, 170), mat);
-  m.rotation.x = Math.PI / 2; m.position.set(CX, 76 - .03, CZ - 20); m.renderOrder = 5; return m;
+  if (gap < Infinity) nudge(m, 0, 0, -gap - embed);
+  scene.updateMatrixWorld(true); return +gap.toFixed(2);
+}
+// the ray casts take half a minute in software WebGL: their result (gap before seating, mm) is kept here; ?reseat=1 measures again
+const GAPS = {glass: -27.56, stars: -11.32}, sit = (k, embed) => { if (P.reseat) return seat(mesh[k], embed); nudge(mesh[k], 0, 0, -GAPS[k] - embed); scene.updateMatrixWorld(true); return GAPS[k]; };
+const seated = {glass: sit("glass", Number(P.gembed ?? 3.5)), stars: sit("stars", Number(P.sembed ?? .5))};
+window.FLAT = FLAT;
+// world from here on: x right (body centre x = 0), y up, the halves meet at z = 0, the front bulges toward +z
+
+// ── measured on the STL: 16 through holes, 2 columns × 8 rows, Ø 16.28, relative to the body centre (height 105.243) ──
+const CY = 105.243, COL = [-9.68, 9.62], ROW0 = 47.55, PITCH = 19.49, HOLE_D = 16.28, FRONT = 14;
+const LABELS = [['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4'], ['5', '6', '7', '8', '9', '10', '12', '15']];
+// engraved numbers beside the holes (the STL has none): same plastic, shown by relief and a hairline of shade
+function numbersDecal() {
+  const PXMM = 16, Wd = 90, Hd = 170, W = Math.round(Wd * PXMM), H = Math.round(Hd * PXMM), c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, W, H); x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.font = `600 ${6.2 * PXMM}px "Bahnschrift", Arial, sans-serif`;
+  const gx = mm => W / 2 + mm * PXMM, gy = mm => H / 2 - (mm + 20) * PXMM;
+  for (let side = 0; side < 2; side++) for (let r = 0; r < 8; r++) { x.textAlign = side === 0 ? 'right' : 'left'; x.fillText(LABELS[side][r], gx(COL[side] + (side === 0 ? -1 : 1) * (HOLE_D / 2 + 2.2)), gy(ROW0 - r * PITCH) + PXMM * .25); }
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 16; tex.colorSpace = THREE.NoColorSpace;
+  const mat = new THREE.MeshPhysicalMaterial({color: new THREE.Color(C.body).multiplyScalar(.5), roughness: .6, bumpMap: tex, bumpScale: Number(P.bump || 3), alphaMap: tex, transparent: true, opacity: Number(P.numop || 0), depthWrite: false, envMapIntensity: .9});
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(Wd, Hd), mat); m.position.set(0, CY - 20, Number(P.numz || 10)); m.renderOrder = 5; return m;
 }
 const decal = numbersDecal(); scene.add(decal);
 
-// ── the degree ruler (clear acrylic, black mask with 16 lenses, grip); sits behind the front shell, in front of the back shell ──
-function rulerGroup() {
-  const g = new THREE.Group(), Y = Number(P.ruler_y || 88);
-  const rrect = (w, top, bottom, r) => { const s = new THREE.Shape(), l = -w / 2, rr = w / 2; s.moveTo(l + r, top); s.lineTo(rr - r, top); s.quadraticCurveTo(rr, top, rr, top - r); s.lineTo(rr, bottom + r); s.quadraticCurveTo(rr, bottom, rr - r, bottom); s.lineTo(l + r, bottom); s.quadraticCurveTo(l, bottom, l, bottom + r); s.lineTo(l, top - r); s.quadraticCurveTo(l, top, l + r, top); return s; };
-  const zRow = r => ROW0 - r * PITCH;            // relative to the body centre
-  const top = zRow(0) + 27, plateTop = zRow(0) + 15.5, plateBottom = zRow(7) - 13.5, neckTop = plateBottom - 3, neckBottom = neckTop - 30, gripTop = neckBottom - 10, gripBottom = gripTop - 92;
-  // clear acrylic: wide head, tapering neck, runs into the grip
-  const A = new THREE.Shape(), hw = 26.4, nw = 11.5;
-  A.moveTo(-hw + 4, top); A.lineTo(hw - 4, top); A.quadraticCurveTo(hw, top, hw, top - 4); A.lineTo(hw, neckTop); A.bezierCurveTo(hw, neckTop - 14, nw + 1, neckTop - 8, nw, neckBottom); A.lineTo(nw, gripTop - 20); A.lineTo(-nw, gripTop - 20); A.lineTo(-nw, neckBottom); A.bezierCurveTo(-nw - 1, neckTop - 8, -hw, neckTop - 14, -hw, neckTop); A.lineTo(-hw, top - 4); A.quadraticCurveTo(-hw, top, -hw + 4, top);
-  const acrylic = new THREE.Mesh(new THREE.ExtrudeGeometry(A, {depth: 2.6, bevelEnabled: true, bevelSize: .5, bevelThickness: .5, bevelSegments: 3, curveSegments: 24}),
-    new THREE.MeshPhysicalMaterial({color: 0xdfeaf2, transparent: true, opacity: .2, roughness: .06, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.7, side: THREE.DoubleSide, depthWrite: false}));
-  acrylic.renderOrder = 1; acrylic.position.z = -3.3;   // the clear acrylic is the substrate: the black mask is printed on its front
-  // black mask with the 16 holes
-  const M = rrect(50.4, plateTop, plateBottom, 3.2);
-  for (const [hx, hz] of holeCenters) { const h = new THREE.Path(); h.absarc(hx, hz, HOLE_D / 2 - .45, 0, Math.PI * 2, true); M.holes.push(h); }
-  const plate = new THREE.Mesh(new THREE.ExtrudeGeometry(M, {depth: .5, bevelEnabled: false, curveSegments: 48}), new THREE.MeshPhysicalMaterial({color: 0x101113, roughness: .55, clearcoat: .15, envMapIntensity: .6}));
-  plate.position.z = 0; plate.renderOrder = 2;
-  // white printing on the mask: PLUS (+) and the dioptres beside the holes
-  const PXMM = 16, W = Math.round(54 * PXMM), H = Math.round((plateTop - plateBottom + 2) * PXMM), c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.textBaseline = 'middle';
-  const gx = mm => W / 2 + mm * PXMM, gy = mm => (plateTop + 1 - mm) * PXMM;
-  x.textAlign = 'center'; x.font = `600 ${4.1 * PXMM}px "Helvetica Neue", Arial, sans-serif`; x.fillText('PLUS  (+)', gx(0), gy(plateTop - 4.2));
-  x.font = `600 ${5 * PXMM}px "Helvetica Neue", Arial, sans-serif`;
-  for (let side = 0; side < 2; side++) for (let r = 0; r < 8; r++) { x.textAlign = side === 0 ? 'left' : 'right'; x.fillText(LABELS[side][r], gx(side === 0 ? -24.4 : 24.4), gy(zRow(r)) + PXMM * .2); }
-  const printTex = new THREE.CanvasTexture(c); printTex.colorSpace = THREE.SRGBColorSpace; printTex.anisotropy = 8;
-  const print = new THREE.Mesh(new THREE.PlaneGeometry(54, plateTop - plateBottom + 2), new THREE.MeshBasicMaterial({map: printTex, transparent: true, depthWrite: false}));
-  print.position.set(0, (plateTop + plateBottom) / 2, .52); print.renderOrder = 3;
-  // lenses: thin plus-lens caps, clear, with the soft reflections of the studio
-  const lensMat = new THREE.MeshPhysicalMaterial({color: 0xffffff, transparent: true, opacity: .08, roughness: .02, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 3.6, depthWrite: false});
-  const lensR = HOLE_D / 2 - .55, Rc = 38, theta = Math.asin(lensR / Rc);
-  const lensGeo = new THREE.SphereGeometry(Rc, 64, 16, 0, Math.PI * 2, 0, theta); lensGeo.rotateX(Math.PI / 2); lensGeo.translate(0, 0, -Rc * Math.cos(theta));   // cap bulging toward +z
-  for (const [hx, hz] of holeCenters) { const l = new THREE.Mesh(lensGeo, lensMat); l.position.set(hx, hz, 1.1); l.renderOrder = 4; g.add(l); }
-  // grip: matte black, rounded, with a hole at the end; a bright collar where it meets the acrylic
-  const G = rrect(24.6, gripTop, gripBottom, 7); const gh = new THREE.Path(); gh.absarc(0, gripBottom + 11, 3.6, 0, Math.PI * 2, true); G.holes.push(gh);
-  const grip = new THREE.Mesh(new THREE.ExtrudeGeometry(G, {depth: 5.4, bevelEnabled: true, bevelSize: 1.1, bevelThickness: 1.1, bevelSegments: 4, curveSegments: 32}), new THREE.MeshPhysicalMaterial({color: 0x17181b, roughness: .5, clearcoat: .35, clearcoatRoughness: .4, envMapIntensity: .9}));
-  grip.position.z = -1.4;
-  const collar = new THREE.Mesh(new THREE.ExtrudeGeometry(rrect(25.4, gripTop + 2.4, gripTop - 1.2, 1.2), {depth: 6, bevelEnabled: true, bevelSize: .5, bevelThickness: .5, bevelSegments: 3}), new THREE.MeshPhysicalMaterial({color: 0xc9ced3, metalness: .9, roughness: .28, envMapIntensity: 1.4}));
-  collar.position.z = -1.7;
-  g.add(acrylic, plate, print, grip, collar);
-  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  // ruler frame (x right, z toward the viewer, y up) → world (x right, y depth, z up): turn it a quarter about x so its "up" becomes world +z and its front looks at the camera (−y)
-  const holder = new THREE.Group(); holder.add(g); g.rotation.x = Math.PI / 2;   // (x, y, z) → (x, −z, y): front (+z) → −y (toward the camera), up (+y) → +z
-  holder.position.set(CX, Y, CZ);
-  return holder;
-}
-const ruler = rulerGroup(); scene.add(ruler);
+// the ruler: its lenses on the holes, centred between the two flat faces
+const ruler = buildRuler({acr: .05}); ruler.position.set(-(COL[0] + COL[1]) / 2, CY + ROW0 - RULER.ROW0, Number(P.ruler_z || 0)); scene.add(ruler);   // x: the halves are mirrored by the half turn
 
-const key = new THREE.DirectionalLight(0xffffff, Number(P.key || 1.7));
-key.position.set(Number(P.kx || -260), Number(P.ky || -150), Number(P.kz || 300)); key.castShadow = true;
-key.shadow.mapSize.set(4096, 4096); key.shadow.camera.left = key.shadow.camera.bottom = -190; key.shadow.camera.right = key.shadow.camera.top = 190; key.shadow.camera.far = 900;
-key.shadow.bias = -.0004; key.shadow.normalBias = .5; key.shadow.radius = Number(P.soft || 5); key.shadow.blurSamples = 25;
-scene.add(key);
-const fill = new THREE.DirectionalLight(0xffffff, Number(P.fill_light || .3)); fill.position.set(220, -200, 60); scene.add(fill);
-// a wide soft spot from the upper left: the flat faces of the shells get the gentle falloff a studio softbox gives
-const spot = new THREE.SpotLight(0xffffff, Number(P.grad ?? 1.1), 0, Number(P.spot_angle || .62), 1, 0); spot.position.set(Number(P.sx || -170), Number(P.sy || -330), Number(P.sz || 330)); spot.target.position.set(CX + Number(P.tx || 10), 76, CZ + Number(P.tz || -10)); scene.add(spot, spot.target);
-
-// framing from the airplane only (the ruler and decal never change it)
-const box = new THREE.Box3().setFromObject(root), height = box.max.z - box.min.z, camera = new THREE.PerspectiveCamera(12, 1, 10, 8000); camera.up.set(0, 0, 1);
-let pillar = null, pedCam = null;
-if ((P.variants || '').includes('ped')) {
-  const r = Number(P.radius || 73), ph = Number(P.ph || 110), cy = (box.min.y + box.max.y) / 2 - 8;
-  pillar = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ph, 160), new THREE.MeshPhysicalMaterial({color: 0xf6f6f4, roughness: .55, clearcoat: .1}));
-  pillar.rotation.x = Math.PI / 2; pillar.position.set((box.min.x + box.max.x) / 2, cy, box.min.z - ph / 2); pillar.receiveShadow = true; scene.add(pillar);
-  pedCam = () => { const el = Number(P.elev || 8.5) * Math.PI / 180, top = box.max.z, low = box.min.z - ph, frameH = (top - low) / Number(P.fill || .93);
-    const dist = frameH / 2 / Math.tan(12 * Math.PI / 360), target = new THREE.Vector3((box.min.x + box.max.x) / 2, cy, (top + low) / 2 + Number(P.dz || 0));
-    camera.position.copy(target).add(new THREE.Vector3(0, -Math.cos(el), Math.sin(el)).multiplyScalar(dist)); camera.lookAt(target); camera.clearViewOffset(); camera.updateProjectionMatrix(); };
+// ── camera ─────────────────────────────────────────────────────────────────────────────
+const box = new THREE.Box3(); for (const k of ['front', 'back', 'glass', 'pylons', 'stars', 'nosef']) box.expandByObject(mesh[k]);
+const fov = Number(P.fov || 12), camera = new THREE.PerspectiveCamera(fov, 1, 10, 20000);
+const verts = []; for (const k of ['front', 'back', 'pylons', 'nosef']) { const o = mesh[k], p = o.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / 6000)); for (let i = 0; i < p.count; i += step) verts.push(new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)); }
+function place(az, el, fitH, fitB) {
+  const target = box.getCenter(new THREE.Vector3()); let dist = (box.max.y - box.min.y) / fitH / 2 / Math.tan(fov * Math.PI / 360);
+  const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  for (let it = 0; it < 8; it++) {
+    camera.position.copy(target).addScaledVector(dir, dist); camera.lookAt(target); camera.updateMatrixWorld();
+    let lo = Infinity, hi = -Infinity; for (const v of verts) { const y = v.clone().project(camera).y; lo = Math.min(lo, y); hi = Math.max(hi, y); }
+    const wantLo = -1 + 2 * fitB, wantHi = -1 + 2 * (fitB + fitH);
+    dist *= (hi - lo) / (wantHi - wantLo); target.y += ((hi + lo) / 2 - (wantHi + wantLo) / 2) * dist * Math.tan(fov * Math.PI / 360) / Math.cos(el);
+  }
+  camera.position.copy(target).addScaledVector(dir, dist); camera.lookAt(target); camera.updateMatrixWorld();
 }
-function frontalCamera() {
-  const frameH = height / Number(P.h || .8933), bottom = Number(P.bottom || .0760);
-  const dist = frameH / 2 / Math.tan(12 * Math.PI / 360), cz = box.min.z - bottom * frameH + frameH / 2, cx = (box.min.x + box.max.x) / 2;
-  camera.position.set(cx, box.min.y - dist + 20, cz); camera.lookAt(cx, (box.min.y + box.max.y) / 2, cz);
-  camera.clearViewOffset(); camera.updateProjectionMatrix();
-  return {pxPerMm: +(SIZE / frameH).toFixed(4), targetZ: +cz.toFixed(3)};
+const [az, el] = (P.orbit || `0,${P.elev || 5}`).split(',').map(v => Number(v) * Math.PI / 180);
+const vitrine = () => place(az, el, Number(P.h || .8933), Number(P.bottom || .076));
+vitrine();
+
+// popup picture: the airplane on the white pillar, on the page's light grey, with a soft contact shadow on an unseen floor
+const PED = {r: Number(P.radius || 96), h: Number(P.ph || 110), elev: Number(P.pelev || 8.5), fill: Number(P.pfill || .9)};
+const pillar = new THREE.Mesh(new THREE.CylinderGeometry(PED.r, PED.r, PED.h, 192), new THREE.MeshPhysicalMaterial({color: 0xf6f6f4, roughness: .55, clearcoat: .1, envMapIntensity: .9}));
+pillar.position.set(0, box.min.y - PED.h / 2, 4); pillar.castShadow = pillar.receiveShadow = true; pillar.visible = false; scene.add(pillar);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.ShadowMaterial({opacity: .22})); floor.rotation.x = -Math.PI / 2; floor.position.y = box.min.y - PED.h; floor.receiveShadow = true; floor.visible = false; if (P.pfloor) scene.add(floor);   // off: the key light's shadow on it is too hard
+function pedCamera() {
+  const e = PED.elev * Math.PI / 180, top = box.max.y, low = box.min.y - PED.h, frameH = (top - low) / PED.fill, dist = frameH / 2 / Math.tan(fov * Math.PI / 360);
+  const target = new THREE.Vector3(0, (top + low) / 2, 0); camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(e), Math.cos(e)).multiplyScalar(dist)); camera.lookAt(target); camera.updateMatrixWorld();
 }
 
-const SHOW = {
-  full: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'decal'], front: ['front', 'glass', 'pylons', 'stars', 'nosef', 'decal'], back: ['back', 'noseb'],
-  ruler: ['ruler'], ped: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'decal']
-};
-const wanted = (P.variants || 'full').split(',');
-const results = {}, info = {};
-for (const name of wanted) {
+const SHOW = {full: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'decal'], front: ['front', 'glass', 'pylons', 'stars', 'nosef', 'decal'], back: ['back', 'noseb'],
+  ruler: ['ruler'], inuse: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'decal', 'ruler'], card: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef'], ped: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'pillar']};
+const out = {}, info = {seated};
+for (const name of (P.variants || 'full').split(',')) {
   const shown = new Set(SHOW[name]);
   for (const [k, m] of Object.entries(mesh)) m.visible = shown.has(k);
-  decal.visible = shown.has('decal'); ruler.visible = shown.has('ruler'); if (pillar) pillar.visible = name === 'ped';
-  const tall = name === 'ruler', W = SIZE, H = tall ? RULER_H : SIZE;
-  renderer.setPixelRatio(SS); renderer.setSize(W, H);
-  if (name === 'ped') pedCam(); else info[name] = frontalCamera();
-  if (tall) { camera.setViewOffset(SIZE, SIZE, 0, 0, W, H); }
-  renderer.setClearColor(name === 'ped' ? new THREE.Color(P.bg || '#eeeff2') : 0x000000, name === 'ped' ? 1 : 0);
-  renderer.render(scene, camera);
-  const c = document.createElement('canvas'); c.width = W * SS; c.height = H * SS; c.getContext('2d').drawImage(renderer.domElement, 0, 0);
-  const out = document.createElement('canvas'); out.width = W; out.height = H;
-  const g = out.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(c, 0, 0, W, H);
-  results[name] = out.toDataURL('image/png');
+  decal.visible = shown.has('decal') && Number(P.numop || 0) > 0;   // the STL has the numbers engraved; the decal is only a fallback
+  ruler.visible = shown.has('ruler');
+  pillar.visible = floor.visible = shown.has('pillar');
+  if (name === 'card') place(az, el, Number(P.ch || .93), Number(P.cb || .035)); else if (name === 'ped') pedCamera(); else vitrine();
+  const tall = name === 'ruler' || name === 'inuse', W = name === 'card' ? Number(P.csize || 768) : SIZE, H = tall ? RULER_H : W;
+  renderer.setSize(W, H);
+  let c = renderStudio(renderer, scene, camera, {width: W, height: H, passes: PASSES, subject: tall || name === 'ped' ? scene : zUp, view: {fullWidth: W, fullHeight: W, x: 0, y: 0},
+    key: {dir: [Number(P.kx ?? -.5), Number(P.ky ?? .72), Number(P.kz ?? .7)], spread: Number(P.spread || .3), intensity: Number(P.key || 1.6), distance: Number(P.kdist ?? 4)},
+    dome: {intensity: Number(P.dome || 1.1), minElevation: -.1}, shadowMap: 4096});
+  if (name === 'ped') {   // opaque: a soft vertical grey behind
+    const bg = document.createElement('canvas'); bg.width = W; bg.height = H; const g = bg.getContext('2d'), grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, P.bg0 || '#f2f3f5'); grad.addColorStop(1, P.bg1 || '#e5e7eb'); g.fillStyle = grad; g.fillRect(0, 0, W, H); g.drawImage(c, 0, 0); c = bg;
+  }
+  if (name === 'ruler') {   // trimmed; its place on the square picture, for products.js (tool: width, top, ratio)
+    const {canvas, box: b} = cropToContent(c); c = canvas;
+    info.ruler = {width: +(b.w / SIZE).toFixed(4), top: +(b.y / SIZE).toFixed(4), ratio: +(b.w / b.h).toFixed(4), shift: +((b.x + b.w / 2) / SIZE - .5).toFixed(4), px: [b.w, b.h]};
+  }
+  if (name === 'full' || name === 'card') info[name] = artBox(c);
+  out[name] = c;
 }
-window.results = results;
-window.info = {box: {min: box.min.toArray(), max: box.max.toArray()}, variants: wanted, camera: info};
-window.png = results[wanted[0]];
-window.done = true;
+vitrine();
+const toPx = v => { camera.clearViewOffset(); const q = v.clone().project(camera); return [+((q.x + 1) / 2).toFixed(4), +((1 - q.y) / 2).toFixed(4)]; };
+// where the parts are on the square picture (fractions), for the callouts
+info.anchors = {plateTop: toPx(new THREE.Vector3(0, ruler.position.y, ruler.position.z)), gripTop: toPx(new THREE.Vector3(0, ruler.position.y + RULER.GRIP_TOP, ruler.position.z)), wingL: toPx(new THREE.Vector3(-52, CY - 8, 6)), nose: toPx(new THREE.Vector3(0, box.max.y - 6, 10))};
+finish(out, info);
 </script>

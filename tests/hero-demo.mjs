@@ -34,7 +34,8 @@ for (const [key, {demo}] of demos) {
   assert.ok(tool.fade[0] < tool.fade[1], `${key}: o equipamento se dissolve de cima para baixo`);
   assert.ok(!tool.turn || Math.abs(tool.turn) <= 20, `${key}: giro do equipamento discreto (acompanha a foto da peça)`);
   assert.ok(!tool.shift || Math.abs(tool.shift) < .05, `${key}: deslocamento do equipamento discreto`);
-  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < 1.25, `${key}: o cabo some logo abaixo da peça (o foco fica no encaixe)`);
+  // o cabo some logo abaixo da peça (o foco fica no encaixe); num equipamento em duas partes a carcaça embaixo da peça faz parte da cena
+  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < (demo.head ? 1.8 : 1.25), `${key}: o equipamento se dissolve logo abaixo da peça`);
   for (const name of ['back', 'front']) if (layers[name]) assert.ok(fs.existsSync(path.join(root, 'dist/assets', layers[name])), `${key}: camada ${name} existe`);
   assert.ok(!layers.depth || (layers.back && layers.depth > 0 && layers.depth < .3), `${key}: recuo da camada de trás discreto`);
   for (const item of demo.callouts || []) {
@@ -79,7 +80,7 @@ assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 52
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /Personalize o seu/.test(demo));
 assert.ok(/entries\[i\]\.soon/.test(demo) && /aria-disabled/.test(demo) && /'Em breve'/.test(demo), 'novidade sem compra: o convite vira um aviso, sem link');
-for (const text of ['Em breve', 'Novidade · em breve', 'Equipamento', SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
+for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
 for (const text of ['Voltar à vitrine', 'Personalize o seu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 
 console.log('hero-demo: ok');

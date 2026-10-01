@@ -4,42 +4,37 @@ Branch `vitrine/aviao-macaco` (feita a partir de `integracao/mercado-pago`, 2026
 
 ## O que mudou
 
-- **Imagem do avião corrigida.** Banner, cards do catálogo e popup agora são renders do CAD real (STL de 21/08/2026), de frente, com as
-  16 aberturas **vazadas** (a régua é do cliente) e os números ao lado. Antes eram uma imagem com “lentes” brancas e um rasgo preto na base.
-  Como o STL não tem os números, eles entram como decalque com relevo; se houver um STL mais novo da frente, basta rodar os renders de novo
-  (`tools/render-aviao-macaco/README.md`). A imagem do popup passou de `aviaoscopia-regua.webp` para `aviaoscopia.webp`.
-- **Demonstração de montagem do avião.** Clicar no avião aproxima a peça como nas outras; ela se **abre em duas metades** (a da frente avança e
-  vai para cima e para a esquerda, a de trás recua para baixo e para a direita, com um giro leve), a **régua de grau sobe por baixo, por entre
-  elas**, e as metades **se fecham em volta da régua** com um estalo curto e um brilho que atravessa a frente. Chamadas: “Aviãoscopia” e “Régua
-  de grau”. Percurso de 2,6 s (o encaixe do retinoscópio continua com 1,56 s). Configuração em `SHOWCASE.aviaoscopia.demo.assemble`.
-- **Macacoscópio como novidade, sem compra.** Quarta vitrine do banner (`SOON.macacoscopio` em `products.js`, fora de `PRODUCTS`): sem preço,
-  catálogo, carrinho nem personalização; no lugar de “Escolha sua cor” aparece o selo “Novidade · em breve” e o convite da demonstração vira
-  “Em breve”, sem link. Tema creme/banana e folhagem de fundo. Quando a modelagem ficar pronta, a entrada passa para `PRODUCTS`.
-- **Demonstração do macaco.** A base do equipamento, com a coluna preta, sobe por dentro do macaco e a cabeça do equipamento desce por cima
-  (`demo.head`). Chamadas: “Macacoscópio” e “Equipamento”. As imagens são **provisórias**, recortadas das fotos (`tools/render-aviao-macaco`);
-  trocando as três imagens e os números em `SHOWCASE.macacoscopio.demo` a animação continua igual.
-- **Motor da demonstração** (`hero-demo.js`): três jeitos, escolhidos pelos dados: encaixe (retinoscópio), equipamento em duas partes
-  (`head`) e montagem (`assemble`). Nada específico de produto no código. Novos: `--cy-shift` (desloca o palco), `.demo-sheen`, `.demo-head`,
-  alinhamento `right` nas chamadas.
-
-## Arquivos
-
-- Novos: `dist/assets/aviaoscopia.webp`, `aviaoscopia-front.webp`, `aviaoscopia-back.webp`, `aviaoscopia-ruler.webp`,
-  `product-macacoscopio-cutout.webp`, `macacoscopio-base.webp`, `macacoscopio-head.webp`, `tools/render-aviao-macaco/*`.
-- Substituídos: `product-aviaoscopia-cutout.webp`, `card-aviaoscopia.webp`, `card-preview-aviaoscopia.webp`. Removido: `aviaoscopia-regua.webp`.
-- Alterados: `dist/products.js`, `hero-demo.js`, `hero-demo.css`, `carousel.js`, `carousel.css`, `hero-scenery.js`, `translations.js`,
-  `tests/hero-demo.mjs`, `tests/carousel.cjs`, `COLLABORATOR_PROMPT.md`.
+- **Imagens no mesmo universo visual das outras.** Tudo agora é render 3D com luz de estúdio (`tools/render-aviao-macaco`), e as camadas de cada
+  demonstração saem com a mesma câmera da foto da vitrine, então se sobrepõem pixel a pixel:
+  - **Avião**, do CAD real (STL de 21/08/2026). A versão anterior mostrava a face interna da peça (a face plana, dos ímãs), por isso parecia
+    "desconfigurada". Agora as metades estão montadas como no avião de verdade: faces planas no meio, faces bojudas para fora, com bandeja funda,
+    janelas da cabine, estrelas encaixadas nas asas, motores, nariz e os números gravados do próprio CAD. Novos: vitrine, popup na pilastra,
+    cards do catálogo e as camadas da montagem (frente, trás e régua).
+  - **Régua de esquiascopia**, modelada das fotos: acrílico, impressão preta com "PLUS (+)", 16 lentes com a curvatura de cada grau e cabo.
+    Sem a etiqueta com nome/CRM.
+  - **Lâmpada de fenda portátil**, modelada das fotos: base cinza martelada com a placa de aço e a barra em T, carcaça com os dois anéis,
+    coluna preta, prisma e cabeça binocular com objetivas tratadas e as "orelhas" pretas.
+  - **Macaco**, no estilo de brinquedo da borboleta e do dinossauro, fiel à peça impressa (rosto, orelhas, braços, banana, patinhas).
+- **Montagem do avião.** A peça se aproxima como nas outras e abre em vista explodida: a metade da frente vem para perto e a de trás recua
+  (com paralaxe entre os furos). A régua sobe por entre elas, com "PLUS (+)" e as lentes passando atrás dos furos. As metades fecham puxadas
+  pelos ímãs, com um estalo curto, sombra nas lentes e um brilho que atravessa a frente. Chamadas: "Aviãoscopia" e "Régua de esquiascopia".
+- **Encaixe do macaco.** Mesma ideia aprovada: a carcaça com a coluna sobe por dentro do macaco e o prisma com a cabeça binocular desce por cima.
+  O resultado é igual à foto do macaco montado na lâmpada. Chamadas: "Macacoscópio" e "Lâmpada de fenda". No celular, as chamadas e o
+  "Em breve" ficam na faixa livre abaixo da carcaça (`ctaY`).
+- **Textos.** "Régua de esquiascopia" e "Lâmpada de fenda" nas chamadas e avisos, em PT/EN/ES. O subtítulo do macaco passou a ser
+  "Capa para lâmpada de fenda portátil".
+- **Macacoscópio como novidade, sem compra.** Continua a quarta vitrine do banner (`SOON.macacoscopio`), sem preço, catálogo nem carrinho.
 
 ## Verificação
 
 - 23 suítes verdes (`node tools/run-tests.mjs`).
-- Chrome headless na vitrine local, quadros em instantes exatos (animações pausadas e buscadas): desktop e celular, avião e macaco;
-  link direto `#produto/macacoscopio`; ciclo das quatro vitrines; textos em EN e ES; movimento reduzido (a cabeça do equipamento aparece);
+- Chrome headless na vitrine local, quadros em instantes exatos: avião e macaco em 1280×720, 1440×900 e 1920×1080, e no celular/tablet em
+  360×740, 390×844 e 820×1180. O encaixe do retinoscópio na borboleta continua igual.
+- Também conferidos: link direto `#produto/macacoscopio`, o ciclo das quatro vitrines, EN/ES, movimento reduzido, popup e card do avião,
   console limpo.
-- Não testado: Safari/iOS, aparelho físico, DPR 2 com as imagens provisórias do equipamento (ficam um pouco macias).
+- Não testado: Safari/iOS e aparelho físico.
 
 ## Em aberto
 
-- Nome oficial do equipamento (a legenda diz só “Equipamento”) e fotos limpas ou modelo 3D do macaco e do equipamento.
-- A prévia 3D do avião na personalização ainda é o modelo antigo (`models.js`).
-- Decisão da Ju: manter o avião com os furos abertos na vitrine (como vendido) ou mostrar a régua dentro.
+- A "Prévia 3D" da personalização do avião ainda é o modelo antigo (`models.js`).
+- O subtítulo do avião continua "Avião magnético para régua de grau" (texto da loja); as chamadas da demonstração usam "régua de esquiascopia".

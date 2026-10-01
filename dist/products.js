@@ -17,7 +17,7 @@ export const PRODUCTS = {
 // Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
 // Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
 export const SOON = {
-  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para equipamento oftalmológico',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
+  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
 };
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
@@ -71,36 +71,39 @@ export const SHOWCASE = {
     }
   },
   aviaoscopia:{
-    art:{h:.9043, bottom:.0702, foot:.5263, alt:'Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca'},
+    art:{h:.8939, bottom:.0758, foot:.4896, alt:'Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca'},
     theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'},
     demo:{
-      // Montagem em vez de encaixe: a régua sobe por entre as duas metades (back e front, renderizadas do CAD com a mesma câmera) e elas se
-      // fecham em volta dela. assemble.open/apart = onde ficam a metade da frente e a de trás enquanto a régua sobe (z em px de perspectiva, x/y em % do quadrado, ry em graus).
-      assemble:{open:{z:56, x:-7, y:-4, ry:-8}, apart:{z:-72, x:7, y:5, ry:6}},
-      tool:{src:'aviaoscopia-ruler.webp', width:.2289, top:.1691, ratio:.175, fade:[.7, .82]},
+      // Montagem em vez de encaixe: a régua de esquiascopia sobe por entre as duas metades e elas se fecham em volta dela. Metades, régua e
+      // vitrine são renders do mesmo modelo com a mesma câmera (tools/render-aviao-macaco/plane.html), então as camadas coincidem pixel a pixel.
+      // assemble.open/apart = vista explodida enquanto a régua sobe: a metade da frente vem para perto (z em px de perspectiva) e a de trás recua;
+      // x/y em % do quadrado, rx/ry em graus.
+      assemble:{open:{z:96, x:-1.5, y:-3, rx:5, ry:-7}, apart:{z:-118, x:1.5, y:2.5, rx:-2, ry:6}},
+      tool:{src:'aviaoscopia-ruler.webp', width:.2201, top:.1762, ratio:.1865, fade:[.74, .9]},
       layers:{front:'aviaoscopia-front.webp', back:'aviaoscopia-back.webp'},
       callouts:[
-        {label:'Aviãoscopia', wide:{points:[[.27, .55], [.17, .62], [-.04, .62]], align:'left'}, compact:{points:[[.27, .55], [.2, .66], [.2, 1.05]], align:'below'}},
-        {label:'Régua de grau', wide:{points:[[.5, 1.03], [.43, 1.08], [-.04, 1.08]], align:'left'}, compact:{points:[[.5, 1.03], [.74, 1.03], [.74, 1.07]], align:'below'}}
+        {label:'Aviãoscopia', wide:{points:[[.283, .522], [.17, .6], [-.04, .6]], align:'left'}, compact:{points:[[.283, .522], [.2, .66], [.2, 1.05]], align:'below'}},
+        {label:'Régua de esquiascopia', wide:{points:[[.5, 1.04], [.43, 1.09], [-.04, 1.09]], align:'left'}, compact:{points:[[.5, 1.04], [.74, 1.04], [.74, 1.08]], align:'below'}}
       ],
       glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
-      message:'Aviãoscopia fechada em volta da régua de grau.'
+      message:'Aviãoscopia fechada em volta da régua de esquiascopia.'
     }
   },
   macacoscopio:{
-    art:{h:.87, bottom:.055, foot:.36, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
+    art:{h:.87, bottom:.055, foot:.311, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
     theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
     demo:{
-      // O equipamento (fotos provisórias, recortadas de duas fotos): a base com a coluna preta sobe por dentro do macaco e a cabeça desce por cima.
-      // tool = base + coluna, centrada; head = cabeça com o pino, centrada, acima da peça (top negativo). Imagens atrás da peça, como no encaixe.
-      tool:{src:'macacoscopio-base.webp', width:.9147, top:.3738, ratio:.9474, fade:[.78, .9]},
-      head:{src:'macacoscopio-head.webp', width:.8334, top:-.295, ratio:1.9159},
+      // A lâmpada de fenda portátil em duas partes, renderizadas com a câmera da foto da vitrine (tools/render-aviao-macaco/monkeylamp.html):
+      // tool = base, carcaça e coluna preta, que sobe por dentro do macaco; head = prisma e cabeça binocular, que descem por cima (top negativo:
+      // acima do quadrado). As duas ficam atrás do macaco, como na peça montada.
+      tool:{src:'macacoscopio-base.webp', width:.7959, top:.0933, ratio:.3978, fade:[.66, .8]},
+      head:{src:'macacoscopio-head.webp', width:.6603, top:-.1762, ratio:1.6761},
       callouts:[
-        {label:'Macacoscópio', wide:{points:[[.29, .53], [.18, .46], [-.04, .46]], align:'left'}, compact:{points:[[.29, .53], [.12, .75], [.12, 1.1]], align:'below'}},
-        {label:'Equipamento', wide:{points:[[.66, -.1], [.82, -.2], [1.03, -.2]], align:'right'}, compact:{points:[[.78, 1], [.86, 1.1]], align:'below'}}
+        {label:'Macacoscópio', wide:{points:[[.43, .59], [.25, .5], [-.04, .5]], align:'left'}, compact:{points:[[.43, .59], [.06, .86], [.06, 1.62]], align:'below'}},
+        {label:'Lâmpada de fenda', wide:{points:[[.61, .02], [.78, -.06], [1.04, -.06]], align:'right'}, compact:{points:[[.69, 1.26], [.94, 1.26], [.94, 1.62]], align:'below'}}
       ],
-      zoom:.74, cy:{wide:10, compact:6}, glow:'#fffaf0', halo:'#e8b96a', accent:'#f4c431', shade:'#33200f',
-      message:'Macacoscópio encaixado no equipamento.'
+      zoom:.7, cy:{wide:-6, compact:-6}, ctaY:{compact:1.33}, glow:'#fffaf0', halo:'#e8b96a', accent:'#f4c431', shade:'#33200f',
+      message:'Macacoscópio encaixado na lâmpada de fenda.'
     }
   }
 };

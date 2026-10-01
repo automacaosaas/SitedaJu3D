@@ -89,7 +89,7 @@
   .demo-callout[data-layout="wide"] { display: none; }
   .demo-callout[data-layout="compact"] { display: block; }
   .demo-callout-label { letter-spacing: .16em; }
-  .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * .78); width: fit-content; margin: 0 auto; }
+  .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * var(--cta-y-compact, .78));   /* abaixo da peça; num equipamento alto (ctaY), abaixo dele */ width: fit-content; margin: 0 auto; }
   .demo-close { top: 8px; right: 14px; width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {

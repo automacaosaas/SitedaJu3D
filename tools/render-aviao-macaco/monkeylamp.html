@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// Layers of the Macacoscópio demonstration, all with the camera of the vitrine picture (framed on the monkey alone, like the butterfly and the
+// dinosaur), so they register pixel for pixel:
+//   monkey = the piece (vitrine and catalogue picture)
+//   base   = the slit lamp's stand, housing and column at their assembled place: the monkey sits on the housing cap, round the column
+//            (it continues far below the square: trimmed, its place given as tool width/top/ratio)
+//   top    = prism and binocular head at their assembled place, above the monkey (trimmed, given as head width/top/ratio; top < 0)
+//   assembled = everything together, for checking
+import * as THREE from 'three';
+import {makeRenderer, studioEnvironment, renderStudio, finish, cropToContent, artBox} from './studio.js';
+import {buildMonkey} from './monkey.js';
+import {buildLamp} from './slitlamp.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const S = Number(P.size || 1254), PASSES = Number(P.passes || 40), ABOVE = Number(P.above || .7), BELOW = Number(P.below || 2.6);
+const renderer = makeRenderer(S, S, {exposure: Number(P.exposure || 1.04)});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: Number(P.top || 5), left: Number(P.left || 2.6), right: Number(P.right || 2.2), scrim: Number(P.scrim || 1.4), glint: Number(P.glint ?? 18)});
+const monkey = buildMonkey(); scene.add(monkey);
+const lamp = buildLamp(); lamp.root.position.y = -104; scene.add(lamp.root);   // the housing cap's top (y 104 on the lamp) under the monkey's bottom
+
+// the vitrine camera: framed on the monkey's projected vertices, its top at 1 − bottom − h of the height, its bottom at 1 − bottom
+const fov = Number(P.fov || 14), elev = Number(P.elev || 5) * Math.PI / 180, camera = new THREE.PerspectiveCamera(fov, 1, 10, 20000);
+const verts = []; scene.updateMatrixWorld(true);
+monkey.traverse(o => { if (!o.isMesh) return; const p = o.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / 3000)); for (let i = 0; i < p.count; i += step) verts.push(new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)); });
+const box = new THREE.Box3().setFromObject(monkey), target = new THREE.Vector3(0, (box.min.y + box.max.y) / 2, 0), H = Number(P.h || .87), B = Number(P.bottom || .055);
+let dist = (box.max.y - box.min.y) / H / 2 / Math.tan(fov * Math.PI / 360);
+for (let it = 0; it < 8; it++) {
+  camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target); camera.updateMatrixWorld();
+  let lo = Infinity, hi = -Infinity; for (const v of verts) { const y = v.clone().project(camera).y; lo = Math.min(lo, y); hi = Math.max(hi, y); }
+  const wantLo = -1 + 2 * B, wantHi = -1 + 2 * (B + H);
+  dist *= (hi - lo) / (wantHi - wantLo);
+  target.y += ((hi + lo) / 2 - (wantHi + wantLo) / 2) * dist * Math.tan(fov * Math.PI / 360) / Math.cos(elev);
+}
+camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target);
+
+const LAYERS = {monkey: {show: ['monkey'], y: 0, h: 1}, base: {show: ['base', 'column'], y: 0, h: BELOW}, top: {show: ['top'], y: -ABOVE, h: ABOVE + .6}, assembled: {show: ['monkey', 'base', 'column', 'top'], y: -ABOVE, h: ABOVE + BELOW}};
+const out = {}, info = {};
+for (const name of (P.layers || 'monkey,base,top').split(',')) {
+  const L = LAYERS[name], shown = new Set(L.show);
+  monkey.visible = shown.has('monkey'); for (const [k, g] of Object.entries(lamp.groups)) g.visible = shown.has(k);
+  const W = S, Hh = Math.round(S * L.h);
+  renderer.setSize(W, Hh);
+  let c = renderStudio(renderer, scene, camera, {width: W, height: Hh, passes: PASSES, subject: scene, view: {fullWidth: S, fullHeight: S, x: 0, y: Math.round(L.y * S)},
+    key: {dir: [Number(P.kx ?? -.5), Number(P.ky ?? .7), Number(P.kz ?? .75)], spread: Number(P.spread || .32), intensity: Number(P.key || 1.6), distance: Number(P.kdist ?? 4)},
+    dome: {intensity: Number(P.dome || 1.15), minElevation: -.1}, shadowMap: 4096});
+  if (name === 'monkey') info.monkey = artBox(c);
+  if (name === 'base' || name === 'top') {   // trimmed; its place on the square picture, as fractions of the side
+    const {canvas, box: b} = cropToContent(c); c = canvas;
+    info[name] = {width: +(b.w / S).toFixed(4), top: +((b.y + L.y * S) / S).toFixed(4), ratio: +(b.w / b.h).toFixed(4), shift: +((b.x + b.w / 2) / S - .5).toFixed(4), px: [b.w, b.h]};
+  }
+  out[name] = c;
+}
+const toPx = v => { camera.clearViewOffset(); const q = v.clone().project(camera); return [+((q.x + 1) / 2).toFixed(4), +((1 - q.y) / 2).toFixed(4)]; };
+// anchors for the callouts (fractions of the square): the monkey's belly, the lamp's head and housing
+info.anchors = {belly: toPx(new THREE.Vector3(-8, 40, 18.6)), headTop: toPx(new THREE.Vector3(-20, lamp.AXIS - 104 + 12, -40)), objective: toPx(new THREE.Vector3(-12.8, lamp.AXIS - 104, -6)), housing: toPx(new THREE.Vector3(-20, -30, 38)), bottom: toPx(new THREE.Vector3(0, 0, 18))};
+finish(out, info);
+</script>
