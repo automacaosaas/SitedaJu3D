@@ -30,23 +30,34 @@ const PAGES = {
 const esc = value => String(value).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const base = () => String(COMPANY.website).replace(/\/+$/, '');
 
-function block(name) {
-  const page = PAGES[name], url = `${base()}/${page.url ?? name}`;
+// The tags of one page. jsonLd: structured data for search engines (schema.org), written as a data block that is never
+// executed (so the Content-Security-Policy has nothing to allow). extra: more <meta> lines (product price, for instance).
+function tags({url, title, description, image = IMAGE, type = 'website', extra = [], jsonLd = null}) {
   return [
     '<!-- og -->',
-    '<meta property="og:type" content="website">',
+    `<meta property="og:type" content="${esc(type)}">`,
     `<meta property="og:site_name" content="${esc(SITE)}">`,
     '<meta property="og:locale" content="pt_BR">',
-    `<meta property="og:title" content="${esc(page.title)}">`,
-    `<meta property="og:description" content="${esc(page.description)}">`,
+    `<meta property="og:title" content="${esc(title)}">`,
+    `<meta property="og:description" content="${esc(description)}">`,
     `<meta property="og:url" content="${esc(url)}">`,
-    `<meta property="og:image" content="${esc(`${base()}/${IMAGE.path}`)}">`,
-    `<meta property="og:image:width" content="${IMAGE.width}">`,
-    `<meta property="og:image:height" content="${IMAGE.height}">`,
-    `<meta property="og:image:alt" content="${esc(IMAGE.alt)}">`,
+    `<meta property="og:image" content="${esc(`${base()}/${image.path}`)}">`,
+    `<meta property="og:image:width" content="${image.width}">`,
+    `<meta property="og:image:height" content="${image.height}">`,
+    `<meta property="og:image:alt" content="${esc(image.alt)}">`,
+    ...extra,
     '<meta name="twitter:card" content="summary_large_image">',
+    ...(jsonLd ? [`<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`] : []),
     '<!-- /og -->'
   ];
+}
+// Who the shop is, for search engines (on the home page).
+const organization = () => ({'@context': 'https://schema.org', '@type': 'Organization', name: SITE, legalName: COMPANY.legalName, url: `${base()}/`,
+  logo: `${base()}/assets/logo-ju.webp`, sameAs: ['https://www.instagram.com/juimprimepramim/']});
+
+function block(name) {
+  const page = PAGES[name];
+  return tags({url: `${base()}/${page.url ?? name}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null});
 }
 
 function sync(html, name) {
@@ -74,4 +85,4 @@ if (require.main === module) {
   if (check && stale.length) process.exitCode = 1;
 }
 
-module.exports = {sync, pages, block, PAGES, IMAGE, DIST};
+module.exports = {sync, pages, block, tags, base, PAGES, IMAGE, SITE, DIST};

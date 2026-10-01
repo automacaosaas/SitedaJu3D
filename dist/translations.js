@@ -470,6 +470,10 @@ Fechar o carrinho|Close the cart|Cerrar el carrito
 Complete o kit|Complete the kit|Completa el kit
 Adicionar|Add|Añadir
 Ver carrinho|View cart|Ver carrito
+ou 3x sem juros no cartão|or 3 interest-free card installments|o 3 cuotas sin interés con tarjeta
+Envio para todo o Brasil|Shipping all over Brazil|Envío a todo Brasil
+Ver a política|See the policy|Ver la política
+Você está em|You are here|Estás en
 Continuar escolhendo|Keep choosing|Seguir eligiendo
 cores originais|original colors|colores originales
 Adicionar nas cores originais|Add in the original colors|Añadir en los colores originales

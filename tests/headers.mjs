@@ -44,6 +44,8 @@ for (const page of pages) {
   assert(!/(href|src)\s*=\s*["']javascript:/i.test(html), `${page}: no javascript: URLs`);
   for (const [, attrs, body] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
     if (/\bsrc\s*=/.test(attrs)) { assert.equal(body.trim(), '', `${page}: script with src has no body`); continue; }
+    // Structured data for search engines is a data block the browser never runs (so no hash is needed): JSON only.
+    if (attrs.trim() === 'type="application/ld+json"') { assert.doesNotThrow(() => JSON.parse(body), `${page}: structured data is valid JSON`); assert(!/<\//.test(body), `${page}: structured data cannot close the tag`); continue; }
     assert.match(attrs, /type="importmap"/, `${page}: only the import map may be inline (move other scripts to a .js file)`);
     const hash = `'sha256-${createHash('sha256').update(body).digest('base64')}'`;
     assert(directives['script-src'].includes(hash), `${page}: import map hash ${hash} is in script-src — update vercel.json after editing the import map`);

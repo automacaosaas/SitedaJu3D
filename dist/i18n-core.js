@@ -15,6 +15,7 @@ const dynamic = [
   [/^(\d+) peça selecionada$/, '$1 selected item', '$1 pieza seleccionada'],
   [/^(\d+) peças selecionadas\.?$/, '$1 selected items', '$1 piezas seleccionadas'],
   [/^(\d+) peça$/, '$1 item', '$1 pieza'],
+  [/^(.+) · (.+) \| Ju, imprime pra mim\?$/, (t, name, sub) => `${t(name)} · ${t(sub)} | Ju, imprime pra mim?`, (t, name, sub) => `${t(name)} · ${t(sub)} | Ju, imprime pra mim?`],
   [/^(\d+) peças$/, '$1 items', '$1 piezas'],
   [/^(\d+) peças? no carrinho$/, (t, n) => n === '1' ? '1 item in the cart' : `${n} items in the cart`, (t, n) => n === '1' ? '1 pieza en el carrito' : `${n} piezas en el carrito`],
   [/^Cores de (.+)$/, 'Colors of $1', 'Colores de $1'],

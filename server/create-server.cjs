@@ -14,12 +14,12 @@ const PROJECT = path.join(__dirname, '..');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
+  '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8',
   '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary'
 };
 // Text compresses well; Meshopt-compressed models still shrink by about a fifth.
-const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.svg', '.glb']);
+const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', '.glb']);
 const DEFAULT_CACHE = 'public, max-age=0, must-revalidate';   // same as Vercel: always revalidate, cheap 304 with the ETag
 const COMPRESSED_CACHE_LIMIT = 64 * 1024 * 1024;
 
