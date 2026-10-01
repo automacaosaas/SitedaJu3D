@@ -48,4 +48,6 @@ export function putItem(items, productId, selection, thumbnail = null, editId = 
   return normalizeCart(remaining);
 }
 // shippingCents: the delivery to add (the fixed example fee unless the checkout passes the real one, from the Correios quote).
+// What paying with Pix saves: the discount is taken per unit, exactly as the server does it.
+export function pixDiscount(items, bps = COMMERCE.pixDiscountBps) { return items.reduce((sum, i) => sum + Math.round(i.unitPrice * bps / 10000) * i.quantity, 0); }
 export function totals(items, shippingCents = COMMERCE.shippingCents) { const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0); const shipping = items.length ? shippingCents : 0; return {subtotal, shipping, total: subtotal + shipping}; }

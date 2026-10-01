@@ -146,3 +146,25 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-ship-options li small { display: block; color: var(--muted); font-size: 11px; }
 .cart-ship-options em { font-style: normal; color: #25664c; font-weight: 650; }
 .cart-order-summary .free-ship { margin: 14px 0 2px; }
+
+/* Pix e cartão lado a lado, acima do Brick do Mercado Pago. O Pix ganha a faixa verde do desconto. */
+.pay-choice { display: grid; gap: 10px; margin: 18px 0 16px; }
+.pay-option { display: grid; gap: 6px; width: 100%; text-align: left; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); min-height: 44px; transition: border-color .2s, box-shadow .2s, background .2s; }
+.pay-option:hover { border-color: #65364955; }
+.pay-option:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+.pay-option[aria-checked="true"] { border-color: var(--theme-accent, #25664c); background: #fff; box-shadow: 0 10px 24px -16px #13864a; }
+.pay-option.pay-pix[aria-checked="true"] { border-color: #13864a; background: #f3faf6; }
+.pay-head { display: flex; align-items: center; gap: 10px; }
+.pay-head strong { font-size: 15px; }
+.pay-head b { margin-left: auto; font-size: 15px; font-variant-numeric: tabular-nums; }
+.pay-head .method-symbol { display: inline-grid; place-items: center; width: 28px; height: 28px; }
+.pay-head .method-symbol svg { width: 22px; height: 22px; }
+.pay-option > small { color: var(--muted); font-size: 12px; }
+.pix-off, .card-off { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-radius: 10px; padding: 8px 12px; font-size: 12px; }
+.pix-off { background: #13864a; color: #fff; box-shadow: 0 8px 18px -12px #13864a; }
+.pix-off strong { font-size: 13px; letter-spacing: .06em; }
+.card-off { background: #edf3ef; color: var(--theme-accent, #25664c); }
+.card-off strong { font-size: 12px; letter-spacing: .05em; }
+.amounts .pix-discount dd { color: #13864a; font-weight: 650; }
+.amounts .pix-hint { color: #13864a; font-size: 13px; }
+.amounts .pix-hint dd { font-weight: 650; }

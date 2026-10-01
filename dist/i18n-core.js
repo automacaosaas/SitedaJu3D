@@ -52,6 +52,7 @@ const dynamic = [
   [/^Frete grátis \((.+)\) garantido!$/, 'Free shipping ($1) unlocked!', '¡Envío gratis ($1) garantizado!'],
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
+  [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
   [/^CET ([\d.,]+%) ao ano$/, 'Effective cost $1 a year', 'Costo efectivo $1 al año']
 ];
 export function translate(value, locale = 'en') {

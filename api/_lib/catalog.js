@@ -3,6 +3,8 @@
 // the delivery fee always come from here. tests/payments.mjs fails when this drifts from dist/products.js or
 // dist/commerce-config.js, so the two copies cannot silently disagree.
 const SHIPPING_CENTS = 1800;
+// Pix pays 5% less on the pieces (not on delivery). Basis points; the same number lives in dist/commerce-config.js.
+const PIX_DISCOUNT_BPS = 500;
 const MAX_LINES = 60, MAX_QUANTITY = 99;
 
 // Color and part names in the three site languages (same wording as dist/translations.js).
@@ -51,6 +53,15 @@ function priceOrder(rawItems) {
   return {lines, subtotal, shipping: SHIPPING_CENTS, total: subtotal + SHIPPING_CENTS};
 }
 
+// The Pix discount is taken per unit, so every Mercado Pago item keeps an exact price and the items still add up to
+// the total charged. `chargeUnitCents` is what each piece costs in this payment; `unitCents` stays the list price.
+const pixUnitDiscount = unitCents => Math.round(unitCents * PIX_DISCOUNT_BPS / 10000);
+function applyPixDiscount(priced) {
+  const lines = priced.lines.map(line => ({...line, chargeUnitCents: line.unitCents - pixUnitDiscount(line.unitCents)}));
+  const discount = lines.reduce((sum, line) => sum + (line.unitCents - line.chargeUnitCents) * line.quantity, 0);
+  return {...priced, lines, discount, total: priced.subtotal - discount + priced.shipping};
+}
+
 // Mercado Pago wants amounts as strings with two decimals ("129.00").
 const amount = cents => (cents / 100).toFixed(2);
 const fromAmount = value => Math.round(Number(value) * 100);
@@ -69,4 +80,4 @@ function describeSelection(productId, selection, lang = 'pt-BR') {
   return PRODUCTS[productId].parts.map(part => ({part: part.names[at], color: COLORS[selection[part.id]][at]}));
 }
 
-module.exports = {PRODUCTS, COLORS, SHIPPING_CENTS, MAX_LINES, MAX_QUANTITY, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};
+module.exports = {PRODUCTS, COLORS, SHIPPING_CENTS, PIX_DISCOUNT_BPS, pixUnitDiscount, applyPixDiscount, MAX_LINES, MAX_QUANTITY, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};

@@ -20,6 +20,8 @@ const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer he
 const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
+// The Pix discount is not a column: the order keeps the list subtotal and the total charged, so it is what is missing.
+const discountOf = order => Math.max(0, (order.subtotalCents || 0) + (order.shippingCents || 0) - (order.totalCents || 0));
 const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
 
 function createOrders({store, env = process.env, now = () => Date.now()}) {
@@ -82,7 +84,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
 
   function summary(order) {
     return {
-      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, shippingInfo: order.shippingInfo || null, total: order.totalCents,
+      id: order.mpOrderId || '', reference: order.reference, lang: order.lang, notes: order.notes, items: order.items, shipping: order.shippingCents, discount: discountOf(order), shippingInfo: order.shippingInfo || null, total: order.totalCents,
       invoice: invoice(order),
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       address: {cep: order.shipTo?.cep || '', street: order.shipTo?.street || '', number: order.shipTo?.number || '', district: order.shipTo?.district || '', city: order.shipTo?.city || '', state: order.shipTo?.state || '', complement: order.shipTo?.complement || ''},
@@ -114,7 +116,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     return {
       reference: order.reference, status: order.status, paymentState: order.paymentState, method: order.method,
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
-      subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
+      subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, discountCents: discountOf(order), totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
       items: order.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitCents, selection: i.selection}))
     };
   }
@@ -124,7 +126,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     const cpf = decrypt(order.buyerDocEnc);
     return {
       id: order.id, reference: order.reference, source: order.source, status: order.status, method: order.method || 'pix', installments: order.installments,
-      items: order.items, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, totalCents: order.totalCents,
+      items: order.items, subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, discountCents: discountOf(order), totalCents: order.totalCents,
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       buyer: {name: order.buyer?.name || '', cpf: cpf ? fields.maskCpf(cpf) : '', company: order.buyer?.company || null},
       address: summary(order).address, notes: order.notes || '',
