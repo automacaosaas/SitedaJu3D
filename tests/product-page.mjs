@@ -36,4 +36,20 @@ assert(/@media \(prefers-reduced-motion: reduce\) \{\s*\.pdp-sheet/.test(css));
 assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-sheet \{ top: auto; left: 0;/.test(css), 'no celular o painel sobe de baixo');
 assert(html.includes('<link rel="stylesheet" href="product-page.css">'));
 
-console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
+// Versão de 01/10/2026: a peça no centro, com as cores logo abaixo dela (partes + fileira com rolagem lateral);
+// "Surpreenda-me" virou um balão no canto da peça; "Mais sobre a peça" no fim, com uma linha de resumo por atalho.
+const visual = dialog.match(/<div class="detail-visual">[\s\S]*?<div class="detail-copy">/)[0];
+assert(/<div class="pdp-stage">[\s\S]*<button type="button" class="pdp-surprise" id="surprise-me">[\s\S]*<\/div>\s*<section class="pdp-colors"/.test(visual), 'balão no palco da peça; cores logo abaixo');
+assert(visual.includes('id="part-tabs"') && /<div class="pdp-rail">.*<div id="palette" role="radiogroup"/.test(visual), 'partes e fileira de cores embaixo da peça');
+assert(!dialog.includes('pdp-preview'), 'sem o selo "Suas cores" (as cores já aparecem embaixo da peça)');
+assert(js.includes("PRESETS.filter(preset=>preset.id!=='surpresa')") && js.includes("applyPreset('surpresa')"), 'Surpreenda-me sai das combinações e vai para o balão');
+assert(/#product-dialog #palette \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;/.test(css) && /scroll-snap-align: center;/.test(css), 'cores em rolagem lateral');
+assert(js.includes('requestAnimationFrame(revealColor)') && js.includes("rail.toggleAttribute('data-start'"), 'a cor escolhida fica à vista; as bordas mostram que há mais cores');
+assert(/@media \(hover: none\) \{ \.pdp-rail-nav \{ display: none; \} \}/.test(css), 'setas só onde há mouse; no celular, o dedo');
+assert(/\.pdp-surprise \{[^}]*min-height: 44px;/.test(css) && /\.pdp-presets button::before \{ content: ''; position: absolute; inset: -4px 0; \}/.test(css), '44 px de toque no balão e nas combinações');
+assert(/prefers-reduced-motion: reduce\) \{[^}]*\.pdp-surprise[^}]*\}\s*\.pdp-surprise, \.pdp-surprise\.is-pop svg \{ animation: none; \}/.test(css), 'balão sem animação com movimento reduzido');
+assert.equal((dialog.match(/class="pdp-fact-text"/g) || []).length, 4, 'cada atalho com uma linha de resumo');
+assert(js.includes("$('#pdp-fact-delivery').textContent=`Produção em ${COMMERCE.productionLabel}`"), 'o prazo vem de commerce-config.js');
+assert(/@media \(max-width: 600px\) \{[\s\S]*#product-dialog\[open\] \{ grid-template-rows: auto minmax\(0, 1fr\) auto; \}/.test(css), 'no celular as cores ficam fixas entre a peça e o texto que rola');
+
+console.log('PASS: product page — one screen (no steps), piece in the center with the colors right below (side-scrolling rail), "Surpreenda-me" balloon, summaries at the end, price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');

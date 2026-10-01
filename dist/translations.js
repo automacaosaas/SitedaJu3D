@@ -765,4 +765,8 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+Sem ideia de cor?|No color in mind?|¿Sin idea de color?
+Como é a peça e para que serve|What it is and what it is for|Qué es la pieza y para qué sirve
+Podem variar conforme a tela|May vary from screen to screen|Pueden variar según la pantalla
+Até 7 dias para desistir|Up to 7 days to change your mind|Hasta 7 días para desistir
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

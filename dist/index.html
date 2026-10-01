@@ -76,25 +76,28 @@
   <dialog id="product-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-subtitle">
     <button class="close" aria-label="Fechar produto">×</button>
     <div class="detail-visual">
+      <div class="pdp-stage">
       <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Imagem</button><button type="button" data-view="model" aria-pressed="false">Prévia 3D</button></div>
       <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.webp" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
       <div id="viewer-host" hidden></div>
       <div class="viewer-message" role="status" hidden></div>
       <div class="viewer-tools" hidden role="group" aria-label="Controles do modelo 3D"><button data-camera="left" aria-label="Girar para a esquerda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.6-5.9L4 8.5"/><path d="M4 3.5v5h5"/></svg></button><button data-camera="auto" aria-label="Girar automaticamente" aria-pressed="false">Girar</button><button data-camera="right" aria-label="Girar para a direita"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9L20 8.5"/><path d="M20 3.5v5h-5"/></svg></button><span></span><button data-camera="in" aria-label="Aproximar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4M11 8v6M8 11h6"/></svg></button><button data-camera="out" aria-label="Afastar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4M8 11h6"/></svg></button><button data-camera="reset" aria-label="Voltar à vista inicial">Início</button></div>
       <p class="view-note">Imagem de apresentação baseada na peça real.</p>
-      <p class="pdp-preview" aria-hidden="true"><span>Suas cores</span><span id="pdp-preview-dots"></span></p>
+      <button type="button" class="pdp-surprise" id="surprise-me"><span class="pdp-surprise-ask">Sem ideia de cor?</span><span class="pdp-surprise-go"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5c.6 4.6 2.4 6.9 7.5 7.5-5.1.6-6.9 2.9-7.5 7.5-.6-4.6-2.4-6.9-7.5-7.5 5.1-.6 6.9-2.9 7.5-7.5z"/><path d="M19 15.5c.25 1.6.9 2.3 2.5 2.5-1.6.2-2.25.9-2.5 2.5-.25-1.6-.9-2.3-2.5-2.5 1.6-.2 2.25-.9 2.5-2.5z"/></svg>Surpreenda-me</span></button>
+      </div>
+      <section class="pdp-colors" aria-labelledby="pdp-colors-title">
+        <div class="pdp-colors-head"><h3 id="pdp-colors-title">Suas cores</h3><span id="selected-color"></span></div>
+        <div id="part-tabs" role="group" aria-label="Parte do produto"></div>
+        <div class="pdp-rail"><button type="button" class="pdp-rail-nav" data-rail="-1" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 5-7 7 7 7"/></svg></button><div id="palette" role="radiogroup" aria-label="Cor da parte"></div><button type="button" class="pdp-rail-nav" data-rail="1" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg></button></div>
+        <p class="part-hint" id="part-hint"></p>
+      </section>
     </div>
     <div class="detail-copy">
       <p class="eyebrow" id="dialog-number"></p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p>
       <div class="pdp-price purchase-price"><p><strong id="product-price"></strong><span class="pdp-pix" id="product-pix"></span></p><small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</small></div>
-      <section class="pdp-colors" aria-labelledby="pdp-colors-title">
-        <div class="pdp-colors-head"><h3 id="pdp-colors-title">Suas cores</h3><span id="selected-color"></span></div>
-        <div id="part-tabs" role="group" aria-label="Parte do produto"></div>
-        <div id="palette" role="radiogroup" aria-label="Cor da parte"></div>
-        <p class="part-hint" id="part-hint"></p>
-        <div class="pdp-presets" id="presets" role="group" aria-label="Combinações prontas"></div><button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores</button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores">
-      </section>
-      <div class="pdp-facts" role="group" aria-label="Mais sobre a peça"><button type="button" data-sheet="0" data-icon="info" aria-haspopup="dialog">Detalhes</button><button type="button" data-sheet="1" data-icon="palette" aria-haspopup="dialog">Cores</button><button type="button" data-sheet="2" data-icon="truck" aria-haspopup="dialog">Entrega</button><button type="button" data-sheet="3" data-icon="returns" aria-haspopup="dialog">Trocas</button></div>
+      <div class="pdp-combos"><p class="pdp-label" aria-hidden="true">Combinações prontas</p><div class="pdp-presets" id="presets" role="group" aria-label="Combinações prontas"></div></div>
+      <button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores</button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores">
+      <div class="pdp-more"><p class="pdp-label" aria-hidden="true">Mais sobre a peça</p><div class="pdp-facts" role="group" aria-label="Mais sobre a peça"><button type="button" data-sheet="0" data-icon="info" aria-haspopup="dialog"><span class="pdp-fact-name">Detalhes</span><span class="pdp-fact-text">Como é a peça e para que serve</span></button><button type="button" data-sheet="1" data-icon="palette" aria-haspopup="dialog"><span class="pdp-fact-name">Cores</span><span class="pdp-fact-text">Podem variar conforme a tela</span></button><button type="button" data-sheet="2" data-icon="truck" aria-haspopup="dialog"><span class="pdp-fact-name">Entrega</span><span class="pdp-fact-text" id="pdp-fact-delivery"></span></button><button type="button" data-sheet="3" data-icon="returns" aria-haspopup="dialog"><span class="pdp-fact-name">Trocas</span><span class="pdp-fact-text">Até 7 dias para desistir</span></button></div></div>
       <p class="sr-only" aria-live="polite" id="color-announcement"></p>
     </div>
     <div class="modal-actions"><div id="purchase-panel"><p id="purchase-status" class="purchase-status" role="status"></p><div class="purchase-actions"><button type="button" class="primary" id="add-to-cart"></button><button type="button" class="primary buy-now" id="buy-now">Comprar agora</button></div></div></div>

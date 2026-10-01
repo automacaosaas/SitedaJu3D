@@ -1,9 +1,20 @@
-/* Página de produto compacta (controller.js): tudo o que decide a compra numa tela;
-   detalhes num painel com abas. Carregado depois de theme.css e mobile-modal.css. */
+/* Página de produto compacta (controller.js): tudo o que decide a compra numa tela. A peça fica no centro, com as
+   cores logo abaixo dela; preço, combinações e compra ao lado (embaixo no celular); detalhes num painel com abas.
+   Carregado depois de theme.css e mobile-modal.css. */
 #product-dialog .detail-copy { display: flex; flex-direction: column; gap: 14px; padding: 52px 36px 18px; }
 #product-dialog .detail-copy h2 { margin: 0; }
 #product-dialog .detail-copy .eyebrow { margin: 0; }
 #product-dialog .detail-subtitle { margin: -8px 0 0; }
+
+/* A peça no centro do palco; a bandeja de cores logo abaixo dela, na mesma coluna */
+#product-dialog .detail-visual { flex-direction: column; align-items: stretch; justify-content: flex-start; min-height: 0; }
+.pdp-stage { position: relative; flex: 1 1 auto; min-height: 0; }
+@media (min-width: 601px) {
+  #product-dialog[open] { height: min(780px, calc(100dvh - 48px)); }
+  /* A foto cabe na altura do palco (mais largo que alto), como no celular */
+  #product-dialog .image-area { position: absolute; inset: 0; height: auto; padding: 72px 24px 44px; }
+  #product-dialog .image-area img { height: 100%; min-height: 0; }
+}
 
 /* Preço com o valor no Pix */
 #product-dialog .pdp-price { display: grid; justify-items: start; gap: 6px; margin: 0; }
@@ -13,40 +24,69 @@
 #product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--muted); text-align: left; }
 #product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
 
-/* Cores: parte em controle segmentado, cores em círculos, combinações prontas */
-.pdp-colors { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+/* Cores: parte em controle segmentado e uma fileira de cores com rolagem lateral, numa bandeja abaixo da peça */
+.pdp-colors { position: relative; z-index: 2; flex: none; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0 20px 20px; padding: 14px 16px 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 12px 32px #28232612; }
 .pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .pdp-colors-head h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
 #selected-color { font-size: 12.5px; color: var(--theme-accent, var(--rose)); text-align: right; }
 #product-dialog #part-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--bg); }
 #product-dialog #part-tabs button { flex: 1 1 0; justify-content: center; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; font-size: 12.5px; text-align: center; }
 #product-dialog #part-tabs button[aria-pressed=true] { background: #fff; color: var(--theme-accent, var(--rose)); font-weight: 650; box-shadow: 0 1px 5px #2823261a; }
-#product-dialog #palette { display: flex; flex-wrap: wrap; gap: 4px; }
-#product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; }
-#product-dialog .swatch i { width: 30px; height: 30px; transition: transform .15s ease; }
+.pdp-rail { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0 -6px; }
+#product-dialog #palette { --rail-fade: linear-gradient(90deg, transparent, #000 26px, #000 calc(100% - 26px), transparent); display: flex; flex-wrap: nowrap; gap: 4px; flex: 1 1 auto; min-width: 0; padding: 3px 2px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-mask-image: var(--rail-fade); mask-image: var(--rail-fade); }
+#product-dialog #palette::-webkit-scrollbar { display: none; }
+#product-dialog .pdp-rail[data-start] #palette { --rail-fade: linear-gradient(90deg, #000 calc(100% - 26px), transparent); }
+#product-dialog .pdp-rail[data-end] #palette { --rail-fade: linear-gradient(90deg, transparent, #000 26px); }
+#product-dialog .pdp-rail[data-start][data-end] #palette { --rail-fade: none; }
+.pdp-rail-nav { flex: none; display: grid; place-items: center; width: 32px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ink); transition: opacity .2s; }
+.pdp-rail-nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pdp-rail-nav:hover { background: var(--bg); }
+.pdp-rail[data-start] [data-rail="-1"], .pdp-rail[data-end] [data-rail="1"] { opacity: 0; pointer-events: none; }
+.pdp-rail[data-start][data-end] .pdp-rail-nav { display: none; }
+@media (hover: none) { .pdp-rail-nav { display: none; } }
+#product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; flex: none; scroll-snap-align: center; }
+#product-dialog .swatch i { width: 32px; height: 32px; transition: transform .15s ease; }
 #product-dialog .swatch:hover { background: transparent; }
 #product-dialog .swatch:hover i { transform: scale(1.1); }
 #product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--theme-accent, var(--rose)); }
 #product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
 #product-dialog .swatch:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 0; }
 #product-dialog .part-hint { margin: -4px 0 0; font-size: 12px; }
+
+/* Balão "Surpreenda-me" no canto da peça: uma combinação ao acaso para quem não sabe por onde começar */
+.pdp-surprise { position: absolute; top: 18px; right: 18px; z-index: 4; display: grid; justify-items: start; gap: 1px; min-height: 44px; padding: 8px 14px 9px; border: 1px solid var(--line); border-radius: 16px 16px 16px 5px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 10px 26px #2823261c; animation: pdp-bubble-in .5s .45s cubic-bezier(.22, 1, .36, 1) backwards; transition: transform .2s ease, box-shadow .2s ease; }
+.pdp-surprise::after { content: ''; position: absolute; left: 14px; bottom: -6px; width: 10px; height: 10px; background: #fff; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
+.pdp-surprise-ask { font-size: 12px; line-height: 1.3; color: var(--muted); }
+.pdp-surprise-go { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; line-height: 1.3; color: var(--theme-accent, var(--rose)); }
+.pdp-surprise svg { width: 15px; height: 15px; fill: currentColor; }
+.pdp-surprise:hover { transform: translateY(-2px); box-shadow: 0 14px 30px #28232626; }
+.pdp-surprise:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
+.pdp-surprise.is-pop svg { animation: pdp-spark .6s ease; }
+.viewer-message:not([hidden]) ~ .pdp-surprise { display: none; }
+@keyframes pdp-bubble-in { from { opacity: 0; transform: translateY(-6px) scale(.94); } }
+@keyframes pdp-spark { 50% { transform: rotate(90deg) scale(1.3); } }
+
+/* Combinações prontas, embaixo do preço */
+.pdp-label { margin: 0 0 8px; font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .pdp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; }
+.pdp-presets button { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; }
+.pdp-presets button::before { content: ''; position: absolute; inset: -4px 0; }   /* 44 px de toque, mesmo visual */
 .pdp-presets button:hover { border-color: var(--theme-accent, var(--rose)); }
 .preset-dots { display: inline-flex; color: var(--theme-accent, var(--rose)); }
 .preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; }
 .preset-dots i:first-child { margin-left: 0; }
 
-/* Atalhos para o painel de informações */
-.pdp-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.pdp-facts button { display: grid; justify-items: center; gap: 4px; min-height: 60px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 12px; color: var(--ink); transition: border-color .2s, transform .2s; }
-.pdp-facts button:hover { border-color: var(--theme-accent, var(--rose)); transform: translateY(-1px); }
-.pdp-facts .icon { width: 19px; height: 19px; color: var(--theme-accent, var(--rose)); }
-
-/* Prévia das cores escolhidas sobre a imagem */
-.pdp-preview { position: absolute; top: 19px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px; border-radius: 999px; background: #fffcfbe6; font-size: 12px; color: var(--muted); box-shadow: 0 1px 4px #2823261a; }
-#pdp-preview-dots { display: flex; gap: 3px; }
-#pdp-preview-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0002; }
+/* "Mais sobre a peça", no fim: cada atalho com uma linha de resumo; abre o painel de informações */
+.pdp-more { margin-top: auto; }
+.pdp-facts { display: grid; border: 1px solid var(--line); border-radius: 16px; background: #fff; overflow: hidden; }
+.pdp-facts button { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon name go" "icon text go"; align-items: center; column-gap: 12px; min-height: 52px; padding: 8px 16px 8px 12px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); text-align: left; transition: background-color .2s; }
+.pdp-facts button:first-child { border-top: 0; }
+.pdp-facts button::after { content: ''; grid-area: go; width: 7px; height: 7px; border-top: 1.6px solid var(--muted); border-right: 1.6px solid var(--muted); transform: rotate(45deg); }
+.pdp-facts button:hover { background: var(--bg); }
+.pdp-facts button:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: -2px; }
+.pdp-facts .icon { grid-area: icon; width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: color-mix(in srgb, var(--theme-accent, var(--rose)) 11%, #fff); color: var(--theme-accent, var(--rose)); }
+.pdp-fact-name { grid-area: name; font-size: 13px; font-weight: 650; line-height: 1.3; }
+.pdp-fact-text { grid-area: text; font-size: 12px; line-height: 1.35; color: var(--muted); }
 
 /* Compra sempre à vista */
 #product-dialog .purchase-actions { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
@@ -66,17 +106,35 @@
 .pdp-sheet-panel a { color: var(--theme-accent, var(--rose)); text-decoration: underline; text-underline-offset: 3px; }
 .pdp-ship { color: #13864a; }
 
+/* Computador: a coluna da peça é a maior; o painel de informações cobre só a coluna da compra */
+@media (min-width: 851px) {
+  #product-dialog[open] { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  .pdp-sheet { width: 43.5%; }
+}
+@media (max-width: 850px) { .pdp-surprise { top: 74px; } }
+
 @media (max-width: 600px) {
   #product-dialog .detail-copy { gap: 12px; padding: 16px 18px 12px; }
   #product-dialog .pdp-price strong { font-size: 24px; }
-  .pdp-colors { padding: 12px; }
-  #product-dialog #palette { gap: 2px; }
-  .pdp-preview { display: none; }
-  .pdp-facts button { min-height: 56px; font-size: 12px; }
+  /* Celular: peça, cores (fixas, sem rolar com o texto), texto que rola e a compra embaixo */
+  #product-dialog[open] { grid-template-rows: auto minmax(0, 1fr) auto; }
+  #product-dialog .detail-visual { display: flex; height: auto; }
+  .pdp-stage { flex: none; height: clamp(240px, 38dvh, 340px); }
+  .pdp-colors { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tabs tabs" "rail rail" "head hint"; align-items: baseline; gap: 6px; margin: 0; padding: 10px 12px 9px; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+  #product-dialog #part-tabs { grid-area: tabs; }
+  .pdp-rail { grid-area: rail; margin: 0 -4px; }
+  .pdp-colors-head { grid-area: head; }
+  .pdp-colors-head h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #selected-color { font-size: 12px; font-weight: 600; text-align: left; }
+  #product-dialog .part-hint { grid-area: hint; margin: 0; }
+  #product-dialog .part-hint::before { content: '· '; }
+  .pdp-surprise { top: 62px; right: 10px; padding: 6px 11px 7px; }
+  .pdp-surprise-go { font-size: 13px; }
   .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #2823261f; transform: translateY(100%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pdp-sheet, .pdp-facts button, #product-dialog .swatch i { transition: none; }
+  .pdp-sheet, .pdp-facts button, #product-dialog .swatch i, .pdp-surprise, .pdp-rail-nav { transition: none; }
+  .pdp-surprise, .pdp-surprise.is-pop svg { animation: none; }
 }
 /* Compartilhar estas cores (auditoria D3): um link que reabre a mesma combinação. */
 .pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; padding: 0 2px; border: 0; background: none; color: var(--theme-accent, var(--rose)); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

@@ -4,7 +4,7 @@ import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
-const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
+const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),rail=$('.pdp-rail'),palette=$('#palette'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
@@ -29,7 +29,7 @@ function fillProduct(key){
   const p=PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=`COLEÇÃO 01 / PEÇA ${p.number}`;$('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
   $('#dialog-image').src=`assets/${p.image}`;$('#dialog-image').alt=`${p.title} sobre uma pilastra branca — imagem de apresentação`;$('#fixed-note').textContent=p.fixed;
-  $('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#pdp-production').textContent=COMMERCE.productionLabel;
+  $('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#pdp-production').textContent=COMMERCE.productionLabel;$('#pdp-fact-delivery').textContent=`Produção em ${COMMERCE.productionLabel}`;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }
 function syncProduct(){
@@ -74,7 +74,7 @@ function renderControls(){
   const p=PRODUCTS[activeProduct];
   $('#part-tabs').replaceChildren(...p.parts.map(part=>{const b=document.createElement('button');b.type='button';b.dataset.part=part.id;b.innerHTML='<span class="part-dot" aria-hidden="true"></span><span></span>';b.lastElementChild.textContent=part.name;return b;}));
   $('#palette').replaceChildren(...PALETTE.map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',value.hex);b.style.setProperty('--check',['yellow','cream','mint','white'].includes(value.id)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');b.append(swatch);return b;}));
-  $('#presets').replaceChildren(...PRESETS.map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=color(id).hex;dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
+  $('#presets').replaceChildren(...PRESETS.filter(preset=>preset.id!=='surpresa').map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=color(id).hex;dots.append(i);}const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
   updateControls();
 }
 function updateControls(){
@@ -82,11 +82,16 @@ function updateControls(){
   document.querySelectorAll('#part-tabs [data-part]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.part===selectedPart));b.querySelector('.part-dot').style.background=color(s[b.dataset.part]).hex;});
   document.querySelectorAll('#palette [data-color]').forEach(b=>{const on=b.dataset.color===s[selectedPart];b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;});
   $('#selected-color').textContent=`${part.name}: ${color(s[selectedPart]).name}`;$('#part-hint').textContent=part.hint;
-  $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=color(s[item.id]).hex;i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
-  viewer?.update(hexColors());
+  viewer?.update(hexColors());requestAnimationFrame(revealColor);
 }
 // A foto mostra só as cores originais: ao escolher uma cor, a prévia passa para o 3D.
 function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
+function applyPreset(id){const preset=PRESETS.find(p=>p.id===id);applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);}
+// Cores numa fileira com rolagem lateral: a escolhida fica sempre à vista, as bordas esmaecem enquanto há mais cores
+// para o lado e, no computador, as setas rolam a fileira (no celular, o dedo).
+const scrollMode=()=>matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+function railState(){const end=palette.scrollWidth-palette.clientWidth;rail.toggleAttribute('data-start',palette.scrollLeft<=1);rail.toggleAttribute('data-end',palette.scrollLeft>=end-1);}
+function revealColor(){const b=palette.querySelector('[aria-checked="true"]');if(!b||!palette.clientWidth)return;const r=palette.getBoundingClientRect(),c=b.getBoundingClientRect();if(c.left<r.left+24||c.right>r.right-24)palette.scrollBy({left:c.left-r.left-(r.width-c.width)/2,behavior:scrollMode()});railState();}
 function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
 
 // ── Painel "Sobre a peça" (abas) ──
@@ -116,7 +121,11 @@ $('#share-colors').addEventListener('click',async()=>{
   try{if(navigator.share&&matchMedia('(pointer: coarse)').matches){await navigator.share({title:p.title,text,url});return;}await navigator.clipboard.writeText(url);announce('Link das cores copiado. Quem abrir vê a peça nesta combinação.');}
   catch(error){if(error?.name==='AbortError')return;const field=$('#share-link');field.value=url;field.hidden=false;field.focus();field.select();announce(`Copie o link: ${url}`);}
 });
-$('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset]');if(!b)return;const preset=PRESETS.find(p=>p.id===b.dataset.preset);applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);});
+$('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset]');if(b)applyPreset(b.dataset.preset);});
+palette.addEventListener('scroll',railState,{passive:true});new ResizeObserver(railState).observe(palette);
+rail.addEventListener('click',e=>{const b=e.target.closest('[data-rail]');if(b)palette.scrollBy({left:Number(b.dataset.rail)*palette.clientWidth*.7,behavior:scrollMode()});});
+// Balão "Surpreenda-me" no canto da peça: uma combinação ao acaso para quem não sabe por onde começar.
+$('#surprise-me').addEventListener('click',e=>{applyPreset('surpresa');const b=e.currentTarget;b.classList.remove('is-pop');void b.offsetWidth;b.classList.add('is-pop');});
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);renderControls();setView('model');}});
