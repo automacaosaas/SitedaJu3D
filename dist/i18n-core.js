@@ -25,6 +25,10 @@ const dynamic = [
   [/^Pedido (.+)$/, 'Order $1', 'Pedido $1'],
   [/^PEDIDO (.+)$/, 'ORDER $1', 'PEDIDO $1'],
   [/^Produção: (.+)$/, 'Production: $1', 'Producción: $1'],
+  [/^(\d+) a (\d+) dias úteis$/, '$1 to $2 business days', '$1 a $2 días hábiles'],
+  [/^(\d+) dias úteis$/, '$1 business days', '$1 días hábiles'],
+  [/^Entrega em (.+)$/, (t, days) => `Delivery in ${t(days)}`, (t, days) => `Entrega en ${t(days)}`],
+  [/^Prazo estimado: (.+)$/, (t, days) => `Estimated delivery: ${t(days)}`, (t, days) => `Plazo estimado: ${t(days)}`],
   [/^(\d+) peça · (.+)$/, '$1 item · $2', '$1 pieza · $2'],
   [/^(\d+) peças · (.+)$/, '$1 items · $2', '$1 piezas · $2'],
   [/^Adicionar (.+) ao carrinho$/, 'Add $1 to cart', 'Añadir $1 al carrito'],
@@ -43,7 +47,17 @@ const dynamic = [
   [/^(.+) sobre uma pilastra branca — imagem de apresentação$/, '$1 on a white pedestal — presentation image', '$1 sobre un pedestal blanco — imagen de presentación'],
   [/^(.+) sobre pilastra branca$/, '$1 on a white pedestal', '$1 sobre un pedestal blanco'],
   [/^Prévia 3D ilustrativa de (.+)$/, 'Illustrative 3D preview of $1', 'Vista previa 3D ilustrativa de $1'],
-  [/^Preço de (.+)$/, 'Price for $1', 'Precio de $1']
+  [/^Preço de (.+)$/, 'Price for $1', 'Precio de $1'],
+  [/^para o frete grátis \((.+)\)\.$/, 'more for free shipping ($1).', 'para el envío gratis ($1).'],
+  [/^Frete grátis \((.+)\) garantido!$/, 'Free shipping ($1) unlocked!', '¡Envío gratis ($1) garantizado!'],
+  [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
+  [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
+  [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
+  [/^(R\$ [\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
+  [/^Combinação (.+) aplicada\.$/, (t, name) => `${t(name)} combination applied.`, (t, name) => `Combinación ${t(name)} aplicada.`],
+  [/^produção em (.+)$/, (t, days) => `production in ${t(days)}`, (t, days) => `producción en ${t(days)}`],
+  [/^(\d+) de (\d+)$/, '$1 of $2', '$1 de $2'],
+  [/^CET ([\d.,]+%) ao ano$/, 'Effective cost $1 a year', 'Costo efectivo $1 al año']
 ];
 export function translate(value, locale = 'en') {
   if (locale === 'pt-BR') return value;

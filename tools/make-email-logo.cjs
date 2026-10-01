@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const SRC = path.join(__dirname, '..', 'dist', 'assets', 'logo-ju.png');
+const SRC = path.join(__dirname, '..', 'design', 'originais', 'logo-ju.png');
 const OUT = path.join(__dirname, '..', 'dist', 'assets', 'logo-ju-email.png');
 const SIZE = 360;      // 2x of the 180px it is shown at in the e-mail
 const TOLERANCE = 34;  // max per-channel distance from the background to count as "background"

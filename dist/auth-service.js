@@ -1,202 +1,161 @@
-// UI adapter only. The demo is NOT authentication and grants no server access.
-// Accounts and passwords live in this page's memory. Codes are e-mailed by the server (api/auth/*, Resend) when it is
-// configured; otherwise the preview shows a test code. See AUTH-INTEGRATION.md and EMAIL-TEMPLATE.md.
-export const AUTH_MODE = 'demo';
-const SESSION_KEY = 'ju.account.preview.v1';
+// Accounts through the server (api/auth/*, api/account/*). The session itself is an HttpOnly cookie that page scripts
+// cannot read; the copy kept here (sessionStorage) only shows the name in the header and is refreshed from /api/auth/me.
+// account.js and checkout.js use the methods below; see AUTH-INTEGRATION.md.
+export const AUTH_MODE = 'server';
+const SESSION_KEY = 'ju.account.v2';
 export const ORDERS_KEY = 'ju.orders.preview.v1';
-let previewSession = null;
-const publicUser = user => {
-  const visible = {name:user.name, email:user.email, demo:true};
-  // Keep the opt-in available to the account screen without exposing a new
-  // enumerable field in existing preview-session and integration responses.
-  Object.defineProperty(visible, 'marketingOptIn', {value:user.marketingOptIn === true, enumerable:false});
-  return visible;
-};
-export function getSession() {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    return value?.demo === true && typeof value.name === 'string' && typeof value.email === 'string' ? publicUser(value) : previewSession;
-  } catch { return previewSession; }
-}
-function setSession(user) {
-  previewSession = publicUser(user);
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({...previewSession, marketingOptIn:previewSession.marketingOptIn})); } catch {}
-  return previewSession;
-}
-export async function signOut() { previewSession = null; try { sessionStorage.removeItem(SESSION_KEY); } catch {} }
 
-// Talks to the e-mail service. Every method resolves to null when the service is not available on this host
-// (no /api, or not configured yet) so the preview keeps working; real failures throw a message for the user.
-export function createMailer({fetchImpl = (...args) => fetch(...args), language = () => document.documentElement?.lang || 'pt-BR'} = {}) {
-  async function post(path, body) {
+const MESSAGES = {
+  invalid_email: 'Informe um e-mail válido.',
+  invalid_code: 'O código não confere. Verifique os seis números.',
+  expired: 'O código expirou. Solicite um novo código.',
+  too_many_attempts: 'Limite de tentativas atingido. Solicite outro código.',
+  too_many_requests: 'Muitas tentativas. Aguarde um instante e tente de novo.',
+  invalid_challenge: 'Este código não é mais válido. Solicite um novo código.',
+  invalid_grant: 'Confirme seu e-mail com um novo código.',
+  invalid_credentials: 'E-mail ou senha não conferem.',
+  weak_password: 'Use uma senha com 8 a 128 caracteres.',
+  account_exists: 'Este e-mail já tem uma conta. Entre com o código ou com a sua senha.',
+  send_failed: 'Não foi possível enviar o e-mail agora. Tente novamente em instantes.',
+  email_not_configured: 'O envio de e-mails ainda não está disponível. Tente novamente mais tarde.',
+  accounts_unavailable: 'As contas estão indisponíveis no momento. Tente novamente mais tarde.',
+  data_keys_missing: 'As contas estão indisponíveis no momento. Tente novamente mais tarde.',
+  unauthorized: 'Sua sessão terminou. Entre de novo para continuar.',
+  cpf_in_use: 'Este CPF já está ligado a outra conta.',
+  forbidden: 'Não foi possível confirmar este pedido. Recarregue a página e tente de novo.'
+};
+const FIELDS = {
+  name: 'Informe seu nome (até 100 caracteres).', password: 'Use uma senha com 8 a 128 caracteres.',
+  firstName: 'Informe seu nome.', lastName: 'Informe seu sobrenome.', cpf: 'Confira o CPF.', phone: 'Informe um telefone com DDD.',
+  cnpj: 'Confira o CNPJ.', companyName: 'Informe a razão social.', stateRegistration: 'Informe a inscrição estadual ou marque que é isenta.'
+};
+const GENERIC = 'Não foi possível continuar. Tente novamente.';
+
+export function createClient({fetchImpl = (...args) => fetch(...args), language = () => globalThis.document?.documentElement?.lang || 'pt-BR'} = {}) {
+  async function request(method, path, body) {
     let response;
-    try { response = await fetchImpl(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); }
+    try { response = await fetchImpl(path, {method, credentials: 'same-origin', cache: 'no-store', ...(body ? {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {})}); }
     catch { throw Error('Sem conexão. Verifique sua internet e tente de novo.'); }
     let data = null;
     try { data = await response.json(); } catch {}
-    if (response.status === 404 || response.status === 405 || (response.status === 503 && data?.error === 'email_not_configured') || (response.ok && !data)) return null;
-    return {status:response.status, data:data || {}};
+    if (response.ok) return data || {};
+    const code = data?.error || '', message = code === 'invalid_request' || code === 'weak_password' ? FIELDS[data?.field] || GENERIC : MESSAGES[code] || GENERIC;
+    throw Object.assign(Error(message), {code, field: data?.field || null, status: response.status});
   }
-  const tooMany = 'Muitas tentativas. Aguarde um instante e tente de novo.';
+
+  // --- the header's copy of who is signed in --------------------------------------------------------------------
+  const readCache = () => { try { const v = JSON.parse(sessionStorage.getItem(SESSION_KEY)); return v && typeof v.email === 'string' && typeof v.name === 'string' ? v : null; } catch { return null; } };
+  let cached = null, pending = null;
+  try { cached = readCache(); } catch {}
+  function remember(user) {
+    cached = user ? {name: user.name, email: user.email, marketingOptIn: user.marketingOptIn === true, hasPassword: user.hasPassword === true, profileComplete: user.profileComplete === true} : null;
+    try { if (cached) sessionStorage.setItem(SESSION_KEY, JSON.stringify(cached)); else sessionStorage.removeItem(SESSION_KEY); } catch {}
+    return cached;
+  }
+
+  // --- e-mail first: code, then name/password for a new address ------------------------------------------------
+  let challenge = null, grant = null, deletion = null;
+  const view = c => ({email: c.email, purpose: c.purpose, expiresAt: c.expiresAt, resendAt: c.resendAt, ...(c.demoCode ? {demoCode: c.demoCode} : {})});
+  async function start(email, purpose) {
+    const data = await request('POST', '/api/auth/start', {email, purpose, lang: language()});
+    challenge = {...data, token: data.challenge};
+    grant = null;
+    return view(challenge);
+  }
+  const decodeEmail = part => { try { return new TextDecoder().decode(Uint8Array.from(atob(part.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))); } catch { return ''; } };
+
+  const auth = {
+    begin: ({email}) => start(email, 'access'),
+    forgot: ({email}) => start(email, 'reset'),
+    async resend() { if (!challenge) throw Error('Solicite um novo código.'); return start(challenge.email, challenge.purpose); },
+    // The link in the e-mail carries the code reference and the code; the address in it is only for display.
+    adopt(token) {
+      const [id = '', part = ''] = String(token).split('.'), email = decodeEmail(part);
+      if (!/^[0-9a-f-]{36}$/.test(id) || !/^[^\s@]+@[^\s@]+$/.test(email)) throw Error('Este link não é mais válido. Entre ou crie sua conta para receber um novo código.');
+      challenge = {token, email, purpose: 'access', expiresAt: Date.now() + 600000, resendAt: Date.now()};
+      grant = null;
+      return view(challenge);
+    },
+    async verify({code}) {
+      if (!challenge) throw Error('Solicite um novo código.');
+      const data = await request('POST', '/api/auth/verify', {challenge: challenge.token, code});
+      if (data.status === 'signed_in') { challenge = null; return {user: remember(data.user)}; }
+      grant = data.grant;
+      return data.status === 'reset_allowed' ? {resetAllowed: true} : {registrationAllowed: true};
+    },
+    async completeRegistration({name, password, marketingOptIn = false}) {
+      if (!grant) throw Error('Confirme seu e-mail com um novo código.');
+      const data = await request('POST', '/api/auth/register', {grant, name, password, marketingOptIn: marketingOptIn === true});
+      grant = null; challenge = null;
+      return remember(data.user);
+    },
+    async login({email, password}) { return remember((await request('POST', '/api/auth/login', {email, password})).user); },
+    async reset({password}) {
+      if (!grant) throw Error('Verifique um novo código para redefinir a senha.');
+      const data = await request('POST', '/api/auth/reset', {grant, password});
+      grant = null; challenge = null;
+      return remember(data.user);
+    },
+    cancel() { challenge = null; grant = null; }
+  };
+
   return {
-    async send({email, name = '', purpose}) {
-      const reply = await post('/api/auth/send-code', {email, name, purpose, lang:language()});
-      if (!reply) return null;
-      if (reply.status === 200 && reply.data.challenge) return {token:reply.data.challenge, expiresAt:reply.data.expiresAt, resendAt:reply.data.resendAt};
-      if (reply.status === 400) throw Error('Informe um e-mail válido.');
-      if (reply.status === 429) throw Error(tooMany);
-      throw Error('Não foi possível enviar o e-mail agora. Tente novamente em instantes.');
+    auth,
+    getSession: () => cached,
+    acceptSession: async user => remember(user),
+    // The header and the page both ask when a page opens; callers at the same moment share one request.
+    refreshSession() {
+      pending ??= (async () => {
+        try {
+          const response = await fetchImpl('/api/auth/me', {credentials: 'same-origin', cache: 'no-store'});
+          if (response.status === 401) return remember(null);
+          if (!response.ok) return cached;
+          return remember((await response.json()).user || null);
+        } catch { return cached; }
+        finally { pending = null; }
+      })();
+      return pending;
     },
-    async verify({token, code}) {
-      const reply = await post('/api/auth/verify-code', {challenge:token, code});
-      if (!reply) throw Error('Não foi possível conferir o código agora. Tente novamente em instantes.');
-      if (reply.status === 200) return reply.data;
-      if (reply.data.error === 'expired') throw Error('O código expirou. Solicite um novo código.');
-      if (reply.data.error === 'invalid_code') throw Error('O código não confere. Verifique os seis números.');
-      if (reply.status === 429) throw Error(tooMany);
-      throw Error('Este link não é mais válido. Entre ou crie sua conta para receber um novo código.');
+    async signOut() { try { await request('POST', '/api/auth/logout', {}); } catch {} auth.cancel(); remember(null); },
+    loadProfile: async () => (await request('GET', '/api/account/profile')).profile,
+    async saveProfile(data) { const profile = (await request('PUT', '/api/account/profile', data)).profile; if (cached) remember({...cached, profileComplete: true}); return profile; },
+    loadOrders: async () => (await request('GET', '/api/account/orders')).orders || [],
+
+    // "Excluir minha conta": a code goes to the account's e-mail; confirming it deletes the account and ends the session.
+    async startDeletion() { deletion = await request('POST', '/api/account/delete-start', {lang: language()}); return view(deletion); },
+    adoptDeletion(token) {
+      if (!/^[0-9a-f-]{36}\.[\w-]+$/.test(String(token))) throw Error('Este link não é mais válido. Solicite um novo código.');
+      deletion = {challenge: token, email: decodeEmail(String(token).split('.')[1]), purpose: 'delete', expiresAt: Date.now() + 600000, resendAt: Date.now()};
+      return view(deletion);
     },
-    // Display only: the server is what actually checks the signature and the code.
-    peek(token) {
-      try {
-        const body = String(token).split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(body), char => char.charCodeAt(0))));
-        return payload?.v === 1 && typeof payload.e === 'string' && typeof payload.p === 'string' ? {email:payload.e, purpose:payload.p, name:String(payload.n || ''), expiresAt:Number(payload.x)} : null;
-      } catch { return null; }
+    async confirmDeletion({code}) {
+      if (!deletion) throw Error('Solicite um novo código.');
+      await request('POST', '/api/account/delete', {challenge: deletion.challenge, code});
+      deletion = null; auth.cancel(); remember(null);
+      try { sessionStorage.removeItem(ORDERS_KEY); } catch {}
     }
   };
 }
 
-export function createDemoAuth({now = () => Date.now(), makeCode = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6,'0'), mailer = null} = {}) {
-  const accounts = new Map();
-  let challenge = null, resetGrant = null, registrationGrant = null;
-  const sentAtByEmail = new Map();
-  const normalize = value => String(value || '').trim().toLowerCase();
-  const checkPassword = value => { if (typeof value !== 'string' || value.length < 8 || value.length > 128) throw Error('Use uma senha com 8 a 128 caracteres.'); };
-  async function digest(value) {
-    return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))).map(n=>n.toString(16).padStart(2,'0')).join('');
-  }
-  function authorizeIssue(email) {
-    if (challenge && now()-challenge.sentAt < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
-    if (now()-(sentAtByEmail.get(email) ?? -Infinity) < 30000) throw Error('Aguarde 30 segundos antes de solicitar outro código.');
-  }
-  function issueReady(email, purpose, pending) {
-    sentAtByEmail.set(email, now());
-    resetGrant = null; registrationGrant = null;
-    challenge = {email, purpose, pending, code:makeCode(), expiresAt:now()+600000, sentAt:now(), attempts:0};
-    return {email, purpose, expiresAt:challenge.expiresAt, resendAt:challenge.sentAt+30000, demoCode:challenge.code};
-  }
-  function issue(email, purpose, pending) { authorizeIssue(email); return issueReady(email, purpose, pending); }
-  // E-mailed code when the service is available; otherwise the preview code above.
-  async function issueByEmail(email, purpose, pending, name = '') {
-    authorizeIssue(email);
-    const sent = mailer ? await mailer.send({email, name:pending?.name || name, purpose}) : null;
-    if (!sent) return issueReady(email, purpose, pending);
-    sentAtByEmail.set(email, now());
-    resetGrant = null; registrationGrant = null;
-    challenge = {email, purpose, pending, name:pending?.name || name, server:sent, expiresAt:sent.expiresAt, sentAt:now(), attempts:0};
-    return {email, purpose, expiresAt:sent.expiresAt, resendAt:sent.resendAt};
-  }
-  // The server's answer is authoritative for which address was verified.
-  function complete(valid, proof) {
-    challenge = null;
-    const email = proof?.email || valid.email;
-    if (valid.purpose === 'access') {
-      const account = accounts.get(email);
-      if (account) return {user:publicUser(account)};
-      registrationGrant = {email, expiresAt:now()+600000};
-      return {registrationAllowed:true};
-    }
-    if (valid.purpose === 'signup') {
-      const pending = valid.pending ? {...valid.pending, email} : {name:proof?.name || email.split('@')[0], email, passwordHash:null};
-      accounts.set(email, pending);
-      return {user:publicUser(pending)};
-    }
-    resetGrant = {email, expiresAt:now()+600000, verified:Boolean(proof)};
-    return {resetAllowed:true};
-  }
-  return {
-    // The current account page starts with just an e-mail. It uses the same
-    // signed code as registration, then asks for the remaining details only
-    // when this address has no local preview account yet.
-    async begin({email}) {
-      email = normalize(email);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180) throw Error('Informe um e-mail válido.');
-      return issueByEmail(email, 'access');
-    },
-    async completeRegistration({name, password, marketingOptIn = false}) {
-      name = String(name || '').trim();
-      if (!registrationGrant || now() >= registrationGrant.expiresAt) throw Error('Confirme seu e-mail com um novo código.');
-      if (!name || name.length > 100) throw Error('Informe seu nome (até 100 caracteres).');
-      checkPassword(password);
-      const grant = registrationGrant;
-      const account = {name, email:grant.email, passwordHash:await digest(password), marketingOptIn:marketingOptIn === true, consentAt:marketingOptIn === true ? now() : null};
-      if (registrationGrant !== grant || now() >= grant.expiresAt || accounts.has(grant.email)) throw Error('Confirme seu e-mail com um novo código.');
-      accounts.set(account.email, account); registrationGrant = null;
-      return publicUser(account);
-    },
-    cancel() { challenge = null; registrationGrant = null; resetGrant = null; },
-    async register({name,email,password}, {onStage = () => {}} = {}) {
-      email=normalize(email); name=String(name||'').trim();
-      if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Error('Preencha seu nome e um e-mail válido.');
-      checkPassword(password);
-      if(accounts.has(email)) throw Error('Este e-mail já foi cadastrado nesta prévia. Entre na sua conta.');
-      const pending = {name,email,passwordHash:await digest(password)};
-      onStage('sending');
-      return issueByEmail(email,'signup',pending);
-    },
-    async login({email,password}) {
-      const account=accounts.get(normalize(email));
-      if (!account || account.passwordHash !== await digest(password)) throw Error('E-mail ou senha não conferem nesta prévia. Crie uma conta de teste nesta página.');
-      return publicUser(account);
-    },
-    async forgot({email}, {onStage = () => {}} = {}) {
-      email=normalize(email);
-      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw Error('Informe um e-mail válido.');
-      onStage('sending');
-      return issueByEmail(email,'reset');
-    },
-    async resend() {
-      if(!challenge) throw Error('Solicite um novo código.');
-      return issueByEmail(challenge.email,challenge.purpose,challenge.pending,challenge.name);
-    },
-    // Continue a challenge that started elsewhere: the person followed the link in the e-mail.
-    adopt(token) {
-      const info = mailer?.peek(token);
-      if (!info) throw Error('Este link não é mais válido. Entre ou crie sua conta para receber um novo código.');
-      resetGrant = null;
-      challenge = {email:info.email, purpose:info.purpose, name:info.name, server:{token}, expiresAt:info.expiresAt, sentAt:now()-30000, attempts:0};
-      return {email:info.email, purpose:info.purpose, expiresAt:info.expiresAt, resendAt:challenge.sentAt+30000};
-    },
-    async verify({code}) {
-      if(!challenge) throw Error('Solicite um novo código.');
-      if(now()>=challenge.expiresAt) throw Error('O código expirou. Solicite um novo código.');
-      if(challenge.attempts>=5) throw Error('Limite de tentativas atingido. Solicite outro código.');
-      challenge.attempts++;
-      if(challenge.server) {
-        if(!/^\d{6}$/.test(code)) throw Error('O código não confere. Verifique os seis números.');
-        return complete(challenge, await mailer.verify({token:challenge.server.token, code}));
-      }
-      if(!/^\d{6}$/.test(code) || code!==challenge.code) throw Error('O código não confere. Verifique os seis números.');
-      return complete(challenge, null);
-    },
-    async reset({password}) {
-      checkPassword(password);
-      if(!resetGrant || now()>=resetGrant.expiresAt) throw Error('Verifique um novo código para redefinir a senha.');
-      let user=accounts.get(resetGrant.email);
-      if(!user && resetGrant.verified) { user={name:resetGrant.email.split('@')[0], email:resetGrant.email, passwordHash:null}; accounts.set(user.email,user); }
-      if(!user) throw Error('Não existe uma conta de teste nesta página. Comece por Criar conta.');
-      user.passwordHash=await digest(password);resetGrant=null;return {ok:true};
-    }
-  };
-}
-export const auth = createDemoAuth({mailer:createMailer()});
-export async function acceptSession(user) { return setSession(user); }
+const client = createClient();
+export const auth = client.auth;
+export const getSession = client.getSession;
+export const acceptSession = client.acceptSession;
+export const refreshSession = client.refreshSession;
+export const signOut = client.signOut;
+export const loadProfile = client.loadProfile;
+export const saveProfile = client.saveProfile;
+export const loadOrders = client.loadOrders;
+export const startDeletion = client.startDeletion;
+export const adoptDeletion = client.adoptDeletion;
+export const confirmDeletion = client.confirmDeletion;
+
+// Orders of the demonstration (payments switched off) stay in this tab only; real and test orders come from the server.
 export function saveDemoOrder(order) {
   try {
-    const existing=JSON.parse(sessionStorage.getItem(ORDERS_KEY)||'[]');
-    const safe={id:order.id,method:order.method,total:order.amounts.total,createdAt:new Date().toISOString(),items:order.items.map(i=>({title:i.title,quantity:i.quantity,unitPrice:i.unitPrice})),demo:true};
-    sessionStorage.setItem(ORDERS_KEY,JSON.stringify([safe,...(Array.isArray(existing)?existing:[])].slice(0,20)));
+    const existing = JSON.parse(sessionStorage.getItem(ORDERS_KEY) || '[]');
+    const safe = {id: order.id, method: order.method, total: order.amounts.total, createdAt: new Date().toISOString(), items: order.items.map(i => ({title: i.title, quantity: i.quantity, unitPrice: i.unitPrice})), demo: true};
+    sessionStorage.setItem(ORDERS_KEY, JSON.stringify([safe, ...(Array.isArray(existing) ? existing : [])].slice(0, 20)));
   } catch {}
 }
-export function readDemoOrders() { try { const value=JSON.parse(sessionStorage.getItem(ORDERS_KEY)||'[]');return Array.isArray(value)?value.filter(o=>o?.demo===true&&Array.isArray(o.items)):[]; } catch { return []; } }
+export function readDemoOrders() { try { const value = JSON.parse(sessionStorage.getItem(ORDERS_KEY) || '[]'); return Array.isArray(value) ? value.filter(o => o?.demo === true && Array.isArray(o.items)) : []; } catch { return []; } }

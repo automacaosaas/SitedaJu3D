@@ -171,7 +171,7 @@ Selecione uma peça para continuar.|Select a piece to continue.|Selecciona una p
 Compra segura|Secure shopping|Compra segura
 Seus dados protegidos|Your data is protected|Tus datos protegidos
 Produção sob demanda|Made to order|Producción bajo pedido
-5 a 7 dias úteis (exemplo)|5 to 7 business days (example)|5 a 7 días hábiles (ejemplo)
+3 a 5 dias úteis|3 to 5 business days|3 a 5 días hábiles
 Cartão|Card|Tarjeta
 Seu carrinho espera um pouco de cor.|Your cart is waiting for a little color.|Tu carrito espera un poco de color.
 Escolha uma peça e crie a sua combinação.|Choose a piece and create your combination.|Elige una pieza y crea tu combinación.
@@ -523,4 +523,221 @@ use Personalize o seu para escolher as cores.|use Customize yours to choose the 
 Falar com a Ju no WhatsApp ↗|Talk to Ju on WhatsApp ↗|Hablar con Ju por WhatsApp ↗
 Informe um WhatsApp com DDD, por exemplo (11) 99999-9999.|Enter a WhatsApp number with area code, for example (11) 99999-9999.|Introduce un WhatsApp con código de área, por ejemplo (11) 99999-9999.
 Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.|Demo approved, but the cart could not be updated in this browser.|Demostración aprobada, pero no se pudo actualizar el carrito en este navegador.
+Nome|First name|Nombre
+Sobrenome|Last name|Apellidos
+CPF|CPF|CPF
+Telefone|Phone|Teléfono
+CPF e telefone são usados na nota fiscal e na entrega.|Your CPF and phone are used on the invoice and for delivery.|El CPF y el teléfono se usan en la factura y en la entrega.
+Incluir dados de pessoa jurídica|Add company details|Incluir datos de persona jurídica
+CNPJ|CNPJ|CNPJ
+Razão social|Company legal name|Razón social
+Inscrição estadual|State registration|Inscripción estatal
+Isenta de inscrição estadual|Exempt from state registration|Exenta de inscripción estatal
+A nota fiscal sai no CNPJ. O CPF continua sendo o de quem compra.|The invoice is issued to the CNPJ. The CPF remains the buyer's.|La factura se emite al CNPJ. El CPF sigue siendo el de quien compra.
+Quero receber comunicações promocionais.|I want to receive promotional messages.|Quiero recibir comunicaciones promocionales.
+Informe seu nome.|Enter your first name.|Introduce tu nombre.
+Informe seu sobrenome.|Enter your last name.|Introduce tus apellidos.
+Confira o CPF.|Check the CPF.|Revisa el CPF.
+Informe um telefone com DDD.|Enter a phone number with area code.|Introduce un teléfono con código de área.
+Confira o CNPJ.|Check the CNPJ.|Revisa el CNPJ.
+Informe a razão social.|Enter the company legal name.|Introduce la razón social.
+Informe a inscrição estadual ou marque que é isenta.|Enter the state registration or mark it as exempt.|Introduce la inscripción estatal o marca que está exenta.
+Este código não é mais válido. Solicite um novo código.|This code is no longer valid. Request a new code.|Este código ya no es válido. Solicita un nuevo código.
+E-mail ou senha não conferem.|Email or password do not match.|El correo o la contraseña no coinciden.
+Este e-mail já tem uma conta. Entre com o código ou com a sua senha.|This email already has an account. Sign in with the code or your password.|Este correo ya tiene una cuenta. Entra con el código o con tu contraseña.
+O envio de e-mails ainda não está disponível. Tente novamente mais tarde.|Email delivery is not available yet. Please try again later.|El envío de correos aún no está disponible. Inténtalo más tarde.
+As contas estão indisponíveis no momento. Tente novamente mais tarde.|Accounts are unavailable right now. Please try again later.|Las cuentas no están disponibles en este momento. Inténtalo más tarde.
+Sua sessão terminou. Entre de novo para continuar.|Your session has ended. Sign in again to continue.|Tu sesión terminó. Vuelve a entrar para continuar.
+Este CPF já está ligado a outra conta.|This CPF is already linked to another account.|Este CPF ya está vinculado a otra cuenta.
+Não foi possível confirmar este pedido. Recarregue a página e tente de novo.|We could not confirm this request. Reload the page and try again.|No se pudo confirmar esta solicitud. Recarga la página e inténtalo de nuevo.
+E-mail confirmado|Email confirmed|Correo confirmado
+Meus dados|My details|Mis datos
+SEUS DADOS|YOUR DETAILS|TUS DATOS
+Meus dados.|My details.|Mis datos.
+Usados na nota fiscal e na entrega. Altere quando quiser.|Used on the invoice and for delivery. Change them whenever you like.|Se usan en la factura y en la entrega. Cámbialos cuando quieras.
+Salvar meus dados|Save my details|Guardar mis datos
+Buscando seus dados…|Loading your details…|Cargando tus datos…
+Salvando seus dados…|Saving your details…|Guardando tus datos…
+Dados salvos!|Details saved!|¡Datos guardados!
+Criando sua conta…|Creating your account…|Creando tu cuenta…
+Atualizando sua senha…|Updating your password…|Actualizando tu contraseña…
+Senha atualizada!|Password updated!|¡Contraseña actualizada!
+IDENTIFICAÇÃO|IDENTIFICATION|IDENTIFICACIÓN
+Quem está|Who is|¿Quién está
+comprando?|buying?|comprando?
+Seus dados para a nota fiscal e a entrega.|Your details for the invoice and delivery.|Tus datos para la factura y la entrega.
+Ir para a entrega|Go to delivery|Ir a la entrega
+Identificação|Identification|Identificación
+AMBIENTE DE TESTE|TEST ENVIRONMENT|ENTORNO DE PRUEBA
+Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado|Mercado Pago test payments · no real money is charged|Pagos de prueba de Mercado Pago · no se cobra ningún valor real
+Na próxima etapa você escolhe entre Pix, cartão de crédito ou cartão de débito. O pagamento é feito com segurança pelo Mercado Pago.|In the next step you choose between Pix, credit card or debit card. Payment is handled securely by Mercado Pago.|En el siguiente paso eliges entre Pix, tarjeta de crédito o tarjeta de débito. El pago se realiza de forma segura con Mercado Pago.
+Ambiente de teste: use dados de teste. Eles servem só para criar o pedido de teste; nenhum valor real é cobrado.|Test environment: use test details. They are only used to create the test order; no real money is charged.|Entorno de prueba: usa datos de prueba. Solo sirven para crear el pedido de prueba; no se cobra ningún valor real.
+Usamos estes dados só para entregar o seu pedido.|We only use these details to deliver your order.|Usamos estos datos solo para entregar tu pedido.
+Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.|Test payment approved. No real money was charged and no piece will be made.|Pago de prueba aprobado. No se cobró ningún valor real y no se producirá ninguna pieza.
+Pagamento confirmado. A Ju já recebeu o seu pedido.|Payment confirmed. Ju has received your order.|Pago confirmado. Ju ya recibió tu pedido.
+A Ju recebeu todos os detalhes do seu pedido para preparar suas peças.|Ju received every detail of your order to prepare your pieces.|Ju recibió todos los detalles de tu pedido para preparar tus piezas.
+Como testar neste ambiente|How to test in this environment|Cómo probar en este entorno
+Cartão de teste (Mastercard)|Test card (Mastercard)|Tarjeta de prueba (Mastercard)
+Validade|Expiry|Vencimiento
+Código de segurança|Security code|Código de seguridad
+Nome do titular (aprova o pagamento)|Cardholder name (approves the payment)|Nombre del titular (aprueba el pago)
+No campo de e-mail do pagamento, use um endereço diferente do da sua conta do Mercado Pago. O Pix de teste fica sempre pendente.|In the payment e-mail field, use an address different from your Mercado Pago account's. The test Pix always stays pending.|En el campo de correo del pago, usa una dirección distinta a la de tu cuenta de Mercado Pago. El Pix de prueba siempre queda pendiente.
+Pix de teste do Mercado Pago. Nenhum valor real será cobrado.|Mercado Pago test Pix. No real money will be charged.|Pix de prueba de Mercado Pago. No se cobrará ningún valor real.
+Pague com o Pix e o pedido é confirmado na hora.|Pay with Pix and your order is confirmed right away.|Paga con Pix y el pedido se confirma al instante.
+No celular, copie o código. Em outro dispositivo, use o QR Code.|On your phone, copy the code. On another device, use the QR Code.|En el celular, copia el código. En otro dispositivo, usa el código QR.
+No ambiente de teste o Pix fica pendente: não existe pagamento real para confirmar. Para ver um pedido aprovado, use um cartão de teste.|In the test environment the Pix stays pending: there is no real payment to confirm. To see an approved order, use a test card.|En el entorno de prueba el Pix queda pendiente: no hay un pago real que confirmar. Para ver un pedido aprobado, usa una tarjeta de prueba.
+Gerar novo código Pix|Generate new Pix code|Generar nuevo código Pix
+Já paguei · verificar agora|I have paid · check now|Ya pagué · verificar ahora
+QR Code do Pix|Pix QR Code|Código QR de Pix
+Pagamento por Pix|Payment by Pix|Pago con Pix
+Estamos|We are|Estamos
+confirmando.|confirming.|confirmando.
+O pagamento está em análise. Costuma levar poucos minutos.|Your payment is under review. It usually takes a few minutes.|El pago está en revisión. Suele tardar pocos minutos.
+Em análise|Under review|En revisión
+Só mais um instante.|Just one more moment.|Solo un momento más.
+Você não precisa fazer nada. Quando o pagamento for confirmado, esta página avança sozinha.|You do not need to do anything. When the payment is confirmed, this page moves on by itself.|No necesitas hacer nada. Cuando se confirme el pago, esta página avanza sola.
+Verificar agora|Check now|Verificar ahora
+Pagamento em análise|Payment under review|Pago en revisión
+PAGAMENTO|PAYMENT|PAGO
+Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.|Mercado Pago test environment. No real money will be charged.|Entorno de prueba de Mercado Pago. No se cobrará ningún valor real.
+Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.|Choose how you would like to pay. Mercado Pago handles everything securely.|Elige cómo prefieres pagar. Mercado Pago procesa todo de forma segura.
+Carregando as formas de pagamento…|Loading payment options…|Cargando las formas de pago…
+Confira os dados de entrega e tente novamente.|Check your delivery details and try again.|Revisa los datos de entrega e inténtalo de nuevo.
+Não foi possível conferir os itens do pedido. Volte ao carrinho e tente novamente.|We could not check the items in your order. Go back to the cart and try again.|No pudimos verificar los artículos del pedido. Vuelve al carrito e inténtalo de nuevo.
+Confira os dados do cartão e tente novamente.|Check your card details and try again.|Revisa los datos de la tarjeta e inténtalo de nuevo.
+Esta forma de pagamento não está disponível. Escolha Pix ou cartão.|This payment method is not available. Choose Pix or card.|Esta forma de pago no está disponible. Elige Pix o tarjeta.
+Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.|Too many attempts in a row. Wait a few minutes and try again.|Demasiados intentos seguidos. Espera unos minutos e inténtalo de nuevo.
+O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.|The payment was not accepted. Check the details or try another payment method.|No se aceptó el pago. Revisa los datos o prueba otra forma de pago.
+Os pagamentos ainda não estão disponíveis. Tente novamente mais tarde.|Payments are not available yet. Please try again later.|Los pagos aún no están disponibles. Inténtalo de nuevo más tarde.
+Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.|We could not confirm the payment right now. If you are sure you were not charged, try again.|No pudimos confirmar el pago ahora. Si estás seguro de que no hubo cobro, inténtalo de nuevo.
+O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.|The payment was not approved. Check your card details or choose another payment method.|El pago no fue aprobado. Revisa los datos de la tarjeta o elige otra forma de pago.
+Não foi possível carregar o pagamento. Recarregue a página e tente de novo.|Payment could not be loaded. Reload the page and try again.|No se pudo cargar el pago. Recarga la página e inténtalo de nuevo.
+Não foi possível carregar as formas de pagamento. Verifique sua conexão e tente de novo.|Payment options could not be loaded. Check your connection and try again.|No se pudieron cargar las formas de pago. Revisa tu conexión e inténtalo de nuevo.
+Tentar novamente|Try again|Intentar de nuevo
+Pix gerado. Pague com o código ou o QR Code.|Pix created. Pay with the code or the QR Code.|Pix generado. Paga con el código o el código QR.
+Pagamento em análise.|Payment under review.|Pago en revisión.
+Pagamento aprovado, mas não foi possível atualizar o carrinho neste navegador.|Payment approved, but the cart could not be updated in this browser.|Pago aprobado, pero no se pudo actualizar el carrito en este navegador.
+Pagamento de teste aprovado. Nenhum valor real foi cobrado.|Test payment approved. No real money was charged.|Pago de prueba aprobado. No se cobró ningún valor real.
+Pagamento confirmado.|Payment confirmed.|Pago confirmado.
+O Pix expirou. Gere um novo código para continuar.|The Pix expired. Generate a new code to continue.|El Pix caducó. Genera un nuevo código para continuar.
+Não foi possível verificar agora. Tente de novo em instantes.|We could not check right now. Try again in a moment.|No pudimos verificar ahora. Inténtalo de nuevo en unos instantes.
+Verificando…|Checking…|Verificando…
+Código Pix copiado.|Pix code copied.|Código Pix copiado.
+Selecione e copie o código Pix.|Select and copy the Pix code.|Selecciona y copia el código Pix.
+Pagamento confirmado · em produção|Payment confirmed · in production|Pago confirmado · en producción
+Pedido concluído|Order completed|Pedido completado
+Pedido não pôde ser atendido|Order could not be fulfilled|El pedido no pudo ser atendido
+Valor estornado|Amount refunded|Valor reembolsado
+Pagamento não concluído|Payment not completed|Pago no completado
+Pedido de teste · nenhum valor real|Test order · no real charge|Pedido de prueba · ningún cargo real
+Pedido|Order|Pedido
+Acompanhe o pagamento e a produção de cada pedido.|Follow the payment and production of each order.|Sigue el pago y la producción de cada pedido.
+Excluir minha conta|Delete my account|Eliminar mi cuenta
+Apaga seus dados de cadastro. Pede a confirmação de um código enviado ao seu e-mail.|Erases your account details. Asks you to confirm with a code sent to your email.|Borra tus datos de registro. Pide confirmar con un código enviado a tu correo.
+EXCLUIR CONTA|DELETE ACCOUNT|ELIMINAR CUENTA
+Excluir minha|Delete my|Eliminar mi
+conta.|account.|cuenta.
+Enviamos um código de seis números para o seu e-mail. Digite o código para confirmar.|We sent a six-digit code to your email. Type the code to confirm.|Enviamos un código de seis números a tu correo. Escribe el código para confirmar.
+Esta ação não pode ser desfeita.|This cannot be undone.|Esta acción no se puede deshacer.
+Excluir minha conta definitivamente|Delete my account permanently|Eliminar mi cuenta definitivamente
+Seus dados de cadastro (nome, CPF, telefone e senha) são apagados.|Your account details (name, CPF, phone and password) are erased.|Tus datos de registro (nombre, CPF, teléfono y contraseña) se borran.
+Os pedidos já feitos ficam guardados pelo prazo exigido para a nota fiscal, sem ligação com a conta.|Orders already placed are kept for the period required for invoices, no longer linked to the account.|Los pedidos ya hechos se guardan durante el plazo exigido para la factura, sin vínculo con la cuenta.
+Você sai da conta em todos os aparelhos.|You are signed out on every device.|Se cierra tu sesión en todos los dispositivos.
+Enviar código de confirmação|Send confirmation code|Enviar código de confirmación
+Cancelar|Cancel|Cancelar
+Enviando o código…|Sending the code…|Enviando el código…
+Código de teste gerado.|Test code generated.|Código de prueba generado.
+Enviamos o código para o seu e-mail.|We sent the code to your email.|Enviamos el código a tu correo.
+Excluindo sua conta…|Deleting your account…|Eliminando tu cuenta…
+Conta excluída.|Account deleted.|Cuenta eliminada.
+Sua conta foi excluída. Obrigada por ter passado por aqui.|Your account was deleted. Thank you for stopping by.|Tu cuenta fue eliminada. Gracias por haber pasado por aquí.
+Buscando seus pedidos…|Loading your orders…|Buscando tus pedidos…
+Entre na sua conta para confirmar a exclusão.|Sign in to your account to confirm the deletion.|Inicia sesión en tu cuenta para confirmar la eliminación.
+Complete sua identificação (nome, CPF e telefone) para a nota fiscal e a entrega.|Complete your identification (name, CPF and phone) for the invoice and delivery.|Completa tu identificación (nombre, CPF y teléfono) para la factura y la entrega.
+Sua sessão terminou. Entre de novo na sua conta para continuar.|Your session ended. Sign in to your account again to continue.|Tu sesión terminó. Vuelve a iniciar sesión en tu cuenta para continuar.
+Termos de Uso|Terms of Use|Términos de Uso
+Política de Privacidade|Privacy Policy|Política de Privacidad
+Trocas e Devoluções|Exchanges and Returns|Cambios y Devoluciones
+Informações legais|Legal information|Información legal
+Li e concordo com os Termos de Uso e a Política de Trocas e Devoluções, e declaro ter lido a Política de Privacidade.|I have read and agree to the Terms of Use and the Exchanges and Returns Policy, and I confirm I have read the Privacy Policy.|He leído y acepto los Términos de Uso y la Política de Cambios y Devoluciones, y declaro haber leído la Política de Privacidad.
+Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By creating your account, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al crear tu cuenta, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
+Para pagar, aceite os Termos de Uso e a Política de Trocas e Devoluções na etapa de entrega.|To pay, accept the Terms of Use and the Exchanges and Returns Policy in the delivery step.|Para pagar, acepta los Términos de Uso y la Política de Cambios y Devoluciones en la etapa de entrega.
+Este documento está disponível só em português. Em caso de dúvida, vale a versão em português.|This document is available in Portuguese only. In case of doubt, the Portuguese version prevails.|Este documento está disponible solo en portugués. En caso de duda, prevalece la versión en portugués.
+Como quer receber?|How would you like to receive it?|¿Cómo quieres recibirlo?
+Digite o CEP para calcular o frete.|Enter your CEP (postal code) to calculate shipping.|Escribe tu CEP (código postal) para calcular el envío.
+Calculando o frete…|Calculating shipping…|Calculando el envío…
+Não encontramos envio para esse CEP. Confira o CEP ou fale com a Ju.|We could not find a shipping option for this CEP. Check the CEP or talk to Ju.|No encontramos envío para este CEP. Revisa el CEP o habla con Ju.
+Não conseguimos calcular o frete agora. Tente de novo em instantes.|We could not calculate shipping right now. Please try again in a moment.|No pudimos calcular el envío ahora. Inténtalo de nuevo en unos instantes.
+Muitas consultas seguidas. Aguarde alguns instantes e tente de novo.|Too many requests in a row. Wait a moment and try again.|Demasiadas consultas seguidas. Espera unos instantes e inténtalo de nuevo.
+O valor do frete mudou. Confira o novo valor antes de pagar.|The shipping price changed. Check the new price before paying.|El precio del envío cambió. Revisa el nuevo precio antes de pagar.
+Escolha uma forma de envio.|Choose a shipping option.|Elige una forma de envío.
+Aguarde o cálculo do frete.|Wait for the shipping calculation.|Espera el cálculo del envío.
+Opções de envio|Shipping options|Opciones de envío
+Tentar de novo|Try again|Intentar de nuevo
+Grátis|Free|Gratis
+calculada pelo CEP|calculated from your CEP|calculada según tu CEP
+(sem entrega)|(without delivery)|(sin envío)
+Envio|Shipping|Envío
+Preços são exemplos para avaliação. O frete é calculado pelo CEP, com a tabela dos Correios.|Prices are examples for evaluation. Shipping is calculated by CEP, using the Correios rates.|Los precios son ejemplos para evaluación. El envío se calcula por CEP, con la tarifa de Correios.
+Endereço preenchido pelo CEP. Confira e complete o número.|Address filled in from the CEP. Check it and add the number.|Dirección completada con el CEP. Revísala y añade el número.
+Cidade e estado preenchidos pelo CEP. Complete o endereço.|City and state filled in from the CEP. Complete the address.|Ciudad y estado completados con el CEP. Completa la dirección.
+Não encontramos esse CEP. Preencha o endereço manualmente.|We could not find this CEP. Fill in the address manually.|No encontramos este CEP. Completa la dirección manualmente.
+Não foi possível buscar o endereço agora. Preencha manualmente.|We could not look up the address right now. Fill it in manually.|No pudimos buscar la dirección ahora. Complétala manualmente.
+Calcule o frete|Calculate shipping|Calcula el envío
+Calcular|Calculate|Calcular
+Sem frete · ver resumo|Without shipping · see summary|Sin envío · ver resumen
+sem frete|without shipping|sin envío
+Faltam|Add|Faltan
+Parcelas neste cartão|Installments on this card|Cuotas con esta tarjeta
+Parcelas|Installments|Cuotas
+Juros|Interest|Intereses
+sem juros|interest-free|sin intereses
+Valores do Mercado Pago para este cartão. O que passa do preço à vista são os juros do parcelamento.|Amounts from Mercado Pago for this card. Anything above the upfront price is installment interest.|Valores de Mercado Pago para esta tarjeta. Lo que supera el precio al contado son los intereses de las cuotas.
+Crie uma senha (opcional)|Create a password (optional)|Crea una contraseña (opcional)
+Sem senha, você entra sempre com um código enviado para o seu e-mail.|Without a password, you always sign in with a code sent to your e-mail.|Sin contraseña, siempre entras con un código enviado a tu correo.
+Desconto no Pix (5%)|Pix discount (5%)|Descuento por Pix (5%)
+No Pix|With Pix|Con Pix
+(5% off)|(5% off)|(5% de descuento)
+5% OFF NO PIX|5% OFF WITH PIX|5% DE DESCUENTO CON PIX
+QR Code ou copia e cola · confirmação na hora|QR code or copy and paste · confirmed right away|Código QR o copia y pega · confirmación al instante
+Crédito ou débito|Credit or debit|Crédito o débito
+ATÉ 12X NO CRÉDITO|UP TO 12 INSTALLMENTS ON CREDIT|HASTA 12 CUOTAS CON CRÉDITO
+parcelas na próxima etapa|installments in the next step|cuotas en el siguiente paso
+Copia e cola ou QR Code · 5% off|Copy and paste or QR code · 5% off|Copia y pega o código QR · 5% de descuento
+Pix escolhido: 5% de desconto nas peças.|Pix selected: 5% off the pieces.|Pix elegido: 5% de descuento en las piezas.
+Cartão escolhido.|Card selected.|Tarjeta elegida.
+ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
+frete calculado pelo CEP|shipping calculated by postal code|envío calculado por código postal
+PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA
+5% off no Pix ou até 12x no cartão|5% off with Pix or up to 12 card installments|5% de descuento con Pix o hasta 12 cuotas con tarjeta
+FEITO SOB ENCOMENDA|MADE TO ORDER|HECHO POR ENCARGO
+Vantagens da loja|Shop highlights|Ventajas de la tienda
+mensagem|message|mensaje
+Mensagem anterior|Previous message|Mensaje anterior
+Próxima mensagem|Next message|Siguiente mensaje
+Pausar mensagens|Pause messages|Pausar mensajes
+Retomar mensagens|Resume messages|Reanudar mensajes
+Personalizar o meu|Customize mine|Personalizar el mío
+Ver encaixado|See it fitted|Ver encajado
+5% off no Pix|5% off with Pix|5% de descuento con Pix
+Suas cores|Your colors|Tus colores
+Original|Original|Original
+Pastel|Pastel|Pastel
+Vibrante|Vibrant|Vibrante
+Surpreenda-me|Surprise me|Sorpréndeme
+Detalhes|Details|Detalles
+Trocas|Returns|Cambios
+Sobre a peça|About this piece|Sobre la pieza
+Fechar informações|Close information|Cerrar información
+Informações da peça|Piece information|Información de la pieza
+Mais sobre a peça|More about this piece|Más sobre la pieza
+Cor da parte|Part color|Color de la parte
+Combinações prontas|Ready-made combinations|Combinaciones listas
+ou até 12x no cartão · valores ilustrativos nesta prévia|or up to 12 card installments · illustrative prices in this preview|o hasta 12 cuotas con tarjeta · precios ilustrativos en esta vista previa
+Cada peça é feita sob encomenda: a produção leva|Each piece is made to order: production takes|Cada pieza se hace por encargo: la producción tarda
+O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são calculados pelo CEP no carrinho.|Shipping is by Correios, all over Brazil. The shipping cost and delivery time are calculated by postal code in the cart.|El envío es por Correios, a todo Brasil. El costo y el plazo de entrega se calculan por código postal en el carrito.
+Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
+Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
+Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
+Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

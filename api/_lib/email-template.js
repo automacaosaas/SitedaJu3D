@@ -1,5 +1,5 @@
 'use strict';
-// Verification e-mail: one layout, three purposes (signup, access, reset), three languages.
+// Verification e-mail: one layout, four purposes (signup, access, reset, delete), three languages.
 // Table layout and inline styles on purpose: this is what mail clients render reliably.
 const C = {page: '#fff7f5', card: '#fffcfb', border: '#f1e1e4', rose: '#b64c68', pink: '#ee96a5', soft: '#fbedf1', ink: '#282326', muted: '#7b7076', rule: '#f1d9de'};
 const SERIF = "'Playfair Display',Georgia,'Times New Roman',serif";
@@ -16,7 +16,8 @@ const COPY = {
     purposes: {
       signup: {subject: 'Seu código de verificação · Ju, imprime pra mim?', preheader: 'Use o código de verificação para finalizar seu cadastro.', eyebrow: 'CADASTRO', title: ['Seu código de verificação', 'para finalizar seu cadastro.'], intro: 'Use o código abaixo para confirmar seu cadastro.', label: 'CÓDIGO DE VERIFICAÇÃO', button: 'Confirmar meu e-mail', ignore: 'Se você não solicitou este cadastro, pode ignorar este e-mail com tranquilidade.'},
       access: {subject: 'Seu código de acesso · Ju, imprime pra mim?', preheader: 'Este é o código para o seu primeiro acesso ao site.', eyebrow: 'PRIMEIRO ACESSO', title: ['Seu código de acesso', 'para entrar no site.'], intro: 'Este é o código para realizar seu primeiro acesso ao nosso site.', label: 'CÓDIGO DE ACESSO', button: 'Entrar no site', ignore: 'Se você não solicitou este acesso, pode ignorar este e-mail com tranquilidade.'},
-      reset: {subject: 'Recuperação de acesso · Ju, imprime pra mim?', preheader: 'Use o código para criar uma nova senha.', eyebrow: 'RECUPERAÇÃO DE ACESSO', title: ['Seu código para', 'criar uma nova senha.'], intro: 'Use o código abaixo para redefinir a senha da sua conta.', label: 'CÓDIGO DE VERIFICAÇÃO', button: 'Criar nova senha', ignore: 'Se você não pediu para redefinir a senha, pode ignorar este e-mail. Sua senha continua a mesma.'}
+      reset: {subject: 'Recuperação de acesso · Ju, imprime pra mim?', preheader: 'Use o código para criar uma nova senha.', eyebrow: 'RECUPERAÇÃO DE ACESSO', title: ['Seu código para', 'criar uma nova senha.'], intro: 'Use o código abaixo para redefinir a senha da sua conta.', label: 'CÓDIGO DE VERIFICAÇÃO', button: 'Criar nova senha', ignore: 'Se você não pediu para redefinir a senha, pode ignorar este e-mail. Sua senha continua a mesma.'},
+      delete: {subject: 'Confirme a exclusão da sua conta · Ju, imprime pra mim?', preheader: 'Use o código para confirmar a exclusão da sua conta.', eyebrow: 'EXCLUSÃO DE CONTA', title: ['Seu código para', 'excluir sua conta.'], intro: 'Use o código abaixo para confirmar a exclusão da sua conta. Depois de confirmada, ela não pode ser desfeita.', label: 'CÓDIGO DE CONFIRMAÇÃO', button: 'Confirmar exclusão', ignore: 'Se você não pediu para excluir sua conta, ignore este e-mail e troque sua senha. Nada foi apagado.'}
     }
   },
   en: {
@@ -29,7 +30,8 @@ const COPY = {
     purposes: {
       signup: {subject: 'Your verification code · Ju, imprime pra mim?', preheader: 'Use the verification code to finish your sign-up.', eyebrow: 'SIGN-UP', title: ['Your verification code', 'to finish your sign-up.'], intro: 'Use the code below to confirm your registration.', label: 'VERIFICATION CODE', button: 'Confirm my email', ignore: 'If you did not request this sign-up, you can safely ignore this email.'},
       access: {subject: 'Your access code · Ju, imprime pra mim?', preheader: 'This is the code for your first sign-in to the site.', eyebrow: 'FIRST ACCESS', title: ['Your access code', 'to enter the site.'], intro: 'This is the code for your first sign-in to our site.', label: 'ACCESS CODE', button: 'Go to the site', ignore: 'If you did not request this access, you can safely ignore this email.'},
-      reset: {subject: 'Account recovery · Ju, imprime pra mim?', preheader: 'Use the code to create a new password.', eyebrow: 'ACCOUNT RECOVERY', title: ['Your code to', 'create a new password.'], intro: 'Use the code below to reset your account password.', label: 'VERIFICATION CODE', button: 'Create new password', ignore: 'If you did not ask to reset your password, you can ignore this email. Your password stays the same.'}
+      reset: {subject: 'Account recovery · Ju, imprime pra mim?', preheader: 'Use the code to create a new password.', eyebrow: 'ACCOUNT RECOVERY', title: ['Your code to', 'create a new password.'], intro: 'Use the code below to reset your account password.', label: 'VERIFICATION CODE', button: 'Create new password', ignore: 'If you did not ask to reset your password, you can ignore this email. Your password stays the same.'},
+      delete: {subject: 'Confirm your account deletion · Ju, imprime pra mim?', preheader: 'Use the code to confirm the deletion of your account.', eyebrow: 'ACCOUNT DELETION', title: ['Your code to', 'delete your account.'], intro: 'Use the code below to confirm the deletion of your account. Once confirmed, it cannot be undone.', label: 'CONFIRMATION CODE', button: 'Confirm deletion', ignore: 'If you did not ask to delete your account, ignore this email and change your password. Nothing was deleted.'}
     }
   },
   es: {
@@ -42,7 +44,8 @@ const COPY = {
     purposes: {
       signup: {subject: 'Tu código de verificación · Ju, imprime pra mim?', preheader: 'Usa el código de verificación para terminar tu registro.', eyebrow: 'REGISTRO', title: ['Tu código de verificación', 'para terminar tu registro.'], intro: 'Usa el código de abajo para confirmar tu registro.', label: 'CÓDIGO DE VERIFICACIÓN', button: 'Confirmar mi correo', ignore: 'Si no solicitaste este registro, puedes ignorar este correo con tranquilidad.'},
       access: {subject: 'Tu código de acceso · Ju, imprime pra mim?', preheader: 'Este es el código para tu primer acceso al sitio.', eyebrow: 'PRIMER ACCESO', title: ['Tu código de acceso', 'para entrar al sitio.'], intro: 'Este es el código para tu primer acceso a nuestro sitio.', label: 'CÓDIGO DE ACCESO', button: 'Entrar al sitio', ignore: 'Si no solicitaste este acceso, puedes ignorar este correo con tranquilidad.'},
-      reset: {subject: 'Recuperación de acceso · Ju, imprime pra mim?', preheader: 'Usa el código para crear una nueva contraseña.', eyebrow: 'RECUPERACIÓN DE ACCESO', title: ['Tu código para', 'crear una nueva contraseña.'], intro: 'Usa el código de abajo para restablecer la contraseña de tu cuenta.', label: 'CÓDIGO DE VERIFICACIÓN', button: 'Crear nueva contraseña', ignore: 'Si no pediste restablecer la contraseña, puedes ignorar este correo. Tu contraseña sigue igual.'}
+      reset: {subject: 'Recuperación de acceso · Ju, imprime pra mim?', preheader: 'Usa el código para crear una nueva contraseña.', eyebrow: 'RECUPERACIÓN DE ACCESO', title: ['Tu código para', 'crear una nueva contraseña.'], intro: 'Usa el código de abajo para restablecer la contraseña de tu cuenta.', label: 'CÓDIGO DE VERIFICACIÓN', button: 'Crear nueva contraseña', ignore: 'Si no pediste restablecer la contraseña, puedes ignorar este correo. Tu contraseña sigue igual.'},
+      delete: {subject: 'Confirma la eliminación de tu cuenta · Ju, imprime pra mim?', preheader: 'Usa el código para confirmar la eliminación de tu cuenta.', eyebrow: 'ELIMINACIÓN DE CUENTA', title: ['Tu código para', 'eliminar tu cuenta.'], intro: 'Usa el código de abajo para confirmar la eliminación de tu cuenta. Una vez confirmada, no se puede deshacer.', label: 'CÓDIGO DE CONFIRMACIÓN', button: 'Confirmar eliminación', ignore: 'Si no pediste eliminar tu cuenta, ignora este correo y cambia tu contraseña. No se borró nada.'}
     }
   }
 };
@@ -50,9 +53,9 @@ const COPY = {
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
 
 // The link opens the verification screen with the code already filled in. It travels in the URL fragment, which
-// browsers never send to a server or forward in a Referer header.
-function verificationUrl({siteUrl, token, code}) {
-  return `${siteUrl.replace(/\/+$/, '')}/conta.html#verificar?c=${encodeURIComponent(token)}&k=${encodeURIComponent(code)}`;
+// browsers never send to a server or forward in a Referer header. Account deletion opens its own screen (#excluir).
+function verificationUrl({siteUrl, token, code, route = 'verificar'}) {
+  return `${siteUrl.replace(/\/+$/, '')}/conta.html#${route}?c=${encodeURIComponent(token)}&k=${encodeURIComponent(code)}`;
 }
 
 function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '', code, url, siteUrl, assetUrl = siteUrl, expiryMinutes = 10, year = new Date().getFullYear()}) {
@@ -117,4 +120,4 @@ function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '',
   return {subject: p.subject, html, text};
 }
 
-module.exports = {COPY, renderVerificationEmail, verificationUrl};
+module.exports = {COPY, renderVerificationEmail, verificationUrl, C, SERIF, SANS, esc};

@@ -1,0 +1,122 @@
+'use strict';
+// In-memory store with the same interface as store-mysql.js. Used by tests and, outside production, when no database is
+// configured (local server, test site before the database exists). Data disappears when the process restarts.
+function createMemoryStore() {
+  const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
+  const admins = new Map(), adminSessions = new Map(), audit = [];
+  let eventSerial = 0, auditSerial = 0;
+  const key = buffer => Buffer.from(buffer).toString('hex');
+  const copy = value => value && structuredClone(value);
+
+  return {
+    kind: 'memory',
+    customers: {
+      async findByEmail(email) { return copy([...customers.values()].find(c => c.email === email) || null); },
+      async findById(id) { return copy(customers.get(id) || null); },
+      async findByCpfIndex(index) { return copy([...customers.values()].find(c => c.cpfIndex && key(c.cpfIndex) === key(index)) || null); },
+      async create(data) {
+        if ([...customers.values()].some(c => c.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'account_exists'});
+        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, termsVersion: null, termsAcceptedAt: null, createdAt: new Date(), ...data};
+        customers.set(row.id, row);
+        return copy(row);
+      },
+      async update(id, patch) {
+        const row = customers.get(id);
+        if (!row) return null;
+        if (patch.cpfIndex && [...customers.values()].some(c => c.id !== id && c.cpfIndex && key(c.cpfIndex) === key(patch.cpfIndex))) throw Object.assign(new Error('duplicate cpf'), {code: 'cpf_in_use'});
+        Object.assign(row, patch);
+        return copy(row);
+      },
+      // Account deletion: sessions and codes go; orders stay (fiscal records) without the link to the account.
+      async delete(id) {
+        const row = customers.get(id);
+        if (!row) return false;
+        customers.delete(id);
+        for (const [k, s] of sessions) if (s.customerId === id) sessions.delete(k);
+        for (const [k, c] of challenges) if (c.email === row.email) challenges.delete(k);
+        for (const o of orders.values()) if (o.customerId === id) o.customerId = null;
+        return true;
+      }
+    },
+    orders: {
+      // Same reference (a retried payment attempt) returns the existing order instead of a second one.
+      async create(order) {
+        const existing = [...orders.values()].find(o => o.reference === order.reference);
+        if (existing) return {order: copy(existing), created: false};
+        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, shippingInfo: null, refundState: null, refundId: null, refundedAt: null, refundError: null, ownerNotifiedAt: null, customerNotifiedAt: null, termsVersion: null, termsAcceptedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
+        orders.set(row.id, row);
+        return {order: copy(row), created: true};
+      },
+      async findById(id) { return copy(orders.get(id) || null); },
+      async findByReference(reference) { return copy([...orders.values()].find(o => o.reference === reference) || null); },
+      async findByMpId(mpOrderId) { return copy([...orders.values()].find(o => o.mpOrderId && o.mpOrderId === mpOrderId) || null); },
+      async update(id, patch) { const row = orders.get(id); if (!row) return null; Object.assign(row, patch); return copy(row); },
+      // Applies `patch` only while the order is still in one of `from`; true for exactly one caller.
+      async transition(id, from, patch) { const row = orders.get(id); if (!row || !from.includes(row.status)) return false; Object.assign(row, patch); return true; },
+      async listByCustomer(customerId, limit = 50) { return copy([...orders.values()].filter(o => o.customerId === customerId).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      async list({statuses = null, limit = 500} = {}) { return copy([...orders.values()].filter(o => !statuses || statuses.includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      async addEvent(orderId, kind, detail = null, actor = null) { events.push({id: ++eventSerial, orderId, kind, detail, actor, createdAt: new Date()}); },
+      async events(orderId) { return copy(events.filter(e => e.orderId === orderId)); }
+    },
+    // Painel da Ju (db/migrations/003_painel.sql).
+    admins: {
+      async count() { return admins.size; },
+      async findByEmail(email) { return copy([...admins.values()].find(a => a.email === email) || null); },
+      async findById(id) { return copy(admins.get(id) || null); },
+      async create(data) {
+        if ([...admins.values()].some(a => a.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'admin_exists'});
+        const row = {totpSecretEnc: null, totpEnabledAt: null, totpLastStep: null, lastLoginAt: null, createdAt: new Date(), ...data};
+        admins.set(row.id, row);
+        return copy(row);
+      },
+      async update(id, patch) { const row = admins.get(id); if (!row) return null; Object.assign(row, patch); return copy(row); },
+      // Accepts a TOTP step only if it is newer than the last one used: true for exactly one caller.
+      async useStep(id, step) { const row = admins.get(id); if (!row || (row.totpLastStep !== null && row.totpLastStep >= step)) return false; row.totpLastStep = step; return true; }
+    },
+    adminSessions: {
+      async create(session) { adminSessions.set(key(session.tokenHash), {mfaAt: null, attempts: 0, revokedAt: null, createdAt: new Date(), ...session}); },
+      async find(tokenHash) { return copy(adminSessions.get(key(tokenHash)) || null); },
+      async recordAttempt(tokenHash) { const s = adminSessions.get(key(tokenHash)); if (s) s.attempts += 1; return s ? s.attempts : 0; },
+      async revoke(tokenHash, now) { const s = adminSessions.get(key(tokenHash)); if (s && !s.revokedAt) s.revokedAt = now; },
+      async revokeAllFor(adminId, now) { for (const s of adminSessions.values()) if (s.adminId === adminId && !s.revokedAt) s.revokedAt = now; }
+    },
+    adminAudit: {
+      async add({adminId = null, action, detail = null, ip = null}) { audit.push({id: ++auditSerial, adminId, action, detail, ip, createdAt: new Date()}); },
+      async list(limit = 100) { return copy(audit.slice(-limit).reverse()); }
+    },
+    sessions: {
+      async create(session) { sessions.set(key(session.tokenHash), {revokedAt: null, lastSeenAt: new Date(), ...session}); },
+      async find(tokenHash) { return copy(sessions.get(key(tokenHash)) || null); },
+      async touch(tokenHash, expiresAt, now) { const s = sessions.get(key(tokenHash)); if (s) Object.assign(s, {expiresAt, lastSeenAt: now}); },
+      async revoke(tokenHash, now) { const s = sessions.get(key(tokenHash)); if (s) s.revokedAt = now; },
+      async revokeAllFor(customerId, now) { for (const s of sessions.values()) if (s.customerId === customerId && !s.revokedAt) s.revokedAt = now; }
+    },
+    challenges: {
+      async create(challenge) { challenges.set(challenge.id, {attempts: 0, verifiedAt: null, grantHash: null, grantExpiresAt: null, usedAt: null, ...challenge}); },
+      async find(id) { return copy(challenges.get(id) || null); },
+      async recordAttempt(id) { const c = challenges.get(id); if (c) c.attempts += 1; return c ? c.attempts : 0; },
+      async markVerified(id, grantHash, grantExpiresAt, now) { Object.assign(challenges.get(id), {verifiedAt: now, grantHash, grantExpiresAt}); },
+      async findByGrant(grantHash) { return copy([...challenges.values()].find(c => c.grantHash && key(c.grantHash) === key(grantHash)) || null); },
+      // Returns true only for the first caller, so a grant or a code is spent exactly once.
+      async markUsed(id, now) { const c = challenges.get(id); if (!c || c.usedAt) return false; c.usedAt = now; return true; }
+    },
+    // Same retention as store-mysql.js: counters 1 day, codes 30 days, expired sessions 6 months.
+    async purge(now) {
+      const day = 86400000, old = (value, days) => new Date(value).getTime() < now - days * day;
+      for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - day) limits.delete(k);
+      for (const [k, c] of challenges) if (old(c.expiresAt, 30)) challenges.delete(k);
+      for (const [k, s] of sessions) if (old(s.expiresAt, 183)) sessions.delete(k);
+      for (const [k, s] of adminSessions) if (old(s.expiresAt, 183)) adminSessions.delete(k);
+    },
+    // Fixed windows: at most `limit` hits per `windowMs` for a bucket.
+    async rateLimit(bucket, limit, windowMs, now) {
+      const start = Math.floor(now / windowMs) * windowMs, id = `${bucket}|${start}`;
+      const hits = (limits.get(id) || 0) + 1;
+      limits.set(id, hits);
+      if (limits.size > 10000) await this.purge(now);
+      return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
+    }
+  };
+}
+
+module.exports = {createMemoryStore};

@@ -6,3 +6,37 @@
 .mobile-order-bar{display:none}.shop-live:empty{display:block;opacity:0}
 @media(max-width:700px){.mobile-order-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;color:var(--rose);font-size:12px;min-height:48px;margin:0 0 22px;background:#f8e9eb}.mobile-order-bar strong{font-weight:650}#order-summary{scroll-margin-top:16px}}
 @media(prefers-reduced-motion:reduce){.waiting-dot{animation:none}}
+/* Real payments (Mercado Pago) */
+.live-qr{width:216px;height:216px;margin:24px auto 8px;padding:8px;border:1px solid var(--line);border-radius:14px;background:#fff}.live-qr img{display:block;width:100%;height:100%;image-rendering:pixelated}
+.payment-brick{margin:16px 0 6px;min-height:96px}.payment-brick[aria-busy=true]{min-height:0}
+.test-help{margin:14px 0 0}.test-help p{margin:10px 0 0}
+.test-cards{display:grid;gap:6px;margin:10px 0 0}.test-cards div{display:flex;justify-content:space-between;gap:12px;font-size:13px}.test-cards dt{color:var(--muted)}.test-cards dd{margin:0;font-weight:650;font-family:ui-monospace,monospace;text-align:right}
+/* Checkout: required agreement to the Termos and the Trocas (and the Privacidade read), recorded with the order. */
+.terms-check{margin-top:22px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fffcfb}.terms-check label{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.5;cursor:pointer}.terms-check input{width:18px;height:18px;margin:1px 0 0;flex-shrink:0;accent-color:var(--rose)}.terms-links{display:flex;flex-wrap:wrap;gap:4px 16px;margin:8px 0 0 28px;font-size:12px}.terms-links a{color:var(--rose);text-decoration:underline;text-underline-offset:3px}
+/* Four steps (with Identificação) do not fit a phone: the steps not in progress show only their number; the name stays for screen readers. */
+@media(max-width:480px){.shop-steps>span:not([aria-current]){font-size:0;gap:0}.shop-steps>span:not([aria-current]) b{font-size:9px}}
+/* Real shipping (Correios): the options for the CEP, one card each, the cheapest chosen from the start. */
+.shipping-choice{margin-top:22px}.ship-title{margin:0 0 10px;font-size:13px}
+.ship-note{margin:0;padding:14px 16px;border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--muted);background:var(--bg)}
+.ship-problem{border-style:solid;color:#98364e;background:#fdeef1}
+.ship-options{display:grid;gap:10px}
+.ship-option{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);background:var(--bg);border-radius:12px;font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
+.ship-option input{accent-color:var(--rose);width:18px;height:18px;flex:none;margin:0}
+.ship-option:has(input:checked){border-color:var(--rose);background:#fff}
+.ship-option:has(input:focus-visible){outline:2px solid var(--rose);outline-offset:3px}
+.ship-main{display:grid;gap:3px}.ship-main small{font-size:11px;color:var(--muted)}
+.ship-price{margin-left:auto;font-weight:650;white-space:nowrap}.ship-price em{font-style:normal;color:#25664c}
+.amounts dd small,.amounts dt small{font-weight:400}.amounts dd em{font-style:normal;color:#25664c;font-weight:650}
+.field .field-hint{font-size:12px;line-height:1.4}.field .field-hint:empty{display:none}
+/* Free shipping: how far the order is from it (cart and checkout summaries). */
+.free-ship{margin:14px 0 4px;padding:12px 14px;border:1px solid #25664c24;border-radius:12px;background:#f1f8f4;font-size:12px;line-height:1.45;color:#25463a}.free-ship p{margin:0 0 8px}.free-ship strong{font-weight:650}
+.free-ship-track{display:block;height:6px;border-radius:99px;background:#25664c1f;overflow:hidden}.free-ship-track i{display:block;height:100%;width:calc(var(--free-ship) * 100%);border-radius:inherit;background:#2f7d5c;transition:width .3s ease}
+.free-ship.is-reached{border-color:#25664c40}.free-ship.is-reached strong{color:#1f5a42}
+@media(prefers-reduced-motion:reduce){.free-ship-track i{transition:none}}
+/* Installments of the typed card: each one, the total and the interest on top of the price. */
+.installments-info{margin:14px 0 4px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:#fffcfb}
+.installments-title{margin:0 0 8px;font-size:13px;font-weight:650}
+.installments-table{width:100%;border-collapse:collapse;font-size:12px}.installments-table th,.installments-table td{padding:7px 4px;border-top:1px solid var(--line);text-align:right;vertical-align:top}.installments-table thead th{border-top:0;color:var(--muted);font-weight:500}
+.installments-table th[scope=row],.installments-table thead th:first-child{text-align:left;font-weight:600}.installments-table td em{font-style:normal;color:#25664c;font-weight:650}.installments-table td small{display:block;color:var(--muted);font-size:10px}
+.installments-info .small-note{margin:10px 0 0}
+.mobile-order-bar small{font-weight:400;opacity:.8}

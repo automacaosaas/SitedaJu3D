@@ -159,3 +159,20 @@ publicação; não usar reset ou force push.
   dizia "imprimi". Confirmar.
 - Cards do desktop: o encolhimento é fixo em px (só na home). Em telas muito baixas (< 700 px de
   altura) o carrossel ainda cabe, mas com pouca folga.
+
+## Banner limpo (01/10/2026)
+
+O botão “Escolha sua cor”, as bolinhas de cor e a ida ao card com o botão pulsante foram
+substituídos, a pedido da Ju, por:
+
+- preço do produto com o selo verde “5% off no Pix” no bloco de texto;
+- ação principal “Personalizar o meu” (ícone de paleta, sem seta), que abre o configurador
+  (`#produto/<peça>/personalizar`);
+- “Ver encaixado” nas peças com demonstração, que abre a demonstração do produto ativo.
+
+No desktop, o texto e os botões ficam à esquerda e a peça à direita. No celular, o botão
+principal fica entre as setas. Conferido no Chromium em 1440, 1100, 768, 390, 360 e 320 px,
+sem rolagem lateral: rótulo numa linha, demonstração abrindo, configurador abrindo e o
+Aviãoscopia sem “Ver encaixado”. Não houve teste em aparelho físico. As menções acima a
+“Escolha sua cor” descrevem a versão anterior.
+

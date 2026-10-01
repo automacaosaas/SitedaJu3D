@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval' https://sdk.mercadopago.com https://http2.mlstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://http2.mlstatic.com; font-src 'self' https://fonts.gstatic.com https://http2.mlstatic.com; img-src 'self' data: blob: https://siteda-ju3-d.vercel.app https://*.mlstatic.com https://www.mercadolibre.com https://www.mercadolivre.com https://*.mercadopago.com; connect-src 'self' https://api.mercadopago.com https://api-static.mercadopago.com https://secure-fields.mercadopago.com https://api.mercadolibre.com https://www.mercadolibre.com https://http2.mlstatic.com https://events.mercadopago.com; frame-src 'self' https://*.mercadopago.com https://www.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com; object-src 'none'; base-uri 'self'; form-action 'self'">
   <script src="journey.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -8,10 +9,14 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Seu cantinho · Ju imprime pra mim</title>
   <link rel="icon" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&amp;family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Parisienne&amp;display=swap">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="experience.css">
   <link rel="stylesheet" href="shopping.css">
   <link rel="stylesheet" href="account.css">
+  <link rel="stylesheet" href="identification.css">
   <script type="module" src="account.js"></script>
   <link rel="stylesheet" href="journey.css">
 </head>
@@ -33,7 +38,7 @@
       <span class="auth-heart">♡</span>
     </div>
     <div class="ju-scene">
-      <img class="julia-character" src="assets/julia-auth.png" width="1536" height="1024" fetchpriority="high" alt="Julia sorri com o rosto apoiado na mão, de jaleco branco e roupa roxa, segurando uma borboleta ilustrada.">
+      <img class="julia-character" src="assets/julia-auth.webp" width="1536" height="1024" fetchpriority="high" alt="Julia sorri com o rosto apoiado na mão, de jaleco branco e roupa roxa, segurando uma borboleta ilustrada.">
     </div>
     <section class="account-card account-panel" aria-labelledby="account-title">
       <p class="scene-greeting" id="scene-greeting" hidden></p>
@@ -50,6 +55,7 @@
     <p>CRIATIVIDADE E CUIDADO<br>PARA UMA ROTINA MAIS LEVE</p>
     <span aria-hidden="true">♡</span>
     <a href="produtos.html">Explore as criações da Ju ↗</a>
+    <div class="footer-legal"><nav aria-label="Informações legais"><a href="termos.html">Termos de Uso</a><a href="privacidade.html">Política de Privacidade</a><a href="trocas.html">Trocas e Devoluções</a></nav><p class="footer-company" translate="no"><span data-company="legalName">JU IMPRIME PARA MIM LTDA</span> · CNPJ <span data-company="cnpj">67.771.044/0001-96</span> · <span data-company="address">Rua Presidente Castelo Branco, 61, Nossa Senhora de Lourdes, Ouro Preto/MG, CEP 35404-450</span> · <span data-company="email">[PREENCHER: e-mail de atendimento]</span></p></div>
   </footer>
 </body>
 </html>
