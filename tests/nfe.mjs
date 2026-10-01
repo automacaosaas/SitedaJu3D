@@ -69,24 +69,26 @@ function order(over = {}) {
   assert.equal(pix.totals.discountCents, 2085, 'the Pix 5% goes on the note as a discount'); assert.equal(pix.payment.cents, 41415); assert.equal(pix.payment.code, '17');
   assert(!buildInvoice({order: order({totalCents: 50000}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).ok, 'a total above the pieces + delivery is refused');
   assert.equal(i.payment.code, '03'); assert.equal(i.presence, '2', 'internet sale'); assert.equal(i.finalConsumer, true);
-  assert(i.additionalInfo.endsWith(`Pedido ${i.reference}.`));
+  assert.equal(i.additionalInfo, `${fiscal.EXAMPLE.fiscal.additionalInfo} Pedido nº: ${i.reference}`, 'the tax text, then the order');
+  assert.equal(fiscal.FISCAL.additionalInfo, 'DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI.', "the accountant's text (01/10/2026)");
   assert.equal(buildInvoice({order: order({method: 'pix'}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice.payment.code, '17');
   assert.equal(buildInvoice({order: order({method: 'debit'}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice.payment.code, '04');
 
   const sp = buildInvoice({order: order({shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(sp.destination, '2'); assert.equal(sp.items[0].cfop, '6107', 'a person in another state: production sold to a non-taxpayer');
-  assert.match(sp.additionalInfo, /DIFAL da UF destino R\$ 0,00 \+ FCP R\$ 0,00; DIFAL da UF Origem R\$ 0,00\. Pedido JU-/, 'the interstate ICMS line (zero in the Simples)');
+  assert.match(sp.additionalInfo, /DIFAL da UF destino R\$ 0,00 \+ FCP R\$ 0,00; DIFAL da UF Origem R\$ 0,00\. Pedido nº: JU-/, 'the interstate ICMS line (zero in the Simples)');
   assert(!i.additionalInfo.includes('DIFAL'), 'not inside MG');
   const spCompany = {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: '110042490114'}};
   const taxpayer = buildInvoice({order: order({buyer: spCompany, shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(taxpayer.items[0].cfop, '6101', 'a company with a state registration in another state'); assert(!taxpayer.additionalInfo.includes('DIFAL'));
   const exemptSp = buildInvoice({order: order({buyer: {...spCompany, company: {...spCompany.company, stateRegistration: 'ISENTO'}}, shipTo: {...order().shipTo, cep: '01310100', state: 'SP', city: 'São Paulo'}}), city: SP, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(exemptSp.items[0].cfop, '6107', 'a company without a state registration is a non-taxpayer');
+  assert.equal(exemptSp.recipient.ieIndicator, '9', 'and goes as a non-contributor (accountant, 01/10/2026)'); assert.match(exemptSp.additionalInfo, /DIFAL da UF destino/);
 
   const company = buildInvoice({order: order({buyer: {name: 'Ana Souza Lima', email: 'ana@example.com', company: {cnpj: '12ABC34501DE35', name: 'Clínica Olhar', stateRegistration: '0620012345678'}}}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(company.recipient.cnpj, '12ABC34501DE35'); assert.equal(company.recipient.name, 'Clínica Olhar'); assert.equal(company.recipient.ieIndicator, '1'); assert(!('cpf' in company.recipient), 'a company note carries the CNPJ, not the CPF');
   const exempt = buildInvoice({order: order({buyer: {name: 'Ana', email: 'a@b.co', company: {cnpj: '12ABC34501DE35', name: 'Clínica', stateRegistration: 'ISENTO'}}}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
-  assert.equal(exempt.recipient.ieIndicator, '2'); assert.equal(exempt.recipient.stateRegistration, '');
+  assert.equal(exempt.recipient.ieIndicator, '9'); assert.equal(exempt.recipient.stateRegistration, '');
 
   // Problems are listed, nothing is sent.
   const pending = buildInvoice({order: order(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV});

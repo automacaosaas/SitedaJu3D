@@ -74,12 +74,14 @@ const creations = () => fake.calls.filter(c => c.method === 'POST' && c.path ===
   assert.match(person.itens[0].descricao, /^Borboletoscópio \(/);
   assert.deepEqual(person.transporte, {fretePorConta: 0, frete: 18});
   assert.equal(person.parcelas[0].valor, 276); assert.deepEqual(person.parcelas[0].formaPagamento, {id: 501});
-  assert.match(person.observacoes, /Pedido JU-/);
+  assert.match(person.observacoes, /Pedido nº: JU-/);
   assert(!('desconto' in person), 'no discount, no field');
   const pixNote = toBling(built(order({totalCents: 25800 - 1290 + 1800})), '501');
   assert.equal(pixNote.desconto, 12.9, 'the Pix 5% of the pieces as the note discount'); assert.equal(pixNote.parcelas[0].valor, 263.1);
   const company = toBling(built(order({buyer: {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: '0620012345678'}}})), null);
   assert.deepEqual([company.contato.tipoPessoa, company.contato.numeroDocumento, company.contato.ie, company.contato.contribuinte, company.contato.nome], ['J', '11222333000181', '0620012345678', 1, 'Clínica Olhar']);
+  const noIe = toBling(built(order({buyer: {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: 'ISENTO'}}})), null);
+  assert.deepEqual([noIe.contato.tipoPessoa, noIe.contato.contribuinte, 'ie' in noIe.contato], ['J', 9, false], 'a company without a state registration: "Não contribuinte" in Bling (rule 2, CFOP 6107)');
   assert(!('formaPagamento' in company.parcelas[0]), 'no payment method found: Bling uses its default');
   assert.equal(built(order()).bling.natureId, '1');
   assert(!('bling' in buildInvoice({order: order(), city: SP, environment: 'homologacao', provider: 'fake', env: ENV, ...fiscal.EXAMPLE}).invoice), 'only the Bling note carries the nature id');

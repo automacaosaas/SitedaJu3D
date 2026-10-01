@@ -33,7 +33,9 @@ const FISCAL = {
   },
   unit: 'UN',
   freightMode: '0',   // 0 = frete por conta do emitente (CIF): the store pays the carrier and charges it in the order
-  additionalInfo: 'DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NÃO GERA DIREITO A CRÉDITO FISCAL DE ICMS, ISS E IPI.',
+  // The accountant's text (01/10/2026); api/_lib/nfe.js adds the DIFAL line when due and "Pedido nº: <pedido>". The
+  // "Informações complementares" field of the nature in Bling stays empty, so the text is not repeated.
+  additionalInfo: 'DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI.',
   // With Bling (NFE_PROVIDER=bling) the series and the tax rules (CFOP, CSOSN, PIS/COFINS, DIFAL) are set up by the
   // accountant inside Bling, in a "natureza de operação"; the site sends only its id. The panel lists the ids once the
   // Bling account is connected.

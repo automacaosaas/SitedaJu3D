@@ -18,12 +18,13 @@ function describe(item) {
 }
 
 // Who receives the invoice: the company (CNPJ and state registration) when the buyer bought as one, otherwise the person.
-// ieIndicator (indIEDest): 1 contribuinte, 2 isento, 9 não contribuinte.
+// ieIndicator (indIEDest): 1 contribuinte, 9 não contribuinte. A company without a state registration ("ISENTO" at
+// checkout) goes as a non-contributor, as the accountant set on 01/10/2026 (rule 2 of the Bling nature, CFOP 6107).
 function recipientOf(order, env) {
   const company = order.buyer?.company;
   if (company?.cnpj) {
     const ie = String(company.stateRegistration || '').toUpperCase();
-    return {name: company.name || order.buyer?.name || '', cnpj: fields.normalizeCnpj(company.cnpj) || company.cnpj, stateRegistration: ie && ie !== 'ISENTO' ? ie : '', ieIndicator: ie && ie !== 'ISENTO' ? '1' : '2'};
+    return {name: company.name || order.buyer?.name || '', cnpj: fields.normalizeCnpj(company.cnpj) || company.cnpj, stateRegistration: ie && ie !== 'ISENTO' ? ie : '', ieIndicator: ie && ie !== 'ISENTO' ? '1' : '9'};
   }
   let cpf = '';
   try { cpf = order.buyerDocEnc ? fields.decrypt(env, order.buyerDocEnc) : ''; } catch { cpf = ''; }
@@ -67,7 +68,7 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
     freight: {mode: fiscal.freightMode, cents: freightCents},
     payment: {code: PAYMENT_CODE[order.method] || '99', cents: cents(order.totalCents)},
     totals: {productsCents, freightCents, discountCents, totalCents: cents(order.totalCents)},
-    additionalInfo: `${fiscal.additionalInfo}${difal} Pedido ${order.reference}.`,
+    additionalInfo: `${fiscal.additionalInfo}${difal} Pedido nº: ${order.reference}`,
     ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId}} : {})
   }};
 }
