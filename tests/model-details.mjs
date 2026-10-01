@@ -96,6 +96,12 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
    assert.equal(toWall.name,'body','Beside the turbine the first surface is the blue fuselage');
    assert.ok(Math.abs(toWall.point.x)<.306&&Math.abs(toWall.point.x)>.29,'That surface is the fuselage wall itself');
   }
+  // Regular, upright five-pointed wing stars (same centre on both wings): red along the five tip directions
+  // (90, 162, 234, 306 and 18 degrees) and blue between them, where the old crooked stars had their pinched legs.
+  for(const sx of [-1,1]){
+   for(const a of [90,162,234,306,18])assert.equal(materialAt(sx*.4373+.075*Math.cos(a*Math.PI/180),-.0975+.075*Math.sin(a*Math.PI/180)),'details',`Star tip at ${a} deg`);
+   for(const a of [54,126,198,270,342])assert.equal(materialAt(sx*.4373+.075*Math.cos(a*Math.PI/180),-.0975+.075*Math.sin(a*Math.PI/180)),'body',`Gap between star tips at ${a} deg`);
+  }
   // The turbines no longer touch or cross the fuselage wall (at |x| ~ .30).
   let nearest=Infinity;
   scene.traverse(o=>{

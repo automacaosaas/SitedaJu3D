@@ -3,8 +3,8 @@ import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
 
 const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=relevo-bolinhas',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=olhos-dentes-crista',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=turbinas-separadas',import.meta.url)
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=dentes-arredondados',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=estrelas-regulares',import.meta.url)
 };
 // Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).
