@@ -214,6 +214,8 @@ Feito sob encomenda|Made to order|Hecho por encargo
 Preços, frete e prazo são exemplos para avaliação. A entrega real será calculada antes do pagamento.|Prices, shipping and timing are examples for evaluation. Actual delivery costs will be calculated before payment.|Los precios, el envío y los plazos son ejemplos. La entrega real se calculará antes del pago.
 Foto nas cores originais|Photo in original colors|Foto en colores originales
 Sua combinação · prévia 3D|Your combination · 3D preview|Tu combinación · vista previa 3D
+Suas cores|Your colors|Tus colores
+Cores originais|Original colors|Colores originales
 Peça removida do carrinho.|Item removed from cart.|Pieza eliminada del carrito.
 Quantidade atualizada.|Quantity updated.|Cantidad actualizada.
 Itens selecionados removidos.|Selected items removed.|Artículos seleccionados eliminados.

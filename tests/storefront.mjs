@@ -61,4 +61,14 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(read('dist/catalog.js'), /class="product-customize" href="\$\{productHref\(id\)\}\/personalizar">Personalizar o meu</, 'the card button opens the configurator');
 }
 
+// ── B3, L1, L2: legible text, full-contrast side cards, drawn 3D controls ──
+{
+  for (const file of ['account.css', 'cart-page.css', 'catalog.css', 'commerce.css', 'mobile-modal.css', 'shopping.css', 'theme.css', 'carousel.css'])
+    assert.doesNotMatch(read('dist/' + file), /font-size: *(?:clamp\()?(?:[0-9]|1[01])(?:\.\d+)?px|font: [^;}]*?(?:clamp\()?\b(?:[0-9]|1[01])px/, `${file}: no text under 12 px (audit B3)`);
+  assert.match(read('dist/catalog.css'), /\.product-rail-card\{opacity:1;filter:none\}\.product-rail-card:not\(\.is-active\) \.product-rail-art img\{opacity:\.55/, 'side cards: only the picture fades (audit L1)');
+  const tools = /<div class="viewer-tools"[^]*?<\/div>/.exec(read('dist/index.html'))[0];
+  assert.doesNotMatch(tools, /[↶↷]|>[+−]</, '3D controls are drawn icons, not text characters (audit L2)');
+  assert.equal((tools.match(/<svg /g) || []).length, 4);
+}
+
 console.log('PASS: storefront — pre-rendered product cards match the default colors, prices and Pix prices; the cart without checkboxes; opening screen once per session; one "Personalizar o meu".');
