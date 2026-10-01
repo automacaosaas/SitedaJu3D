@@ -720,4 +720,24 @@ Retomar mensagens|Resume messages|Reanudar mensajes
 Personalizar o meu|Customize mine|Personalizar el mío
 Ver encaixado|See it fitted|Ver encajado
 5% off no Pix|5% off with Pix|5% de descuento con Pix
+Suas cores|Your colors|Tus colores
+Original|Original|Original
+Pastel|Pastel|Pastel
+Vibrante|Vibrant|Vibrante
+Surpreenda-me|Surprise me|Sorpréndeme
+Detalhes|Details|Detalles
+Trocas|Returns|Cambios
+Sobre a peça|About this piece|Sobre la pieza
+Fechar informações|Close information|Cerrar información
+Informações da peça|Piece information|Información de la pieza
+Mais sobre a peça|More about this piece|Más sobre la pieza
+Cor da parte|Part color|Color de la parte
+Combinações prontas|Ready-made combinations|Combinaciones listas
+ou até 12x no cartão · valores ilustrativos nesta prévia|or up to 12 card installments · illustrative prices in this preview|o hasta 12 cuotas con tarjeta · precios ilustrativos en esta vista previa
+Cada peça é feita sob encomenda: a produção leva|Each piece is made to order: production takes|Cada pieza se hace por encargo: la producción tarda
+O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são calculados pelo CEP no carrinho.|Shipping is by Correios, all over Brazil. The shipping cost and delivery time are calculated by postal code in the cart.|El envío es por Correios, a todo Brasil. El costo y el plazo de entrega se calculan por código postal en el carrito.
+Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
+Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
+Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
+Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

@@ -83,7 +83,7 @@ publicados ficam em `dist/`:
   `SHOWCASE` (enquadramento do recorte e tema de cada produto).
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
-- `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
+- `controller.js`: rotas por hash e página de produto compacta (cores, combinações, painel de informações, persistência).
 - `vendor/`: Three.js r180 minificado (`three.module.min.js`), OrbitControls, GLTFLoader e o decodificador Meshopt locais.
 - `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
   usado no e-mail).
@@ -239,8 +239,17 @@ numa linha. Acima do cabeçalho das páginas da loja fica a barra rotativa
 
 ## Modal e configurador
 
-O mesmo modal tem três estados: apresentação, personalização e resumo. No
-celular, ele usa quase toda a altura útil com `dvh` e safe areas. A prévia fica
+O produto é uma **página compacta numa tela só** (`controller.js` + `product-page.css`),
+sem etapas. Ela reúne nome, preço com o valor no Pix, “Suas cores” (parte em
+controle segmentado, cores em círculos como grupo de opções navegável por setas e
+combinações prontas Original, Pastel, Vibrante e Surpreenda-me) e a compra sempre
+à vista (“Adicionar ao carrinho” e “Comprar agora”). Ao escolher uma cor, a prévia
+passa da imagem para o 3D. Os atalhos Detalhes, Cores, Entrega e Trocas abrem um
+painel com abas: ao lado no desktop, de baixo para cima no celular. O Esc fecha
+primeiro o painel. O painel só traz informação real; compatibilidade e medidas
+entram quando a Ju fornecer. `#produto/<peça>` abre na imagem e
+`#produto/<peça>/personalizar` abre no 3D. No celular, a página usa quase toda a
+altura útil com `dvh` e safe areas. A prévia fica
 estável na parte superior, somente o painel inferior de opções rola, e a ação
 principal permanece acessível no rodapé. O botão de fechar fica sempre visível e
 a página de fundo permanece travada.
@@ -248,8 +257,7 @@ a página de fundo permanece travada.
 A imagem usa `object-fit: contain`. A prévia 3D enquadra o produto completo e a
 pilastra com base nos limites reais da geometria. Há giro, zoom e retorno à vista
 inicial. Os controles não cobrem o objeto. A troca de parte ou cor não pode
-causar salto do modal, rolagem externa ou perda de foco. O resumo lista cada
-parte e a cor escolhida; essa etapa ainda não envia pedido.
+causar salto do modal, rolagem externa ou perda de foco.
 
 ## Acessibilidade e compatibilidade
 
@@ -283,8 +291,8 @@ node --check dist/viewer.js
 ```
 
 Faça a matriz visual descrita em `QA.md` em 360 × 800, 390 × 844 e 430 × 932,
-além de notebook e desktop amplo. Valide os três produtos, os três estados do
-modal, imagem e 3D, todas as partes, cores, resumo, fechamento, rolagem interna,
+além de notebook e desktop amplo. Valide os três produtos, a página de produto,
+imagem e 3D, todas as partes, cores, combinações, o painel de informações, fechamento, rolagem interna,
 carrossel nos dois sentidos e ausência de erros no console. Para mudanças no
 banner, siga também a matriz de `HERO-BANNER-QA.md` (1920 a 360, gestos,
 movimento reduzido e os botões “Personalizar o meu” e “Ver encaixado”). Para mudanças no Aviãoscopia,
