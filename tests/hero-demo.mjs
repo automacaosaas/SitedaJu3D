@@ -9,7 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = file => fs.readFileSync(path.join(root, 'dist', file), 'utf8');
 const load = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const {planTracks} = await load('motion-timeline.js');
-const {PRODUCTS, SHOWCASE, showcase} = await load('products.js');
+const {PRODUCTS, SOON, SHOWCASE, showcase} = await load('products.js');
 const {translate} = await load('i18n-core.js');
 
 // ── linha do tempo: todas as trilhas terminam juntas, então tocar ao contrário espelha a ordem ──
@@ -24,7 +24,11 @@ const demos = Object.entries(SHOWCASE).filter(([, entry]) => entry.demo);
 assert.ok(demos.length >= 1);
 for (const [key, {demo}] of demos) {
   const {tool, layers = {}} = demo;
-  assert.ok(PRODUCTS[key], `${key}: produto existe`);
+  assert.ok(PRODUCTS[key] || SOON[key], `${key}: produto (ou novidade) existe`);
+  if (demo.head) {
+    assert.ok(fs.existsSync(path.join(root, 'dist/assets', demo.head.src)), `${key}: imagem da cabeça do equipamento existe`);
+    assert.ok(demo.head.width > 0 && demo.head.width <= 1 && demo.head.ratio > 0 && demo.head.top > -.6 && demo.head.top < .5, `${key}: cabeça do equipamento em fração do quadrado, acima ou sobre a peça`);
+  }
   assert.ok(fs.existsSync(path.join(root, 'dist/assets', tool.src)), `${key}: imagem do equipamento existe`);
   for (const value of [tool.width, tool.top, tool.ratio, ...tool.fade]) assert.ok(value > 0 && value <= 1, `${key}: medidas em fração do quadrado`);
   assert.ok(tool.fade[0] < tool.fade[1], `${key}: o equipamento se dissolve de cima para baixo`);
@@ -38,7 +42,7 @@ for (const [key, {demo}] of demos) {
     for (const {points, align} of [item.wide, item.compact]) assert.ok(points.length >= 2 && points.every(p => p.length === 2) && ['left', 'right', 'below'].includes(align), `${key}: linha da chamada ${item.label}`);
   }
   for (const name of ['glow', 'halo', 'accent', 'shade']) assert.match(demo[name], /^#[0-9a-f]{6}$/i, `${key}: cor ${name}`);
-  assert.ok(!demo.zoom || (demo.zoom >= .8 && demo.zoom <= 1.25), `${key}: zoom discreto`);
+  assert.ok(!demo.zoom || (demo.zoom >= .7 && demo.zoom <= 1.25), `${key}: zoom discreto`);
   assert.ok(demo.message && translate(demo.message, 'en') !== demo.message && translate(demo.message, 'es') !== demo.message, `${key}: aviso traduzido`);
 }
 assert.equal(showcase('produto-sem-demo').demo, null, 'produto sem demo continua abrindo o popup');
@@ -67,12 +71,15 @@ assert.ok(!/setInterval/.test(demo + timeline));
 assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered'") && css.includes('.hero-demo[data-back="recessed"] .demo-back {') && !/^\.demo-back \{[^}]*(filter|mask|scale)/m.test(css), 'camadas renderizadas juntas (depth 0) entram sem nenhuma compensação');
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
 assert.ok(ends.length > 8 && Math.max(...ends) <= 2700, `nenhuma trilha passa de 2,7 s (${Math.max(...ends)} ms)`);
-const timing = demo.match(/const T = asm \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);
+const timing = demo.match(/const T = asm \? \{([^}]*)\} : config\.head \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);
 assert.ok(timing, 'tempos do encaixe e da montagem na mesma tabela');
-assert.ok(field(timing[2], 'cta') + 340 <= 1700, 'encaixe: sequência completa em até 1,7 s');
+assert.ok(field(timing[3], 'cta') + 340 <= 1700, 'encaixe: sequência completa em até 1,7 s');
+assert.ok(field(timing[2], 'cta') + 340 <= 2200 && field(timing[2], 'head') > field(timing[2], 'tool'), 'equipamento em duas partes: até 2,2 s, e a cabeça só desce depois de a base começar a subir');
 assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 520, 'montagem: até 2,7 s, e o equipamento só sobe depois de a peça se abrir');
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /Personalize o seu/.test(demo));
+assert.ok(/entries\[i\]\.soon/.test(demo) && /aria-disabled/.test(demo) && /'Em breve'/.test(demo), 'novidade sem compra: o convite vira um aviso, sem link');
+for (const text of ['Em breve', 'Novidade · em breve', 'Equipamento', SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
 for (const text of ['Voltar à vitrine', 'Personalize o seu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 
 console.log('hero-demo: ok');

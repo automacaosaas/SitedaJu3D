@@ -101,6 +101,8 @@
 .palette-dots { display: flex; justify-content: center; gap: clamp(10px, calc(var(--u) * 0.013), 20px); }
 .palette-dots i { width: clamp(28px, calc(var(--u) * 0.031), 48px); height: clamp(28px, calc(var(--u) * 0.031), 48px); border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 clamp(3px, calc(var(--u) * 0.0035), 5px) #fff, 0 6px 14px rgba(30, 50, 70, .16); transition: transform .25s ease; }
 .copy[inert], .palette[inert] { pointer-events: none; }
+/* Novidade sem compra: no lugar de "Escolha sua cor", um selo no mesmo desenho do botão. */
+.palette-soon { display: inline-flex; align-items: center; min-height: 44px; padding: .78em 1.35em; border-radius: 999px; background: rgba(255, 255, 255, .8); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(14px, calc(var(--u) * 0.0125), 19px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; }
 .palette-button { display: inline-flex; align-items: center; gap: .6em; min-height: 44px; padding: .78em 1.35em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(14px, calc(var(--u) * 0.0125), 19px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; cursor: pointer; box-shadow: 0 10px 24px var(--glow); transition: background-color .2s ease, transform .2s ease, box-shadow .2s ease; }
 .palette-button svg { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .palette-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }

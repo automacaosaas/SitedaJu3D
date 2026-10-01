@@ -14,6 +14,11 @@ export const PRODUCTS = {
   dinossauroscopio:{number:'02',category:'oftalmologia',title:'Dinossauroscópio',subtitle:'Capa para retinoscópio',image:'dinossauroscopio.webp',catalogImage:'product-dinossauroscopio-cutout.webp',description:'Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.',parts:[{id:'body',name:'Corpo',hint:'Cabeça e corpo do dinossauro',default:'moss'},{id:'details',name:'Crista e bolinhas',hint:'A mesma cor nas duas partes',default:'cream'}],fixed:'Os olhos permanecem pretos e os dentes, brancos.'},
   aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
 };
+// Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
+// Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
+export const SOON = {
+  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para equipamento oftalmológico',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
+};
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
 // (h: altura visível · bottom: folga abaixo do produto · foot: largura da base), para assentar
@@ -80,6 +85,22 @@ export const SHOWCASE = {
       ],
       glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
       message:'Aviãoscopia fechada em volta da régua de grau.'
+    }
+  },
+  macacoscopio:{
+    art:{h:.87, bottom:.055, foot:.36, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
+    theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
+    demo:{
+      // O equipamento (fotos provisórias, recortadas de duas fotos): a base com a coluna preta sobe por dentro do macaco e a cabeça desce por cima.
+      // tool = base + coluna, centrada; head = cabeça com o pino, centrada, acima da peça (top negativo). Imagens atrás da peça, como no encaixe.
+      tool:{src:'macacoscopio-base.webp', width:.9147, top:.3738, ratio:.9474, fade:[.78, .9]},
+      head:{src:'macacoscopio-head.webp', width:.8334, top:-.295, ratio:1.9159},
+      callouts:[
+        {label:'Macacoscópio', wide:{points:[[.29, .53], [.18, .46], [-.04, .46]], align:'left'}, compact:{points:[[.29, .53], [.12, .75], [.12, 1.1]], align:'below'}},
+        {label:'Equipamento', wide:{points:[[.66, -.1], [.82, -.2], [1.03, -.2]], align:'right'}, compact:{points:[[.78, 1], [.86, 1.1]], align:'below'}}
+      ],
+      zoom:.74, cy:{wide:10, compact:6}, glow:'#fffaf0', halo:'#e8b96a', accent:'#f4c431', shade:'#33200f',
+      message:'Macacoscópio encaixado no equipamento.'
     }
   }
 };

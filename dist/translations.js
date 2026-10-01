@@ -10,6 +10,13 @@ Retinoscópio|Retinoscope|Retinoscopio
 Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
 Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.
 Aviãoscopia fechada em volta da régua de grau.|Aviãoscopia closed around the lens rack.|Aviãoscopia cerrada alrededor de la regla de lentes.
+Novidade · em breve|New · coming soon|Novedad · próximamente
+Em breve|Coming soon|Próximamente
+Capa para equipamento oftalmológico|Cover for ophthalmic equipment|Funda para equipo oftalmológico
+Equipamento|Equipment|Equipo
+Macacoscópio encaixado no equipamento.|Macacoscópio fitted on the equipment.|Macacoscópio encajado en el equipo.
+Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca|Macacoscópio, a brown monkey cover holding a banana, on a white pedestal|Macacoscópio, funda de mono marrón con una banana, sobre un pedestal blanco
+Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
 Régua de grau|Lens rack|Regla de lentes
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.

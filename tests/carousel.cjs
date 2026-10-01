@@ -85,20 +85,24 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   }
 
   // ── dados: cada produto tem tema, enquadramento e cores originais ───────────────
-  const {PRODUCTS, PRODUCT_CATEGORIES, PALETTE, SHOWCASE, DEFAULT_SHOWCASE, showcase, originalColors} = data;
-  assert.ok(Object.keys(SHOWCASE).every(key => PRODUCTS[key]), 'SHOWCASE só descreve produtos que existem');
+  const {PRODUCTS, SOON, PRODUCT_CATEGORIES, PALETTE, SHOWCASE, DEFAULT_SHOWCASE, showcase, originalColors} = data;
+  assert.ok(Object.keys(SHOWCASE).every(key => PRODUCTS[key] || SOON[key]), 'SHOWCASE só descreve produtos (ou novidades) que existem');
+  assert.ok(Object.keys(SOON).length >= 1 && Object.keys(SOON).every(key => !PRODUCTS[key] && SOON[key].soon === true && SOON[key].colors.length && SOON[key].colors.every(c => /^#[0-9a-f]{6}$/i.test(c.hex)) && !SOON[key].parts.length),
+    'novidade: só vitrine (fora de PRODUCTS: sem preço, carrinho, catálogo nem personalização) e com os pontinhos do banner');
   const tokens = ['bannerStops', 'headerBackground', 'textColor', 'mutedColor', 'accentColor'];
-  for (const key of Object.keys(PRODUCTS)) {
-    const {art, theme} = showcase(key), p = PRODUCTS[key];
+  for (const key of [...Object.keys(PRODUCTS), ...Object.keys(SOON)]) {
+    const {art, theme} = showcase(key), p = PRODUCTS[key] || SOON[key];
     assert.ok(PRODUCT_CATEGORIES[p.category]?.label, `${key}: categoria real cadastrada`);
     assert.ok(fs.existsSync(dist('assets/' + (p.catalogImage || p.image))), `${key}: imagem original existe`);
     for (const field of ['h', 'bottom', 'foot']) assert.ok(art[field] > 0 && art[field] <= 1, `${key}: art.${field}`);
     assert.ok(art.h + art.bottom <= 1, `${key}: recorte cabe no quadrado`);
     for (const token of tokens) assert.ok(theme[token], `${key}: theme.${token}`);
     // cores mostradas = cores de fábrica de cada parte, sem repetir
-    const shown = originalColors(key), expected = [...new Set(p.parts.map(part => part.default))];
-    assert.deepEqual(shown.map(c => c.id), expected, `${key}: paleta = padrão das partes`);
-    assert.ok(shown.every(c => PALETTE.some(x => x.id === c.id && /^#[0-9a-f]{6}$/i.test(c.hex))));
+    if (!SOON[key]) {
+      const shown = originalColors(key), expected = [...new Set(p.parts.map(part => part.default))];
+      assert.deepEqual(shown.map(c => c.id), expected, `${key}: paleta = padrão das partes`);
+      assert.ok(shown.every(c => PALETTE.some(x => x.id === c.id && /^#[0-9a-f]{6}$/i.test(c.hex))));
+    }
     // tema pastel e legível
     const bg = stops(theme.bannerStops), header = theme.headerBackground;
     assert.ok(bg.length >= 2, `${key}: gradiente com paradas hex`);
