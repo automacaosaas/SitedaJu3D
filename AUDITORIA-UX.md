@@ -140,8 +140,8 @@ foram ajustados (“até 12x no cartão”, frete grátis acima de R$ 500).
 Para implementar os cartões de escolha: os dois cartões ficam acima do Brick e montam o
 Brick só com o meio escolhido (`paymentMethods`). O desconto do Pix ainda não existe: o valor
 com desconto precisa ser calculado no servidor ao criar o pagamento Pix, nunca só na tela.
-A produção aparece como 3 a 5 dias nos commits de frete e como 5 a 7 dias no site e na barra
-rotativa; confirmar o prazo certo.
+Decisões da Ju (01/10/2026): produção de **3 a 5 dias úteis** e **5% de desconto no Pix**,
+implementados nesta branch (ver `MERCADOPAGO-SETUP.md`, seção "Desconto no Pix").
 
 ## Plano em fases
 
