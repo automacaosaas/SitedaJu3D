@@ -9,6 +9,15 @@ Voltar à vitrine|Back to showcase|Volver a la vitrina
 Retinoscópio|Retinoscope|Retinoscopio
 Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
 Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.
+Aviãoscopia fechada em volta da régua de esquiascopia.|Aviãoscopia closed around the skiascopy rack.|Aviãoscopia cerrada alrededor de la regla de esquiascopia.
+Novidade · em breve|New · coming soon|Novedad · próximamente
+Em breve|Coming soon|Próximamente
+Capa para lâmpada de fenda portátil|Cover for a handheld slit lamp|Funda para lámpara de hendidura portátil
+Lâmpada de fenda|Slit lamp|Lámpara de hendidura
+Macacoscópio encaixado na lâmpada de fenda.|Macacoscópio fitted on the slit lamp.|Macacoscópio encajado en la lámpara de hendidura.
+Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca|Macacoscópio, a brown monkey cover holding a banana, on a white pedestal|Macacoscópio, funda de mono marrón con una banana, sobre un pedestal blanco
+Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
+Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
 Categorias de produtos|Product categories|Categorías de productos
@@ -93,7 +102,7 @@ Coleção de três produtos|Three-product collection|Colección de tres producto
 Nossos três produtos|Our three products|Nuestros tres productos
 Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca|Mint-green Borboletoscópio with yellow details on a white pedestal|Borboletoscópio verde menta con detalles amarillos sobre un pedestal blanco
 Dinossauroscópio verde-musgo com espinhos amarelo-claros sobre uma pilastra branca|Moss-green Dinossauroscópio with light-yellow spikes on a white pedestal|Dinossauroscópio verde musgo con cresta amarillo claro sobre un pedestal blanco
-Aviãoscopia sobre pilastra branca, com 16 aberturas numeradas e rasgo retangular para a haste da régua|Aviãoscopia on a white pedestal, with 16 numbered openings and a rectangular slot for the lens rack handle|Aviãoscopia sobre un pedestal blanco, con 16 aberturas numeradas y una ranura rectangular para el mango de la regla
+Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca|Blue Aviãoscopia with 16 numbered openings on a white pedestal|Aviãoscopia azul con 16 aberturas numeradas sobre un pedestal blanco
 Início|Home|Inicio
 Produtos|Products|Productos
 Sobre a Ju|About Ju|Sobre Ju
@@ -389,7 +398,7 @@ As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre la
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
 Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.|A butterfly to bring color and imagination to every appointment. 3D printed, with an open slot for the retinoscope.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D, con el espacio para encajar el retinoscopio libre.
 Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.|A friendly dinosaur for every glance. A 3D-printed cover with an opening for the retinoscope.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D con abertura para encajar el retinoscopio.
-Um convite para a imaginação decolar. As 16 aberturas da régua lembram janelas de avião, com os graus identificados ao lado. O rasgo retangular na base acomoda a haste plana da régua. Apresentação ilustrativa com a régua encaixada.|An invitation to let imagination take flight. The rack’s 16 openings resemble airplane windows, with lens powers labeled alongside. The rectangular slot at the base holds the rack’s flat handle. Illustrative view with the rack inserted.|Una invitación a dejar volar la imaginación. Las 16 aberturas de la regla recuerdan a ventanas de avión, con las graduaciones indicadas al lado. La ranura rectangular de la base aloja el mango plano de la regla. Presentación ilustrativa con la regla encajada.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the lens rack with magnets, and the rack’s handle comes out at the base.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de lentes, y el mango de la regla sale por la base.
 Use uma senha com 8 a 128 caracteres.|Use a password with 8 to 128 characters.|Usa una contraseña de 8 a 128 caracteres.
 Aguarde 30 segundos antes de solicitar outro código.|Wait 30 seconds before requesting another code.|Espera 30 segundos antes de solicitar otro código.
 Preencha seu nome e um e-mail válido.|Enter your name and a valid email.|Introduce tu nombre y un correo válido.

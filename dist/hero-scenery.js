@@ -12,7 +12,7 @@ const fern = () => {
 };
 export function scenery(key) {
   if (key === 'aviaoscopia') return `<div class="clouds" aria-hidden="true">${[1,2,3,4,5,6].map(n => `<i class="cloud c${n}"></i>`).join('')}</div>`;
-  const kind = key === 'dinossauroscopio' ? 'ferns' : 'petals';
+  const kind = key === 'dinossauroscopio' || key === 'macacoscopio' ? 'ferns' : 'petals';
   return `<div class="hero-scenery scenery-${kind}" aria-hidden="true">${['left','right'].map(side => {
     const id = `mist-${kind}-${side}`;
     return `<svg class="scenery-${side}" viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${kind === 'ferns' ? fern() : petals}</g></svg>`;

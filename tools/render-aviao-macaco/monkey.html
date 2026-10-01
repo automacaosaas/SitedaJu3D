@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// Macacoscópio alone, for the vitrine and the catalogue: square, front view, framed like the butterfly and the dinosaur
+// (the piece fills `h` of the height with `bottom` of free space below it).
+import * as THREE from 'three';
+import {makeRenderer, studioEnvironment, renderStudio, finish} from './studio.js';
+import {buildMonkey} from './monkey.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const S = Number(P.size || 1254), PASSES = Number(P.passes || 40);
+const renderer = makeRenderer(S, S, {exposure: Number(P.exposure || 1.04)});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: Number(P.top || 5), left: Number(P.left || 2.6), right: Number(P.right || 2.2), scrim: Number(P.scrim || 1.4), glint: Number(P.glint ?? 18)});
+const monkey = buildMonkey(); scene.add(monkey);
+
+const fov = Number(P.fov || 14), elev = Number(P.elev || 5) * Math.PI / 180, camera = new THREE.PerspectiveCamera(fov, 1, 10, 20000);
+// frame on the projected vertices: the piece's top at 1 − bottom − h of the height, its bottom at 1 − bottom
+const verts = []; scene.updateMatrixWorld(true);
+scene.traverse(o => { if (!o.isMesh) return; const p = o.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / 3000)); for (let i = 0; i < p.count; i += step) verts.push(new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)); });
+const box = new THREE.Box3().setFromObject(monkey), target = new THREE.Vector3(0, (box.min.y + box.max.y) / 2, 0), H = Number(P.h || .87), B = Number(P.bottom || .055);
+let dist = (box.max.y - box.min.y) / H / 2 / Math.tan(fov * Math.PI / 360);
+for (let it = 0; it < 8; it++) {
+  camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target); camera.updateMatrixWorld();
+  let lo = Infinity, hi = -Infinity; for (const v of verts) { const y = v.clone().project(camera).y; lo = Math.min(lo, y); hi = Math.max(hi, y); }
+  // wanted in NDC: hi = 1 − 2B − 2H + 2H… → top = −1 + 2(B + H), bottom = −1 + 2B
+  const wantLo = -1 + 2 * B, wantHi = -1 + 2 * (B + H);
+  dist *= (hi - lo) / (wantHi - wantLo);
+  target.y += ((hi + lo) / 2 - (wantHi + wantLo) / 2) * dist * Math.tan(fov * Math.PI / 360) / Math.cos(elev);
+}
+camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target);
+
+const out = renderStudio(renderer, scene, camera, {width: S, height: S, passes: PASSES, subject: monkey,
+  key: {dir: [Number(P.kx ?? -.5), Number(P.ky ?? .7), Number(P.kz ?? .75)], spread: Number(P.spread || .32), intensity: Number(P.key || 1.6), distance: Number(P.kdist ?? 4)},
+  dome: {intensity: Number(P.dome || 1.15), minElevation: -.1}, shadowMap: 4096});
+finish({monkey: out}, {box: {min: box.min.toArray().map(v => +v.toFixed(1)), max: box.max.toArray().map(v => +v.toFixed(1))}});
+</script>

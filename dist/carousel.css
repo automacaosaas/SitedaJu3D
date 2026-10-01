@@ -105,6 +105,8 @@
 /* Secundária: discreta, só nas peças com demonstração. */
 .hero-demo-button { display: inline-flex; align-items: center; gap: .55em; min-height: 48px; padding: 0 1.2em 0 .9em; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .72); color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0105), 16px) / 1 'DM Sans', sans-serif; cursor: pointer; transition: background .2s, border-color .2s; }
 .hero-demo-button svg { width: 1.35em; height: 1.35em; flex: none; }
+/* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
+.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
 .slot[data-front=true] { cursor: pointer; }
 
 /* Produto + pilastra: um bloco só; a escala nasce na base para a pilastra não sair do chão. */

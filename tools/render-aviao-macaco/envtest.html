@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0"><script type="module">
+// Debug view of the studio environment: a mirror ball, a dark glossy ball and a white glossy ball, seen from the render camera's side.
+import * as THREE from 'three';
+import {makeRenderer, studioEnvironment, finish} from './studio.js';
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const renderer = makeRenderer(900, 300);
+const scene = new THREE.Scene(); scene.environment = studioEnvironment(renderer, {scrim: 1.6, glint: Number(P.glint ?? 40)});
+const mats = [new THREE.MeshPhysicalMaterial({color: '#fff', metalness: 1, roughness: 0}), new THREE.MeshPhysicalMaterial({color: '#07090c', roughness: .04, clearcoat: 1}), new THREE.MeshPhysicalMaterial({color: '#f1efea', roughness: .3, clearcoat: .7, clearcoatRoughness: .18})];
+mats.forEach((m, i) => { const s = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 48), m); s.position.x = (i - 1) * 2.3; scene.add(s); });
+const camera = new THREE.PerspectiveCamera(10, 3, .1, 1000); camera.position.set(0, 0, 40); camera.lookAt(0, 0, 0);
+renderer.render(scene, camera);
+const c = document.createElement('canvas'); c.width = 900; c.height = 300; c.getContext('2d').drawImage(renderer.domElement, 0, 0);
+finish({env: c});
+</script>

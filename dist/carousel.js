@@ -1,6 +1,6 @@
 // Vitrine principal: um produto por vez, apoiado na pilastra, com fundo e header temáticos.
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
-import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
@@ -13,7 +13,7 @@ const shell = region?.closest('.hero-shell');
 if (region && shell) init();
 
 function init() {
-  const keys = Object.keys(PRODUCTS), total = keys.length;
+  const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)], total = keys.length;   // as novidades (SOON) vêm depois: só vitrine, sem compra
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const easeOut = cubicBezier(...EASE);
   const status = region.querySelector('#gallery-status');
@@ -27,10 +27,10 @@ function init() {
   const lower = text => text.charAt(0).toLowerCase() + text.slice(1);
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
-    const product = PRODUCTS[key], {art, theme, demo} = showcase(key);
+    const product = PRODUCTS[key] || SOON[key], soon = !PRODUCTS[key], {art, theme, demo} = showcase(key);
     // wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo.
     const wash = mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3);
-    return {key, product, art, theme, demo, wash, price: COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    return {key, product, art, theme, demo, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
   let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false;
@@ -49,8 +49,9 @@ function init() {
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : ''}</div>`).join('');
   // Banner limpo: uma ação principal (abre o configurador do produto ativo) e, nas peças com demonstração,
   // uma secundária que mostra a peça encaixada no equipamento. O nome do produto completa o rótulo para leitores de tela.
-  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, theme, demo}) =>
-    `<div class="palette" style="${themeVars(theme)}"><a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="sr-only"> ${product.title}</span></a>${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
+  // Novidade (SOON): sem configurador nem preço; no lugar da ação principal, um selo "Novidade · em breve".
+  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, theme, demo, soon}) =>
+    `<div class="palette" style="${themeVars(theme)}">${soon ? '<span class="palette-soon">Novidade · em breve</span>' : `<a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="sr-only"> ${product.title}</span></a>`}${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
     const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
     return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
@@ -98,7 +99,7 @@ function init() {
     copies.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     palettes.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     if (stage.getAttribute('aria-busy') === 'false') demo.prepare(active);
-    if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]')).focus({preventScroll: true});
+    if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]'))?.focus({preventScroll: true});
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
    no tamanho final — a animação só a reduz no começo): .demo-backdrop (luz, atrás da pilastra), .hero-demo (peça +
    equipamento, à frente) e .demo-controls (voltar, ficha técnica e convite). A vinheta cobre header + banner. */
 .showcase.is-demo { cursor: default; }
-.demo-backdrop, .hero-demo, .demo-controls { position: absolute; inset: 0; pointer-events: none; container-type: size; --size: calc(min(37cqw, 76cqh) * var(--demo-zoom, 1)); --cy: 45%; }
+.demo-backdrop, .hero-demo, .demo-controls { position: absolute; inset: 0; pointer-events: none; container-type: size; --size: calc(min(37cqw, 76cqh) * var(--demo-zoom, 1)); --cy: calc(45% + var(--cy-shift, 0%)); }
 .demo-backdrop { z-index: 1; }
 .hero-demo { z-index: 4; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 64px), transparent); }
 .demo-controls { z-index: 7; }
@@ -24,6 +24,9 @@
 .hero-demo[data-back="recessed"] .demo-back { opacity: 0; scale: calc(1 - var(--back-depth, 0)) 1; object-position: 0 calc(var(--size) * var(--back-shift, 0)); filter: brightness(.55) saturate(1.15);
   -webkit-mask-image: linear-gradient(90deg, transparent 35%, #000 38.5%, #000 61.5%, transparent 65%), linear-gradient(transparent 30%, #000 33%, #000 93%, transparent 96%); -webkit-mask-composite: source-in;
   mask-image: linear-gradient(90deg, transparent 35%, #000 38.5%, #000 61.5%, transparent 65%), linear-gradient(transparent 30%, #000 33%, #000 93%, transparent 96%); mask-composite: intersect; }
+/* Segunda peça do equipamento (cabeça), atrás da peça e acima dela; desce por cima quando o produto tem `head`. */
+.demo-head { position: absolute; left: calc((1 - var(--head-w, 0)) * 50%); top: calc(var(--head-top, 0) * 100%); width: calc(var(--head-w, 0) * 100%); aspect-ratio: var(--head-ratio, 1); opacity: 0; filter: drop-shadow(0 calc(var(--size) * .012) calc(var(--size) * .02) rgba(45, 30, 15, .28)); }
+.demo-head img { display: block; width: 100%; height: 100%; -webkit-user-drag: none; user-select: none; }
 .demo-tool, .demo-cast-image { position: absolute; left: calc((1 - var(--tool-w)) * 50% + var(--tool-shift, 0) * 100%); top: calc(var(--tool-top) * 100%); width: calc(var(--tool-w) * 100%); aspect-ratio: var(--tool-ratio); rotate: y var(--tool-turn, 0deg); }
 /* Profundidade para o giro do equipamento quando a peça foi fotografada levemente de lado (tool.turn). */
 .demo-float, .demo-cast { perspective: 900px; }
@@ -39,6 +42,10 @@
 /* Sombra do equipamento nas paredes internas da abertura (recortada pela camada de trás da peça). */
 .demo-cast { opacity: .5; -webkit-mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; }
 .demo-cast-image { display: block; height: auto; filter: brightness(0) blur(calc(var(--size) * .012)); translate: calc(var(--size) * .008) calc(var(--size) * .012); }
+/* Brilho que atravessa a frente quando as metades se fecham (só na montagem): uma faixa clara inclinada, recortada pela silhueta da frente. */
+.demo-sheen { position: absolute; inset: 0; overflow: hidden; pointer-events: none; -webkit-mask: var(--front-src) 0 0 / 100% 100% no-repeat; mask: var(--front-src) 0 0 / 100% 100% no-repeat; }
+.demo-sheen i { position: absolute; top: -10%; bottom: -10%; left: 0; width: 30%; opacity: 0; transform: translateX(-130%) skewX(-16deg); mix-blend-mode: soft-light;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5) 42%, rgba(255, 255, 255, .5) 58%, transparent); }
 /* Sombra da peça sobre o equipamento: a própria silhueta dela, desfocada e um pouco abaixo, recortada pelo
    equipamento na posição final — escurece só o equipamento, rente às bordas da abertura e sob o rostinho. */
 .demo-shade { opacity: 0; filter: brightness(0) blur(calc(var(--size) * .011)); object-position: 0 calc(var(--size) * .01);
@@ -60,6 +67,7 @@
   font: 600 clamp(10.5px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
 .demo-callout[data-align="left"] .demo-callout-label { transform: translate(calc(-100% - 12px), -50%); }
 .demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
+.demo-callout[data-align="right"] .demo-callout-label { transform: translate(12px, -50%); }
 
 /* Controles: "voltar" no mesmo desenho das setas; o convite à direita da peça (no celular, abaixo). */
 .demo-close { position: absolute; top: clamp(10px, calc(var(--u) * .018), 28px); right: max(16px, calc(var(--hero-inset) - 24px)); display: grid; place-items: center; width: clamp(44px, 3.6vw, 56px); height: clamp(44px, 3.6vw, 56px); padding: 0;
@@ -70,15 +78,18 @@
 .demo-cta { --accent: var(--theme-accent, #25664c); --strong: var(--theme-accent-strong, #1e523d); --glow: var(--theme-glow, rgba(37, 102, 76, .32)); --text: var(--theme-text, #10281e);
   position: absolute; left: calc(50% + var(--size) * .5 + clamp(28px, 5cqw, 96px)); top: var(--cy); margin-top: -1.28em; box-shadow: 0 8px 18px var(--glow); pointer-events: auto; }
 .demo-cta svg { animation: demo-nudge 1.9s ease-in-out infinite; }
+/* Novidade sem compra: o convite vira um aviso, sem seta nem clique. */
+.demo-cta.is-soon { pointer-events: none; cursor: default; background: rgba(255, 255, 255, .86); color: var(--theme-accent, #8a4a1f); box-shadow: 0 0 0 1.5px var(--theme-accent, #8a4a1f) inset, 0 8px 18px var(--glow); }
+.demo-cta.is-soon svg { display: none; }
 @keyframes demo-nudge { 0%, 100% { transform: translateX(-1px); opacity: .8; } 50% { transform: translateX(2px); opacity: 1; } }
 @media (hover: hover) { .demo-close:hover { background: #fff; transform: scale(1.05); } }
 
 @media (max-width: 900px) {
-  .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom, 1)); --cy: 40%; }
+  .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom, 1)); --cy: calc(40% + var(--cy-shift-compact, 0%)); }
   .demo-callout[data-layout="wide"] { display: none; }
   .demo-callout[data-layout="compact"] { display: block; }
   .demo-callout-label { letter-spacing: .16em; }
-  .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * .78); width: fit-content; margin: 0 auto; }
+  .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * var(--cta-y-compact, .78));   /* abaixo da peça; num equipamento alto (ctaY), abaixo dele */ width: fit-content; margin: 0 auto; }
   .demo-close { top: 8px; right: 14px; width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {

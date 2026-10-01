@@ -12,7 +12,12 @@ export const PRODUCT_CATEGORIES = Object.freeze({
 export const PRODUCTS = {
   borboletoscopio:{number:'01',category:'oftalmologia',title:'Borboletoscópio',subtitle:'Capa para retinoscópio',image:'borboletoscopio.webp',catalogImage:'product-borboletoscopio-cutout.webp',description:'Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.',parts:[{id:'body',name:'Corpo',hint:'Contorno, asas e antenas',default:'mint'},{id:'details',name:'Detalhes das asas',hint:'Parte interna e bolinhas',default:'yellow'}],fixed:'O rostinho e os olhos mantêm as cores originais.'},
   dinossauroscopio:{number:'02',category:'oftalmologia',title:'Dinossauroscópio',subtitle:'Capa para retinoscópio',image:'dinossauroscopio.webp',catalogImage:'product-dinossauroscopio-cutout.webp',description:'Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.',parts:[{id:'body',name:'Corpo',hint:'Cabeça e corpo do dinossauro',default:'moss'},{id:'details',name:'Crista e bolinhas',hint:'A mesma cor nas duas partes',default:'cream'}],fixed:'Os olhos permanecem pretos e os dentes, brancos.'},
-  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia-regua.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas da régua lembram janelas de avião, com os graus identificados ao lado. O rasgo retangular na base acomoda a haste plana da régua. Apresentação ilustrativa com a régua encaixada.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
+  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
+};
+// Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
+// Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
+export const SOON = {
+  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
 };
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
@@ -66,8 +71,40 @@ export const SHOWCASE = {
     }
   },
   aviaoscopia:{
-    art:{h:.9043, bottom:.0702, foot:.5263, alt:'Aviãoscopia sobre pilastra branca, com 16 aberturas numeradas e rasgo retangular para a haste da régua'},
-    theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'}
+    art:{h:.8939, bottom:.0758, foot:.4896, alt:'Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca'},
+    theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'},
+    demo:{
+      // Montagem em vez de encaixe: a régua de esquiascopia sobe por entre as duas metades e elas se fecham em volta dela. Metades, régua e
+      // vitrine são renders do mesmo modelo com a mesma câmera (tools/render-aviao-macaco/plane.html), então as camadas coincidem pixel a pixel.
+      // assemble.open/apart = vista explodida enquanto a régua sobe: a metade da frente vem para perto (z em px de perspectiva) e a de trás recua;
+      // x/y em % do quadrado, rx/ry em graus.
+      assemble:{open:{z:96, x:-1.5, y:-3, rx:5, ry:-7}, apart:{z:-118, x:1.5, y:2.5, rx:-2, ry:6}},
+      tool:{src:'aviaoscopia-ruler.webp', width:.2201, top:.1762, ratio:.1865, fade:[.74, .9]},
+      layers:{front:'aviaoscopia-front.webp', back:'aviaoscopia-back.webp'},
+      callouts:[
+        {label:'Aviãoscopia', wide:{points:[[.283, .522], [.17, .6], [-.04, .6]], align:'left'}, compact:{points:[[.283, .522], [.2, .66], [.2, 1.05]], align:'below'}},
+        {label:'Régua de esquiascopia', wide:{points:[[.5, 1.04], [.43, 1.09], [-.04, 1.09]], align:'left'}, compact:{points:[[.5, 1.04], [.74, 1.04], [.74, 1.08]], align:'below'}}
+      ],
+      glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
+      message:'Aviãoscopia fechada em volta da régua de esquiascopia.'
+    }
+  },
+  macacoscopio:{
+    art:{h:.87, bottom:.055, foot:.311, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
+    theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
+    demo:{
+      // A lâmpada de fenda portátil em duas partes, renderizadas com a câmera da foto da vitrine (tools/render-aviao-macaco/monkeylamp.html):
+      // tool = base, carcaça e coluna preta, que sobe por dentro do macaco; head = prisma e cabeça binocular, que descem por cima (top negativo:
+      // acima do quadrado). As duas ficam atrás do macaco, como na peça montada.
+      tool:{src:'macacoscopio-base.webp', width:.7959, top:.0933, ratio:.3978, fade:[.66, .8]},
+      head:{src:'macacoscopio-head.webp', width:.6603, top:-.1762, ratio:1.6761},
+      callouts:[
+        {label:'Macacoscópio', wide:{points:[[.43, .59], [.25, .5], [-.04, .5]], align:'left'}, compact:{points:[[.43, .59], [.06, .86], [.06, 1.62]], align:'below'}},
+        {label:'Lâmpada de fenda', wide:{points:[[.61, .02], [.78, -.06], [1.04, -.06]], align:'right'}, compact:{points:[[.69, 1.26], [.94, 1.26], [.94, 1.62]], align:'below'}}
+      ],
+      zoom:.7, cy:{wide:-6, compact:-6}, ctaY:{compact:1.33}, glow:'#fffaf0', halo:'#e8b96a', accent:'#f4c431', shade:'#33200f',
+      message:'Macacoscópio encaixado na lâmpada de fenda.'
+    }
   }
 };
 export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}
