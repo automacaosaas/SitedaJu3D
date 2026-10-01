@@ -78,3 +78,8 @@
 @media (prefers-reduced-motion: reduce) {
   .pdp-sheet, .pdp-facts button, #product-dialog .swatch i { transition: none; }
 }
+/* Compartilhar estas cores (auditoria D3): um link que reabre a mesma combinação. */
+.pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; padding: 0 2px; border: 0; background: none; color: var(--theme-accent, var(--rose)); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.pdp-share .icon { width: 18px; height: 18px; }
+.pdp-share-link { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 12px; color: inherit; }
+.pdp-share:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 2px; }

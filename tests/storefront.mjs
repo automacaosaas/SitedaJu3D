@@ -85,6 +85,18 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(read('dist/index.html'), /Voltar à coleção/, 'no link repeating the × (audit C6)');
 }
 
+// ── D3: a link that reopens the same combination ──────────────────────
+{
+  const controller = read('dist/controller.js'), page = read('dist/index.html');
+  assert.match(controller, /export const comboPath=\(key,selection\)=>`#produto\/\$\{key\}\/personalizar\/\$\{PRODUCTS\[key\]\.parts\.map\(part=>selection\[part\.id\]\)\.join\('\.'\)\}`;/, 'the link carries the colors in part order');
+  assert.match(controller, /return validSelection\(key,Object\.fromEntries\(PRODUCTS\[key\]\.parts\.map\(\(part,i\)=>\[part\.id,ids\[i\]\]\)\)\);/, 'an unknown color falls back to the original one');
+  assert.match(controller, /const shared=step==='personalizar'\?comboFrom\(key,combo\):null;/);
+  assert.match(controller, /history\.replaceState\(null,'',`#produto\/\$\{key\}\/personalizar`\)/, 'the address goes back to normal so the next choices are not pinned');
+  assert.match(controller, /navigator\.share&&matchMedia\('\(pointer: coarse\)'\)\.matches/, 'share sheet on a phone');
+  assert.match(controller, /await navigator\.clipboard\.writeText\(url\)/, 'copied link elsewhere');
+  assert.match(page, /<button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores<\/button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores">/, 'the link stays visible when copying is not allowed');
+}
+
 // ── J1: link previews (Open Graph) on every page a person may share ───
 {
   const {createRequire} = await import('node:module');
