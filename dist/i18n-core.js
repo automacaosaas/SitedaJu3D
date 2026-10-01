@@ -14,6 +14,8 @@ const dynamic = [
   [/^Selecionar todos \((\d+)\)$/, 'Select all ($1)', 'Seleccionar todos ($1)'],
   [/^(\d+) peça selecionada$/, '$1 selected item', '$1 pieza seleccionada'],
   [/^(\d+) peças selecionadas\.?$/, '$1 selected items', '$1 piezas seleccionadas'],
+  [/^(\d+) peça$/, '$1 item', '$1 pieza'],
+  [/^(\d+) peças$/, '$1 items', '$1 piezas'],
   [/^Carrinho, (\d+) item$/, 'Cart, $1 item', 'Carrito, $1 artículo'],
   [/^Carrinho, (\d+) itens$/, 'Cart, $1 items', 'Carrito, $1 artículos'],
   [/^Coleção de (\d+) produto$/, 'Collection of $1 product', 'Colección de $1 producto'],

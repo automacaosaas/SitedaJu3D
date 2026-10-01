@@ -142,7 +142,8 @@ async function get(handler, query, {method = 'GET', ip = '203.0.113.9'} = {}) {
 {
   const checkout = fs.readFileSync(path.join(root, 'dist/checkout.js'), 'utf8').replace(/\r\n/g, '\n');
   assert(/import \{lookupCep, cepMessage\} from '\.\/cep-client\.js'/.test(checkout));
-  assert(/field\('cep',[^)]*hint:true\}\)/.test(checkout), 'the CEP field has a place for the message');
+  assert(/field\('cep',[^)]*hint:true[^)]*\}\)/.test(checkout), 'the CEP field has a place for the message');
+  assert(/<div class="form-grid">\$\{field\('cep',/.test(checkout), 'the CEP is the first address field (audit F1)');
   assert(/input\.value && input\.value !== input\.dataset\.autofill\)\) continue/.test(checkout), 'what the buyer typed is never overwritten');
   assert(!/viacep|brasilapi/i.test(checkout + fs.readFileSync(path.join(root, 'dist/cep-client.js'), 'utf8')), 'the browser never names an outside address service');
   const headers = fs.readFileSync(path.join(root, 'vercel.json'), 'utf8');
