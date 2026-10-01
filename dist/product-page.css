@@ -1,0 +1,80 @@
+/* Página de produto compacta (controller.js): tudo o que decide a compra numa tela;
+   detalhes num painel com abas. Carregado depois de theme.css e mobile-modal.css. */
+#product-dialog .detail-copy { display: flex; flex-direction: column; gap: 14px; padding: 52px 36px 18px; }
+#product-dialog .detail-copy h2 { margin: 0; }
+#product-dialog .detail-copy .eyebrow { margin: 0; }
+#product-dialog .detail-subtitle { margin: -8px 0 0; }
+
+/* Preço com o valor no Pix */
+#product-dialog .pdp-price { display: grid; justify-items: start; gap: 6px; margin: 0; }
+.pdp-price p { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; }
+#product-dialog .pdp-price strong { font-size: 28px; font-weight: 650; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.pdp-pix { padding: 5px 10px; border-radius: 999px; background: #13864a; color: #fff; font-size: 12.5px; font-weight: 700; }
+#product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--muted); text-align: left; }
+#product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
+
+/* Cores: parte em controle segmentado, cores em círculos, combinações prontas */
+.pdp-colors { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pdp-colors-head h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+#selected-color { font-size: 12.5px; color: var(--theme-accent, var(--rose)); text-align: right; }
+#product-dialog #part-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--bg); }
+#product-dialog #part-tabs button { flex: 1 1 0; justify-content: center; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; font-size: 12.5px; text-align: center; }
+#product-dialog #part-tabs button[aria-pressed=true] { background: #fff; color: var(--theme-accent, var(--rose)); font-weight: 650; box-shadow: 0 1px 5px #2823261a; }
+#product-dialog #palette { display: flex; flex-wrap: wrap; gap: 4px; }
+#product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; }
+#product-dialog .swatch i { width: 30px; height: 30px; transition: transform .15s ease; }
+#product-dialog .swatch:hover { background: transparent; }
+#product-dialog .swatch:hover i { transform: scale(1.1); }
+#product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--theme-accent, var(--rose)); }
+#product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
+#product-dialog .swatch:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 0; }
+#product-dialog .part-hint { margin: -4px 0 0; font-size: 12px; }
+.pdp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; }
+.pdp-presets button:hover { border-color: var(--theme-accent, var(--rose)); }
+.preset-dots { display: inline-flex; color: var(--theme-accent, var(--rose)); }
+.preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; }
+.preset-dots i:first-child { margin-left: 0; }
+
+/* Atalhos para o painel de informações */
+.pdp-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pdp-facts button { display: grid; justify-items: center; gap: 4px; min-height: 60px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 12px; color: var(--ink); transition: border-color .2s, transform .2s; }
+.pdp-facts button:hover { border-color: var(--theme-accent, var(--rose)); transform: translateY(-1px); }
+.pdp-facts .icon { width: 19px; height: 19px; color: var(--theme-accent, var(--rose)); }
+
+/* Prévia das cores escolhidas sobre a imagem */
+.pdp-preview { position: absolute; top: 19px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px; border-radius: 999px; background: #fffcfbe6; font-size: 12px; color: var(--muted); box-shadow: 0 1px 4px #2823261a; }
+#pdp-preview-dots { display: flex; gap: 3px; }
+#pdp-preview-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0002; }
+
+/* Compra sempre à vista */
+#product-dialog .purchase-actions { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+#product-dialog #add-to-cart { gap: 8px; }
+
+/* Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular */
+.pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: 50%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: var(--panel); box-shadow: -18px 0 40px #2823261f; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+.pdp-sheet.is-open { transform: none; }
+.pdp-sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', Georgia, serif; }
+.pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--panel); font-size: 24px; line-height: 1; }
+.pdp-sheet-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.pdp-sheet-tabs button { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13px; color: var(--muted); white-space: nowrap; margin-bottom: -1px; }
+.pdp-sheet-tabs button[aria-selected=true] { border-bottom-color: var(--theme-accent, var(--rose)); color: var(--ink); font-weight: 650; }
+.pdp-sheet-panel { overflow-y: auto; font-size: 14.5px; line-height: 1.65; color: #5f525a; }
+.pdp-sheet-panel p { margin: 0 0 12px; }
+.pdp-sheet-panel a { color: var(--theme-accent, var(--rose)); text-decoration: underline; text-underline-offset: 3px; }
+.pdp-ship { color: #13864a; }
+
+@media (max-width: 600px) {
+  #product-dialog .detail-copy { gap: 12px; padding: 16px 18px 12px; }
+  #product-dialog .pdp-price strong { font-size: 24px; }
+  .pdp-colors { padding: 12px; }
+  #product-dialog #palette { gap: 2px; }
+  .pdp-preview { display: none; }
+  .pdp-facts button { min-height: 56px; font-size: 12px; }
+  .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #2823261f; transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdp-sheet, .pdp-facts button, #product-dialog .swatch i { transition: none; }
+}

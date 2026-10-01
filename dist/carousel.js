@@ -1,11 +1,12 @@
 // Vitrine principal: um produto por vez, apoiado na pilastra, com fundo e header temáticos.
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
-import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, originalColors, showcase} from './products.js';
+import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
-import {COMMERCE, money, pixPrice} from './commerce-config.js';
+import {COMMERCE, money} from './commerce-config.js';
+import {icon} from './icons.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
@@ -26,10 +27,10 @@ function init() {
   const lower = text => text.charAt(0).toLowerCase() + text.slice(1);
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
-    const product = PRODUCTS[key], {art, theme, demo} = showcase(key), colors = originalColors(key);
+    const product = PRODUCTS[key], {art, theme, demo} = showcase(key);
     // wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo.
     const wash = mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3);
-    return {key, product, art, theme, demo, colors, wash, category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    return {key, product, art, theme, demo, wash, price: COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
   let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false;
@@ -44,12 +45,12 @@ function init() {
   // ── Estrutura ────────────────────────────────────────────────────────────────
   bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
-  // Preço já no banner, com o valor no Pix num selo verde (auditoria A1).
-  const price = key => COMMERCE.prices[key] ? `<p class="copy-price"><strong>${money(COMMERCE.prices[key])}</strong><span class="pix-badge">${money(pixPrice(COMMERCE.prices[key]))} no Pix</span></p>` : '';
-  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({key, product, category, theme}) =>
-    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price(key)}</div>`).join('');
-  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, colors, theme, demo}) =>
-    `<div class="palette" style="${themeVars(theme)}"><div class="palette-actions"><a class="palette-button" href="#produto/${key}/personalizar" data-role="palette"><span>Personalizar o meu</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>${demo ? '<button class="palette-demo" type="button" data-demo><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span>Ver encaixado</span></button>' : ''}</div><span class="palette-dots" aria-hidden="true">${colors.map(c => `<i style="--dot:${c.hex}"></i>`).join('')}</span></div>`).join('');
+  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price}) =>
+    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : ''}</div>`).join('');
+  // Banner limpo: uma ação principal (abre o configurador do produto ativo) e, nas peças com demonstração,
+  // uma secundária que mostra a peça encaixada no equipamento. O nome do produto completa o rótulo para leitores de tela.
+  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, theme, demo}) =>
+    `<div class="palette" style="${themeVars(theme)}"><a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="sr-only"> ${product.title}</span></a>${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
     const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
     return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
@@ -128,7 +129,7 @@ function init() {
       for (const layer of [bgLayers[i], bandLayers[i]]) { layer.style.opacity = opacity.toFixed(3); layer.style.zIndex = z; }
     }
     const a = entries[mix.from].theme, b = entries[mix.to].theme, accent = mixColor(a.accentColor, b.accentColor, mix.t);
-    const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
+    const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
     for (const element of themed) for (const name in vars) element.style.setProperty(name, vars[name]);
   }
   function report() {
@@ -162,9 +163,7 @@ function init() {
   prevButton.addEventListener('click', () => move(-1));
   nextButton.addEventListener('click', () => move(1));
 
-  // ── Ações do banner: "Personalizar o meu" é um link para o configurador do produto ativo; "Ver encaixado" abre a
-  //    demonstração do encaixe, a mesma do toque na peça (auditoria A2 e A3). ──
-  region.addEventListener('click', e => { if (e.target.closest('[data-demo]') && demo.has(active)) { e.preventDefault(); demo.open(active); } });
+  region.addEventListener('click', e => { if (e.target.closest('[data-demo-open]') && !locked && demo.has(active)) demo.open(active); });
 
   // ── Hover: a peça ativa inclina até ~2,5° seguindo o cursor (só mouse; o CSS aplica em :hover) ──
   let tiltFrame = 0, tiltAt = null;

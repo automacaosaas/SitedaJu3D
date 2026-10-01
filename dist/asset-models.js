@@ -6,8 +6,8 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 // model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=sobrancelhas-meshopt2',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=turbinas-meshopt2',import.meta.url)
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=dentes-meshopt3',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=estrelas-meshopt3',import.meta.url)
 };
 // Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).

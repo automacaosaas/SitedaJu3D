@@ -61,6 +61,8 @@ const dynamic = [
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
   [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
+  [/^(R\$ [\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
+  [/^Combinação (.+) aplicada\.$/, (t, name) => `${t(name)} combination applied.`, (t, name) => `Combinación ${t(name)} aplicada.`],
   [/^produção em (.+)$/, (t, days) => `production in ${t(days)}`, (t, days) => `producción en ${t(days)}`],
   [/^(\d+) de (\d+)$/, '$1 of $2', '$1 de $2'],
   [/^CET ([\d.,]+%) ao ano$/, 'Effective cost $1 a year', 'Costo efectivo $1 al año']

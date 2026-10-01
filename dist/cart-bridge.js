@@ -1,7 +1,6 @@
 import {goToCart} from './shopping-navigation.js';
 import {PRODUCTS} from './products.js';
 import {readCart, writeCart, putItem, EDIT_KEY, DIRECT_KEY} from './cart-store.js';
-import {COMMERCE, money, pixPrice, pixPercent} from './commerce-config.js';
 import {icon} from './icons.js';
 import {loadShippingConfig} from './shipping-client.js';
 import {freeShippingNote} from './free-shipping.js';
@@ -18,21 +17,20 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
     else edit = null;
   }
   function refresh() {
-    panel.hidden = dialog.dataset.mode !== 'summary';
+    // Página compacta: a compra fica sempre à vista.
+    panel.hidden = false;
     buy.hidden = !!edit;
     dialog.toggleAttribute('data-cart-edit', !!edit);
     const key = getProduct();
     if (key && PRODUCTS[key]) {
-      button.innerHTML = `${edit ? 'Salvar e voltar ao carrinho' : 'Adicionar ao carrinho'} ${icon(edit ? 'arrow' : 'cart')}`;
-      document.querySelector('#product-price').textContent = money(COMMERCE.prices[key]);
-      let pix = panel.querySelector('.purchase-pix');
-      if (!pix) { pix = document.createElement('p'); pix.className = 'purchase-pix'; panel.querySelector('.purchase-price')?.after(pix); }
-      pix.innerHTML = `<strong>${money(pixPrice(COMMERCE.prices[key]))}</strong> no Pix <small>(${pixPercent}% de desconto)</small>`;
+      button.innerHTML = `${icon(edit ? 'check' : 'cart')}<span>${edit ? 'Salvar e voltar ao carrinho' : 'Adicionar ao carrinho'}</span>`;
     }
     // The free-shipping rule, right under the price (from the server; nothing while real shipping is off).
-    let note = panel.querySelector('.purchase-free-ship');
-    if (freeNote && !note) { note = document.createElement('p'); note.className = 'purchase-free-ship'; (panel.querySelector('.purchase-pix') || panel.querySelector('.purchase-price'))?.after(note); }
+    let note = dialog.querySelector('.purchase-free-ship');
+    if (freeNote && !note) { note = document.createElement('p'); note.className = 'purchase-free-ship'; dialog.querySelector('.purchase-price')?.after(note); }
     if (note) { note.textContent = freeNote; note.hidden = !freeNote; }
+    const ship = dialog.querySelector('#pdp-ship');
+    if (ship) { ship.textContent = freeNote; ship.hidden = !freeNote; }
   }
   loadShippingConfig().then(config => { freeNote = config.mode === 'correios' ? freeShippingNote(config.freeShipping) : ''; refresh(); }).catch(() => {});
   button.addEventListener('click', async () => {

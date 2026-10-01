@@ -83,7 +83,7 @@ publicados ficam em `dist/`:
   `SHOWCASE` (enquadramento do recorte e tema de cada produto).
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
-- `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
+- `controller.js`: rotas por hash e página de produto compacta (cores, combinações, painel de informações, persistência).
 - `vendor/`: Three.js r180 minificado (`three.module.min.js`), OrbitControls, GLTFLoader e o decodificador Meshopt locais.
 - `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
   usado no e-mail).
@@ -188,8 +188,10 @@ base. Ele representa a régua encaixada:
 
 ## Vitrine principal (banner temático)
 
-O banner mostra um produto por vez: categoria, nome, subtítulo, a peça sobre uma
-pilastra branca e o botão “Escolha sua cor” com as cores originais logo abaixo.
+O banner mostra um produto por vez, no formato “banner limpo”: categoria, nome,
+subtítulo, preço com o selo verde “5% off no Pix”, a peça sobre uma pilastra branca
+e os botões “Personalizar o meu” (principal) e “Ver encaixado” (só nas peças com
+demonstração).
 A troca é uma passagem lateral: peça e pilastra saem juntas, a próxima entra pelo
 lado oposto, e fundo, header, textos e paleta trocam na mesma transição
 (780 ms, `cubic-bezier(.22, 1, .36, 1)`). Um único valor contínuo (`position`,
@@ -209,8 +211,7 @@ arraste nunca abre o modal; um toque simples na peça abre o produto. Setas,
 teclado e arraste com mouse funcionam. O tratamento de `lostpointercapture` é
 intencional: ao transferir a captura implícita do toque do link para a vitrine,
 o evento propagado pelo link não pode cancelar o gesto. Respeite
-`prefers-reduced-motion` (só crossfade, sem translação nem escala, e o botão do
-card ganha um contorno estático em vez de pulsar).
+`prefers-reduced-motion` (só crossfade, sem translação nem escala).
 
 Fundo e tema: uma faixa de cor por tema (`data-hero-bg`) cobre a página inteira,
 atrás do banner e do catálogo; o degradê do banner continua por baixo dele e um
@@ -224,19 +225,31 @@ originais do site. Não altere `catalog.css` nem `catalog.js` para isso: os
 ajustes ficam em `carousel.css`, sempre com o prefixo `.home`, e a página
 Produtos não muda.
 
-“Escolha sua cor” leva ao card do produto ativo no carrossel do catálogo (clique
-programático no card, o mesmo caminho do toque em um card lateral), rola até ele
-e faz pulsar o botão “Personalize o seu” até a pessoa interagir. Isso depende de
-`data-product-id` nos cards.
+“Personalizar o meu” segue o padrão dos marketplaces: cor sólida do tema, verbo
+claro, ícone de paleta à esquerda, sem seta, 52 px de altura. É um link para
+`#produto/<peça>/personalizar`, que abre o modal direto no configurador. “Ver
+encaixado” abre a demonstração do produto ativo (`demo.open`), a mesma do toque na
+peça. A demonstração usa o mesmo botão.
 
-Desktop (≥ 901 px): os cards do catálogo da home são um pouco menores
-(ativo 352 px) para o carrossel caber inteiro ao chegar pelo botão. O celular usa
-a coluna única, com o botão logo abaixo da pilastra.
+Desktop (≥ 901 px): texto e botões à esquerda, peça à direita. Celular: coluna
+única; o botão principal ocupa a largura entre as setas (até 340 px) e “Ver
+encaixado” fica logo abaixo. Abaixo de 380 px o botão compacta para o rótulo caber
+numa linha. Acima do cabeçalho das páginas da loja fica a barra rotativa
+(`announcement-bar.js`).
 
 ## Modal e configurador
 
-O mesmo modal tem três estados: apresentação, personalização e resumo. No
-celular, ele usa quase toda a altura útil com `dvh` e safe areas. A prévia fica
+O produto é uma **página compacta numa tela só** (`controller.js` + `product-page.css`),
+sem etapas. Ela reúne nome, preço com o valor no Pix, “Suas cores” (parte em
+controle segmentado, cores em círculos como grupo de opções navegável por setas e
+combinações prontas Original, Pastel, Vibrante e Surpreenda-me) e a compra sempre
+à vista (“Adicionar ao carrinho” e “Comprar agora”). Ao escolher uma cor, a prévia
+passa da imagem para o 3D. Os atalhos Detalhes, Cores, Entrega e Trocas abrem um
+painel com abas: ao lado no desktop, de baixo para cima no celular. O Esc fecha
+primeiro o painel. O painel só traz informação real; compatibilidade e medidas
+entram quando a Ju fornecer. `#produto/<peça>` abre na imagem e
+`#produto/<peça>/personalizar` abre no 3D. No celular, a página usa quase toda a
+altura útil com `dvh` e safe areas. A prévia fica
 estável na parte superior, somente o painel inferior de opções rola, e a ação
 principal permanece acessível no rodapé. O botão de fechar fica sempre visível e
 a página de fundo permanece travada.
@@ -244,8 +257,7 @@ a página de fundo permanece travada.
 A imagem usa `object-fit: contain`. A prévia 3D enquadra o produto completo e a
 pilastra com base nos limites reais da geometria. Há giro, zoom e retorno à vista
 inicial. Os controles não cobrem o objeto. A troca de parte ou cor não pode
-causar salto do modal, rolagem externa ou perda de foco. O resumo lista cada
-parte e a cor escolhida; essa etapa ainda não envia pedido.
+causar salto do modal, rolagem externa ou perda de foco.
 
 ## Acessibilidade e compatibilidade
 
@@ -279,11 +291,11 @@ node --check dist/viewer.js
 ```
 
 Faça a matriz visual descrita em `QA.md` em 360 × 800, 390 × 844 e 430 × 932,
-além de notebook e desktop amplo. Valide os três produtos, os três estados do
-modal, imagem e 3D, todas as partes, cores, resumo, fechamento, rolagem interna,
+além de notebook e desktop amplo. Valide os três produtos, a página de produto,
+imagem e 3D, todas as partes, cores, combinações, o painel de informações, fechamento, rolagem interna,
 carrossel nos dois sentidos e ausência de erros no console. Para mudanças no
 banner, siga também a matriz de `HERO-BANNER-QA.md` (1920 a 360, gestos,
-movimento reduzido e o fluxo “Escolha sua cor”). Para mudanças no Aviãoscopia,
+movimento reduzido e os botões “Personalizar o meu” e “Ver encaixado”). Para mudanças no Aviãoscopia,
 confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 
 ## Processo de colaboração e Git

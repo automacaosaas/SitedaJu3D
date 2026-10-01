@@ -49,9 +49,8 @@ const {translate} = await site('i18n-core.js');
   const page = read('dist/produtos.html'), script = read('dist/catalog.js');
   assert.match(script, /<span class="product-rail-pix">\$\{money\(pixPrice\(COMMERCE\.prices\[id\]\)\)\} no Pix<\/span>/);
   for (const price of Object.values(COMMERCE.prices)) assert(page.includes(`<span class="product-rail-pix">${money(pixPrice(price)).replace(/ /g, '&nbsp;')} no Pix</span>`), `produtos.html: ${money(pixPrice(price))} no Pix`);
-  assert.match(read('dist/cart-bridge.js'), /money\(pixPrice\(COMMERCE\.prices\[key\]\)\)/, 'product panel: the Pix price under the price');
-  assert.match(read('dist/carousel.js'), /<span class="pix-badge">\$\{money\(pixPrice\(COMMERCE\.prices\[key\]\)\)\} no Pix<\/span>/, 'banner: the Pix badge');
-  assert.match(read('dist/controller.js'), /<span class="pix-badge">\$\{money\(pixPrice\(price\)\)\} no Pix<\/span>/, 'product window: the Pix badge');
+  assert.match(read('dist/carousel.js'), /<span class="copy-pix">5% off no Pix<\/span>/, 'banner: price with the Pix badge');
+  assert.match(read('dist/controller.js'), /\$\('#product-pix'\)\.textContent=`\$\{money\(pixPrice\(price\)\)\} no Pix`/, 'product page: the Pix price');
 }
 
 // ── checkout: the card option (decision of 01/10/2026: 3x sem juros) ──
@@ -62,6 +61,7 @@ const {translate} = await site('i18n-core.js');
   const bar = read('dist/announcement-bar.js');
   assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
   assert.doesNotMatch(bar, /até 12x no cartão/);
+  assert.match(read('dist/index.html'), /<small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</, 'and the product page');
   assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: 12\}/, 'the Brick offers only the method chosen');
 }
 

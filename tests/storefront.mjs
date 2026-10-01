@@ -71,17 +71,13 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.equal((tools.match(/<svg /g) || []).length, 4);
 }
 
-// ── C3, C5, C6, B6: the product window ────────────────────────────────
+// ── B6: the quick cart button says which colors go in (the product page itself is the owner's, tests/product-page.mjs) ──
 {
-  const page = read('dist/index.html'), controller = read('dist/controller.js'), cards = read('dist/catalog.js'), navigation = read('dist/shopping-navigation.js');
-  assert.match(page, /<p class="detail-subtitle" id="dialog-subtitle"><\/p><p class="detail-price" id="dialog-price"><\/p>/, 'the price sits right under the name');
-  assert.match(controller, /\$\('#dialog-price'\)\.innerHTML=price\?`<strong>\$\{money\(price\)\}<\/strong><span class="pix-badge">\$\{money\(pixPrice\(price\)\)\} no Pix<\/span>`/, 'with the Pix price, from the opening state on (audit C3)');
-  assert.match(page, /<button type="button" class="add-original" id="add-original" data-add-product="" data-original-colors>Adicionar nas cores originais<\/button>/, 'buy in the original colors without the configurator (audit C5)');
-  assert.match(controller, /\$\('#add-original'\)\.hidden=next!=='info';/); assert.match(controller, /\$\('#add-original'\)\.dataset\.addProduct=key;/);
-  assert.doesNotMatch(page, /Voltar à coleção/, 'no link repeating the × (audit C6)'); assert.doesNotMatch(controller, /\$\('\.back'\)/);
+  const cards = read('dist/catalog.js'), navigation = read('dist/shopping-navigation.js');
   assert.match(cards, /aria-label="Adicionar \$\{product\.title\} ao carrinho nas cores originais" title="Adicionar nas cores originais"/, 'the quick cart button says which colors go in (audit B6)');
   assert.match(cards, /await goToCart\(\{original: true\}\)/); assert.match(navigation, /'Peça adicionada nas cores originais\. Indo para o carrinho…'/);
   assert.equal((read('dist/produtos.html').match(/ao carrinho nas cores originais" title="Adicionar nas cores originais">/g) || []).length, 3);
+  assert.doesNotMatch(read('dist/index.html'), /Voltar à coleção/, 'no link repeating the × (audit C6)');
 }
 
 // ── J1: link previews (Open Graph) on every page a person may share ───
