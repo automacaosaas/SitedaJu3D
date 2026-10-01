@@ -18,13 +18,14 @@ module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, bod
   const settings = nfeSettings(env);
   if (settings.provider !== 'bling') throw fail('bling_off');
   const bling = createBling({store, env, now, fetchImpl});
-  const natureId = (settings.example ? EXAMPLE.fiscal : FISCAL).bling.natureId;
+  // The natures the site uses, by kind of buyer (nonTaxpayer, taxpayer); one still to be filled is left out.
+  const natureIds = Object.fromEntries(Object.entries((settings.example ? EXAMPLE.fiscal : FISCAL).bling.natureId).filter(([, id]) => !String(id).startsWith('[PREENCHER')).map(([kind, id]) => [kind, String(id)]));
 
   async function view() {
     const status = await bling.status();
     let natures = null, naturesError = null;
     if (status.connected) { try { natures = await bling.natures(); } catch (error) { naturesError = error instanceof BlingError ? error.message : 'Falha ao consultar o Bling.'; } }
-    return {ok: true, bling: {...status, natureId: String(natureId).startsWith('[PREENCHER') ? null : String(natureId), natures, naturesError}};
+    return {ok: true, bling: {...status, natureIds, natures, naturesError}};
   }
   if (req.method === 'GET') return {body: await view()};
 

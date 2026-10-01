@@ -83,17 +83,22 @@ const creations = () => fake.calls.filter(c => c.method === 'POST' && c.path ===
   const noIe = toBling(built(order({buyer: {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: 'ISENTO'}}})), null);
   assert.deepEqual([noIe.contato.tipoPessoa, noIe.contato.contribuinte, 'ie' in noIe.contato], ['J', 9, false], 'a company without a state registration: "Não contribuinte" in Bling (rule 2, CFOP 6107)');
   assert(!('formaPagamento' in company.parcelas[0]), 'no payment method found: Bling uses its default');
-  assert.equal(built(order()).bling.natureId, '1');
+  assert.equal(built(order()).bling.natureId, '1', 'a person: the nature for non-taxpayers (other states 6107)');
+  const withIe = {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: '0620012345678'}};
+  assert.equal(built(order({buyer: withIe})).bling.natureId, '3', 'a company with a state registration: the "contribuinte" nature (other states 6101)');
+  assert.equal(built(order({buyer: {...withIe, company: {...withIe.company, stateRegistration: 'ISENTO'}}})).bling.natureId, '1', 'a company without one: the non-taxpayer nature');
+  assert.equal(toBling(built(order({buyer: withIe})), null).naturezaOperacao.id, 3);
   assert(!('bling' in buildInvoice({order: order(), city: SP, environment: 'homologacao', provider: 'fake', env: ENV, ...fiscal.EXAMPLE}).invoice), 'only the Bling note carries the nature id');
 }
 
 // ── tax data with Bling: CFOP, CSOSN, PIS/COFINS and series live in Bling ──
 {
-  const missing = fiscal.missing(fiscal.FISCAL, {provider: 'bling'});
-  assert(missing.includes('bling.natureId'), 'the nature id is asked for');
+  const pendingFiscal = {...fiscal.FISCAL, bling: {natureId: {nonTaxpayer: '[PREENCHER: id]', taxpayer: '[PREENCHER: id]'}}};
+  const missing = fiscal.missing(pendingFiscal, {provider: 'bling'});
+  assert.deepEqual(missing, ['bling.natureId.nonTaxpayer', 'bling.natureId.taxpayer'], 'each nature id is asked for');
   assert(!missing.some(p => /^(series|cfop\.|icms\.csosn|pis\.|cofins\.)/.test(p)), 'tax rules come from Bling');
-  assert(!fiscal.missing(fiscal.FISCAL, {provider: 'focusnfe'}).includes('bling.natureId'), 'other services do not need it');
-  const blocked = buildInvoice({order: order(), city: SP, environment: 'homologacao', provider: 'bling', env: ENV});
+  assert(!fiscal.missing(pendingFiscal, {provider: 'focusnfe'}).some(p => p.startsWith('bling.')), 'other services do not need it');
+  const blocked = buildInvoice({order: order(), city: SP, environment: 'homologacao', provider: 'bling', env: ENV, fiscal: pendingFiscal});
   assert.equal(blocked.ok, false); assert(blocked.problems[0].includes('bling.natureId'), 'no note while the nature id is missing');
 }
 
@@ -138,7 +143,7 @@ const endpoint = blingEndpoint.create({env: ENV, store, now, fetchImpl: network}
   assert.equal(connected.statusCode, 200);
   const status = connected.json().bling;
   assert.deepEqual([status.connected, status.connectedBy, status.pausedReason], [true, 'ju@site.test', null]);
-  assert.equal(status.natures.length, 2, 'the natures come right after connecting');
+  assert.equal(status.natures.length, 3, 'the natures come right after connecting');
   assert(Math.abs(new Date(status.refreshExpiresAt).getTime() - (clock + 30 * 86400000)) < 5000, 'refresh token good for 30 days');
   assert.equal((await call(endpoint, {body: {action: 'connect', code: allowed.code, state: allowed.state}, cookie: ju.cookie})).json().error, 'bling_code_invalid', 'a code works once');
   assert((await store.adminAudit.list()).some(a => a.action === 'bling_connected'));
@@ -149,8 +154,8 @@ const endpoint = blingEndpoint.create({env: ENV, store, now, fetchImpl: network}
   assert(issued >= 1); assert(!Buffer.from(row.tokensEnc).toString('latin1').includes('eyJ.fake.'), 'tokens encrypted at rest');
 
   const listed = (await call(endpoint, {method: 'GET', cookie: ju.cookie})).json().bling;
-  assert.deepEqual(listed.natures.map(n => [n.id, n.description]), [['1', 'Venda de produção do estabelecimento'], ['2', 'Remessa para conserto']], "Bling's natures with their ids");
-  assert.equal(listed.natureId, '1', 'the one the site uses');
+  assert.deepEqual(listed.natures.map(n => [n.id, n.description]), [['1', 'Venda de produção do estabelecimento'], ['2', 'Remessa para conserto'], ['3', 'Venda de produção do estabelecimento – contribuinte']], "Bling's natures with their ids");
+  assert.deepEqual(listed.natureIds, {nonTaxpayer: '1', taxpayer: '3'}, 'the ones the site uses, by kind of buyer');
 }
 
 // ── issuing through Bling ─────────────────────────────────────────────
@@ -215,11 +220,11 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   const start = refreshes();
   clock += 7 * 3600e3; fake.expireAccessTokens();
   const [a, b] = await Promise.all([bling.natures(), bling.natures()]);
-  assert.equal(a.length, 2); assert.equal(b.length, 2);
+  assert.equal(a.length, 3); assert.equal(b.length, 3);
   assert.equal(refreshes(), start + 1, 'two calls needing a new token share one renewal (refresh tokens are single-use)');
 
   fake.expireAccessTokens();   // Bling says the token is dead even though the site thinks it is fresh
-  assert.equal((await bling.natures()).length, 2, 'a 401 renews once and retries');
+  assert.equal((await bling.natures()).length, 3, 'a 401 renews once and retries');
   assert.equal(refreshes(), start + 2);
 
   assert.equal(await bling.keepAlive(), false, 'renewed recently: nothing to do');
