@@ -39,6 +39,10 @@
 /* Sombra do equipamento nas paredes internas da abertura (recortada pela camada de trás da peça). */
 .demo-cast { opacity: .5; -webkit-mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; }
 .demo-cast-image { display: block; height: auto; filter: brightness(0) blur(calc(var(--size) * .012)); translate: calc(var(--size) * .008) calc(var(--size) * .012); }
+/* Brilho que atravessa a frente quando as metades se fecham (só na montagem): uma faixa clara inclinada, recortada pela silhueta da frente. */
+.demo-sheen { position: absolute; inset: 0; overflow: hidden; pointer-events: none; -webkit-mask: var(--front-src) 0 0 / 100% 100% no-repeat; mask: var(--front-src) 0 0 / 100% 100% no-repeat; }
+.demo-sheen i { position: absolute; top: -10%; bottom: -10%; left: 0; width: 30%; opacity: 0; transform: translateX(-130%) skewX(-16deg); mix-blend-mode: soft-light;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5) 42%, rgba(255, 255, 255, .5) 58%, transparent); }
 /* Sombra da peça sobre o equipamento: a própria silhueta dela, desfocada e um pouco abaixo, recortada pelo
    equipamento na posição final — escurece só o equipamento, rente às bordas da abertura e sob o rostinho. */
 .demo-shade { opacity: 0; filter: brightness(0) blur(calc(var(--size) * .011)); object-position: 0 calc(var(--size) * .01);
@@ -60,6 +64,7 @@
   font: 600 clamp(10.5px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
 .demo-callout[data-align="left"] .demo-callout-label { transform: translate(calc(-100% - 12px), -50%); }
 .demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
+.demo-callout[data-align="right"] .demo-callout-label { transform: translate(12px, -50%); }
 
 /* Controles: "voltar" no mesmo desenho das setas; o convite à direita da peça (no celular, abaixo). */
 .demo-close { position: absolute; top: clamp(10px, calc(var(--u) * .018), 28px); right: max(16px, calc(var(--hero-inset) - 24px)); display: grid; place-items: center; width: clamp(44px, 3.6vw, 56px); height: clamp(44px, 3.6vw, 56px); padding: 0;

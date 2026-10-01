@@ -2,6 +2,8 @@
 // transforma a própria vitrine numa apresentação — a interface sai, a peça se aproxima como numa câmera, o fundo
 // acompanha, o equipamento sobe até se encaixar nela e uma ficha técnica mínima nomeia as duas partes.
 // "Voltar" toca a mesma sequência ao contrário.
+// Com `assemble` (products.js) o produto é montado em vez de encaixado: a peça se abre em duas metades, o equipamento sobe por entre elas e as
+// metades se fecham em volta dele (peça de duas metades, como a de um avião com régua).
 //
 // Camadas (de trás para frente): sombra projetada · peça, camada de trás (paredes internas da abertura) · sombra do
 // equipamento nas paredes · equipamento (com o reflexo verde da peça) · sombra da peça sobre o equipamento · peça,
@@ -47,7 +49,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       + image('demo-drop') + image('demo-back')
       + '<div class="demo-cast">' + image('demo-cast-image') + '</div>'
       + '<div class="demo-tool"><img alt="" decoding="async" draggable="false"></div>'
-      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '</div>'
+      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '<div class="demo-sheen" aria-hidden="true"><i></i></div></div>'
       + '</div></div></div></div>');
     const controls = node('div', 'demo-controls', '<div class="demo-callouts" aria-hidden="true"></div>');
     const close = node('button', 'demo-close', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
@@ -67,7 +69,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       callouts: controls.querySelector('.demo-callouts'), header: shell.querySelector('.site-header'),
       rig: q('.demo-rig'), tilt: q('.demo-tilt'), turn: q('.demo-turn'), float: q('.demo-float'), drop: q('.demo-drop'), back: q('.demo-back'),
       cast: q('.demo-cast'), castImage: q('.demo-cast-image'), tool: q('.demo-tool'), toolImage: q('.demo-tool img'),
-      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), ready: null};
+      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), ready: null};
   }
 
   // Monta as camadas do produto e decodifica as imagens antes do clique (o equipamento nunca chega atrasado).
@@ -85,7 +87,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       const vars = {'--tool-w': tool.width, '--tool-top': tool.top, '--tool-ratio': tool.ratio, '--tool-fade-a': tool.fade[0], '--tool-fade-b': tool.fade[1], '--tool-src': `url("${toolSrc}")`,
         '--tool-turn': `${turn}deg`, '--tool-shift': tool.shift || 0, [far[0]]: turn ? Math.min(.45, Math.abs(turn) * .04) : 0, [far[1]]: 0, '--tool-side': `${-Math.sign(turn) * Math.min(2, Math.abs(turn) * .16)}px`,
         '--demo-core': withAlpha(config.glow, .95), '--demo-halo': withAlpha(config.halo, .3), '--demo-halo-soft': withAlpha(config.halo, .1), '--demo-accent': withAlpha(config.accent, .12),
-        '--demo-bounce': withAlpha(config.halo, .85), '--demo-vignette': withAlpha(config.shade, .16), '--demo-zoom': config.zoom || 1};
+        '--demo-bounce': withAlpha(config.halo, .85), '--demo-vignette': withAlpha(config.shade, .16), '--demo-zoom': config.zoom || 1, '--front-src': `url("${front}")`};
       // Camada de trás renderizada junto com a frente (depth 0) entra como veio; recortada de outra imagem (depth > 0) é
       // recuada, escurecida e mostrada só em volta da abertura para compensar a diferença.
       if (layers.back) Object.assign(vars, {'--back-src': `url("assets/${layers.back}")`, '--back-depth': layers.depth || 0, '--back-shift': layers.depth ? .004 : 0});
@@ -132,6 +134,23 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       ];
     }
     const depth = PERSPECTIVE * (1 / g.s - 1);
+    // Tempos (ms) do que vem depois da câmera. Montagem: a peça se abre (0,52–0,98 s), o equipamento sobe (0,9–1,5 s) e as metades se fecham (1,34–1,79 s).
+    const asm = configs[index].assemble || null;
+    const T = asm ? {tool: 900, shade: 1660, labels: 2150, cta: 2260, glow: 2000, drop: 1900} : {tool: 520, shade: 880, labels: 1120, cta: 1220, glow: 1220, drop: 1260};
+    const assemble = () => {
+      // cada metade: z (px de perspectiva), x/y (% do quadrado) e giro em Y (graus) quando aberta; a da frente avança e sai para cima e para a esquerda, a de trás recua para baixo e para a direita
+      const at = ({z = 0, x = 0, y = 0, ry = 0} = {}) => `translate3d(${x}%, ${y}%, ${z}px) rotateY(${ry}deg)`;
+      // abrem, esperam o equipamento, fecham acelerando (o ímã puxa), batem (over: px além do ponto) e assentam
+      const shell = (to, over) => [
+        {offset: 0, transform: at(), easing: EASE.out}, {offset: .3, transform: at(to), easing: EASE.settle}, {offset: .58, transform: at(to), easing: 'cubic-bezier(.5, 0, .8, .4)'},
+        {offset: .9, transform: at(), easing: EASE.out}, {offset: .95, transform: at({z: over}), easing: EASE.settle}, {offset: 1, transform: at()}];
+      return [
+        {el: d.sleeve, delay: 520, duration: 1360, keyframes: shell(asm.open, -5)},
+        {el: back, delay: 520, duration: 1360, keyframes: shell(asm.apart, 5)},
+        // no estalo, um brilho atravessa a frente (sobreposição das camadas)
+        {el: d.sheen, delay: 1790, duration: 760, easing: EASE.soft, keyframes: [{offset: 0, opacity: 0, transform: 'translateX(-130%) skewX(-16deg)'}, {offset: .15, opacity: 1}, {offset: .85, opacity: 1}, {offset: 1, opacity: 0, transform: 'translateX(330%) skewX(-16deg)'}]}
+      ];
+    };
     const camera = (x, y, z) => `perspective(${PERSPECTIVE}px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)`;
     const [copyAway, paletteAway] = g.compact ? ['0, -12px', '0, 12px'] : ['-18px, 0', '18px, 0'];
     const leave = away => [{opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)', filter: 'blur(0px)'}, {opacity: 0, transform: `translate3d(${away}, 0) scale(.985)`, filter: 'blur(2px)'}];
@@ -147,6 +166,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       {offset: .68, transform: 'translate3d(0, .4px, 0)', easing: EASE.settle},
       {offset: 1, transform: 'translate3d(0, 0, 0)'}];
     return [
+      ...(asm ? assemble() : []),
       // 1 · 0–0,35 s — a peça da pilastra dá lugar à da demonstração no mesmo lugar; interface e header recuam
       {el: g.source, duration: 1, keyframes: [{visibility: 'hidden'}, {visibility: 'hidden'}]},
       {el: copy, duration: 260, easing: EASE.exit, keyframes: leave(copyAway)},
@@ -162,8 +182,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
         {transform: 'perspective(1100px) rotateX(0deg) rotateY(0deg)'},
         {offset: .45, transform: 'perspective(1100px) rotateX(2.5deg) rotateY(-3deg)'},
         {transform: 'perspective(1100px) rotateX(0deg) rotateY(0deg)'}]},
-      {el: back, delay: 80, duration: 400, easing: EASE.soft, keyframes: [{opacity: 0}, {opacity: 1}]},
-      {el: d.drop, delay: 40, duration: 1260, keyframes: [
+      {el: back, delay: asm ? 0 : 80, duration: asm ? 140 : 400, easing: EASE.soft, keyframes: [{opacity: 0}, {opacity: 1}]},
+      {el: d.drop, delay: 40, duration: T.drop, keyframes: [
         {offset: 0, opacity: 0, transform: 'translate3d(0, 0, 0) scale(.92)', easing: EASE.out},
         {offset: .42, opacity: .12, transform: 'translate3d(.8%, 3.4%, 0) scale(.98)', easing: EASE.soft},
         {offset: .78, opacity: .12, transform: 'translate3d(.8%, 3.4%, 0) scale(.98)', easing: EASE.soft},
@@ -171,7 +191,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // 3 · o fundo acompanha: luz macia atrás do encaixe, cenário recua, vinheta discreta
       {el: g.scenery, delay: 60, duration: 460, easing: EASE.soft, keyframes: [{opacity: 1, transform: 'translate3d(0, 0, 0)'}, {opacity: .3, transform: 'translate3d(0, 12px, 0)'}]},
       {el: d.vignette, delay: 80, duration: 460, easing: EASE.soft, keyframes: [{opacity: 0}, {opacity: 1}]},
-      {el: d.glow, delay: 80, duration: 1220, keyframes: [
+      {el: d.glow, delay: 80, duration: T.glow, keyframes: [
         {offset: 0, opacity: 0, transform: 'scale(.85)', easing: EASE.soft},
         {offset: .38, opacity: .85, transform: 'scale(1)', easing: EASE.soft},
         {offset: .8, opacity: .85, transform: 'scale(1)', easing: EASE.soft},
@@ -179,18 +199,17 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       {el: d.close, delay: 360, duration: 260, easing: EASE.out, keyframes: [{opacity: 0, scale: '.9'}, {opacity: 1, scale: '1'}]},
       // 4 · 0,52–1,12 s — o equipamento sobe por dentro da peça, passa 3 px do ponto, volta 1 px e assenta; ele projeta
       //     sombra nas paredes internas, a peça projeta sombra nele e, no contato, cede um pouco
-      {el: d.tool, delay: 520, duration: 600, keyframes: rise},
-      {el: cast, delay: 520, duration: 600, keyframes: rise},
-      {el: d.shade, delay: 880, duration: 300, keyframes: [
+      {el: d.tool, delay: T.tool, duration: 600, keyframes: rise},
+      {el: cast, delay: T.tool, duration: 600, keyframes: rise},
+      {el: d.shade, delay: T.shade, duration: 300, keyframes: [
         {offset: 0, opacity: 0, easing: EASE.soft},
         {offset: .45, opacity: .66, easing: EASE.settle},
         {offset: 1, opacity: .56}]},
-      {el: d.sleeve, delay: 970, duration: 240, keyframes: give},
-      {el: back, delay: 970, duration: 240, keyframes: give},
+      ...(asm ? [] : [{el: d.sleeve, delay: 970, duration: 240, keyframes: give}, {el: back, delay: 970, duration: 240, keyframes: give}]),   // na montagem o assentar já está nas metades
       // 5 · 1,12–1,56 s — estabilizado: a ficha técnica nomeia as partes e, logo depois, o convite
-      ...labels.map((el, i) => ({el, delay: 1120 + Math.floor(i / 2) * 60, duration: 300, easing: EASE.out,
+      ...labels.map((el, i) => ({el, delay: T.labels + Math.floor(i / 2) * 60, duration: 300, easing: EASE.out,
         keyframes: [{opacity: 0, translate: el.dataset.align === 'below' ? '0 -6px' : '8px 0'}, {opacity: 1, translate: '0 0'}]})),
-      {el: d.cta, delay: 1220, duration: 340, easing: EASE.out, keyframes: [{opacity: 0, translate: '0 10px', filter: 'blur(3px)'}, {opacity: 1, translate: '0 0', filter: 'blur(0px)'}]}
+      {el: d.cta, delay: T.cta, duration: 340, easing: EASE.out, keyframes: [{opacity: 0, translate: '0 10px', filter: 'blur(3px)'}, {opacity: 1, translate: '0 0', filter: 'blur(0px)'}]}
     ];
   }
 

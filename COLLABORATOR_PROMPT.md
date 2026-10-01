@@ -167,6 +167,12 @@ seleções salvas em `localStorage` nem mude os IDs sem uma migração.
 
 ## Regras específicas do Aviãoscopia
 
+> **Atualização (2026-10-01):** as imagens do banner, do catálogo e do popup (`product-aviaoscopia-cutout.webp`, `card-aviaoscopia*.webp`,
+> `aviaoscopia.webp`) agora são renders do CAD real (STL do projeto de 21/08/2026) e mostram o produto como é vendido: as 16 aberturas
+> **vazadas** (a régua de grau é do cliente), números ao lado, sem rasgo desenhado na base. A régua só aparece na demonstração do banner:
+> `aviaoscopia-ruler.webp` sobe por entre `aviaoscopia-back.webp` e `aviaoscopia-front.webp`, que se fecham em volta dela. As regras abaixo
+> valem para o **modelo 3D da prévia** (`models.js`, testado por `tests/plane-geometry.mjs`), que ainda é o modelo antigo.
+
 O avião não pode aparecer como uma moldura vazia nem com um furo redondo na
 base. Ele representa a régua encaixada:
 

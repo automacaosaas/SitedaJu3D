@@ -12,7 +12,7 @@ export const PRODUCT_CATEGORIES = Object.freeze({
 export const PRODUCTS = {
   borboletoscopio:{number:'01',category:'oftalmologia',title:'Borboletoscópio',subtitle:'Capa para retinoscópio',image:'borboletoscopio.webp',catalogImage:'product-borboletoscopio-cutout.webp',description:'Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.',parts:[{id:'body',name:'Corpo',hint:'Contorno, asas e antenas',default:'mint'},{id:'details',name:'Detalhes das asas',hint:'Parte interna e bolinhas',default:'yellow'}],fixed:'O rostinho e os olhos mantêm as cores originais.'},
   dinossauroscopio:{number:'02',category:'oftalmologia',title:'Dinossauroscópio',subtitle:'Capa para retinoscópio',image:'dinossauroscopio.webp',catalogImage:'product-dinossauroscopio-cutout.webp',description:'Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.',parts:[{id:'body',name:'Corpo',hint:'Cabeça e corpo do dinossauro',default:'moss'},{id:'details',name:'Crista e bolinhas',hint:'A mesma cor nas duas partes',default:'cream'}],fixed:'Os olhos permanecem pretos e os dentes, brancos.'},
-  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia-regua.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas da régua lembram janelas de avião, com os graus identificados ao lado. O rasgo retangular na base acomoda a haste plana da régua. Apresentação ilustrativa com a régua encaixada.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
+  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de grau',image:'aviaoscopia.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
 };
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
@@ -66,8 +66,21 @@ export const SHOWCASE = {
     }
   },
   aviaoscopia:{
-    art:{h:.9043, bottom:.0702, foot:.5263, alt:'Aviãoscopia sobre pilastra branca, com 16 aberturas numeradas e rasgo retangular para a haste da régua'},
-    theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'}
+    art:{h:.9043, bottom:.0702, foot:.5263, alt:'Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca'},
+    theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'},
+    demo:{
+      // Montagem em vez de encaixe: a régua sobe por entre as duas metades (back e front, renderizadas do CAD com a mesma câmera) e elas se
+      // fecham em volta dela. assemble.open/apart = onde ficam a metade da frente e a de trás enquanto a régua sobe (z em px de perspectiva, x/y em % do quadrado, ry em graus).
+      assemble:{open:{z:56, x:-7, y:-4, ry:-8}, apart:{z:-72, x:7, y:5, ry:6}},
+      tool:{src:'aviaoscopia-ruler.webp', width:.2289, top:.1691, ratio:.175, fade:[.7, .82]},
+      layers:{front:'aviaoscopia-front.webp', back:'aviaoscopia-back.webp'},
+      callouts:[
+        {label:'Aviãoscopia', wide:{points:[[.27, .55], [.17, .62], [-.04, .62]], align:'left'}, compact:{points:[[.27, .55], [.2, .66], [.2, 1.05]], align:'below'}},
+        {label:'Régua de grau', wide:{points:[[.5, 1.03], [.43, 1.08], [-.04, 1.08]], align:'left'}, compact:{points:[[.5, 1.03], [.74, 1.03], [.74, 1.07]], align:'below'}}
+      ],
+      glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
+      message:'Aviãoscopia fechada em volta da régua de grau.'
+    }
   }
 };
 export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}

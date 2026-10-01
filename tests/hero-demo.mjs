@@ -41,12 +41,13 @@ for (const [key, {demo}] of demos) {
   assert.ok(!demo.zoom || (demo.zoom >= .8 && demo.zoom <= 1.25), `${key}: zoom discreto`);
   assert.ok(demo.message && translate(demo.message, 'en') !== demo.message && translate(demo.message, 'es') !== demo.message, `${key}: aviso traduzido`);
 }
-assert.equal(showcase('aviaoscopia').demo, null, 'produto sem demo continua abrindo o popup');
+assert.equal(showcase('produto-sem-demo').demo, null, 'produto sem demo continua abrindo o popup');
+assert.ok(showcase('aviaoscopia').demo?.assemble, 'o avião é montado: o equipamento sobe por entre as duas metades, que se fecham em volta dele');
 assert.ok(showcase('borboletoscopio').demo);
 assert.equal(SHOWCASE.borboletoscopio.demo.layers.front, PRODUCTS.borboletoscopio.catalogImage, 'a frente da demonstração é a própria imagem da vitrine');
 assert.deepEqual(SHOWCASE.borboletoscopio.demo.callouts.map(item => item.label), ['Borboletoscópio', 'Retinoscópio'], 'ficha técnica: só os dois rótulos pedidos');
 assert.deepEqual(SHOWCASE.dinossauroscopio.demo.callouts.map(item => item.label), ['Dinossauroscópio', 'Retinoscópio']);
-for (const key of Object.keys(SHOWCASE)) if (SHOWCASE[key].demo?.layers?.front) assert.equal(SHOWCASE[key].demo.layers.front, PRODUCTS[key].catalogImage, `${key}: a frente da demonstração é a própria imagem da vitrine`);
+for (const key of Object.keys(SHOWCASE)) if (SHOWCASE[key].demo?.layers?.front && !SHOWCASE[key].demo.assemble) assert.equal(SHOWCASE[key].demo.layers.front, PRODUCTS[key].catalogImage, `${key}: a frente da demonstração é a própria imagem da vitrine`);
 assert.equal(translate('Retinoscópio', 'en'), 'Retinoscope');
 
 // ── regras do pedido, direto no código ──────────────────────────────────────────
@@ -65,7 +66,11 @@ assert.ok(/timeline\.cancel\(\)/.test(demo) && /float\.cancel\(\)/.test(demo) &&
 assert.ok(!/setInterval/.test(demo + timeline));
 assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered'") && css.includes('.hero-demo[data-back="recessed"] .demo-back {') && !/^\.demo-back \{[^}]*(filter|mask|scale)/m.test(css), 'camadas renderizadas juntas (depth 0) entram sem nenhuma compensação');
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
-assert.ok(ends.length > 10 && Math.max(...ends) <= 1700, `sequência completa em até 1,7 s (${Math.max(...ends)} ms)`);
+assert.ok(ends.length > 8 && Math.max(...ends) <= 2700, `nenhuma trilha passa de 2,7 s (${Math.max(...ends)} ms)`);
+const timing = demo.match(/const T = asm \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);
+assert.ok(timing, 'tempos do encaixe e da montagem na mesma tabela');
+assert.ok(field(timing[2], 'cta') + 340 <= 1700, 'encaixe: sequência completa em até 1,7 s');
+assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 520, 'montagem: até 2,7 s, e o equipamento só sobe depois de a peça se abrir');
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /Personalize o seu/.test(demo));
 for (const text of ['Voltar à vitrine', 'Personalize o seu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
