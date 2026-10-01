@@ -125,7 +125,23 @@ Pedidos da Ju sobre os wireframes, já refletidos na versão interativa do relat
   um botão “Adicionar ao carrinho” com o preço; frete numa linha; ficha técnica em quatro
   atalhos com ícone (Compatível, Medidas, Higienizar, Troca), cada um abre um painel lateral
   com abas, no lugar da página longa de sanfonas.
-- **Checkout:** o cartão do Pix ganhou um destaque verde “5% OFF NO PIX · economize R$ 7,35”.
+- **Checkout:** Pix e Cartão aparecem lado a lado como opções selecionáveis. O Pix tem a faixa
+  verde “5% OFF NO PIX · economize R$ 7,35”; o Cartão tem “Crédito ou débito” e a faixa
+  “ATÉ 12X NO CRÉDITO · veja as parcelas”. Total e botão (“Pagar com Pix” / “Pagar com
+  cartão”) mudam com a escolha. Nota “processado pelo Mercado Pago”.
+
+### Alinhamento com o checkout real (branches `integracao/mercado-pago` e `checkout/melhorias`)
+
+Essas branches já preenchem o endereço pelo CEP, calculam PAC e SEDEX pelos Correios (PAC
+grátis a partir de R$ 500) e cobram Pix, crédito (até 12x, com tabela de juros) e débito pelo
+Payment Brick do Mercado Pago. Isso resolve F1 e boa parte de F3. Os textos dos wireframes
+foram ajustados (“até 12x no cartão”, frete grátis acima de R$ 500).
+
+Para implementar os cartões de escolha: os dois cartões ficam acima do Brick e montam o
+Brick só com o meio escolhido (`paymentMethods`). O desconto do Pix ainda não existe: o valor
+com desconto precisa ser calculado no servidor ao criar o pagamento Pix, nunca só na tela.
+A produção aparece como 3 a 5 dias nos commits de frete e como 5 a 7 dias no site e na barra
+rotativa; confirmar o prazo certo.
 
 ## Plano em fases
 
