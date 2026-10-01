@@ -67,7 +67,7 @@ assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? '
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
 assert.ok(ends.length > 10 && Math.max(...ends) <= 1700, `sequência completa em até 1,7 s (${Math.max(...ends)} ms)`);
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
-assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /Personalize o seu/.test(demo));
-for (const text of ['Voltar à vitrine', 'Personalize o seu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
+assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /Personalizar o meu/.test(demo));
+for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 
 console.log('hero-demo: ok');

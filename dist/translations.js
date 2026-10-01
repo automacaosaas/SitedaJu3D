@@ -405,6 +405,8 @@ Ju, imprime pra mim? Criatividade em 3D|Ju, imprime pra mim? Creativity in 3D|Ju
 CRIATIVIDADE EM 3D|CREATIVITY IN 3D|CREATIVIDAD EN 3D
 Mais cor na consulta. Mais encanto em cada olhar.|More color at every appointment. More wonder in every glance.|Más color en cada consulta. Más encanto en cada mirada.
 Escolha sua cor|Choose your color|Elige tu color
+Personalizar o meu|Customize mine|Personalizar el mío
+Ver encaixado|See it fitted|Verlo encajado
 Produto anterior|Previous product|Producto anterior
 Próximo produto|Next product|Siguiente producto
 © 2026 Ju, imprime pra mim? Todos os direitos reservados.|© 2026 Ju, imprime pra mim? All rights reserved.|© 2026 Ju, imprime pra mim? Todos los derechos reservados.

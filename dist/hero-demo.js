@@ -53,7 +53,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const close = node('button', 'demo-close', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
     close.type = 'button';
     close.setAttribute('aria-label', 'Voltar à vitrine');
-    const cta = node('a', 'palette-button demo-cta', '<span>Personalize o seu</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>');
+    const cta = node('a', 'palette-button demo-cta', '<span>Personalizar o meu</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>');
     const atmosphere = node('div', 'demo-atmosphere', '<i class="demo-vignette"></i>');
     controls.append(close, cta);
     for (const el of [backdrop, stage, atmosphere]) el.setAttribute('aria-hidden', 'true');

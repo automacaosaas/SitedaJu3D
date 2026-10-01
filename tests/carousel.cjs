@@ -160,7 +160,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok([...new Set(css.match(/\.product-[a-z-]+/g))].every(name => catalogClasses.has(name)), 'o CSS só menciona partes permitidas do catálogo');
   assert.ok(css.split('\n').filter(line => /\.product-/.test(line)).every(line => /^\s*(\.home |\/\*|@supports \([^)]*\) \{ \.home )/.test(line)), 'todo seletor do catálogo tem o prefixo .home');
   assert.ok(!/catalog-card|catalog-carousel/.test(css), 'sem seletores fora do escopo do catálogo');
-  assert.ok(/product-rail-card\[data-product-id=/.test(js) && !/product-rail/.test(js.replace(/\.product-rail-card\[data-product-id="[^"]*"\]/g, '')), 'o JS só localiza o card do produto para levar até ele');
+  assert.ok(!/product-rail/.test(js), 'o banner não mexe nos cards do catálogo');
   assert.ok(/var\(--theme-accent, var\(--rose\)\)/.test(css) && /var\(--theme-text, var\(--ink\)\)/.test(css) && /var\(--theme-muted, var\(--muted\)\)/.test(css), 'sem JS, tudo mantém as cores originais do site');
   assert.ok(!/\.explore|Conhecer <span/.test(css + js) && !/class="explore"/.test(js), 'sem o botão "Conhecer" no hover');
   assert.ok(/\.slot\[data-front=true\] \{ cursor: pointer; \}/.test(css) && /\.slot\[data-front=true\]:hover \.piece img \{ transform: translateY\(-8px\)/.test(css), 'o movimento de hover da peça continua');
@@ -173,20 +173,19 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   }
   assert.ok(css.includes('.home .page-inner { position: relative; z-index: 1; }'), 'catálogo desenha acima da dissolução');
 
-  // ── "Escolha sua cor" (botão), seta pulsante e ida ao card ──────────────────────
-  assert.ok(js.includes('data-go-card') && js.includes('function goToCard'), 'o botão leva ao card do produto ativo');
+  // ── Ações do banner (auditoria A1–A3, revisão 2): preço com Pix, "Personalizar o meu" e "Ver encaixado" ──
+  assert.ok(js.includes('href="#produto/${key}/personalizar" data-role="palette"'), '"Personalizar o meu" abre o produto ativo já no configurador');
+  assert.ok(/\$\{demo \? '<button class="palette-demo" type="button" data-demo>/.test(js) && /closest\('\[data-demo\]'\) && demo\.has\(active\)\) \{ e\.preventDefault\(\); demo\.open\(active\)/.test(js), '"Ver encaixado" abre a demonstração, só nos produtos que têm uma');
+  assert.ok(js.includes('<span class="pix-badge">${money(pixPrice(COMMERCE.prices[key]))} no Pix</span>'), 'preço com o valor no Pix');
+  assert.ok(!/data-go-card|goToCard|is-pulsing|cta-pulse|chevron-nudge/.test(js + css), 'sem o caminho antigo (rolar até o card e pulsar)');
+  assert.ok(html.includes('href="#produto/borboletoscopio/personalizar">Personalizar o meu</a>'), 'sem JS, o botão também leva ao configurador');
   assert.ok(!/hero-cue|data-hero-cue|cue-ring|cue-bounce/.test(html + js + css), 'sem a seta separada');
   assert.ok(/\.palette-button \{[^}]*background: var\(--accent\)/.test(css), 'botão na cor do tema, trocando com o produto');
   assert.ok(/\.home \.catalog-home \.product-customize, \.home \.catalog-home \.product-cart \{[^}]*background: var\(--theme-accent, var\(--rose\)\)/.test(css), 'Personalize o seu e carrinho do card seguem a cor do banner');
   assert.ok(/\.home \.catalog-home \.product-customize:hover, \.home \.catalog-home \.product-cart:hover \{[^}]*var\(--theme-accent-strong/.test(css), 'e escurecem no hover na mesma família de cor');
-  for (const name of ['chevron-nudge', 'cta-pulse']) assert.ok(css.includes('@keyframes ' + name), 'animação ' + name);
-  assert.ok(css.includes('.palette-button svg { animation: none; }') && /\.home \.product-customize\.is-pulsing \{ animation: none; outline/.test(css), 'movimento reduzido: sem pulsar, com destaque estático');
-  // A seta dentro do botão pulsa sem exagero (poucos pixels) e vale para desktop e mobile (regra base, sem media query).
-  const nudge = css.match(/@keyframes chevron-nudge \{([^}]*\}[^}]*)\}/)[1], shifts = [...nudge.matchAll(/translateY\((-?[\d.]+)px\)/g)].map(m => Number(m[1]));
-  assert.ok(shifts.length === 2 && Math.max(...shifts.map(Math.abs)) <= 3 && Math.max(...shifts) - Math.min(...shifts) <= 5, 'pulsar de leve (≤ 5 px de curso)');
-  assert.ok(/^\.palette-button svg \{ animation: chevron-nudge/m.test(css), 'a animação vale para desktop e mobile');
+  assert.ok(/\.palette-button:hover svg \{ transform: translateX\(4px\); \}/.test(css), 'a seta avança ao passar o mouse');
+  assert.ok(/\.palette-button, \.palette-button svg, \.palette-demo \{ transition: none; \}/.test(css), 'movimento reduzido: sem transições');
   assert.ok(/\.hero-palette \{[^}]*margin-top: clamp\(20px, 6vw, 34px\)/.test(css), 'no celular o botão desceu um pouco');
-  assert.ok(/\['pointerenter', 'focus', 'click', 'animationend'\]/.test(js), 'a pulsação para quando a pessoa interage');
   for (const key of Object.keys(PRODUCTS)) {
     const {accentColor} = showcase(key).theme;
     assert.ok(contrast('#ffffff', accentColor) >= 4.5, key + ': texto branco sobre o botão (' + contrast('#ffffff', accentColor).toFixed(2) + ')');

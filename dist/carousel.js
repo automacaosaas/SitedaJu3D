@@ -5,6 +5,7 @@ import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
+import {COMMERCE, money, pixPrice} from './commerce-config.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
@@ -43,10 +44,12 @@ function init() {
   // ── Estrutura ────────────────────────────────────────────────────────────────
   bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
-  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme}) =>
-    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p></div>`).join('');
-  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, colors, theme}) =>
-    `<div class="palette" style="${themeVars(theme)}"><button class="palette-button" type="button" data-role="palette" data-go-card aria-label="Escolha sua cor: ver ${product.title} na coleção e personalizar. Cores originais: ${colors.map(c => c.name).join(', ')}"><span>Escolha sua cor</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><span class="palette-dots" aria-hidden="true">${colors.map(c => `<i style="--dot:${c.hex}"></i>`).join('')}</span></div>`).join('');
+  // Preço já no banner, com o valor no Pix num selo verde (auditoria A1).
+  const price = key => COMMERCE.prices[key] ? `<p class="copy-price"><strong>${money(COMMERCE.prices[key])}</strong><span class="pix-badge">${money(pixPrice(COMMERCE.prices[key]))} no Pix</span></p>` : '';
+  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({key, product, category, theme}) =>
+    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price(key)}</div>`).join('');
+  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, colors, theme, demo}) =>
+    `<div class="palette" style="${themeVars(theme)}"><div class="palette-actions"><a class="palette-button" href="#produto/${key}/personalizar" data-role="palette"><span>Personalizar o meu</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>${demo ? '<button class="palette-demo" type="button" data-demo><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg><span>Ver encaixado</span></button>' : ''}</div><span class="palette-dots" aria-hidden="true">${colors.map(c => `<i style="--dot:${c.hex}"></i>`).join('')}</span></div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
     const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
     return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
@@ -93,7 +96,6 @@ function init() {
     slots.forEach((slot, i) => { slot.dataset.front = String(i === active); slot.toggleAttribute('inert', i !== active); });
     copies.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     palettes.forEach((block, i) => block.toggleAttribute('inert', i !== active));
-    clearPulse();
     if (stage.getAttribute('aria-busy') === 'false') demo.prepare(active);
     if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]')).focus({preventScroll: true});
   }
@@ -126,7 +128,7 @@ function init() {
       for (const layer of [bgLayers[i], bandLayers[i]]) { layer.style.opacity = opacity.toFixed(3); layer.style.zIndex = z; }
     }
     const a = entries[mix.from].theme, b = entries[mix.to].theme, accent = mixColor(a.accentColor, b.accentColor, mix.t);
-    const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
+    const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
     for (const element of themed) for (const name in vars) element.style.setProperty(name, vars[name]);
   }
   function report() {
@@ -160,34 +162,9 @@ function init() {
   prevButton.addEventListener('click', () => move(-1));
   nextButton.addEventListener('click', () => move(1));
 
-  // ── Ir ao card: "Escolha sua cor" e a seta pulsante levam ao card do produto ativo ──
-  let pulseAbort = null;
-  function clearPulse() {
-    pulseAbort?.abort(); pulseAbort = null;
-    document.querySelectorAll('.product-customize.is-pulsing').forEach(button => button.classList.remove('is-pulsing'));
-  }
-  function goToCard() {
-    const key = entries[active].key, card = document.querySelector(`.product-rail-card[data-product-id="${key}"]`);
-    const section = card?.closest('[data-product-carousel]') || document.querySelector('#produtos');
-    if (!section) return;
-    clearPulse();
-    card?.click(); // traz o card ao centro do carrossel, igual ao toque em um card lateral
-    section.scrollIntoView({behavior: reduced.matches ? 'auto' : 'smooth', block: 'center'});
-    status.textContent = `${entries[active].product.title}: use Personalize o seu para escolher as cores.`;
-    const button = card?.querySelector('.product-customize');
-    if (!button) return;
-    let started = false;
-    const begin = () => {
-      if (started) return;
-      started = true;
-      button.classList.add('is-pulsing');
-      pulseAbort = new AbortController();
-      for (const type of ['pointerenter', 'focus', 'click', 'animationend']) button.addEventListener(type, clearPulse, {once: true, signal: pulseAbort.signal});
-    };
-    addEventListener('scrollend', begin, {once: true});
-    setTimeout(begin, reduced.matches ? 60 : 1100);
-  }
-  region.addEventListener('click', e => { if (e.target.closest('[data-go-card]')) goToCard(); });
+  // ── Ações do banner: "Personalizar o meu" é um link para o configurador do produto ativo; "Ver encaixado" abre a
+  //    demonstração do encaixe, a mesma do toque na peça (auditoria A2 e A3). ──
+  region.addEventListener('click', e => { if (e.target.closest('[data-demo]') && demo.has(active)) { e.preventDefault(); demo.open(active); } });
 
   // ── Hover: a peça ativa inclina até ~2,5° seguindo o cursor (só mouse; o CSS aplica em :hover) ──
   let tiltFrame = 0, tiltAt = null;

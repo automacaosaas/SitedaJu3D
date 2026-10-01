@@ -50,4 +50,15 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(checkout, /selectedItems|select-all|remove-selected/);
 }
 
-console.log('PASS: storefront — pre-rendered product cards match the default colors, prices and Pix prices; the cart without checkboxes.');
+// ── A5: the opening screen only on the first visit of the session ─────
+{
+  const entry = read('dist/page-entry.js');
+  assert.match(entry, /seen = sessionStorage\.getItem\('ju\.opened'\) === '1'; sessionStorage\.setItem\('ju\.opened', '1'\);/);
+  assert.ok(entry.indexOf("if (seen) {") < entry.indexOf("root.classList.add('ju-opening')"), 'a later visit never hides the shop behind the opening');
+  assert.match(entry, /window\.finishJuOpening = \(\) => \{\};/, 'the banner can still call it');
+  // C6: one label for the action that opens the configurator
+  for (const file of ['dist/catalog.js', 'dist/produtos.html', 'dist/hero-demo.js', 'dist/index.html', 'dist/carousel.js']) assert.doesNotMatch(read(file), /Personalize o seu|PERSONALIZE O SEU/, `${file}: "Personalizar o meu"`);
+  assert.match(read('dist/catalog.js'), /class="product-customize" href="\$\{productHref\(id\)\}\/personalizar">Personalizar o meu</, 'the card button opens the configurator');
+}
+
+console.log('PASS: storefront — pre-rendered product cards match the default colors, prices and Pix prices; the cart without checkboxes; opening screen once per session; one "Personalizar o meu".');
