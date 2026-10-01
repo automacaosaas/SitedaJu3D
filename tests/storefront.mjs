@@ -71,4 +71,22 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.equal((tools.match(/<svg /g) || []).length, 4);
 }
 
+// ── J1: link previews (Open Graph) on every page a person may share ───
+{
+  const {createRequire} = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const {sync, pages, IMAGE} = require('../tools/sync-meta.cjs');
+  const {COMPANY} = require('../api/_lib/legal');
+  const stale = pages().filter(name => sync(fs.readFileSync(path.join(root, 'dist', name), 'utf8'), name) !== fs.readFileSync(path.join(root, 'dist', name), 'utf8'));
+  assert.deepEqual(stale, [], `link previews out of date — run: node tools/sync-meta.cjs (${stale.join(', ')})`);
+  for (const name of ['index.html', 'produtos.html', 'termos.html', 'privacidade.html', 'trocas.html']) {
+    const page = read('dist/' + name);
+    for (const tag of ['og:title', 'og:description', 'og:url', 'og:image', 'og:image:width', 'og:image:height']) assert.match(page, new RegExp(`<meta property="${tag}" content="[^"]+">`), `${name}: ${tag}`);
+    assert.match(page, new RegExp(`<meta property="og:image" content="${COMPANY.website.replace(/[.]/g, '\\.')}/assets/og-ju\\.jpg">`), `${name}: absolute image address on the store's domain`);
+  }
+  const jpeg = fs.readFileSync(path.join(root, 'dist', IMAGE.path));
+  assert.equal(jpeg.readUInt16BE(0), 0xffd8, 'the preview is a JPEG (the format every app reads)');
+  assert(jpeg.length < 300 * 1024, 'and small enough for WhatsApp');
+}
+
 console.log('PASS: storefront — pre-rendered product cards match the default colors, prices and Pix prices; the cart without checkboxes; opening screen once per session; one "Personalizar o meu".');
