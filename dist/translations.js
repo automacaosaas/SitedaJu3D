@@ -464,7 +464,14 @@ Enviamos um código de seis números para o seu e-mail. Toque no botão da mensa
 Enviando outro código…|Sending another code…|Enviando otro código…
 Voltar à página anterior|Back to the previous page|Volver a la página anterior
 Peça adicionada. Indo para o carrinho…|Item added. Taking you to your cart…|Pieza añadida. Te llevamos al carrito…
-Peça adicionada nas cores originais. Indo para o carrinho…|Item added in the original colors. Taking you to your cart…|Pieza añadida en los colores originales. Te llevamos al carrito…
+Adicionado ao carrinho|Added to cart|Añadido al carrito
+Adicionado nas cores originais|Added in the original colors|Añadido en los colores originales
+Fechar o carrinho|Close the cart|Cerrar el carrito
+Complete o kit|Complete the kit|Completa el kit
+Adicionar|Add|Añadir
+Ver carrinho|View cart|Ver carrito
+Continuar escolhendo|Keep choosing|Seguir eligiendo
+cores originais|original colors|colores originales
 Adicionar nas cores originais|Add in the original colors|Añadir en los colores originales
 Cores salvas. Voltando ao carrinho…|Colors saved. Returning to your cart…|Colores guardados. Volviendo al carrito…
 Entre ou crie sua conta para acompanhar cada detalhe das suas escolhas.|Sign in or create your account to follow every detail of your choices.|Inicia sesión o crea tu cuenta para seguir cada detalle de tus elecciones.

@@ -75,7 +75,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
 {
   const cards = read('dist/catalog.js'), navigation = read('dist/shopping-navigation.js');
   assert.match(cards, /aria-label="Adicionar \$\{product\.title\} ao carrinho nas cores originais" title="Adicionar nas cores originais"/, 'the quick cart button says which colors go in (audit B6)');
-  assert.match(cards, /await goToCart\(\{original: true\}\)/); assert.match(navigation, /'Peça adicionada nas cores originais\. Indo para o carrinho…'/);
+  assert.match(cards, /openMiniCart\(\{itemId: addedItemId\(cart, id, defaults\(id\)\), original: true\}\)/, 'the quick add opens the mini-cart saying the original colors went in (audits B6 and E1)');
+  assert.doesNotMatch(navigation, /original/);
   assert.equal((read('dist/produtos.html').match(/ao carrinho nas cores originais" title="Adicionar nas cores originais">/g) || []).length, 3);
   assert.doesNotMatch(read('dist/index.html'), /Voltar à coleção/, 'no link repeating the × (audit C6)');
 }

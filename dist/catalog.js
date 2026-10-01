@@ -1,4 +1,4 @@
-import {goToCart} from './shopping-navigation.js';
+import {openMiniCart, addedItemId} from './mini-cart.js';
 import {PRODUCTS, PRODUCT_CATEGORIES, color, defaults} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
@@ -114,6 +114,6 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
     tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
   tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel]'); host.dataset.category = button.dataset.catalogFilter; mountCarousel(host, button.dataset.catalogFilter); });
 }
-document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await goToCart({original: true}); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
+document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); const cart = writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); openMiniCart({itemId: addedItemId(cart, id, defaults(id)), original: true}); button.disabled = false; button.classList.remove('is-loading'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
 
 window.addEventListener('pageshow', () => document.querySelectorAll('[data-add-product]').forEach(button => {button.disabled = false; button.classList.remove('is-loading');}));

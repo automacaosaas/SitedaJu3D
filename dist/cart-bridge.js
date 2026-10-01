@@ -1,6 +1,7 @@
 import {goToCart} from './shopping-navigation.js';
 import {PRODUCTS} from './products.js';
 import {readCart, writeCart, putItem, EDIT_KEY, DIRECT_KEY} from './cart-store.js';
+import {openMiniCart, addedItemId} from './mini-cart.js';
 import {icon} from './icons.js';
 import {loadShippingConfig} from './shipping-client.js';
 import {freeShippingNote} from './free-shipping.js';
@@ -37,7 +38,8 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
     if (busy) return;
     busy = true; button.disabled = true;
     try {
-      writeCart(putItem(readCart(), getProduct(), getSelection(), capture(), edit?.id || null));
+      const product = getProduct(), selection = getSelection();
+      const cart = writeCart(putItem(readCart(), product, selection, capture(), edit?.id || null));
       const edited = !!edit; edit = null;
       try { sessionStorage.removeItem(EDIT_KEY); } catch {}
       window.dispatchEvent(new Event('ju:cart'));
@@ -48,9 +50,10 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
         await goToCart({replace:true, saved:true});
         return;
       }
+      // Audit E1: the piece goes into the mini-cart and the buyer stays in the shop.
       dialog.querySelector('.close').click();
       await new Promise(resolve => requestAnimationFrame(resolve));
-      await goToCart();
+      openMiniCart({itemId: addedItemId(cart, product, selection)});
     } catch (error) { status.textContent = error.message; }
     finally { setTimeout(() => { busy = false; button.disabled = false; refresh(); }, 900); }
   });
