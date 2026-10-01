@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {registerHooks} from 'node:module';
-registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.js',import.meta.url).href:specifier,context);}});
-const T=await import('../dist/vendor/three.module.js');
+registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.min.js',import.meta.url).href:specifier,context);}});
+const T=await import('../dist/vendor/three.module.min.js');
 const {ProductViewer}=await import('../dist/viewer.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
 const originalParse=GLTFLoader.prototype.parseAsync;

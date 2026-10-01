@@ -1,0 +1,194 @@
+'use strict';
+// MySQL/MariaDB store (tables in db/migrations/001_contas.sql). Same interface as store-memory.js. Every query uses
+// placeholders; values never go into the SQL text.
+const COLUMNS = {
+  id: 'id', email: 'email', emailVerifiedAt: 'email_verified_at', displayName: 'display_name', firstName: 'first_name', lastName: 'last_name',
+  passwordHash: 'password_hash', cpfEnc: 'cpf_enc', cpfIndex: 'cpf_index', phoneEnc: 'phone_enc', companyCnpj: 'company_cnpj', companyName: 'company_name',
+  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
+};
+
+function toCustomer(row) {
+  if (!row) return null;
+  const customer = {};
+  for (const [field, column] of Object.entries(COLUMNS)) customer[field] = row[column] ?? null;
+  customer.marketingOptIn = Boolean(row.marketing_opt_in);
+  return customer;
+}
+const ORDER_COLUMNS = {
+  id: 'id', reference: 'reference', customerId: 'customer_id', source: 'source', status: 'status', paymentState: 'payment_state', method: 'method',
+  installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
+  buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', shippingInfo: 'shipping_info', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
+  decidedAt: 'decided_at', declineReason: 'decline_reason', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
+  ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
+};
+const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo']);
+const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
+const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
+function toOrder(row, items = []) {
+  if (!row) return null;
+  const order = {};
+  for (const [field, column] of Object.entries(ORDER_COLUMNS)) order[field] = JSON_FIELDS.has(field) ? parse(row[column]) : row[column] ?? null;
+  order.items = items.map(i => ({productId: i.product_id, title: i.title, quantity: i.quantity, unitCents: i.unit_price_cents, selection: parse(i.selection) || {}}));
+  return order;
+}
+const ADMIN_COLUMNS = {id: 'id', email: 'email', passwordHash: 'password_hash', totpSecretEnc: 'totp_secret_enc', totpEnabledAt: 'totp_enabled_at', totpLastStep: 'totp_last_step', lastLoginAt: 'last_login_at', createdAt: 'created_at'};
+function toAdmin(row) {
+  if (!row) return null;
+  const admin = {};
+  for (const [field, column] of Object.entries(ADMIN_COLUMNS)) admin[field] = row[column] ?? null;
+  if (admin.totpLastStep !== null) admin.totpLastStep = Number(admin.totpLastStep);
+  return admin;
+}
+const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
+const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
+const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
+
+function createMysqlStore(pool) {
+  const one = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows[0] || null; };
+  const all = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows; };
+  async function withItems(row) { return row ? toOrder(row, await all('SELECT * FROM order_items WHERE order_id = ? ORDER BY position', [row.id])) : null; }
+  async function withItemsList(rows) {
+    if (!rows.length) return [];
+    const items = await all(`SELECT * FROM order_items WHERE order_id IN (${rows.map(() => '?').join(', ')}) ORDER BY order_id, position`, rows.map(r => r.id));
+    return rows.map(r => toOrder(r, items.filter(i => i.order_id === r.id)));
+  }
+  const run = async (sql, params) => { const [result] = await pool.execute(sql, params); return result; };
+  const duplicate = (error, name) => error?.code === 'ER_DUP_ENTRY' && String(error.message).includes(name);
+
+  return {
+    kind: 'mysql',
+    customers: {
+      findByEmail: async email => toCustomer(await one('SELECT * FROM customers WHERE email = ?', [email])),
+      findById: async id => toCustomer(await one('SELECT * FROM customers WHERE id = ?', [id])),
+      findByCpfIndex: async index => toCustomer(await one('SELECT * FROM customers WHERE cpf_index = ?', [index])),
+      async create(data) {
+        const fields = Object.keys(data).filter(f => COLUMNS[f]);
+        try { await run(`INSERT INTO customers (${fields.map(f => COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f])); }
+        catch (error) { if (duplicate(error, 'uq_customers_email')) throw Object.assign(new Error('duplicate email'), {code: 'account_exists'}); throw error; }
+        return toCustomer(await one('SELECT * FROM customers WHERE id = ?', [data.id]));
+      },
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => COLUMNS[f] && f !== 'id');
+        if (fields.length) {
+          try { await run(`UPDATE customers SET ${fields.map(f => `${COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f]), id]); }
+          catch (error) { if (duplicate(error, 'uq_customers_cpf')) throw Object.assign(new Error('duplicate cpf'), {code: 'cpf_in_use'}); throw error; }
+        }
+        return toCustomer(await one('SELECT * FROM customers WHERE id = ?', [id]));
+      },
+      // Account deletion: sessions go by cascade, orders keep their snapshot with customer_id set to NULL.
+      async delete(id) {
+        const customer = await one('SELECT email FROM customers WHERE id = ?', [id]);
+        if (!customer) return false;
+        await run('DELETE FROM auth_challenges WHERE email = ?', [customer.email]);
+        return (await run('DELETE FROM customers WHERE id = ?', [id])).affectedRows === 1;
+      }
+    },
+    orders: {
+      async create(order) {
+        const connection = await pool.getConnection();
+        try {
+          await connection.beginTransaction();
+          const fields = Object.keys(order).filter(f => ORDER_COLUMNS[f]);
+          try { await connection.execute(`INSERT INTO orders (${fields.map(f => ORDER_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => toDb(f, order[f]))); }
+          catch (error) {
+            await connection.rollback();
+            if (duplicate(error, 'uq_orders_reference')) return {order: await this.findByReference(order.reference), created: false};
+            throw error;
+          }
+          for (const [position, item] of (order.items || []).entries()) {
+            await connection.execute('INSERT INTO order_items (order_id, position, product_id, title, quantity, unit_price_cents, selection) VALUES (?, ?, ?, ?, ?, ?, ?)', [order.id, position, item.productId, item.title, item.quantity, item.unitCents, JSON.stringify(item.selection || {})]);
+          }
+          await connection.commit();
+        } catch (error) { await connection.rollback().catch(() => {}); throw error; }
+        finally { connection.release(); }
+        return {order: await this.findById(order.id), created: true};
+      },
+      async findById(id) { return withItems(await one('SELECT * FROM orders WHERE id = ?', [id])); },
+      async findByReference(reference) { return withItems(await one('SELECT * FROM orders WHERE reference = ?', [reference])); },
+      async findByMpId(mpOrderId) { return withItems(await one('SELECT * FROM orders WHERE mp_order_id = ?', [mpOrderId])); },
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => ORDER_COLUMNS[f] && f !== 'id');
+        if (fields.length) await run(`UPDATE orders SET ${fields.map(f => `${ORDER_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => toDb(f, patch[f])), id]);
+        return this.findById(id);
+      },
+      // The WHERE on the current status makes this atomic: one caller gets affectedRows = 1, every other gets 0.
+      async transition(id, from, patch) {
+        const fields = Object.keys(patch).filter(f => ORDER_COLUMNS[f] && f !== 'id');
+        const result = await run(`UPDATE orders SET ${fields.map(f => `${ORDER_COLUMNS[f]} = ?`).join(', ')} WHERE id = ? AND status IN (${from.map(() => '?').join(', ')})`, [...fields.map(f => toDb(f, patch[f])), id, ...from]);
+        return result.affectedRows === 1;
+      },
+      async listByCustomer(customerId, limit = 50) { return withItemsList(await all(`SELECT * FROM orders WHERE customer_id = ? ORDER BY created_at DESC LIMIT ${Math.min(Number(limit) || 50, 200)}`, [customerId])); },
+      async list({statuses = null, limit = 500} = {}) {
+        const cap = Math.min(Number(limit) || 500, 2000);
+        const rows = statuses ? await all(`SELECT * FROM orders WHERE status IN (${statuses.map(() => '?').join(', ')}) ORDER BY created_at DESC LIMIT ${cap}`, statuses) : await all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ${cap}`, []);
+        return withItemsList(rows);
+      },
+      addEvent: (orderId, kind, detail = null, actor = null) => run('INSERT INTO order_events (order_id, kind, detail, actor) VALUES (?, ?, ?, ?)', [orderId, kind, detail === null ? null : String(detail).slice(0, 500), actor === null ? null : String(actor).slice(0, 180)]),
+      async events(orderId) { return (await all('SELECT * FROM order_events WHERE order_id = ? ORDER BY id', [orderId])).map(e => ({id: e.id, orderId: e.order_id, kind: e.kind, detail: e.detail, actor: e.actor, createdAt: e.created_at})); }
+    },
+    admins: {
+      count: async () => Number((await one('SELECT COUNT(*) AS n FROM admin_users', [])).n),
+      findByEmail: async email => toAdmin(await one('SELECT * FROM admin_users WHERE email = ?', [email])),
+      findById: async id => toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [id])),
+      async create(data) {
+        const fields = Object.keys(data).filter(f => ADMIN_COLUMNS[f]);
+        try { await run(`INSERT INTO admin_users (${fields.map(f => ADMIN_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f])); }
+        catch (error) { if (duplicate(error, 'uq_admin_users_email')) throw Object.assign(new Error('duplicate email'), {code: 'admin_exists'}); throw error; }
+        return toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [data.id]));
+      },
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => ADMIN_COLUMNS[f] && f !== 'id');
+        if (fields.length) await run(`UPDATE admin_users SET ${fields.map(f => `${ADMIN_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f]), id]);
+        return toAdmin(await one('SELECT * FROM admin_users WHERE id = ?', [id]));
+      },
+      // Only a newer step matches the WHERE, so a code is accepted once even with two requests at the same time.
+      async useStep(id, step) { return (await run('UPDATE admin_users SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)', [step, id, step])).affectedRows === 1; }
+    },
+    adminSessions: {
+      create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),
+      find: async tokenHash => toAdminSession(await one('SELECT * FROM admin_sessions WHERE token_hash = ?', [tokenHash])),
+      async recordAttempt(tokenHash) { await run('UPDATE admin_sessions SET attempts = attempts + 1 WHERE token_hash = ?', [tokenHash]); return (await one('SELECT attempts FROM admin_sessions WHERE token_hash = ?', [tokenHash]))?.attempts ?? 0; },
+      revoke: (tokenHash, now) => run('UPDATE admin_sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL', [now, tokenHash]),
+      revokeAllFor: (adminId, now) => run('UPDATE admin_sessions SET revoked_at = ? WHERE admin_id = ? AND revoked_at IS NULL', [now, adminId])
+    },
+    adminAudit: {
+      add: ({adminId = null, action, detail = null, ip = null}) => run('INSERT INTO admin_audit (admin_id, action, detail, ip) VALUES (?, ?, ?, ?)', [adminId, String(action).slice(0, 40), detail === null ? null : String(detail).slice(0, 300), ip === null ? null : String(ip).slice(0, 64)]),
+      async list(limit = 100) { return (await all(`SELECT * FROM admin_audit ORDER BY id DESC LIMIT ${Math.min(Number(limit) || 100, 1000)}`, [])).map(a => ({id: a.id, adminId: a.admin_id, action: a.action, detail: a.detail, ip: a.ip, createdAt: a.created_at})); }
+    },
+    sessions: {
+      create: s => run('INSERT INTO sessions (token_hash, customer_id, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)', [s.tokenHash, s.customerId, s.expiresAt, s.ip, s.userAgent]),
+      find: async tokenHash => toSession(await one('SELECT * FROM sessions WHERE token_hash = ?', [tokenHash])),
+      touch: (tokenHash, expiresAt, now) => run('UPDATE sessions SET expires_at = ?, last_seen_at = ? WHERE token_hash = ?', [expiresAt, now, tokenHash]),
+      revoke: (tokenHash, now) => run('UPDATE sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL', [now, tokenHash]),
+      revokeAllFor: (customerId, now) => run('UPDATE sessions SET revoked_at = ? WHERE customer_id = ? AND revoked_at IS NULL', [now, customerId])
+    },
+    challenges: {
+      create: c => run('INSERT INTO auth_challenges (id, email, purpose, code_hash, expires_at) VALUES (?, ?, ?, ?, ?)', [c.id, c.email, c.purpose, c.codeHash, c.expiresAt]),
+      find: async id => toChallenge(await one('SELECT * FROM auth_challenges WHERE id = ?', [id])),
+      async recordAttempt(id) { await run('UPDATE auth_challenges SET attempts = attempts + 1 WHERE id = ?', [id]); return (await one('SELECT attempts FROM auth_challenges WHERE id = ?', [id]))?.attempts ?? 0; },
+      markVerified: (id, grantHash, grantExpiresAt, now) => run('UPDATE auth_challenges SET verified_at = ?, grant_hash = ?, grant_expires_at = ? WHERE id = ?', [now, grantHash, grantExpiresAt, id]),
+      findByGrant: async grantHash => toChallenge(await one('SELECT * FROM auth_challenges WHERE grant_hash = ?', [grantHash])),
+      // The UPDATE only matches an unused row, so exactly one caller wins even with two requests at the same time.
+      async markUsed(id, now) { return (await run('UPDATE auth_challenges SET used_at = ? WHERE id = ? AND used_at IS NULL', [now, id])).affectedRows === 1; }
+    },
+    // Data kept only as long as needed (Política de Privacidade): attempt counters for a day, e-mailed codes for 30 days,
+    // expired sessions (they hold the IP of each access) for the 6 months of the Marco Civil. Runs now and then from
+    // rateLimit, so no scheduled job is needed.
+    async purge(now) {
+      const day = 86400000, before = days => new Date(now - days * day);
+      await run('DELETE FROM rate_limits WHERE window_start < ?', [now - day]);
+      await run('DELETE FROM auth_challenges WHERE expires_at < ?', [before(30)]);
+      await run('DELETE FROM sessions WHERE expires_at < ?', [before(183)]);
+      await run('DELETE FROM admin_sessions WHERE expires_at < ?', [before(183)]);
+    },
+    async rateLimit(bucket, limit, windowMs, now) {
+      const start = Math.floor(now / windowMs) * windowMs;
+      await run('INSERT INTO rate_limits (bucket, window_start, hits) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1', [bucket.slice(0, 200), start]);
+      const {hits} = await one('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start = ?', [bucket.slice(0, 200), start]);
+      if (Math.random() < 0.01) this.purge(now).catch(error => console.error('db: cleanup failed —', error.code || error.message));
+      return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
+    }
+  };
+}
+
+module.exports = {createMysqlStore, toCustomer};

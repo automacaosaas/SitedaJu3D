@@ -50,7 +50,7 @@ de efeitos. A interação chama atenção com profundidade e movimento suave.
 - Tipografia de interface: **DM Sans**.
 - Títulos editoriais: **Playfair Display**.
 - Frases manuscritas: **Parisienne**.
-- Logotipo oficial: `dist/assets/logo-ju.png`.
+- Logotipo oficial: `design/originais/logo-ju.png` (original); o site usa `dist/assets/logo-ju.webp` (336 px).
 
 Use bastante respiro, hierarquia editorial, bordas suaves e animações discretas.
 Preserve contraste, legibilidade, áreas de toque de pelo menos 44 px e estados
@@ -84,19 +84,22 @@ publicados ficam em `dist/`:
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
 - `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
-- `vendor/`: Three.js e OrbitControls locais.
+- `vendor/`: Three.js r180 minificado (`three.module.min.js`), OrbitControls, GLTFLoader e o decodificador Meshopt locais.
 - `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
   usado no e-mail).
 - `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
   sugestão de idioma na primeira visita.
-- `account.js` e `auth-service.js`: conta em fluxo “e-mail primeiro” (e-mail → código →
-  nome/senha só para conta nova) e verificação por e-mail.
+- `account.js` e `auth-service.js`: contas reais no servidor, em fluxo “e-mail primeiro” (e-mail → código ou
+  senha → nome/senha só para conta nova). `identification.js`: etapa Identificação do checkout e “Meus dados”.
+  Detalhes em `AUTH-INTEGRATION.md`.
 - `loading-ui.js` (janela de carregamento por etapas e decodificação de imagens),
   `page-entry.js` (abertura com logo da home), `header-scroll.js` (cabeçalho compacto que
   some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
   catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
-  em WebP ao lado dos PNG originais. Detalhes em `EXPERIENCE-QA.md`.
-- `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
+  em WebP; os PNG originais ficam em `design/originais/` (fora do site publicado). Detalhes em `EXPERIENCE-QA.md` e `PERFORMANCE-QA.md`.
+- `api/` (fora de `dist/`): contas (`api/auth`, `api/account`) e e-mail, para Vercel e Hostinger. `db/migrations/`: tabelas
+  do MySQL, aplicadas quando o servidor liga.
+- `server.cjs` (entrada) e `server/create-server.cjs`: servidor de produção para a Hostinger (serve `dist/` e `api/` com os cabeçalhos de `vercel.json`). Ver `HOSTINGER-SETUP.md`.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
 
@@ -179,8 +182,8 @@ base. Ele representa a régua encaixada:
 - A parte inferior usa um rasgo retangular horizontal, largo e baixo, que
   atravessa a base para acomodar a haste plana da régua. Nunca desenhe uma
   bolinha, tubo ou ponto pintado nesse local.
-- A imagem principal do modal é `dist/assets/aviaoscopia-regua.png`; o banner e o
-  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.png`.
+- A imagem principal do modal é `dist/assets/aviaoscopia-regua.webp`; o banner e o
+  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.webp`.
 - O teste estrutural é `node tests/plane-geometry.mjs`.
 
 ## Vitrine principal (banner temático)
@@ -256,7 +259,7 @@ parte e a cor escolhida; essa etapa ainda não envia pedido.
 
 ## Validação obrigatória
 
-Antes de publicar, execute:
+Antes de publicar, execute `npm test` (roda todas as suítes de `tests/`) e confira também:
 
 ```text
 node tests/carousel.cjs

@@ -1,6 +1,9 @@
 import * as T from 'three';
 import {GLTFLoader} from './vendor/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 
+// The loader accepts Meshopt-compressed GLBs (see PERFORMANCE-QA.md). The current files are the corrected models from main,
+// not yet recompressed. Bump `v` whenever a model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=relevo-bolinhas',import.meta.url),
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=olhos-dentes-crista',import.meta.url),
@@ -28,7 +31,7 @@ export async function createAssetModel(key,colors,signal){
   const response=await fetch(ASSETS[key],{signal});
   if(!response.ok)throw new Error(`Modelo 3D: HTTP ${response.status}`);
   const data=await response.arrayBuffer();signal?.throwIfAborted();
-  const gltf=await new GLTFLoader().parseAsync(data,'');
+  const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data,'');
   const group=gltf.scene;
   if(signal?.aborted){disposeAsset(group);signal.throwIfAborted();}
   const bounds=new T.Box3().setFromObject(group),size=bounds.getSize(new T.Vector3());
