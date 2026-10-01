@@ -42,7 +42,7 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
     if (!['F', 'J'].includes(c.tipoPessoa) || ![1, 2, 9].includes(c.contribuinte) || (c.contribuinte === 1 && !c.ie)) return 'Tipo de pessoa, contribuinte ou inscrição estadual do contato';
     if (!/^\d{5}-\d{3}$/.test(String(a.cep || '')) || !a.uf || !a.municipio || !a.endereco || !a.bairro) return 'Endereço do contato incompleto';
     if (!Array.isArray(body.itens) || !body.itens.length || body.itens.some(i => !i.codigo || !i.classificacaoFiscal || !(i.valor > 0) || !(i.quantidade > 0))) return 'Itens incompletos (código, NCM, valor e quantidade)';
-    const total = body.itens.reduce((sum, i) => sum + i.valor * i.quantidade, 0) + (body.transporte?.frete || 0);
+    const total = body.itens.reduce((sum, i) => sum + i.valor * i.quantidade, 0) + (body.transporte?.frete || 0) - (body.desconto || 0);
     if (Math.abs(total - (body.parcelas || []).reduce((sum, p) => sum + p.valor, 0)) > 0.001) return 'A soma das parcelas difere do total da nota';
     if ((body.parcelas || []).some(p => p.formaPagamento && !paymentMethods.some(f => f.id === p.formaPagamento.id))) return 'Forma de pagamento não encontrada';
     return null;

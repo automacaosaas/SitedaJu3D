@@ -40,3 +40,5 @@
 .installments-table th[scope=row],.installments-table thead th:first-child{text-align:left;font-weight:600}.installments-table td em{font-style:normal;color:#25664c;font-weight:650}.installments-table td small{display:block;color:var(--muted);font-size:10px}
 .installments-info .small-note{margin:10px 0 0}
 .mobile-order-bar small{font-weight:400;opacity:.8}
+/* Pix discount: its own line in the summary, the Pix total as a hint, the chosen method above the Brick */
+.amounts .pix-discount dd{color:#25664c;font-weight:600}.amounts .pix-total{margin-top:-4px;font-size:13px}.amounts .pix-total dd{font-weight:600}.payment-method-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px}.payment-method-note svg{width:20px;height:20px;flex-shrink:0}.payment-method-note span{flex:1;min-width:180px;font-weight:600}.payment-method-note .text-button{margin:0}

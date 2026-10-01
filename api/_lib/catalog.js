@@ -51,6 +51,17 @@ function priceOrder(rawItems) {
   return {lines, subtotal, shipping: SHIPPING_CENTS, total: subtotal + SHIPPING_CENTS};
 }
 
+// Pix pays PIX_DISCOUNT_PERCENT less on the pieces, never on the delivery. The discount is rounded per unit, so the items
+// sent to Mercado Pago at the discounted unit price add up exactly to the total charged (its Orders API has no discount
+// field, and the items must match the total). The order keeps the full prices and the discount shows on its own line.
+const PIX_DISCOUNT_PERCENT = 5;
+const pixUnitDiscount = unitCents => Math.round(unitCents * PIX_DISCOUNT_PERCENT / 100);
+function withPixDiscount(priced) {
+  const lines = priced.lines.map(line => ({...line, discountUnitCents: pixUnitDiscount(line.unitCents)}));
+  const discount = lines.reduce((sum, line) => sum + line.discountUnitCents * line.quantity, 0);
+  return {...priced, lines, discount, total: priced.subtotal - discount + priced.shipping};
+}
+
 // Mercado Pago wants amounts as strings with two decimals ("129.00").
 const amount = cents => (cents / 100).toFixed(2);
 const fromAmount = value => Math.round(Number(value) * 100);
@@ -69,4 +80,4 @@ function describeSelection(productId, selection, lang = 'pt-BR') {
   return PRODUCTS[productId].parts.map(part => ({part: part.names[at], color: COLORS[selection[part.id]][at]}));
 }
 
-module.exports = {PRODUCTS, COLORS, SHIPPING_CENTS, MAX_LINES, MAX_QUANTITY, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};
+module.exports = {PRODUCTS, COLORS, SHIPPING_CENTS, MAX_LINES, MAX_QUANTITY, PIX_DISCOUNT_PERCENT, pixUnitDiscount, withPixDiscount, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};

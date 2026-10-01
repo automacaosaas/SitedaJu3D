@@ -16,18 +16,20 @@
     return {
       create: function (name, containerId, settings) {
         var box = document.getElementById(containerId);
-        var amount = settings.initialization.amount;
+        var amount = settings.initialization.amount, allowed = (settings.customization && settings.customization.paymentMethods) || {creditCard: 'all', bankTransfer: 'all'};
+        var cards = !!(allowed.creditCard || allowed.debitCard), pixAllowed = !!allowed.bankTransfer;
         box.innerHTML = '<form data-fake-brick style="display:grid;gap:12px;padding:16px;border:1px dashed #b64c68;border-radius:14px;background:#fffcfb">' +
           '<strong style="font-size:13px;color:#b64c68">SIMULAÇÃO DO PAGAMENTO · não é o Mercado Pago</strong>' +
-          '<label><input type="radio" name="fake-method" value="credit_card" checked> Cartão de crédito</label>' +
-          '<label><input type="radio" name="fake-method" value="bank_transfer"> Pix</label>' +
+          (cards ? '<label><input type="radio" name="fake-method" value="credit_card" checked> Cartão de crédito</label>' : '') +
+          (pixAllowed ? '<label><input type="radio" name="fake-method" value="bank_transfer"' + (cards ? '' : ' checked') + '> Pix</label>' : '') +
           '<label data-card>Nome do titular <input name="holder" value="APRO" autocomplete="off" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:8px"><small style="display:block;color:#7b7076">APRO aprova · CONT deixa em análise · OTHE recusa</small></label>' +
           '<label data-card>Parcelas <select name="installments" style="padding:6px"><option value="1">1x</option><option value="3">3x</option><option value="6">6x</option><option value="12">12x</option></select></label>' +
           '<button type="submit" style="padding:12px;border:0;border-radius:999px;background:#b64c68;color:#fff;font-weight:700;cursor:pointer">Pagar R$ ' + Number(amount).toFixed(2).replace('.', ',') + '</button></form>';
         var form = box.querySelector('form'), busy = false;
         var bin = function (value) { if (settings.callbacks.onBinChange) settings.callbacks.onBinChange(value); };
         form.addEventListener('change', function () { var pix = form.elements['fake-method'].value === 'bank_transfer'; form.querySelectorAll('[data-card]').forEach(function (el) { el.style.display = pix ? 'none' : ''; }); bin(pix ? undefined : '54808328'); });
-        setTimeout(function () { bin('54808328'); }, 80);
+        if (!cards) form.querySelectorAll('[data-card]').forEach(function (el) { el.style.display = 'none'; });
+        else setTimeout(function () { bin('54808328'); }, 80);
         form.addEventListener('submit', function (event) {
           event.preventDefault(); if (busy) return; busy = true;
           var pix = form.elements['fake-method'].value === 'bank_transfer', email = settings.initialization.payer && settings.initialization.payer.email;

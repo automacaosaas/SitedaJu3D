@@ -17,7 +17,7 @@ const COMPANY = {
   website: 'https://juimprimepramim.com.br'
 };
 
-const TERMS_VERSION = '2026-09-29';
+const TERMS_VERSION = '2026-09-30';
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const termsDate = (version = TERMS_VERSION) => { const [y, m, d] = version.split('-').map(Number); return `${d} de ${MONTHS[m - 1]} de ${y}`; };

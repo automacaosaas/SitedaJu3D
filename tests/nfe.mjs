@@ -64,7 +64,10 @@ function order(over = {}) {
   assert.equal(i.recipient.address.cityCode, '3106200', 'IBGE code from the CEP lookup');
   assert.deepEqual(i.items.map(x => [x.code, x.quantity, x.unitCents, x.totalCents, x.ncm]), [['borboletoscopio', 2, 12900, 25800, '39269090'], ['aviaoscopia', 1, 15900, 15900, '39269090']]);
   assert.equal(i.items[0].description, 'Borboletoscópio (Corpo: Rosa Ju, Detalhes das asas: Lilás)', 'the colors go on the invoice line');
-  assert.deepEqual(i.totals, {productsCents: 41700, freightCents: 1800, totalCents: 43500});
+  assert.deepEqual(i.totals, {productsCents: 41700, freightCents: 1800, discountCents: 0, totalCents: 43500});
+  const pix = buildInvoice({order: order({method: 'pix', totalCents: 41700 - 2085 + 1800}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
+  assert.equal(pix.totals.discountCents, 2085, 'the Pix 5% goes on the note as a discount'); assert.equal(pix.payment.cents, 41415); assert.equal(pix.payment.code, '17');
+  assert(!buildInvoice({order: order({totalCents: 50000}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).ok, 'a total above the pieces + delivery is refused');
   assert.equal(i.payment.code, '03'); assert.equal(i.presence, '2', 'internet sale'); assert.equal(i.finalConsumer, true);
   assert(i.additionalInfo.endsWith(`Pedido ${i.reference}.`));
   assert.equal(buildInvoice({order: order({method: 'pix'}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice.payment.code, '17');

@@ -75,6 +75,9 @@ const creations = () => fake.calls.filter(c => c.method === 'POST' && c.path ===
   assert.deepEqual(person.transporte, {fretePorConta: 0, frete: 18});
   assert.equal(person.parcelas[0].valor, 276); assert.deepEqual(person.parcelas[0].formaPagamento, {id: 501});
   assert.match(person.observacoes, /Pedido JU-/);
+  assert(!('desconto' in person), 'no discount, no field');
+  const pixNote = toBling(built(order({totalCents: 25800 - 1290 + 1800})), '501');
+  assert.equal(pixNote.desconto, 12.9, 'the Pix 5% of the pieces as the note discount'); assert.equal(pixNote.parcelas[0].valor, 263.1);
   const company = toBling(built(order({buyer: {name: 'Ana', email: 'a@b.co', company: {cnpj: '11222333000181', name: 'Clínica Olhar', stateRegistration: '0620012345678'}}})), null);
   assert.deepEqual([company.contato.tipoPessoa, company.contato.numeroDocumento, company.contato.ie, company.contato.contribuinte, company.contato.nome], ['J', '11222333000181', '0620012345678', 1, 'Clínica Olhar']);
   assert(!('formaPagamento' in company.parcelas[0]), 'no payment method found: Bling uses its default');

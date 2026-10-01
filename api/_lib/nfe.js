@@ -46,8 +46,10 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
     return {code: item.productId, description: describe(item), ncm, quantity: item.quantity, unitCents: cents(item.unitCents), totalCents: cents(item.unitCents) * item.quantity};
   });
   if (!items.length) problems.push('Pedido sem itens');
+  // A discount (the Pix 5%) is what the pieces and the freight exceed the total by; it goes on the note as a discount.
   const productsCents = items.reduce((sum, i) => sum + i.totalCents, 0), freightCents = cents(order.shippingCents);
-  if (productsCents + freightCents !== cents(order.totalCents)) problems.push('Os itens mais o frete não somam o total do pedido');
+  const discountCents = productsCents + freightCents - cents(order.totalCents);
+  if (discountCents < 0 || discountCents > productsCents) problems.push('Os itens mais o frete não somam o total do pedido');
   if (problems.length) return {ok: false, problems};
 
   // Another state: a buyer with a state registration (ICMS taxpayer) gets the taxpayer CFOP; a person or a company without
@@ -64,7 +66,7 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
     items: items.map(i => ({...i, cfop, unit: fiscal.unit, icms: {origin: fiscal.icms.origin, csosn: fiscal.icms.csosn}, pis: {cst: fiscal.pis.cst}, cofins: {cst: fiscal.cofins.cst}})),
     freight: {mode: fiscal.freightMode, cents: freightCents},
     payment: {code: PAYMENT_CODE[order.method] || '99', cents: cents(order.totalCents)},
-    totals: {productsCents, freightCents, totalCents: cents(order.totalCents)},
+    totals: {productsCents, freightCents, discountCents, totalCents: cents(order.totalCents)},
     additionalInfo: `${fiscal.additionalInfo}${difal} Pedido ${order.reference}.`,
     ...(provider === 'bling' ? {bling: {natureId: fiscal.bling?.natureId}} : {})
   }};

@@ -38,6 +38,7 @@ function toBling(invoice, paymentMethodId) {
     itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin)})),
     parcelas: [{data: invoice.issuedAt.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
     transporte: {fretePorConta: Number(invoice.freight.mode), frete: money(invoice.freight.cents)},
+    ...(invoice.totals?.discountCents ? {desconto: money(invoice.totals.discountCents)} : {}),   // Pix discount, on the whole note
     observacoes: invoice.additionalInfo
   };
 }

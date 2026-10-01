@@ -1,5 +1,5 @@
 import {PRODUCTS, validSelection} from './products.js';
-import {COMMERCE} from './commerce-config.js';
+import {COMMERCE, pixUnitDiscount} from './commerce-config.js';
 export const CART_KEY = 'ju.cart.demo.v1';
 export const EDIT_KEY = 'ju.cart.edit.v1';
 export const DIRECT_KEY = 'ju.direct.demo.v1';
@@ -48,4 +48,9 @@ export function putItem(items, productId, selection, thumbnail = null, editId = 
   return normalizeCart(remaining);
 }
 // shippingCents: the delivery to add (the fixed example fee unless the checkout passes the real one, from the Correios quote).
+// The same amounts paid with Pix: the pieces with the Pix discount, the delivery unchanged.
+export function pixTotals(items, shippingCents = COMMERCE.shippingCents) {
+  const base = totals(items, shippingCents), discount = items.reduce((sum, i) => sum + pixUnitDiscount(i.unitPrice) * i.quantity, 0);
+  return {...base, discount, total: base.total - discount};
+}
 export function totals(items, shippingCents = COMMERCE.shippingCents) { const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0); const shipping = items.length ? shippingCents : 0; return {subtotal, shipping, total: subtotal + shipping}; }

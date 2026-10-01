@@ -12,4 +12,4 @@
 @media(prefers-reduced-motion:reduce){.catalog-art img{transition:none}.catalog-art:hover img{transform:none}}
 
 /* Product panel: the free-shipping rule under the price. */
-.purchase-free-ship{margin:0 0 8px;font-size:12px;color:#25664c;font-weight:600}
+.purchase-free-ship{margin:0 0 8px;font-size:12px;color:#25664c;font-weight:600}.purchase-pix{margin:-2px 0 8px;font-size:13px;color:var(--muted)}.purchase-pix strong{color:var(--ink,#282326);font-weight:600}

@@ -112,7 +112,8 @@ function paymentFromBrick(input) {
 
 function buildOrderPayload({priced, reference, customer, address, notes, lang, payment}) {
   const [first, ...rest] = customer.name.split(' ');
-  const items = priced.lines.map(line => ({title: line.title, unit_price: amount(line.unitCents), quantity: line.quantity, description: encodeSelection(line.productId, line.selection), external_code: line.productId}));
+  // With the Pix discount each piece goes at its discounted unit price, so the items still add up to the total.
+  const items = priced.lines.map(line => ({title: line.title, unit_price: amount(line.unitCents - (line.discountUnitCents || 0)), quantity: line.quantity, description: encodeSelection(line.productId, line.selection), external_code: line.productId}));
   // Delivery is a line of its own so the items always add up to the total Mercado Pago charges. Free shipping adds no line at
   // all (a zero-priced item may be refused); the total is then just the items.
   if (priced.shipping > 0) items.push({title: 'Frete', unit_price: amount(priced.shipping), quantity: 1, description: priced.shippingInfo ? `Entrega ${priced.shippingInfo.label}` : 'Entrega', external_code: 'shipping'});

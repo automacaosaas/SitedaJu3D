@@ -685,6 +685,13 @@ Cidade e estado preenchidos pelo CEP. Complete o endereço.|City and state fille
 Não encontramos esse CEP. Preencha o endereço manualmente.|We could not find this CEP. Fill in the address manually.|No encontramos este CEP. Completa la dirección manualmente.
 Não foi possível buscar o endereço agora. Preencha manualmente.|We could not look up the address right now. Fill it in manually.|No pudimos buscar la dirección ahora. Complétala manualmente.
 Calcule o frete|Calculate shipping|Calcula el envío
+no Pix|with Pix|con Pix
+No Pix|With Pix|Con Pix
+Desconto no Pix|Pix discount|Descuento Pix
+Crédito ou débito, em até 12x|Credit or debit, up to 12 installments|Crédito o débito, hasta 12 cuotas
+O pagamento é feito com segurança pelo Mercado Pago.|Payment is processed securely by Mercado Pago.|El pago se procesa de forma segura con Mercado Pago.
+Cartão de crédito ou débito|Credit or debit card|Tarjeta de crédito o débito
+Trocar forma de pagamento|Change payment method|Cambiar forma de pago
 Calcular|Calculate|Calcular
 Sem frete · ver resumo|Without shipping · see summary|Sin envío · ver resumen
 sem frete|without shipping|sin envío
