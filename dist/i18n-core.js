@@ -63,7 +63,7 @@ const dynamic = [
   [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
   [/^(R\$ [\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
   [/^Combinação (.+) aplicada\.$/, (t, name) => `${t(name)} combination applied.`, (t, name) => `Combinación ${t(name)} aplicada.`],
-  [/^produção em (.+)$/, (t, days) => `production in ${t(days)}`, (t, days) => `producción en ${t(days)}`],
+  [/^Produção em (.+)$/, (t, days) => `Production in ${t(days)}`, (t, days) => `Producción en ${t(days)}`],
   [/^(\d+) de (\d+)$/, '$1 of $2', '$1 de $2'],
   [/^CET ([\d.,]+%) ao ano$/, 'Effective cost $1 a year', 'Costo efectivo $1 al año']
 ];

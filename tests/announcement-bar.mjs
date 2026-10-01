@@ -39,7 +39,7 @@ const fake = () => {
 
 assert.deepEqual(MESSAGES.map(m => m.title), ['ENVIO PARA TODO O BRASIL', 'PIX E CARTÃO', 'FEITO SOB ENCOMENDA']);
 assert.deepEqual(MESSAGES.map(m => m.icons), [['truck'], ['pix', 'card'], ['clock']], 'each message has its symbol');
-assert.equal(MESSAGES[2].text, 'produção em 3 a 5 dias úteis', 'the production time comes from commerce-config.js');
+assert.equal(MESSAGES[2].text, 'Produção em 3 a 5 dias úteis', 'the production time comes from commerce-config.js');
 
 const shell = await read('site-shell.js');
 assert.match(shell, /if \(!document\.body\.matches\('\.commerce-page, \.account-page'\)\) mountAnnouncementBar\(\);/, 'shop pages only: not on cart, checkout or account');
