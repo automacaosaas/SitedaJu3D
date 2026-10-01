@@ -97,6 +97,16 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(page, /<button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores<\/button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores">/, 'the link stays visible when copying is not allowed');
 }
 
+// ── H1: the phone menu beyond the four links ──────────────────────────
+{
+  const shell = read('dist/site-shell.js');
+  assert.match(shell, /<nav class="drawer-links" aria-label="Navegação móvel">\$\{primaryNav\(\)\}<\/nav>\$\{drawerExtras\(\)\}<\/aside>/);
+  assert.match(shell, /<a href="\$\{id\}\.html"><img src="assets\/card-preview-\$\{id\}\.webp" alt="" width="56" height="56" loading="lazy"/, 'the pieces with thumbnails, to their own pages');
+  assert.match(shell, /<a href="conta\.html#pedidos">/, '"Meus pedidos"');
+  assert.match(shell, /\/\^\\d\{10,15\}\$\/\.test\(COMMERCE\.whatsapp\) \? `<a href="https:\/\/wa\.me\/\$\{COMMERCE\.whatsapp\}"/, '"Fale com a Ju" only once the WhatsApp number is set');
+  assert.match(shell, /<p class="drawer-signature">feito com carinho, pela Ju\.<\/p>/, 'the signature at the foot');
+}
+
 // ── J1: link previews (Open Graph) on every page a person may share ───
 {
   const {createRequire} = await import('node:module');

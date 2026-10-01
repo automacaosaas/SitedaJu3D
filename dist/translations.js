@@ -470,6 +470,9 @@ Fechar o carrinho|Close the cart|Cerrar el carrito
 Complete o kit|Complete the kit|Completa el kit
 Adicionar|Add|Añadir
 Ver carrinho|View cart|Ver carrito
+Nossas peças|Our pieces|Nuestras piezas
+Mais|More|Más
+Fale com a Ju|Talk to Ju|Habla con Ju
 Compartilhar estas cores|Share these colors|Compartir estos colores
 Link das cores|Link to these colors|Enlace de los colores
 Link das cores copiado. Quem abrir vê a peça nesta combinação.|Link to these colors copied. Whoever opens it sees the piece in this combination.|Enlace de los colores copiado. Quien lo abra verá la pieza en esta combinación.

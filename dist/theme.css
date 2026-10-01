@@ -82,3 +82,17 @@
 /* Legal links and store identification in every footer (Decreto 7.962/2013); values come from api/_lib/legal.js. */
 .shop-footer{flex-wrap:wrap}.footer-legal{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 18px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.footer-legal nav{display:flex;flex-wrap:wrap;gap:4px 16px}.footer-legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}.footer-legal a:hover{color:var(--rose)}.footer-company{margin:0;font-size:12px;line-height:1.5}
 @media(max-width:600px){.footer-legal{justify-content:center;text-align:center}.footer-legal nav{justify-content:center}}
+/* Phone menu, beyond the four links (site-shell.js, audit H1): pieces with thumbnails, orders, Instagram, signature. */
+.drawer-products{margin-top:22px}
+.drawer-products h2{margin:0 0 8px;font-size:12px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.drawer-products ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.drawer-products a{display:flex;align-items:center;gap:12px;min-height:64px;padding:4px 6px;border-radius:14px;color:var(--ink)}
+.drawer-products a:hover{background:#6536490a}
+.drawer-products img{width:56px;height:56px;flex-shrink:0;object-fit:contain;border-radius:12px;background:#fff}
+.drawer-products strong{display:block;font:500 17px/1.2 'Playfair Display',Georgia,serif}
+.drawer-products small{display:block;font-size:13px;color:var(--muted)}
+.drawer-more{display:grid;gap:2px;margin-top:18px;padding-top:12px;border-top:1px solid var(--line)}
+.drawer-more a{display:flex;align-items:center;gap:12px;min-height:48px;color:var(--ink);font-size:16px}
+.drawer-more svg{width:22px;height:22px;flex-shrink:0;color:var(--rose)}
+.drawer-signature{margin:22px 0 0;font:26px/1.2 Parisienne,cursive;color:var(--rose)}
+.mobile-drawer :is(a,button):focus-visible{outline:2px solid var(--rose);outline-offset:2px}
