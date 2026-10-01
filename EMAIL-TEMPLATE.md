@@ -33,7 +33,7 @@ O logo é `dist/assets/logo-ju-email.png`: a arte oficial **com fundo transparen
 (360 px, ~57 KB), exibida a 172 px. Ele é gerado a partir de `design/originais/logo-ju.png`
 por `node tools/make-email-logo.cjs`; não edite o PNG à mão.
 No e-mail o logo é carregado sempre do site público (`SITE_URL`, ou
-`siteda-ju3-d.vercel.app`), mesmo quando o envio sai de uma prévia protegida por
+`wheat-llama-936569.hostingersite.com`), mesmo quando o envio sai de uma prévia protegida por
 login da Vercel; o botão continua apontando para o endereço que enviou o e-mail. O e-mail fixa
 `color-scheme: light only` e um cartão claro, porque o preto de “imprime” some em
 fundo escuro. Alguns leitores (Gmail no modo escuro) podem inverter cores mesmo
@@ -100,7 +100,7 @@ aparelhos até existir banco de dados.
 | `AUTH_SECRET` | não (recomendada antes de contas reais) | segredo com 32+ caracteres que assina os desafios. Sem ele, a assinatura é derivada de `RESEND_API_KEY` |
 | `MAIL_FROM` | recomendada | remetente, ex.: `Ju imprime pra mim <acesso@seudominio.com.br>`. Sem ela, usa o remetente de teste do Resend |
 | `MAIL_REPLY_TO` | não | para onde vão as respostas |
-| `SITE_URL` | não | endereço público usado nos links. Padrão: `https://siteda-ju3-d.vercel.app` em produção; nas prévias, o próprio endereço da prévia |
+| `SITE_URL` | não | endereço público usado nos links. Padrão: `https://wheat-llama-936569.hostingersite.com` em produção; nas prévias, o próprio endereço da prévia |
 | `MAIL_TRANSPORT=console` | só em testes | escreve em vez de enviar; ignorado em produção |
 
 Se `RESEND_API_KEY` faltar, o site continua funcionando e mostra o código de teste

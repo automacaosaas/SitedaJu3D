@@ -6,7 +6,7 @@ Trabalhe diretamente no repositório oficial:
 
 - GitHub: https://github.com/automacaosaas/SitedaJu3D.git
 - Branch de produção: `main`
-- Produção: https://siteda-ju3-d.vercel.app/
+- Produção: https://wheat-llama-936569.hostingersite.com/ (Hostinger, publicada por upload de .zip; ver `HOSTINGER-SETUP.md`)
 - Baseline deste handoff: commit `64aa4ea2eed21e5714fe864a88b596d7f0bd42ac`
 
 Antes de editar, clone o repositório ou atualize sua cópia e confirme a branch e
@@ -297,8 +297,8 @@ confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 4. Antes de integrar, rode os testes e revise o diff inteiro.
 5. Envie ao responsável o hash do commit, arquivos alterados, comportamento
    final, testes executados e qualquer limite que ainda exija aparelho físico.
-6. A produção oficial é a Vercel conectada à branch `main`. Após integração,
-   confirme que https://siteda-ju3-d.vercel.app/ recebeu exatamente o commit.
+6. A produção oficial é a Hostinger (a Vercel não é mais usada). Após o envio do .zip,
+   confirme que https://wheat-llama-936569.hostingersite.com/ recebeu exatamente o commit.
 7. Apesar de existir `.openai/hosting.json`, não migre nem publique este projeto
    em outro serviço sem solicitação explícita. O fluxo oficial atual é
    GitHub `main` → Vercel.
