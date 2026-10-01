@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {registerHooks} from 'node:module';
-registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.js',import.meta.url).href:specifier,context);}});
-const T=await import('../dist/vendor/three.module.js');
+registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.min.js',import.meta.url).href:specifier,context);}});
+const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
+const {MeshoptDecoder}=await import('../dist/vendor/libs/meshopt_decoder.module.js');
 
 // Coordinates are the GLB's own (x right, y up, z towards the viewer); rays hit the first surface.
 for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
  const bytes=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
- const {scene}=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const {scene}=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  scene.updateMatrixWorld(true);
  const ray=new T.Raycaster();
  const hitFrom=(origin,direction)=>{
