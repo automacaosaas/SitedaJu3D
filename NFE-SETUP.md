@@ -139,11 +139,16 @@ Empresa no Simples Nacional que **fabrica** o que vende: por isso os CFOPs são 
 | Outro estado, empresa com inscrição estadual (contribuinte) | 6101 | 102 | CST 49 |
 
 - **NCM** das três peças: **3926.90.90** (outras obras de plásticos).
-- **DIFAL**: zerado. Nas vendas para pessoa física de outro estado, a nota traz a linha "Valores totais do ICMS
-  Interestadual: DIFAL da UF destino R$ 0,00 + FCP R$ 0,00; DIFAL da UF Origem R$ 0,00", como na nota nº 10.
+- **DIFAL**: zerado. Nas vendas para pessoa física (ou empresa sem inscrição estadual) de outro estado, a nota traz a
+  linha "Valores totais do ICMS Interestadual: DIFAL da UF destino R$ 0,00 + FCP R$ 0,00; DIFAL da UF Origem R$ 0,00",
+  como na nota nº 10 (mantida pela contadora em 01/10/2026).
+- **Empresa sem inscrição estadual** (marcada como "isenta" no checkout): vai como **não contribuinte** (regra 2,
+  CFOP 6107), decisão da contadora em 01/10/2026.
 - **Frete**: modalidade 0 (por conta do emitente), com o valor destacado no campo do frete e somado ao total.
-- **Informações complementares**: "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NÃO GERA DIREITO A
-  CRÉDITO FISCAL DE ICMS, ISS E IPI." (mais o número do pedido).
+- **Informações complementares** (texto da contadora, 01/10/2026): "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO
+  SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI. Pedido nº: JU-…". Quem escreve é o site, com o número
+  do pedido da loja; o campo "Informações complementares" da natureza no Bling fica **vazio** para não repetir. Falta
+  ela confirmar se é "ME OU EPP" (como está) ou "ME EPP" (como no documento dela).
 - Não usados: 5102, 6102 e 6108 são de revenda; o CSOSN 101 exige informar a alíquota do crédito, e o contador não
   pediu isso.
 
@@ -153,10 +158,29 @@ conferir no DANFE:
 - o CFOP de cada caso;
 - se o Bling já escreve sozinho o texto do Simples ou a linha do DIFAL; se escrever, o site tira os dele para não repetir.
 
+## A natureza de operação no Bling (orientação da contadora, 01/10/2026)
+
+Uma natureza só, que o site usa em todas as vendas:
+
+- **Dados gerais:** descrição "Venda de produção do estabelecimento", série 1, tipo saída, regime Simples Nacional,
+  indicador de presença 2 (operação não presencial, pela internet). Informações complementares: **vazio**.
+- **Aba ICMS**, três regras ("+ Adicionar regra"), todas com produto "Qualquer" e CSOSN 102:
+  1. destino o mesmo estado (MG): CFOP 5101;
+  2. outros estados, cliente **não contribuinte** (sem IE): CFOP 6107;
+  3. outros estados, cliente **contribuinte** (com IE): CFOP 6101.
+- **Abas PIS e COFINS**, em cada regra: CST 49 (outras operações de saída).
+
+O site informa o tipo de cliente em cada nota: pessoa física e empresa sem inscrição estadual vão como não contribuinte
+(9), empresa com inscrição estadual como contribuinte (1).
+
+**Formas de pagamento** no Bling: três, ativas, com o tipo de pagamento da NF-e: Pix **17**, cartão de crédito **03** e
+cartão de débito **04** (se houver mais de uma do mesmo tipo, a marcada como padrão). Sem elas a nota sai com a forma
+padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastrar, esperar 1 hora ou reiniciar o app.
+
 ## O que ainda falta
 
-1. **Contador, no Bling:** a natureza de operação de venda com as regras da tabela acima, série 1 com próximo número 11,
-   formas de pagamento Pix e cartão, certificado A1 e o ambiente de homologação.
+1. **Contadora, no Bling:** criar a natureza acima e as formas de pagamento, e deixar a conta em homologação para o
+   primeiro teste. Série 1 com próximo número 11 e o certificado A1 já estão feitos (01/10/2026).
 2. **Site:** o código dessa natureza (`bling.natureId` em `api/_lib/fiscal.js`), que o painel mostra depois de
    conectar o Bling. É o único dado fiscal que falta.
 

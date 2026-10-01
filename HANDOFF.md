@@ -72,7 +72,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 ## Tarefas (o Pedro diz qual fazer; uma por vez)
 
 - **A. Correções de layout.** O Pedro vai mandar o relatório. Mostre o plano antes de mexer e confira em 375 px e em computador.
-- **B. Nota fiscal.** A equipe já cadastrou a natureza de operação no Bling. Quando o Pedro passar o **id** dela (painel →
+- **B. Nota fiscal.** A natureza de operação ainda **não existe** no Bling (em 01/10 a lista só tinha remessa,
+  bonificação e importação); a contadora vai criá-la como em `NFE-SETUP.md` (seção "A natureza de operação no Bling"),
+  com as formas de pagamento Pix/crédito/débito. Texto da nota, empresa sem IE e DIFAL já ajustados no site (01/10).
+  Quando o Pedro passar o **id** dela (painel →
   cartão "Nota fiscal · Bling"): preencher `bling.natureId` em `api/_lib/fiscal.js`, testar com o Bling simulado e preparar o zip.
   No primeiro teste real em homologação conferir: próximo número (11, série 1), CFOP, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
 - **C. Atendimento.** Quando o Pedro passar e-mail e WhatsApp: `api/_lib/legal.js` (e-mail e telefone) e `dist/commerce-config.js`
