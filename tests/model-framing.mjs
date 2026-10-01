@@ -14,12 +14,12 @@ const originalFetch=globalThis.fetch;
 globalThis.fetch=async url=>new Response(await readFile(url),{status:200});
 // 3D areas measured in the product modal (CSS px): desktop, tablet and phones.
 const HOSTS=[[519,741],[519,679],[519,587],[484,558],[356,750],[402,215],[362,186],[332,169]];
-function viewerFor(model,[w,h]){
+function viewerFor(model,[w,h],width=w){
  // Same pedestal as ProductViewer's constructor (which needs WebGL, unavailable here).
  const pedestal=new T.Mesh(new T.CylinderGeometry(1.9,1.9,.24,80));pedestal.position.y=-2.02;pedestal.updateMatrixWorld(true);
  const v=Object.assign(Object.create(ProductViewer.prototype),{
   camera:new T.PerspectiveCamera(36,w/h,.1,50),controls:{target:new T.Vector3(),update(){},minDistance:0,maxDistance:0},
-  pedestal,model,render(){}
+  pedestal,model,render(){},width   // phones (≤ 480 px) frame the piece without the pedestal (audit D4)
  });
  v.camera.position.set(1.1,.65,8.3);v.fit();return v;
 }
@@ -37,6 +37,12 @@ try{
    const look=()=>{v.camera.lookAt(target);v.camera.updateMatrixWorld(true);};
    const e0=(()=>{look();let x=0,y=0,a=Infinity,b=-Infinity;const p=new T.Vector3();for(const q of pts){p.copy(q).project(v.camera);x=Math.max(x,Math.abs(p.x));y=Math.max(y,Math.abs(p.y));a=Math.min(a,p.y);b=Math.max(b,p.y);}return {x,y,height:(b-a)/2};})();
    heights[`${key}@${host}`]=e0.height;
+   // Phones (audit D4): framed without the pedestal, every piece reads clearly larger than when the pedestal set the frame.
+   if(host[0]<=480&&host[1]>host[0]){
+    const wide=viewerFor(model,host,1000);wide.camera.lookAt(wide.controls.target);wide.camera.updateMatrixWorld(true);
+    let a=Infinity,b=-Infinity;const p=new T.Vector3();for(const q of pts){p.copy(q).project(wide.camera);a=Math.min(a,p.y);b=Math.max(b,p.y);}
+    assert.ok(e0.height>1.2*(b-a)/2,`${key} ${host}: larger on a phone (${e0.height.toFixed(2)} vs ${((b-a)/2).toFixed(2)})`);
+   }
    for(let step=0;step<16;step++){           // the viewer's rotate buttons turn by PI/8
     v.rotate(1);look();let m=0;const p=new T.Vector3();for(const q of pts){p.copy(q).project(v.camera);m=Math.max(m,Math.abs(p.x),Math.abs(p.y));}
     assert.ok(m<.98,`${key} ${host}: fully visible at rotation ${step+1}/16 (${m.toFixed(3)})`);
@@ -55,7 +61,7 @@ try{
  try{
   assets.PRESENTATION_SCALE.borboletoscopio=1;
   const plain=await assets.createAssetModel('borboletoscopio',{},new AbortController().signal);const pts=samples(plain.group);
-  for(const host of [[519,741],[519,679],[356,750]]){
+  for(const host of [[519,741],[519,679]]){   // on phones every piece fills the frame (audit D4), so the exception only matters on wider screens
    const v=viewerFor(plain,host);v.camera.lookAt(v.controls.target);v.camera.updateMatrixWorld(true);
    let a=Infinity,b=-Infinity;const p=new T.Vector3();for(const q of pts){p.copy(q).project(v.camera);a=Math.min(a,p.y);b=Math.max(b,p.y);}
    assert.ok(heights[`borboletoscopio@${host}`]>1.15*(b-a)/2,`The butterfly is presented clearly larger at ${host}`);
