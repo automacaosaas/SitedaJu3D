@@ -171,7 +171,7 @@ Selecione uma peça para continuar.|Select a piece to continue.|Selecciona una p
 Compra segura|Secure shopping|Compra segura
 Seus dados protegidos|Your data is protected|Tus datos protegidos
 Produção sob demanda|Made to order|Producción bajo pedido
-5 a 7 dias úteis (exemplo)|5 to 7 business days (example)|5 a 7 días hábiles (ejemplo)
+3 a 5 dias úteis|3 to 5 business days|3 a 5 días hábiles
 Cartão|Card|Tarjeta
 Seu carrinho espera um pouco de cor.|Your cart is waiting for a little color.|Tu carrito espera un poco de color.
 Escolha uma peça e crie a sua combinação.|Choose a piece and create your combination.|Elige una pieza y crea tu combinación.
@@ -695,4 +695,15 @@ sem juros|interest-free|sin intereses
 Valores do Mercado Pago para este cartão. O que passa do preço à vista são os juros do parcelamento.|Amounts from Mercado Pago for this card. Anything above the upfront price is installment interest.|Valores de Mercado Pago para esta tarjeta. Lo que supera el precio al contado son los intereses de las cuotas.
 Crie uma senha (opcional)|Create a password (optional)|Crea una contraseña (opcional)
 Sem senha, você entra sempre com um código enviado para o seu e-mail.|Without a password, you always sign in with a code sent to your e-mail.|Sin contraseña, siempre entras con un código enviado a tu correo.
+Desconto no Pix (5%)|Pix discount (5%)|Descuento por Pix (5%)
+No Pix|With Pix|Con Pix
+(5% off)|(5% off)|(5% de descuento)
+5% OFF NO PIX|5% OFF WITH PIX|5% DE DESCUENTO CON PIX
+QR Code ou copia e cola · confirmação na hora|QR code or copy and paste · confirmed right away|Código QR o copia y pega · confirmación al instante
+Crédito ou débito|Credit or debit|Crédito o débito
+ATÉ 12X NO CRÉDITO|UP TO 12 INSTALLMENTS ON CREDIT|HASTA 12 CUOTAS CON CRÉDITO
+parcelas na próxima etapa|installments in the next step|cuotas en el siguiente paso
+Copia e cola ou QR Code · 5% off|Copy and paste or QR code · 5% off|Copia y pega o código QR · 5% de descuento
+Pix escolhido: 5% de desconto nas peças.|Pix selected: 5% off the pieces.|Pix elegido: 5% de descuento en las piezas.
+Cartão escolhido.|Card selected.|Tarjeta elegida.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

@@ -49,7 +49,7 @@ Fontes oficiais consultadas:
 - Confirmação baseada em snapshot do pedido, progresso até pagamento confirmado. Preparação/envio permanecem como etapas futuras. Nenhuma produção automática fictícia.
 - WhatsApp preparado para número da empresa; enquanto estiver vazio, botão desabilitado e alternativa para copiar o resumo. Não usar número inventado nem abrir compartilhamento para destinatário indefinido.
 
-Preços: R$129/R$139/R$159, frete R$18, produção 5–7 dias úteis, **todos apenas exemplos visíveis**. Configuração central: `dist/commerce-config.js`.
+Preços: R$129/R$139/R$159, frete R$18, produção 3–5 dias úteis, **todos apenas exemplos visíveis**. Configuração central: `dist/commerce-config.js`.
 
 ### Limites deliberados da demonstração
 
