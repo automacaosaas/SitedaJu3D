@@ -34,6 +34,7 @@ const dynamic = [
   [/^(\d+) peça · (.+)$/, '$1 item · $2', '$1 pieza · $2'],
   [/^(\d+) peças · (.+)$/, '$1 items · $2', '$1 piezas · $2'],
   [/^Adicionar (.+) ao carrinho$/, 'Add $1 to cart', 'Añadir $1 al carrito'],
+  [/^Adicionar (.+) ao carrinho nas cores originais$/, 'Add $1 to cart in the original colors', 'Añadir $1 al carrito en los colores originales'],
   [/^Personalizar (.+)$/, 'Customize $1', 'Personalizar $1'],
   [/^Mostrar (.+)$/, 'Show $1', 'Mostrar $1'],
   [/^Selecionar (.+)$/, 'Select $1', 'Seleccionar $1'],

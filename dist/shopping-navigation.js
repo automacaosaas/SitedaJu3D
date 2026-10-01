@@ -30,7 +30,7 @@ export function returnFromCart() {
 }
 
 let navigating = false;
-export async function goToCart({replace = false, saved = false} = {}) {
+export async function goToCart({replace = false, saved = false, original = false} = {}) {
   if (navigating) return;
   navigating = true;
   if (!replace) rememberShoppingLocation();
@@ -42,7 +42,7 @@ export async function goToCart({replace = false, saved = false} = {}) {
     notice.innerHTML = '<span aria-hidden="true">✓</span><p></p><i aria-hidden="true"></i>';
     document.body.append(notice);
   }
-  notice.querySelector('p').textContent = saved ? 'Cores salvas. Voltando ao carrinho…' : 'Peça adicionada. Indo para o carrinho…';
+  notice.querySelector('p').textContent = saved ? 'Cores salvas. Voltando ao carrinho…' : original ? 'Peça adicionada nas cores originais. Indo para o carrinho…' : 'Peça adicionada. Indo para o carrinho…';
   notice.hidden = false;
   notice.classList.add('is-visible');
   await new Promise(resolve => setTimeout(resolve, matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 700));
