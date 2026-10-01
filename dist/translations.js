@@ -716,4 +716,15 @@ Crédito ou débito|Credit or debit|Crédito o débito
 Copia e cola ou QR Code · 5% off|Copy and paste or QR code · 5% off|Copia y pega o código QR · 5% de descuento
 Pix escolhido: 5% de desconto nas peças.|Pix selected: 5% off the pieces.|Pix elegido: 5% de descuento en las piezas.
 Cartão escolhido.|Card selected.|Tarjeta elegida.
+ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
+frete calculado pelo CEP|shipping calculated by postal code|envío calculado por código postal
+PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA
+5% off no Pix ou 3x sem juros no cartão|5% off with Pix or 3 interest-free card installments|5% de descuento con Pix o 3 cuotas sin interés con tarjeta
+FEITO SOB ENCOMENDA|MADE TO ORDER|HECHO POR ENCARGO
+Vantagens da loja|Shop highlights|Ventajas de la tienda
+mensagem|message|mensaje
+Mensagem anterior|Previous message|Mensaje anterior
+Próxima mensagem|Next message|Siguiente mensaje
+Pausar mensagens|Pause messages|Pausar mensajes
+Retomar mensagens|Resume messages|Reanudar mensajes
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

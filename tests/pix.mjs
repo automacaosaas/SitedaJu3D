@@ -59,6 +59,9 @@ const {translate} = await site('i18n-core.js');
   const checkout = read('dist/checkout.js');
   assert.match(checkout, /<span class="card-off"><strong>3X SEM JUROS<\/strong><span>ou até 12x no crédito<\/span><\/span>/);
   assert.doesNotMatch(checkout, /ATÉ 12X NO CRÉDITO/);
+  const bar = read('dist/announcement-bar.js');
+  assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
+  assert.doesNotMatch(bar, /até 12x no cartão/);
   assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: 12\}/, 'the Brick offers only the method chosen');
 }
 
