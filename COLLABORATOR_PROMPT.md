@@ -188,8 +188,10 @@ base. Ele representa a régua encaixada:
 
 ## Vitrine principal (banner temático)
 
-O banner mostra um produto por vez: categoria, nome, subtítulo, a peça sobre uma
-pilastra branca e o botão “Escolha sua cor” com as cores originais logo abaixo.
+O banner mostra um produto por vez, no formato “banner limpo”: categoria, nome,
+subtítulo, preço com o selo verde “5% off no Pix”, a peça sobre uma pilastra branca
+e os botões “Personalizar o meu” (principal) e “Ver encaixado” (só nas peças com
+demonstração).
 A troca é uma passagem lateral: peça e pilastra saem juntas, a próxima entra pelo
 lado oposto, e fundo, header, textos e paleta trocam na mesma transição
 (780 ms, `cubic-bezier(.22, 1, .36, 1)`). Um único valor contínuo (`position`,
@@ -209,8 +211,7 @@ arraste nunca abre o modal; um toque simples na peça abre o produto. Setas,
 teclado e arraste com mouse funcionam. O tratamento de `lostpointercapture` é
 intencional: ao transferir a captura implícita do toque do link para a vitrine,
 o evento propagado pelo link não pode cancelar o gesto. Respeite
-`prefers-reduced-motion` (só crossfade, sem translação nem escala, e o botão do
-card ganha um contorno estático em vez de pulsar).
+`prefers-reduced-motion` (só crossfade, sem translação nem escala).
 
 Fundo e tema: uma faixa de cor por tema (`data-hero-bg`) cobre a página inteira,
 atrás do banner e do catálogo; o degradê do banner continua por baixo dele e um
@@ -224,14 +225,17 @@ originais do site. Não altere `catalog.css` nem `catalog.js` para isso: os
 ajustes ficam em `carousel.css`, sempre com o prefixo `.home`, e a página
 Produtos não muda.
 
-“Escolha sua cor” leva ao card do produto ativo no carrossel do catálogo (clique
-programático no card, o mesmo caminho do toque em um card lateral), rola até ele
-e faz pulsar o botão “Personalize o seu” até a pessoa interagir. Isso depende de
-`data-product-id` nos cards.
+“Personalizar o meu” segue o padrão dos marketplaces: cor sólida do tema, verbo
+claro, ícone de paleta à esquerda, sem seta, 52 px de altura. É um link para
+`#produto/<peça>/personalizar`, que abre o modal direto no configurador. “Ver
+encaixado” abre a demonstração do produto ativo (`demo.open`), a mesma do toque na
+peça. A demonstração usa o mesmo botão.
 
-Desktop (≥ 901 px): os cards do catálogo da home são um pouco menores
-(ativo 352 px) para o carrossel caber inteiro ao chegar pelo botão. O celular usa
-a coluna única, com o botão logo abaixo da pilastra.
+Desktop (≥ 901 px): texto e botões à esquerda, peça à direita. Celular: coluna
+única; o botão principal ocupa a largura entre as setas (até 340 px) e “Ver
+encaixado” fica logo abaixo. Abaixo de 380 px o botão compacta para o rótulo caber
+numa linha. Acima do cabeçalho das páginas da loja fica a barra rotativa
+(`announcement-bar.js`).
 
 ## Modal e configurador
 
@@ -283,7 +287,7 @@ além de notebook e desktop amplo. Valide os três produtos, os três estados do
 modal, imagem e 3D, todas as partes, cores, resumo, fechamento, rolagem interna,
 carrossel nos dois sentidos e ausência de erros no console. Para mudanças no
 banner, siga também a matriz de `HERO-BANNER-QA.md` (1920 a 360, gestos,
-movimento reduzido e o fluxo “Escolha sua cor”). Para mudanças no Aviãoscopia,
+movimento reduzido e os botões “Personalizar o meu” e “Ver encaixado”). Para mudanças no Aviãoscopia,
 confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 
 ## Processo de colaboração e Git
