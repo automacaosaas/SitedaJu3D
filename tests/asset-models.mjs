@@ -54,6 +54,10 @@ try{
  }
  // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
  for(const key of Object.keys(SOON)){
+  const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
+  const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
+  // The loader reads embedded images through a blob: fetch, which the site's CSP (connect-src) blocks: colours go in the materials.
+  assert.equal(json.textures?.length||0,0,`${key}: fixed colours in the materials, no texture`);
   const model=await createAssetModel(key,{},new AbortController().signal);
   assert.equal(model.parts.size,0,`${key}: fixed colours, no selectable part`);
   model.group.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model.group);

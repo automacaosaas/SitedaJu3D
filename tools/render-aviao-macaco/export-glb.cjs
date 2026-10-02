@@ -1,5 +1,6 @@
 // node export-glb.cjs [out.glb] [error] [page] — a 3D preview of the site (needs serve.cjs on 8851). Default: the airplane from the real CAD;
-// the provisional Macacoscópio: node export-glb.cjs ../../dist/assets/models/macacoscopio.glb 0.0001 monkey-glb.html
+// the procedural Macacoscópio (the provisional 3D preview until 02/10/2026; the site now uses the Rodin model, do not write over it):
+// node export-glb.cjs macaco-procedural.glb 0.0001 monkey-glb.html
 // 1. plane.html?export=glb assembles the STL parts as in the renders and writes a welded GLB (read here in slices);
 // 2. gltf-transform 4.5.1 (the process of PERFORMANCE-QA.md): simplify with an error limit (detail kept where the shape has it),
 //    then meshopt compression with 16-bit positions. Prints the sizes and the coordinates the model tests use. The cockpit pane stands

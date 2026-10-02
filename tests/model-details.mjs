@@ -7,7 +7,7 @@ const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
 const {MeshoptDecoder}=await import('../dist/vendor/libs/meshopt_decoder.module.js');
 
 // Coordinates are the GLB's own (x right, y up, z towards the viewer); rays hit the first surface.
-for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
+for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscopio']){
  const bytes=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
  const {scene}=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  scene.updateMatrixWorld(true);
@@ -111,5 +111,18 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.y>.1)nearest=Math.min(nearest,Math.abs(v.x));}
   });
   assert.ok(nearest>.31,`The turbines sit outside the fuselage (closest |x| ${nearest.toFixed(4)})`);
+ }
+ if(key==='macacoscopio'){
+  // The Rodin model with the texture's colours as five fixed materials (no texture: the site's CSP blocks the blob: fetch of
+  // embedded images). Brown fur, beige face plate, belly and inner ears, black eyes, brows, nose and mouth, a white shine on each eye.
+  for(const [x,y] of [[-.137,.56],[.118,.56]])assert.equal(materialAt(x,y),'features','Black eyes');
+  for(const [x,y] of [[-.132,.621],[.111,.617]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
+  for(const [x,y] of [[-.15,.72],[.13,.72]])assert.equal(materialAt(x,y),'features','Black brows');
+  assert.equal(materialAt(0,.50),'features','Black nose');
+  for(const [x,y] of [[-.17,.47],[.15,.47],[0,.64],[-.15,.78]])assert.equal(materialAt(x,y),'face','Beige face plate, the shaded cheek included');
+  for(const [x,y] of [[0,.05],[0,-.12],[-.4,.7],[.4,.7]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
+  assert.equal(materialAt(0,-.4),'banana','Yellow banana');
+  for(const [x,y] of [[-.3,.1],[.3,.1],[0,.28],[0,.8]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
+  for(const [x,y] of [[0,0],[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown, without painted light spots');
  } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
 }
