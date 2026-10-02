@@ -51,5 +51,5 @@ que parte da `juncao/pr2-auditoria` do Pedro (891e57a). Ainda não publicada.
 
 ## Em aberto
 
-- A "Prévia 3D" da personalização do avião ainda é o modelo antigo (`models.js`).
+- (resolvido em 02/10/2026) A prévia 3D da personalização do avião agora é o CAD real (`export-glb.cjs`).
 - O subtítulo do avião continua "Avião magnético para régua de grau" (texto da loja); as chamadas da demonstração usam "régua de esquiascopia".

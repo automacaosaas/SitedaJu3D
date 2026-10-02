@@ -105,6 +105,8 @@ $('#pdp-info').insertAdjacentHTML('afterbegin',icon('info'));$('#pdp-info').addE
 
 $('.close').addEventListener('click',closeProduct);
 dialog.addEventListener('cancel',e=>{e.preventDefault();if(!sheet.hidden)closeSheet();else closeProduct();});
+// Esc com o painel aberto fecha só o painel, mesmo quando o navegador não deixa segurar o "cancel" (sem um clique antes).
+dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){e.preventDefault();closeSheet();}});
 dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProduct();}});
 dialog.addEventListener('close',()=>{++request;viewer?.hide();closeSheet(false);unlockPage();document.querySelector(`[data-product="${activeProduct}"]`)?.focus({preventScroll:true});});
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));

@@ -166,6 +166,77 @@ for (const [m, s] of [[mesh.nosef, -1], [mesh.noseb, 1]]) { const b = new THREE.
 seated.nose = [capOn(mesh.nosef, mesh.front, Number(P.nembed ?? .6)), capOn(mesh.noseb, mesh.back, Number(P.nembed ?? .6))];
 // world from here on: x right (body centre x = 0), y up, the halves meet at z = 0, the front bulges toward +z
 
+// ?export=glb — the assembled airplane as the 3D preview of the configurator (dist/assets/models/aviaoscopia.glb, before compression):
+// one mesh, one primitive per material, with the contract asset-models.js expects: body (both shells), details (stars and nose cap),
+// engines, fixed (cockpit windows). Units: millimetres / GLB_MM, centred on the assembly. Welded here (same position and normal), so
+// export-glb.cjs only has to simplify and compress it. The page stops after this (the result is read in slices: window.glbB64).
+if (P.export === 'glb') {
+  const { mergeVertices } = await import('/vendor/utils/BufferGeometryUtils.js');
+  const GLB_MM = Number(P.glbmm || 122);
+  const PARTS = {body: ['front', 'back'], details: ['stars', 'nosef', 'noseb'], engines: ['pylons'], fixed: ['glass']};
+  const COLORS = {body: [0.012, 0.045, 0.40], details: [0.62, 0.008, 0.03], engines: [0.91, 0.40, 0.004], fixed: [0.86, 0.88, 0.89]};   // linear
+  scene.updateMatrixWorld(true);
+  const all = new THREE.Box3(); for (const keys of Object.values(PARTS)) for (const k of keys) all.expandByObject(mesh[k]);
+  const centre = all.getCenter(new THREE.Vector3());
+  const toGlb = new THREE.Matrix4().makeScale(1 / GLB_MM, 1 / GLB_MM, 1 / GLB_MM).multiply(new THREE.Matrix4().makeTranslation(-centre.x, -centre.y, -centre.z));
+  // the nose cap STLs carry ~275 000 triangles each for a small dome (a fine surface noise nobody sees): vertex clustering on a
+  // 0.25 mm grid first, so the error-limited simplification spends its budget on the airplane instead
+  function cluster(geo, cell) {
+    const p = (geo.index ? geo.toNonIndexed() : geo).attributes.position, ids = new Map(), sums = [], tri = [];
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = `${Math.round(x / cell)},${Math.round(y / cell)},${Math.round(z / cell)}`;
+      let id = ids.get(k); if (id === undefined) { id = sums.length; ids.set(k, id); sums.push([0, 0, 0, 0]); }
+      const s = sums[id]; s[0] += x; s[1] += y; s[2] += z; s[3]++; tri.push(id);
+    }
+    const index = []; for (let t = 0; t < tri.length; t += 3) { const [a, b, c] = [tri[t], tri[t + 1], tri[t + 2]]; if (a !== b && b !== c && a !== c) index.push(a, b, c); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sums.flatMap(s => [s[0] / s[3], s[1] / s[3], s[2] / s[3]]), 3)); g.setIndex(index);
+    return toCreasedNormals(g.toNonIndexed(), 30 * Math.PI / 180);
+  }
+  for (const k of ['nosef', 'noseb']) mesh[k].geometry = cluster(mesh[k].geometry, Number(P.nosecell || .25));
+  const prims = [];
+  for (const [name, keys] of Object.entries(PARTS)) {
+    const pos = [], nor = [];
+    for (const k of keys) {
+      const g = mesh[k].geometry.index ? mesh[k].geometry.toNonIndexed() : mesh[k].geometry, m = new THREE.Matrix4().multiplyMatrices(toGlb, mesh[k].matrixWorld), nm = new THREE.Matrix3().getNormalMatrix(m);
+      const p = g.attributes.position, n = g.attributes.normal, v = new THREE.Vector3();
+      for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m); pos.push(v.x, v.y, v.z); v.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); nor.push(v.x, v.y, v.z); }
+    }
+    let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g = mergeVertices(g, 1e-6);
+    prims.push({name, g});
+  }
+  // minimal GLB writer: float positions/normals, uint32 indices
+  const chunks = [], views = [], accessors = []; let offset = 0;
+  const addView = (array, target) => { const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength); chunks.push(bytes); const pad = (4 - bytes.length % 4) % 4; if (pad) chunks.push(new Uint8Array(pad)); views.push({buffer: 0, byteOffset: offset, byteLength: bytes.length, target}); offset += bytes.length + pad; return views.length - 1; };
+  const primitives = prims.map(({g}, i) => {
+    const p = g.attributes.position.array, n = g.attributes.normal.array, idx = Uint32Array.from(g.index.array);
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (let k = 0; k < p.length; k += 3) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], p[k + a]); max[a] = Math.max(max[a], p[k + a]); }
+    accessors.push({bufferView: addView(Float32Array.from(p), 34962), componentType: 5126, count: p.length / 3, type: 'VEC3', min, max});
+    accessors.push({bufferView: addView(Float32Array.from(n), 34962), componentType: 5126, count: n.length / 3, type: 'VEC3'});
+    accessors.push({bufferView: addView(idx, 34963), componentType: 5125, count: idx.length, type: 'SCALAR'});
+    return {attributes: {POSITION: accessors.length - 3, NORMAL: accessors.length - 2}, indices: accessors.length - 1, material: i};
+  });
+  const json = {asset: {version: '2.0', generator: 'siteju3d tools/render-aviao-macaco/plane.html'}, scene: 0, scenes: [{name: 'Scene', nodes: [0]}],
+    nodes: [{name: 'aviaoscopia', mesh: 0}], meshes: [{name: 'aviaoscopia - CAD 21/08/2026', primitives}],
+    materials: prims.map(({name}) => ({name, doubleSided: true, pbrMetallicRoughness: {baseColorFactor: [...COLORS[name], 1], roughnessFactor: .48, metallicFactor: 0}})),
+    buffers: [{byteLength: offset}], bufferViews: views, accessors};
+  let jsonBytes = new TextEncoder().encode(JSON.stringify(json)); const jpad = (4 - jsonBytes.length % 4) % 4; if (jpad) jsonBytes = new TextEncoder().encode(JSON.stringify(json) + ' '.repeat(jpad));
+  const total = 12 + 8 + jsonBytes.length + 8 + offset, out = new Uint8Array(total), dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+  dv.setUint32(12, jsonBytes.length, true); dv.setUint32(16, 0x4E4F534A, true); out.set(jsonBytes, 20);
+  let at = 20 + jsonBytes.length; dv.setUint32(at, offset, true); dv.setUint32(at + 4, 0x004E4942, true); at += 8;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  let b64 = ''; for (let k = 0; k < out.length; k += 0x8000) b64 += String.fromCharCode.apply(null, out.subarray(k, k + 0x8000));
+  window.glbB64 = btoa(b64);
+  window.info = {bytes: total, glbMm: GLB_MM, centreMm: centre.toArray().map(v => +v.toFixed(2)), parts: prims.map(({name, g}) => [name, g.attributes.position.count, g.index.count / 3]),
+    // where things are, in GLB units, for tests/model-details.mjs and tests/asset-models.mjs
+    holes: (() => { const COLS = [-9.68, 9.62], Y0 = 105.243 + 47.55, STEP = 19.49; return {cols: COLS.map(c => +((-c - centre.x) / GLB_MM).toFixed(4)), rows: Array.from({length: 8}, (_, r) => +((Y0 - r * STEP - centre.y) / GLB_MM).toFixed(4))}; })(),   // measured on the STL (see below); x mirrored by the half turn
+    boxes: Object.fromEntries(Object.entries(mesh).map(([k, m]) => { const b = new THREE.Box3().setFromObject(m).applyMatrix4(toGlb); return [k, b.min.toArray().concat(b.max.toArray()).map(v => +v.toFixed(4))]; }))};
+  window.done = true;
+  await new Promise(() => {});
+}
+
 // ── measured on the STL: 16 through holes, 2 columns × 8 rows, Ø 16.28, relative to the body centre (height 105.243) ──
 const CY = 105.243, COL = [-9.68, 9.62], ROW0 = 47.55, PITCH = 19.49, HOLE_D = 16.28, FRONT = 14;
 const LABELS = [['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4'], ['5', '6', '7', '8', '9', '10', '12', '15']];

@@ -33,6 +33,8 @@ node runpage.cjs "w=600&h=2400" saida.png ruler.html                            
 node runpage.cjs "" saida.png monkey.html                                        # macaco sozinho
 node art.cjs imagem.webp                                                          # h, bottom e foot de uma imagem de vitrine
 node runpage.cjs "" og.png og-patch.html                                          # prévia de link do avião: troca só o avião na arte
+node export-glb.cjs                                                               # prévia 3D do avião (dist/assets/models/aviaoscopia.glb), simplificada e comprimida
+node close-frames.cjs macacoscopio saida                                          # quadros da saída de uma demonstração (Voltar)
 ```
 
 Cada `runpage` grava `saida-<camada>.png` e imprime as frações para `products.js` (`tool`/`head`: width, top, ratio; âncoras das chamadas).

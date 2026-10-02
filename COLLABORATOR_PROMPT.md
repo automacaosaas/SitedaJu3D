@@ -172,7 +172,8 @@ seleções salvas em `localStorage` nem mude os IDs sem uma migração.
 > bandeja funda com as 16 aberturas **vazadas** (a régua é do cliente), números gravados, janelas, estrelas, motores e nariz. A régua de
 > esquiascopia só aparece na demonstração do banner: `aviaoscopia-ruler.webp` sobe por entre `aviaoscopia-back.webp` e `aviaoscopia-front.webp`,
 > que se fecham em volta dela. Para refazer as imagens: `tools/render-aviao-macaco/README.md`. As regras abaixo valem para o **modelo 3D da
-> prévia** (`models.js`, testado por `tests/plane-geometry.mjs`), que ainda é o modelo antigo.
+> prévia** antiga (`models.js`, testado por `tests/plane-geometry.mjs`). A prévia 3D da personalização usa `assets/models/aviaoscopia.glb`,
+> que desde 02/10/2026 é o CAD real (`tools/render-aviao-macaco/export-glb.cjs`).
 
 O avião não pode aparecer como uma moldura vazia nem com um furo redondo na
 base. Ele representa a régua encaixada:

@@ -117,3 +117,14 @@ modelos não têm textura, a compressão foi feita com as mesmas bibliotecas da 
 `functions` e `meshoptimizer`), com o mesmo passo a passo do comando `meshopt`, sem carregar o `sharp`.
 
 O Aviãoscopia comprimido tem 2.452 KB, perto do limite de 2.500 KB de `tests/assets.mjs`.
+
+## 02/10/2026: Aviãoscopia do CAD real na prévia 3D
+
+O `aviaoscopia.glb` da prévia 3D (antes um modelo gerado por IA) passou a vir dos STL reais do projeto de 21/08/2026, montados
+como nos renders da vitrine (`tools/render-aviao-macaco/plane.html`): as duas metades com as faces bojudas para fora, janelas da
+cabine rentes ao nariz, capacete assentado no topo, estrelas, turbinas e os números gravados. `node tools/render-aviao-macaco/export-glb.cjs`
+exporta o modelo já soldado e roda a CLI gltf-transform 4.5.1: `simplify --ratio 0 --error 0.00007` (simplifica até o limite de erro,
+então guarda detalhe onde a forma tem) e `meshopt --level high --quantize-position 16`. O capacete vem com ~275 mil triângulos de ruído
+por metade e é agrupado numa grade de 0,25 mm antes. Mesmos materiais (`body`, `details`, `engines`, `fixed`), sem textura nem cor por
+vértice. Resultado: 387 mil triângulos, 1.688 KB (o anterior tinha 2.452 KB). A URL ganhou `?v=cad-21-08-meshopt1`.
+`tests/model-details.mjs` e `tests/asset-models.mjs` passaram a medir o avião real (furos, estrelas, turbinas, janelas e capacete).
