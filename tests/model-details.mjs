@@ -124,5 +124,11 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   assert.equal(materialAt(0,-.4),'banana','Yellow banana');
   for(const [x,y] of [[-.3,.1],[.3,.1],[0,.28],[0,.8]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
   for(const [x,y] of [[0,0],[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown, without painted light spots');
+  // Smooth outlines cut along the shape: no brown ring around the eyes, the whole flat bowl of each ear beige up to where the
+  // rim rises (rim and outside brown), and the inside of the tube brown (the texture had projected the belly onto it).
+  for(const [x,y] of [[-.195,.589],[.175,.589]])assert.equal(materialAt(x,y),'face','Beige right around the eye, no brown ring');
+  for(const [x,y] of [[-.398,.703],[-.43,.7],[.377,.681],[.41,.68]])assert.equal(materialAt(x,y),'face','The ear bowl is beige');
+  for(const [x,y] of [[-.398,.8],[-.48,.7],[.377,.79],[.46,.68]])assert.equal(materialAt(x,y),'fur','The ear rim and its outside stay brown');
+  for(const [x,y] of [[-.142,-.3],[0,-.1],[.1,.3]])assert.equal(hitFrom([x,y,0],[0,0,1]).name,'fur','The inside of the tube is brown');
  } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
 }

@@ -9,7 +9,7 @@ const ASSETS={
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=dentes-meshopt3',import.meta.url),
   aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-meshopt1',import.meta.url),
   // O macaco do Rodin com as cores da textura em cinco materiais fixos, sem textura (VITRINE-AVIAO-MACACO-QA.md)
-  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=rodin-cores1',import.meta.url)
+  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=rodin-cores2',import.meta.url)
 };
 // Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).

@@ -77,9 +77,11 @@ levando a vitrine até ele.
 provisório da vitrine. A textura de cor virou cinco materiais fixos, sem textura: `fur` (marrom), `face` (bege: rosto, barriga e
 orelhas), `features` (preto: olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de cada olho). A placa do
 rosto é decidida pela forma (o sulco em volta dela), porque a textura pinta a parede do sulco num marrom-claro igual ao bege na
-sombra. `tools/modelo-macaco/preparar_cores.py` (Blender) refaz o arquivo a partir do GLB do Rodin, com 60% das faces (300 mil
-triângulos); depois, `meshopt` como abaixo: 1.233 KB. `tests/model-details.mjs` confere as cores em pontos do rosto, da barriga,
-da banana e das costas. A vitrine continua com as imagens do macaco procedural (`tools/render-aviao-macaco/monkey.js`), que é
+sombra. Os contornos que se veem de perto são cortados na própria malha, ao longo da forma: o olho até onde o relevo começa (com
+um brilho oval igual nos dois), a concha das orelhas até onde a borda começa a subir; a parede de dentro do tubo, onde a textura
+projetava a barriga, fica marrom. `tools/modelo-macaco/preparar_cores.py` (Blender) refaz o arquivo, igual byte a byte, a partir do
+GLB do Rodin, com 60% das faces (300 mil triângulos); depois, `meshopt` como abaixo: 1.249 KB. `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos, das
+orelhas, da barriga, da banana, das costas e de dentro do tubo. A vitrine continua com as imagens do macaco procedural (`tools/render-aviao-macaco/monkey.js`), que é
 parecido mas não idêntico ao do Rodin.
 
 **Pendências para pôr à venda** (sem elas o macaco não pode entrar em `PRODUCTS`: o frete para de calcular para todos sem o peso,

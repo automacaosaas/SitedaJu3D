@@ -6,6 +6,7 @@ Fonte: o GLB do Rodin (`rodin-v2_-0 (7).glb`, recebido em 01/10/2026: malha de 5
 Uso: blender -b -P preparar_cores.py -- <rodin.glb> <saida.glb> 0.6     (0.6 = fica com 60% das faces; depois, meshopt como em PERFORMANCE-QA.md)
 """
 import bpy,bmesh,os,sys,numpy as np
+from mathutils import Vector
 a=sys.argv[sys.argv.index('--')+1:]
 src,dst=os.path.abspath(a[0]),os.path.abspath(a[1]);ratio=float(a[2])
 SMOOTH,ISLAND,FEATURE_MIN=4,400,60
@@ -114,6 +115,64 @@ head=(np.abs(cen3[:,0])<.30)&(cen3[:,1]<-.15)&(cen3[:,2]>.30)
 inside=plate&(cls==0);outside=head&~plate&(cls==1)
 cls[inside]=1;cls[outside]=0
 print('PLACA',int(plate.sum()),'faces; marrom->bege',int(inside.sum()),'; bege fora da placa->marrom',int(outside.sum()),flush=True)
+
+bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table();bm.edges.ensure_lookup_table()
+nrm3=np.array([f.normal for f in bm.faces])
+# Parede de dentro do tubo: a textura projetou a barriga através dela (mancha bege vista pela abertura de trás). Tudo o que
+# está dentro do tubo e virado para o eixo fica marrom.
+top=cen3[:,2]>cen3[:,2].max()-.05;axis=cen3[top][:,:2].mean(0)
+d=cen3[:,:2]-axis;r=np.hypot(d[:,0],d[:,1]);out_dot=(nrm3[:,0]*d[:,0]+nrm3[:,1]*d[:,1])/np.maximum(r,1e-6)
+inner=(r<.30)&(out_dot<-.3)&(cls!=0);print('DENTRO',int(inner.sum()),'faces viradas para dentro ->marrom',flush=True);cls[inner]=0
+
+# Olhos: o oval preto de cada olho, com os buracos de dentro preenchidos (pintinhas e o reflexo recortado da textura), e um
+# brilho oval liso no alto, igual nos dois olhos (espelhado).
+nbr=[[g.index for e in f.edges for g in e.link_faces if g is not f] for f in bm.faces]
+def grow(start,allowed):
+    seen=np.zeros(nf,bool);seen[start]=True;q=deque(int(s) for s in start)
+    while q:
+        for g in nbr[q.popleft()]:
+            if allowed[g] and not seen[g]:seen[g]=True;q.append(g)
+    return seen
+def nearest(mask,x,z):
+    c=np.where(mask&(cen3[:,1]<-.05))[0];return c[np.argmin(np.hypot(cen3[c,0]-x,cen3[c,2]-z))]
+cls[cls==4]=2
+for ex,sx in [(-.137,1),(.117,-1)]:
+    comp=grow([nearest(cls==2,ex,.59)],cls==2)
+    p=cen3[comp];x0,x1,z0,z1=p[:,0].min(),p[:,0].max(),p[:,2].min(),p[:,2].max()
+    zone=(cen3[:,0]>x0-.02)&(cen3[:,0]<x1+.02)&(cen3[:,2]>z0-.02)&(cen3[:,2]<z1+.02)&(cen3[:,1]<-.05)
+    edge=[i for i in np.where(zone&~comp)[0] if any(not zone[g] for g in nbr[i])]
+    outside=grow(edge,zone&~comp);eye=comp|(zone&~outside)
+    cls[eye]=2;cx,cz=(x0+x1)/2,(z0+z1)/2;hx,hz=cx+sx*.005,cz+.031
+    shine=eye&(((cen3[:,0]-hx)/.012)**2+((cen3[:,2]-hz)/.019)**2<1);cls[shine]=4
+    print('OLHO',int(comp.sum()),'faces pretas +',int((eye&~comp).sum()),'preenchidas; centro',(round(cx,3),round(cz,3)),'brilho',int(shine.sum()),flush=True)
+# Em volta dos relevos, dentro do rosto, nada de contorno marrom: buracos da placa (cercados por ela) ficam bege.
+hole=head&~plate&(cls==0)
+lab=np.full(nf,-1);k=0;fixed=0
+for s in np.where(hole)[0]:
+    if lab[s]>=0:continue
+    q=deque([s]);lab[s]=k;mem=[s];touches=False
+    while q:
+        for gi in nbr[q.popleft()]:
+            if hole[gi]:
+                if lab[gi]<0:lab[gi]=k;q.append(gi);mem.append(gi)
+            elif not plate[gi] and cls[gi]!=2:touches=True
+    if not touches:cls[mem]=1;fixed+=len(mem)
+    k+=1
+print('CONTORNO',fixed,'faces marrons cercadas pelo rosto viraram bege',flush=True)
+# Orelhas: a concha é plana e virada para a frente; a borda sobe em volta. Bege = a parte plana ligada ao centro da concha
+# (normal a menos de 22 graus da normal da concha), com o contorno alisado; marrom = a borda e o resto. Mesmo critério nas duas.
+for ex,ez in [(-.398,.703),(.377,.681)]:
+    zone=(np.abs(cen3[:,0]-ex)<.16)&(np.abs(cen3[:,2]-ez)<.16)&(np.abs(cen3[:,0])>.28)&(cen3[:,1]<.05)
+    core=zone&(np.hypot(cen3[:,0]-ex,cen3[:,2]-ez)<.03)&(cls==1)
+    ne=nrm3[core].mean(0);ne/=np.linalg.norm(ne)
+    flat=zone&(nrm3@ne>np.cos(np.radians(22)))
+    bowl=grow(list(np.where(core&flat)[0]),flat)
+    for it in range(3):
+        v=np.where(nb>=0,bowl[np.maximum(nb,0)],False).sum(1);c=(nb>=0).sum(1)
+        bowl=zone&np.where(2*v>c,True,np.where(2*v<c,False,bowl))
+    cls[zone&bowl]=1;cls[zone&~bowl&(cls==1)]=0
+    print('ORELHA',ex,'concha',int(bowl.sum()),'faces',flush=True)
+bm.free()
 for k in range(5):
     root=components(cls)[cls==k];_,s=np.unique(root,return_counts=True);s=np.sort(s)[::-1]
     print('REGIOES',NAMES[k],len(s),'maiores',s[:8].tolist(),flush=True)
@@ -130,6 +189,111 @@ for i,n in enumerate(NAMES):
     me.materials.append(mat)
     print('MAT',n,int(sel.sum()),'faces sRGB',tuple(np.round(srgb*255).astype(int)),'rough %.2f metal(orig) %.2f'%(rough,metal),flush=True)
 me.polygons.foreach_set('material_index',cls.astype(np.int32))
+
+# Contornos lisos. Pintar faces inteiras deixa o contorno com o desenho dos triângulos (serrilhado onde são grandes). Aqui a
+# malha é cortada ao longo de curvas da própria forma e cada lado recebe sua cor: a concha das orelhas até onde a borda
+# começa a subir, o olho até onde o relevo começa e o brilho como um oval exato.
+FUR,FACE,FEAT,HIGH=0,1,2,4
+def cut(bm,fn,faces,inside_mat):
+    """Parte as faces ao longo de fn==0 (fn<0 é dentro) e pinta de inside_mat as que ficam inteiras dentro."""
+    val={}
+    for f in faces:
+        for v in f.verts:
+            if v not in val:x=fn(v.co);val[v]=x if abs(x)>=1e-12 else 1e-12
+    # ordem fixa (índices), para o arquivo sair igual a cada execução
+    bm.edges.index_update();zero=[]
+    for e in sorted({e for f in faces for e in f.edges},key=lambda e:e.index):
+        a,b=e.verts
+        if (val[a]<0)!=(val[b]<0):
+            t=val[a]/(val[a]-val[b]);p=a.co.lerp(b.co,t)
+            _,nv=bmesh.utils.edge_split(e,a,t);nv.co=p;val[nv]=0.0;zero.append(nv)
+    zs_=set(zero)
+    for f in list(dict.fromkeys(f for v in zero for f in v.link_faces)):
+        if not f.is_valid:continue
+        zs=[v for v in f.verts if v in zs_]
+        if len(zs)!=2:continue
+        a,b=zs
+        if any(b in e.verts for e in a.link_edges if f in e.link_faces):continue
+        try:bmesh.utils.face_split(f,a,b)
+        except Exception:pass
+    painted=0
+    for f in bm.faces:
+        vals=[val.get(v) for v in f.verts]
+        if None in vals:continue
+        if all(x<=0 for x in vals) and min(vals)<0:f.material_index=inside_mat;painted+=1
+    bmesh.ops.triangulate(bm,faces=[f for f in bm.faces if len(f.verts)>3])
+    return painted
+def connected(bm,start,ok):
+    seen={start};q=deque([start])
+    while q:
+        for e in q.popleft().edges:
+            for g in e.link_faces:
+                if g not in seen and ok(g):seen.add(g);q.append(g)
+    return seen
+bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table()
+# orelhas: plano da concha (mínimos quadrados nas faces bege do centro). Em cada direção a partir do centro, a concha vai até
+# onde a borda começa a subir (profundidade sobre o plano acima de 3,8 milésimos); esse raio, suavizado entre direções
+# vizinhas, é o contorno do bege. Assim o bege nunca passa para além da borda, e o contorno é liso.
+for ex,ez in [(-.398,.703),(.377,.681)]:
+    zf=[f for f in bm.faces if abs(f.calc_center_median().x-ex)<.16 and abs(f.calc_center_median().z-ez)<.16 and abs(f.calc_center_median().x)>.28 and f.calc_center_median().y<.05]
+    core=[f for f in zf if f.material_index==FACE and np.hypot(f.calc_center_median().x-ex,f.calc_center_median().z-ez)<.035]
+    P=np.array([f.calc_center_median() for f in core]);c=P.mean(0);n=np.linalg.svd(P-c)[2][2]
+    if n[1]>0:n=-n
+    u=np.cross([0,0,1.],n);u/=np.linalg.norm(u);w=np.cross(n,u)
+    C,N,Uv,Wv=Vector(c),Vector(n),Vector(u),Vector(w)
+    def polar(co):
+        d=co-C;a,b=d.dot(Uv),d.dot(Wv);return np.hypot(a,b),np.arctan2(b,a),d.dot(N)
+    vs={v for f in zf for v in f.verts if v.normal.dot(N)>.2}
+    pr=np.array([polar(v.co) for v in vs]);pr=pr[np.abs(pr[:,2])<.05]
+    nb_=72;R=np.zeros(nb_);bins=((pr[:,1]+np.pi)/(2*np.pi)*nb_).astype(int)%nb_
+    for i in range(nb_):
+        b=pr[bins==i];up=b[(b[:,2]>.0038)&(b[:,0]>.01)]
+        R[i]=up[:,0].min() if len(up) else np.nan
+    # direção sem borda medida (borda baixa demais): herda o raio das vizinhas, em vez de ir até a beirada da orelha
+    ok=~np.isnan(R);idx=np.arange(nb_);R=np.interp(idx,np.concatenate([idx[ok]-nb_,idx[ok],idx[ok]+nb_]),np.concatenate([R[ok]]*3))
+    print('ORELHA direcoes sem borda',int((~ok).sum()),'de',nb_,flush=True)
+    R=np.array([np.median(np.take(R,range(i-3,i+4),mode='wrap')) for i in range(nb_)])     # tira picos isolados
+    R=np.array([np.mean(np.take(R,range(i-2,i+3),mode='wrap')) for i in range(nb_)])       # e alisa
+    th=(np.arange(nb_)+.5)/nb_*2*np.pi-np.pi
+    def Rat(t):return float(np.interp(t,np.concatenate([th-2*np.pi,th,th+2*np.pi]),np.concatenate([R,R,R])))
+    def fn(co):
+        r,t,d=polar(co);return r-Rat(t)
+    region=[f for f in zf if f.normal.dot(N)>-.2 and polar(f.calc_center_median())[0]<R.max()+.02 and abs(polar(f.calc_center_median())[2])<.03]
+    for f in zf:
+        if f.material_index==FACE:f.material_index=FUR
+    for f in region:f.material_index=FUR
+    k=cut(bm,fn,region,FACE);bm.faces.ensure_lookup_table()
+    print('ORELHA LISA',ex,'raio da concha %.3f a %.3f'%(R.min(),R.max()),'regiao',len(region),'bege',k,flush=True)
+# olhos: superfície do rosto em volta (quadrática, ajustada no anel ao redor) e altura do relevo sobre ela; o preto vai até a
+# altura medida na borda atual do olho; o brilho é um oval no alto, espelhado entre os olhos
+for ex,sx in [(-.137,1),(.117,-1)]:
+    eyef=[f for f in bm.faces if f.material_index in (FEAT,HIGH) and abs(f.calc_center_median().x-ex)<.09 and abs(f.calc_center_median().z-.59)<.1 and f.calc_center_median().y<-.05]
+    seed=min(eyef,key=lambda f:np.hypot(f.calc_center_median().x-ex,f.calc_center_median().z-.59))
+    comp=connected(bm,seed,lambda g:g.material_index in (FEAT,HIGH))
+    p=np.array([f.calc_center_median() for f in comp]);cx,cz=(p[:,0].min()+p[:,0].max())/2,(p[:,2].min()+p[:,2].max())/2
+    ax,az=(p[:,0].max()-p[:,0].min())/2,(p[:,2].max()-p[:,2].min())/2
+    ell=lambda co,s:((co.x-cx)/(ax*s))**2+((co.z-cz)/(az*s))**2
+    ring=np.array([v.co for v in bm.verts if v.co.y<-.05 and 1.25<ell(v.co,1)<1.9**2 and v.normal.y<-.3])
+    A=lambda q:np.stack([np.ones(len(q)),q[:,0],q[:,2],q[:,0]**2,q[:,2]**2,q[:,0]*q[:,2]],1)
+    for it in range(3):
+        coef=np.linalg.lstsq(A(ring),ring[:,1],rcond=None)[0];res=A(ring)@coef-ring[:,1];ring=ring[np.abs(res)<max(.002,3*res.std())]
+    height=lambda co:float(A(np.array([co]))@coef-co.y)       # para a frente (y menor) é positivo
+    border=[v.co for f in comp for v in f.verts if any(g.material_index not in (FEAT,HIGH) for g in v.link_faces)]
+    h0=float(np.median([height(co) for co in border]))
+    region=[f for f in bm.faces if f.calc_center_median().y<-.05 and ell(f.calc_center_median(),1)<1.35**2 and f.material_index in (FEAT,HIGH,FACE,FUR)]
+    for f in region:f.material_index=FACE
+    k=cut(bm,lambda co:h0-height(co),region,FEAT);bm.faces.ensure_lookup_table()
+    hx,hz=cx+sx*.005,cz+.031
+    # triângulos menores sob o brilho, para o oval sair redondo (subdividir não muda a forma)
+    for it in range(2):
+        sub=[f for f in bm.faces if f.material_index==FEAT and ((f.calc_center_median().x-hx)/.02)**2+((f.calc_center_median().z-hz)/.027)**2<1 and f.calc_center_median().y<-.05]
+        bm.edges.index_update()
+        bmesh.ops.subdivide_edges(bm,edges=sorted({e for f in sub for e in f.edges},key=lambda e:e.index),cuts=1,use_grid_fill=True)
+        bmesh.ops.triangulate(bm,faces=[f for f in bm.faces if len(f.verts)>3])
+    eye=[f for f in bm.faces if f.material_index==FEAT and ell(f.calc_center_median(),1)<1.35**2 and f.calc_center_median().y<-.05]
+    s=cut(bm,lambda co:((co.x-hx)/.012)**2+((co.z-hz)/.019)**2-1,eye,HIGH);bm.faces.ensure_lookup_table()
+    print('OLHO LISO',ex,'altura da base %.4f'%h0,'preto',k,'brilho',s,'anel',len(ring),flush=True)
+bm.to_mesh(me);bm.free();me.update()
 while me.uv_layers:me.uv_layers.remove(me.uv_layers[0])
 for im in list(bpy.data.images):bpy.data.images.remove(im)
 for mat in list(bpy.data.materials):
