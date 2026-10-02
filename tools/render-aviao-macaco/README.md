@@ -31,6 +31,7 @@ node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1" saida.png monkeylam
 node runpage.cjs "w=1000&h=1550&exposure=1.06" saida.png slitlamp.html           # lâmpada sozinha (camadas: full, base, column, top)
 node runpage.cjs "w=600&h=2400" saida.png ruler.html                             # régua sozinha
 node runpage.cjs "" saida.png monkey.html                                        # macaco sozinho
+node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1&model=rodin" saida.png monkeylamp.html   # o mesmo, com o modelo 3D do site (Rodin)
 node art.cjs imagem.webp                                                          # h, bottom e foot de uma imagem de vitrine
 node runpage.cjs "" og.png og-patch.html                                          # prévia de link do avião: troca só o avião na arte
 node export-glb.cjs                                                               # prévia 3D do avião (dist/assets/models/aviaoscopia.glb), simplificada e comprimida

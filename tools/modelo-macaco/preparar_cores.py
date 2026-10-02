@@ -16,6 +16,48 @@ obj=next(o for o in bpy.context.selected_objects if o.type=='MESH');obj.name='ma
 before=len(me.polygons)
 # o importador do glTF separa os vértices nas costuras da UV; solda de volta (a UV fica nos cantos das faces) para a malha ser contínua
 bm=bmesh.new();bm.from_mesh(me);n0=len(bm.verts);bmesh.ops.remove_doubles(bm,verts=bm.verts,dist=1e-6);print("SOLDA",n0,"->",len(bm.verts),flush=True);bm.to_mesh(me);bm.free()
+
+# Superfície lisa. O Rodin deixou ondinhas horizontais de "camada de impressão" (e risquinhos verticais na barriga), com 1 a 3
+# milésimos de altura e 8 a 12 arestas de comprimento. Alisa só isso: cada vértice anda na direção da normal (no máximo 3
+# milésimos) e ficam parados os relevos de verdade, isto é, onde a curvatura sobrevive a um alisamento forte (olhos, nariz, boca,
+# sobrancelhas, banana, mãos, orelhas, sulcos), os vincos encostados neles e as patinhas (relevo raso).
+bpy.context.view_layer.objects.active=obj
+if me.has_custom_normals:bpy.ops.mesh.customdata_custom_splitnormals_clear()
+for p in me.polygons:p.use_smooth=True
+def alisar(me,K=100,SHARP=20,FR=2,MAXD=.003,free=None):
+    V0=np.zeros(len(me.vertices)*3);me.vertices.foreach_get('co',V0);V0=V0.reshape(-1,3);n=len(V0)
+    E=np.zeros(len(me.edges)*2,int);me.edges.foreach_get('vertices',E);E=E.reshape(-1,2)
+    T=np.zeros(len(me.polygons)*3,int);me.polygons.foreach_get('vertices',T);T=T.reshape(-1,3)
+    deg=np.maximum(np.bincount(E.ravel(),minlength=n),1).astype(float)
+    def avg(X):return np.stack([np.bincount(E[:,0],X[E[:,1],k],n)+np.bincount(E[:,1],X[E[:,0],k],n) for k in range(X.shape[1])],1)/deg[:,None]
+    def grow(m,k):
+        for it in range(k):m=m|(avg(m[:,None].astype(float))[:,0]>0)
+        return m
+    def vnormals(X):
+        fn=np.cross(X[T[:,1]]-X[T[:,0]],X[T[:,2]]-X[T[:,0]]);N=np.zeros_like(X)
+        for k in range(3):np.add.at(N,T[:,k],fn)
+        return N/np.maximum(np.linalg.norm(N,axis=1),1e-12)[:,None]
+    Vs=V0.copy()
+    for it in range(40):Vs=Vs+.5*(avg(Vs)-Vs)
+    H=np.abs(np.einsum('ij,ij->i',avg(Vs)-Vs,vnormals(Vs)))
+    THR=.88*np.median(H)                     # escala da malha: a curvatura típica de uma superfície lisa
+    for it in range(3):H=np.maximum(H,avg(H[:,None])[:,0])
+    w=np.clip(1-(H-THR)/THR,0,1)
+    w[(np.abs(np.abs(V0[:,0])-.15)<.075)&(V0[:,2]<-.6)&(V0[:,1]<-.2)]=0       # patinhas
+    bm=bmesh.new();bm.from_mesh(me);sharp=np.zeros(n,bool)
+    for e in bm.edges:
+        if len(e.link_faces)==2 and e.calc_face_angle()>np.radians(SHARP):sharp[e.verts[0].index]=sharp[e.verts[1].index]=True
+    bm.free()
+    keep=sharp&grow(H>1.5*THR,FR)
+    if free is not None:keep&=~free       # dentro das áreas bege não há relevo a guardar: os vincos ali são risquinhos
+    w[grow(keep,2)]=0
+    for it in range(8):w=avg(w[:,None])[:,0]          # transição larga entre o que alisa e o que fica (sem degrau na base dos relevos)
+    V=V0.copy()
+    for it in range(K):
+        N=vnormals(V);L=avg(V)-V;V=V+.3*w[:,None]*np.einsum('ij,ij->i',L,N)[:,None]*N
+        d=V-V0;m=np.linalg.norm(d,axis=1);big=m>MAXD;V[big]=V0[big]+d[big]*(MAXD/m[big])[:,None]
+    me.vertices.foreach_set('co',V.ravel());me.update()
+    print('LISO: %.0f%% dos vertices parados (relevos), movimento p99 %.4f'%(100*(w<.5).mean(),np.percentile(np.linalg.norm(V-V0,axis=1),99)),flush=True)
 if ratio<1:
     m=obj.modifiers.new('dec','DECIMATE');m.decimate_type='COLLAPSE';m.ratio=ratio;m.use_collapse_triangulate=True
     bpy.context.view_layer.objects.active=obj;bpy.ops.object.modifier_apply(modifier=m.name)
@@ -110,11 +152,29 @@ for sx,sz in [(-.12,.47),(.12,.47),(0,.68),(-.1,.62),(.1,.62),(0,.38),(-.07,.40)
     ok=seen.sum()<40000 and cen3[seen,2].min()>.25 and np.abs(cen3[seen,0]).max()<.32
     print('PLACA semente',(sx,sz),int(seen.sum()),'faces','ok' if ok else 'VAZOU, ignorada',flush=True)
     if ok:plate|=seen
-bm.free()
 head=(np.abs(cen3[:,0])<.30)&(cen3[:,1]<-.15)&(cen3[:,2]>.30)
 inside=plate&(cls==0);outside=head&~plate&(cls==1)
 cls[inside]=1;cls[outside]=0
 print('PLACA',int(plate.sum()),'faces; marrom->bege',int(inside.sum()),'; bege fora da placa->marrom',int(outside.sum()),flush=True)
+# Barriga: o mesmo critério do rosto (a textura deixava fiapos marrons na borda). Enche a partir de pontos da barriga até o sulco
+# em volta dela; dentro: bege (a banana e as mãos, que têm a própria base, ficam); fora, na frente do corpo: marrom.
+belly=np.zeros(nf,bool)
+for sx,sz in [(0,-.5),(0,-.05),(0,.12),(-.08,-.45),(.08,-.45),(-.08,0),(.08,0),(.1,-.3)]:
+    cand=np.where((cls==1)&(cen3[:,1]<-.2)&(cen3[:,2]<.25))[0];seed=cand[np.argmin(np.hypot(cen3[cand,0]-sx,cen3[cand,2]-sz))]
+    seen=np.zeros(nf,bool);seen[seed]=True;q=deque([seed])
+    while q:
+        for e in bm.faces[q.popleft()].edges:
+            if len(e.link_faces)!=2 or ang[e.index]<lim:continue
+            for g in e.link_faces:
+                if not seen[g.index]:seen[g.index]=True;q.append(g.index)
+    ok=seen.sum()<60000 and cen3[seen,2].max()<.3 and np.abs(cen3[seen,0]).max()<.25
+    print('BARRIGA semente',(sx,sz),int(seen.sum()),'faces','ok' if ok else 'VAZOU, ignorada',flush=True)
+    if ok:belly|=seen
+bm.free()
+box=(np.abs(cen3[:,0])<.25)&(cen3[:,1]<-.15)&(cen3[:,2]>-.7)&(cen3[:,2]<.28)
+inside=belly&(cls==0);outside=box&~belly&(cls==1)
+cls[inside]=1;cls[outside]=0
+print('BARRIGA',int(belly.sum()),'faces; marrom->bege',int(inside.sum()),'; bege fora->marrom',int(outside.sum()),flush=True)
 
 bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table();bm.edges.ensure_lookup_table()
 nrm3=np.array([f.normal for f in bm.faces])
@@ -189,12 +249,30 @@ for i,n in enumerate(NAMES):
     me.materials.append(mat)
     print('MAT',n,int(sel.sum()),'faces sRGB',tuple(np.round(srgb*255).astype(int)),'rough %.2f metal(orig) %.2f'%(rough,metal),flush=True)
 me.polygons.foreach_set('material_index',cls.astype(np.int32))
+# alisa depois de classificar (a forma original decide as cores; o sulco do rosto, por exemplo) e antes dos cortes de contorno.
+# Vértices cercados só de faces bege (miolo do rosto, da barriga e das orelhas) alisam mesmo junto de vincos.
+_T=np.zeros(len(me.polygons)*3,int);me.polygons.foreach_get('vertices',_T);_T=_T.reshape(-1,3)
+_nall=np.bincount(_T.ravel(),minlength=len(me.vertices));_ntan=np.bincount(_T[cls==1].ravel(),minlength=len(me.vertices))
+alisar(me,free=(_ntan==_nall)&(_nall>0))
+def relevo_local(me,N=150):
+    V=np.zeros(len(me.vertices)*3);me.vertices.foreach_get('co',V);V=V.reshape(-1,3);n=len(V)
+    E=np.zeros(len(me.edges)*2,int);me.edges.foreach_get('vertices',E);E=E.reshape(-1,2)
+    deg=np.maximum(np.bincount(E.ravel(),minlength=n),1).astype(float)
+    avg=lambda X:np.stack([np.bincount(E[:,0],X[E[:,1],k],n)+np.bincount(E[:,1],X[E[:,0],k],n) for k in range(3)],1)/deg[:,None]
+    Vs=V.copy()
+    for it in range(N):Vs=Vs+.5*(avg(Vs)-Vs)
+    Nv=np.zeros(len(me.vertices)*3);me.vertices.foreach_get('normal',Nv);Nv=Nv.reshape(-1,3)
+    return V,np.einsum('ij,ij->i',V-Vs,Nv)
+from mathutils import kdtree
+_V,DET=relevo_local(me);KD=kdtree.KDTree(len(_V))
+for i,p in enumerate(_V):KD.insert(p,i)
+KD.balance()
 
 # Contornos lisos. Pintar faces inteiras deixa o contorno com o desenho dos triângulos (serrilhado onde são grandes). Aqui a
 # malha é cortada ao longo de curvas da própria forma e cada lado recebe sua cor: a concha das orelhas até onde a borda
 # começa a subir, o olho até onde o relevo começa e o brilho como um oval exato.
 FUR,FACE,FEAT,HIGH=0,1,2,4
-def cut(bm,fn,faces,inside_mat):
+def cut(bm,fn,faces,inside_mat,domain=None):
     """Parte as faces ao longo de fn==0 (fn<0 é dentro) e pinta de inside_mat as que ficam inteiras dentro."""
     val={}
     for f in faces:
@@ -220,6 +298,7 @@ def cut(bm,fn,faces,inside_mat):
     for f in bm.faces:
         vals=[val.get(v) for v in f.verts]
         if None in vals:continue
+        if domain is not None and not domain(f):continue     # só faces da própria área (não as vizinhas que compartilham vértices)
         if all(x<=0 for x in vals) and min(vals)<0:f.material_index=inside_mat;painted+=1
     bmesh.ops.triangulate(bm,faces=[f for f in bm.faces if len(f.verts)>3])
     return painted
@@ -266,9 +345,9 @@ for ex,ez in [(-.398,.703),(.377,.681)]:
     print('ORELHA LISA',ex,'raio da concha %.3f a %.3f'%(R.min(),R.max()),'regiao',len(region),'bege',k,flush=True)
 # olhos: superfície do rosto em volta (quadrática, ajustada no anel ao redor) e altura do relevo sobre ela; o preto vai até a
 # altura medida na borda atual do olho; o brilho é um oval no alto, espelhado entre os olhos
-for ex,sx in [(-.137,1),(.117,-1)]:
-    eyef=[f for f in bm.faces if f.material_index in (FEAT,HIGH) and abs(f.calc_center_median().x-ex)<.09 and abs(f.calc_center_median().z-.59)<.1 and f.calc_center_median().y<-.05]
-    seed=min(eyef,key=lambda f:np.hypot(f.calc_center_median().x-ex,f.calc_center_median().z-.59))
+for ex,ez,sx,shine in [(-.137,.59,1,True),(.117,.59,-1,True)]:
+    eyef=[f for f in bm.faces if f.material_index in (FEAT,HIGH) and abs(f.calc_center_median().x-ex)<.09 and abs(f.calc_center_median().z-ez)<.1 and f.calc_center_median().y<-.05]
+    seed=min(eyef,key=lambda f:np.hypot(f.calc_center_median().x-ex,f.calc_center_median().z-ez))
     comp=connected(bm,seed,lambda g:g.material_index in (FEAT,HIGH))
     p=np.array([f.calc_center_median() for f in comp]);cx,cz=(p[:,0].min()+p[:,0].max())/2,(p[:,2].min()+p[:,2].max())/2
     ax,az=(p[:,0].max()-p[:,0].min())/2,(p[:,2].max()-p[:,2].min())/2
@@ -280,7 +359,8 @@ for ex,sx in [(-.137,1),(.117,-1)]:
     height=lambda co:float(A(np.array([co]))@coef-co.y)       # para a frente (y menor) é positivo
     border=[v.co for f in comp for v in f.verts if any(g.material_index not in (FEAT,HIGH) for g in v.link_faces)]
     h0=float(np.median([height(co) for co in border]))
-    region=[f for f in bm.faces if f.calc_center_median().y<-.05 and ell(f.calc_center_median(),1)<1.35**2 and f.material_index in (FEAT,HIGH,FACE,FUR)]
+    # só a superfície de fora do rosto (a parede de dentro da cabeça fica logo atrás dos olhos, na mesma altura)
+    region=[f for f in bm.faces if f.calc_center_median().y<-.28 and ell(f.calc_center_median(),1)<1.35**2 and f.material_index in (FEAT,HIGH,FACE,FUR)]
     for f in region:f.material_index=FACE
     k=cut(bm,lambda co:h0-height(co),region,FEAT);bm.faces.ensure_lookup_table()
     hx,hz=cx+sx*.005,cz+.031
@@ -293,6 +373,43 @@ for ex,sx in [(-.137,1),(.117,-1)]:
     eye=[f for f in bm.faces if f.material_index==FEAT and ell(f.calc_center_median(),1)<1.35**2 and f.calc_center_median().y<-.05]
     s=cut(bm,lambda co:((co.x-hx)/.012)**2+((co.z-hz)/.019)**2-1,eye,HIGH);bm.faces.ensure_lookup_table()
     print('OLHO LISO',ex,'altura da base %.4f'%h0,'preto',k,'brilho',s,'anel',len(ring),flush=True)
+# patinhas (o relevo raso embaixo, na frente) na cor da pele. Centro de cada uma pelo relevo local (altura sobre a média larga em
+# volta); numa área justa em volta dela (longe do sulco da barriga e da borda de baixo), a superfície do corpo é ajustada pela parte
+# de baixo dos pontos e a patinha é o que se ergue acima dela, cortada a 35% da altura máxima.
+A=lambda q:np.stack([np.ones(len(q)),q[:,0],q[:,2],q[:,0]**2,q[:,2]**2,q[:,0]*q[:,2]],1)
+for side in (-1,1):
+    out=lambda co,nr:(co.x-axis[0])*nr.x+(co.y-axis[1])*nr.y>0
+    cand=[i for i,p in enumerate(_V) if side*p[0]>.05 and abs(p[0])<.25 and -.82<p[2]<-.64 and p[1]<-.15]
+    d=DET[cand];top=np.array(cand)[d>.5*d.max()];cx,cz=_V[top,0].mean(),_V[top,2].mean()
+    inb=lambda c:abs(c.x-cx)<.085 and abs(c.z-cz)<.09 and c.y<-.15
+    ring=np.array([v.co for v in bm.verts if inb(v.co) and out(v.co,v.normal)])
+    for it in range(10):
+        coef=np.linalg.lstsq(A(ring),ring[:,1],rcond=None)[0];res=A(ring)@coef-ring[:,1];ring=ring[res<.001]
+    height=lambda co:float(A(np.array([co]))@coef-co.y)
+    region=[f for f in bm.faces if inb(f.calc_center_median()) and out(f.calc_center_median(),f.normal)]
+    hmax=max(height(v.co) for f in region for v in f.verts);h0=.2*hmax
+    for f in region:f.material_index=FUR
+    k=cut(bm,lambda co:h0-height(co),region,FACE,domain=lambda f:inb(f.calc_center_median()) and out(f.calc_center_median(),f.normal));bm.faces.ensure_lookup_table()
+    # pedacinhos soltos (menos de 10% do maior) voltam a marrom; marrom cercado pelo pé vira bege
+    zf=[f for f in bm.faces if inb(f.calc_center_median()) and out(f.calc_center_median(),f.normal)];zset=set(zf);seen=set();comps=[]
+    for f in zf:
+        if f.material_index==FACE and f not in seen:c=connected(bm,f,lambda g:g in zset and g.material_index==FACE);seen|=c;comps.append(c)
+    big=max(len(c) for c in comps)
+    for c in comps:
+        if len(c)<.1*big:
+            for f in c:f.material_index=FUR
+    edge=[f for f in zf if f.material_index!=FACE and any(g not in zset for e in f.edges for g in e.link_faces)];outside=set()
+    for f in edge:
+        if f not in outside:outside|=connected(bm,f,lambda g:g in zset and g.material_index!=FACE)
+    for f in zf:
+        if f.material_index!=FACE and f not in outside:f.material_index=FACE
+    print('PATINHA centro (%.3f, %.3f) altura maxima %.4f corte %.4f bege'%(cx,cz,hmax,h0),k,flush=True)
+# por segurança, no fim: dentro do tubo (virado para o eixo) é sempre marrom
+bm.faces.ensure_lookup_table();k=0
+for f in bm.faces:
+    c=f.calc_center_median();dx,dy=c.x-axis[0],c.y-axis[1];r=float(np.hypot(dx,dy))
+    if r<.30 and (f.normal.x*dx+f.normal.y*dy)/max(r,1e-6)<-.3 and f.material_index!=FUR:f.material_index=FUR;k+=1
+print("DENTRO no fim",k,"faces ->marrom",flush=True)
 bm.to_mesh(me);bm.free();me.update()
 while me.uv_layers:me.uv_layers.remove(me.uv_layers[0])
 for im in list(bpy.data.images):bpy.data.images.remove(im)
