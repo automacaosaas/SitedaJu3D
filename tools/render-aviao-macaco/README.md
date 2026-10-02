@@ -48,3 +48,9 @@ Arquivos do site gerados aqui: `product-aviaoscopia-cutout`, `aviaoscopia` (popu
 
 `frames.cjs` abre a vitrine local (`PORT=8844`, o servidor do painel), clica na peça, pausa as animações e grava quadros em instantes exatos
 (`TIMES=0,500,1000 node frames.cjs aviaoscopia saida 1440 900`; 5.º argumento `mobile`). `sheet.cjs` junta os quadros numa folha de contato.
+
+## Macaco na prévia 3D (provisório)
+
+`node export-glb.cjs ../../dist/assets/models/macacoscopio.glb 0.0001 monkey-glb.html` gera o macaco da prévia 3D a partir de
+`monkey.js`, com as cores pintadas passadas para os vértices (cores fixas, nada colorível). Fica até o arquivo de impressão real ser
+publicado; o passo a passo para trocá-lo está em `VITRINE-AVIAO-MACACO-QA.md`. `glb.js` é o gravador de GLB das duas exportações.

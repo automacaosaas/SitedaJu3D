@@ -107,6 +107,8 @@
 .hero-demo-button svg { width: 1.35em; height: 1.35em; flex: none; }
 /* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
 .palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
+/* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
+.copy-price .palette-soon { min-height: 34px; padding: 0 1em; font-size: clamp(12px, calc(var(--u) * .009), 14px); letter-spacing: .04em; }
 .slot[data-front=true] { cursor: pointer; }
 
 /* Produto + pilastra: um bloco só; a escala nasce na base para a pilastra não sair do chão. */

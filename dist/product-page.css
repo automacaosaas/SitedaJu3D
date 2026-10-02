@@ -129,6 +129,19 @@
 #product-dialog[data-cart-edit] .purchase-actions { grid-template-columns: 1fr; }
 #product-dialog[data-cart-edit] #add-to-cart { border-color: var(--pd-accent); background: var(--pd-accent); color: #fff; }
 
+/* ── Novidade sem venda (data-mode="preview", #produto/<peça>/3d): só para ver — as cores fixas da peça no lugar das escolhas
+   e um aviso no lugar da compra ─────────────────────────────────────────────────────────────────────────────────── */
+.pdp-fixed, .pdp-soon-bar { display: none; }
+#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-facts, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }
+#product-dialog[data-mode=preview] .pdp-fixed { display: grid; gap: 12px; }
+.pdp-fixed-colors { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.pdp-fixed-color { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 10px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13.5px; color: var(--pd-text); }
+.pdp-fixed-color i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; }
+.pdp-fixed-text { margin: 2px 0 0; font-size: 14.5px; line-height: 1.6; color: #5f525a; }
+#product-dialog[data-mode=preview] .pdp-soon-bar { display: grid; gap: 3px; margin: 0; }
+.pdp-soon-bar strong { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pd-accent); }
+.pdp-soon-bar span { font-size: 13.5px; color: var(--pd-muted); }
+
 /* ── Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular ── */
 .pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: min(460px, 46%); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: #fff; box-shadow: -18px 0 40px #14231b24; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 .pdp-sheet.is-open { transform: none; }

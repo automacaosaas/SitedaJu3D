@@ -82,7 +82,7 @@ assert.ok(field(timing[2], 'cta') + 340 <= 2200 && field(timing[2], 'head') > fi
 assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 520, 'montagem: até 2,7 s, e o equipamento só sobe depois de a peça se abrir');
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /icon\('palette'\) \+ '<span>Personalizar o meu<\/span>'/.test(demo), 'a demonstração usa o mesmo botão do banner (paleta, sem seta)');
-assert.ok(/entries\[i\]\.soon/.test(demo) && /aria-disabled/.test(demo) && /'Em breve'/.test(demo), 'novidade sem compra: o convite vira um aviso, sem link');
+assert.ok(/entries\[i\]\.soon/.test(demo) && /'Ver em 3D'/.test(demo) && demo.includes('#produto/${key}/3d'), 'novidade sem compra (cores fixas): o convite leva a ver a peça em 3D');
 for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
 for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 

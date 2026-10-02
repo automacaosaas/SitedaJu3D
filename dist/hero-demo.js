@@ -109,9 +109,10 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       if (config.head) dom.headImage.src = `assets/${config.head.src}`;
       // novidade sem compra: o convite vira um aviso, sem link
       const soon = !!entries[i].soon;
-      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Em breve' : 'Personalizar o meu';
-      if (soon) { dom.cta.removeAttribute('href'); dom.cta.setAttribute('aria-disabled', 'true'); dom.cta.tabIndex = -1; }
-      else { dom.cta.href = `#produto/${key}/personalizar`; dom.cta.removeAttribute('aria-disabled'); dom.cta.removeAttribute('tabindex'); }
+      // novidade sem compra (cores fixas): o convite é para ver a peça em 3D, sem personalizar
+      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : 'Personalizar o meu';
+      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : 'palette')));
+      dom.cta.href = soon ? `#produto/${key}/3d` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
       dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));

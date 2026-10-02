@@ -62,3 +62,40 @@ que parte da `juncao/pr2-auditoria` do Pedro (891e57a). Ainda não publicada.
   sobe até o banner e a demonstração abre; o endereço volta a `#produto/<peça>`. Da página Produtos, vai para `index.html#produto/macacoscopio/encaixe`.
 - Imagens novas `card-macacoscopio.webp` e `card-preview-macacoscopio.webp` (mesmo enquadramento dos outros cards).
 - Testes: `tests/storefront.mjs` confere o card da grade e do carrossel e o endereço; `tests/assets.mjs` e `tests/catalog.cjs` conhecem as novidades.
+
+## Macacoscópio em 3D e o caminho para a venda (02/10/2026)
+
+**Decisões do dono:** cores fixas (marrom, bege e amarelo; sem personalização); Pix com os mesmos 5% dos outros; prazo de 3 a 5 dias
+úteis; descrição atual ("Um macaquinho para acompanhar o olhar dos pequenos").
+
+**Já no site (ainda como novidade, sem venda):** "Ver em 3D" no banner (ação principal da novidade), no convite ao fim da demonstração
+e nos cards da coleção e da página Produtos. Abre a área do produto **só para ver** (`#produto/macacoscopio/3d`, `data-mode="preview"`):
+Foto | 3D, as cores fixas da peça e o aviso "Ainda não está à venda" no lugar do preço e da compra. `#produto/macacoscopio` continua só
+levando a vitrine até ele.
+
+**Modelo 3D PROVISÓRIO:** `dist/assets/models/macacoscopio.glb` é o macaco da vitrine (`tools/render-aviao-macaco/monkey-glb.html`,
+cores nas próprias faces, 286 mil triângulos, 1 MB). Ele dá lugar ao arquivo real assim que for publicado (veja abaixo).
+
+**Pendências para pôr à venda** (sem elas o macaco não pode entrar em `PRODUCTS`: o frete para de calcular para todos sem o peso,
+e a nota fiscal pausa sem o NCM):
+- **preço** (valor);
+- **peso embalado** e se cabe na caixa compartilhada (`api/_lib/shipping-config.js`);
+- **NCM** confirmado pela contadora (`api/_lib/fiscal.js`; os outros usam 3926.90.90);
+- **lâmpadas de fenda compatíveis** (texto da página; não inventar compatibilidade);
+- (opcional para vender) o **arquivo 3D real**.
+
+Com esses dados: o macaco passa de `SOON` para `PRODUCTS` com `parts: []` (cores fixas), preço no site e no servidor
+(`dist/commerce-config.js` e `api/_lib/catalog.js`), peso, NCM, página própria (`node tools/build-product-pages.cjs`), card com preço e
+carrinho, e a área do produto mostra as cores fixas com o preço e a compra.
+
+**Para o colaborador: publicar o modelo 3D real**
+1. Exportar o macaco montado como `.glb` (y para cima, frente virada para +z), com as cores nos materiais ou nos vértices e **sem
+   texturas**. Os materiais não podem se chamar `body`, `details` ou `engines` (esses nomes ficam coloríveis no site).
+2. Comprimir como os outros modelos (PERFORMANCE-QA.md):
+   `npx -y @gltf-transform/cli@4.5.1 meshopt entrada.glb dist/assets/models/macacoscopio.glb --level high --quantize-position 16`
+   (se ficar acima de 2,5 MB, antes: `simplify entrada.glb menor.glb --ratio 0 --error 0.0001`).
+3. Em `dist/asset-models.js`, trocar `?v=provisorio1` por um valor novo (os navegadores não reaproveitam o arquivo antigo) e apagar o
+   comentário "PROVISÓRIO".
+4. `npm test`: `tests/asset-models.mjs` confere que o macaco carrega, não tem parte colorível, assenta na pilastra e cabe nela;
+   `tests/model-framing.mjs`, que não corta em nenhuma rotação; `tests/assets.mjs`, a compressão e o limite de tamanho.
+   Se preferir, suba o STL ou o 3MF em `design/modelos/macacoscopio/` (fora do site publicado) e peça a conversão.

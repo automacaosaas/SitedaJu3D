@@ -5,7 +5,7 @@ import {registerHooks} from 'node:module';
 registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.min.js',import.meta.url).href:specifier,context);}});
 const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
-const {PRODUCTS,PALETTE}=await import('../dist/products.js');
+const {PRODUCTS,PALETTE,SOON}=await import('../dist/products.js');
 const {createAssetModel,PRESENTATION_SCALE}=await import('../dist/asset-models.js');
 // The native renderer decodes images in browser checks; no image shim affects geometry.
 const originalParse=GLTFLoader.prototype.parseAsync;
@@ -51,6 +51,15 @@ try{
    assert.ok(hits(.27,-.1).length>0,'Solid frame remains around the openings');
   }
   model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
+ }
+ // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
+ for(const key of Object.keys(SOON)){
+  const model=await createAssetModel(key,{},new AbortController().signal);
+  assert.equal(model.parts.size,0,`${key}: fixed colours, no selectable part`);
+  model.group.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model.group);
+  assert.ok(Math.abs(bounds.min.y+1.9)<.001&&Math.abs(bounds.max.y-bounds.min.y-4.1)<.001,`${key}: rests on the pedestal at the shared height`);
+  for(const x of [bounds.min.x,bounds.max.x])for(const z of [bounds.min.z,bounds.max.z])assert.ok(Math.hypot(x,z)<1.9,`${key}: stands within the pedestal`);
+  model.dispose();console.log(`PASS ${key}: novelty model loads, fixed colours and consistent bounds.`);
  }
  const aborted=new AbortController();aborted.abort();await assert.rejects(createAssetModel('borboletoscopio',{},aborted.signal),{name:'AbortError'});
 }finally{globalThis.fetch=originalFetch;GLTFLoader.prototype.parseAsync=originalParse;}

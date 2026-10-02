@@ -1,16 +1,17 @@
-// node export-glb.cjs [out.glb] [error] — the 3D preview of the airplane from the real CAD (needs serve.cjs on 8851):
+// node export-glb.cjs [out.glb] [error] [page] — a 3D preview of the site (needs serve.cjs on 8851). Default: the airplane from the real CAD;
+// the provisional Macacoscópio: node export-glb.cjs ../../dist/assets/models/macacoscopio.glb 0.0001 monkey-glb.html
 // 1. plane.html?export=glb assembles the STL parts as in the renders and writes a welded GLB (read here in slices);
 // 2. gltf-transform 4.5.1 (the process of PERFORMANCE-QA.md): simplify with an error limit (detail kept where the shape has it),
 //    then meshopt compression with 16-bit positions. Prints the sizes and the coordinates the model tests use. The cockpit pane stands
 //    0.5 mm off the skin here (0.2 in the renders): at the viewer's depth precision a closer pane flickers through the shell.
 const fs = require('fs'), path = require('path'), {execFileSync} = require('child_process');
 const {withBrowser} = require('./cdp.cjs');
-const [out = path.join(__dirname, '..', '..', 'dist', 'assets', 'models', 'aviaoscopia.glb'), error = '0.00007'] = process.argv.slice(2);
+const [out = path.join(__dirname, '..', '..', 'dist', 'assets', 'models', 'aviaoscopia.glb'), error = '0.00007', page = 'plane.html?export=glb&passes=1&glift=.5&gdepth=.35'] = process.argv.slice(2);
 const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'glb-'));
 const raw = path.join(tmp, 'raw.glb'), simple = path.join(tmp, 'simple.glb');
 withBrowser(async b => {
   await b.viewport(800, 800);
-  await b.goto('http://127.0.0.1:8851/plane.html?export=glb&passes=1&glift=.5&gdepth=.35', {wait: 300});
+  await b.goto(`http://127.0.0.1:8851/${page}`, {wait: 300});
   const started = Date.now();
   while (Date.now() - started < 400000) { try { if (await b.eval('window.done === true')) break; } catch {} await b.sleep(500); }
   const info = await b.eval('window.info'), length = await b.eval('window.glbB64.length');

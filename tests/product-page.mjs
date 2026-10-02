@@ -36,5 +36,9 @@ assert(/\.pdp-sheet-tabs button \{ min-height: 44px;/.test(css) && /\.pdp-sheet-
 assert(/@media \(prefers-reduced-motion: reduce\) \{\s*\.pdp-sheet/.test(css));
 assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-sheet \{ top: auto; left: 0;/.test(css), 'no celular o painel sobe de baixo');
 assert(html.includes('<link rel="stylesheet" href="product-page.css">'));
+// Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
+assert(js.includes("dialog.dataset.mode=soon?'preview':'compact'") && js.includes("if(!PRODUCTS[key]&&!(SOON[key]&&step==='3d'))") && js.includes('if(!PRODUCTS[key])return null;'), 'novidade: modo só para ver, pela rota /3d');
+assert(dialog.includes('id="fixed-colors"') && dialog.includes('<p class="pdp-soon-bar">'), 'novidade: as cores fixas e o aviso no lugar da compra');
+assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-facts, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade: sem escolha de cor, preço nem compra');
 
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');

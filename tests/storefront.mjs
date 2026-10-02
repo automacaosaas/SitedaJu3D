@@ -26,12 +26,14 @@ const html = string => string.replace(/ /g, '&nbsp;');
     assert(id && SOON[id], `novelty card for a known novelty: ${id}`);
     assert(card.includes(`<h2><a href="${demo}">${SOON[id].title}</a></h2>`) && card.includes(`<p class="product-grid-sub">${SOON[id].subtitle}</p>`), `${id}: name and subtitle`);
     assert(card.includes('<span class="product-soon">Em breve</span>') && card.includes(`<a class="product-customize product-see-fit" href="${demo}">`) && card.includes('<span>Ver encaixado</span>'), `${id}: "Em breve" and "Ver encaixado"`);
+    assert(card.includes(`<a class="product-see-3d" href="index.html#produto/${id}/3d">`) && card.includes('<span>Ver em 3D</span>'), `${id}: "Ver em 3D" opens the piece to turn around`);
     assert(!/R\$|no Pix|data-add-product|personalizar|\.html"/.test(card.replace(/index\.html#/g, '#')), `${id}: no price, cart, customization or page of its own`);
     for (const name of [`card-${id}.webp`, `card-preview-${id}.webp`]) assert(fs.existsSync(path.join(root, 'dist/assets', name)), name);
   }
   const catalog = read('dist/catalog.js'), banner = read('dist/carousel.js');
   assert(/const entries = \[\.\.\.Object\.entries\(PRODUCTS\), \.\.\.Object\.entries\(SOON\)\]/.test(catalog) && /if \(product\.soon\) return soonCard\(\{id, product\}\);/.test(catalog), 'the collection carousel shows the novelties after the products');
   assert(/<span class="product-soon">Em breve<\/span>[^`]*<a class="product-customize product-see-fit" href="\$\{href\}">\$\{icon\('play'\)\}<span>Ver encaixado<\/span><\/a>/.test(catalog) && !/function soonCard[^}]*data-add-product/.test(catalog), 'carousel novelty card: "Em breve" and "Ver encaixado", no cart');
+  assert(catalog.includes("<a class=\"product-see-3d\" href=\"${productHref(id)}/3d\">${icon('cube')}<span>Ver em 3D</span></a>") && banner.includes('${soon ? `<a class="palette-button" href="#produto/${key}/3d" data-role="palette">'), '"Ver em 3D" on the collection card and as the main action of the novelty in the showcase');
   assert(/if \(step !== 'encaixe' \|\| index < 0\) return;/.test(banner) && /history\.replaceState\(null, '', `#produto\/\$\{keys\[index\]\}`\)/.test(banner) && /demoFromRoute\(\);   \/\/ chegou da página Produtos/.test(banner), '#produto/<piece>/encaixe opens the demonstration and the address goes back to normal');
   assert.equal(cards.length, Object.keys(PRODUCTS).length, 'one pre-rendered card per product');
   for (const card of cards) {

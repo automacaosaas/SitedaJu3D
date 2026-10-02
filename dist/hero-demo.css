@@ -79,9 +79,7 @@
 .demo-cta { --accent: var(--theme-accent, #25664c); --strong: var(--theme-accent-strong, #1e523d); --glow: var(--theme-glow, rgba(37, 102, 76, .32)); --text: var(--theme-text, #10281e);
   position: absolute; left: calc(50% + var(--size) * .5 + clamp(28px, 5cqw, 96px)); top: var(--cy); margin-top: -1.28em; box-shadow: 0 8px 18px var(--glow); pointer-events: auto; }
 .demo-cta svg { animation: demo-nudge 1.9s ease-in-out infinite; }
-/* Novidade sem compra: o convite vira um aviso, sem seta nem clique. */
-.demo-cta.is-soon { pointer-events: none; cursor: default; background: rgba(255, 255, 255, .86); color: var(--theme-accent, #8a4a1f); box-shadow: 0 0 0 1.5px var(--theme-accent, #8a4a1f) inset, 0 8px 18px var(--glow); }
-.demo-cta.is-soon svg { display: none; }
+/* Novidade sem compra: o convite leva a ver a peça em 3D (#produto/<peça>/3d), no mesmo desenho do convite dos outros produtos. */
 @keyframes demo-nudge { 0%, 100% { transform: translateX(-1px); opacity: .8; } 50% { transform: translateX(2px); opacity: 1; } }
 @media (hover: hover) { .demo-close:hover { background: #fff; transform: scale(1.05); } }
 

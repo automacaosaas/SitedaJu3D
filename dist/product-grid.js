@@ -34,7 +34,7 @@ export function soonGridCard(id) {
     + `<h2><a href="${href}">${product.title}</a></h2><p class="product-grid-sub">${product.subtitle}</p>`
     + `<p class="product-grid-colors"><span class="sr-only">Cores originais: ${product.colors.map(c => c.name).join(', ')}</span><span class="product-swatches" aria-hidden="true">${product.colors.map(c => `<i style="--swatch:${c.hex}" title="${c.name}"></i>`).join('')}</span></p>`
     + `<p class="product-grid-soon-note">Novidade · em breve</p>`
-    + `<a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a></div></article>`;
+    + `<a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="index.html#produto/${id}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></article>`;
 }
 
 export function productGrid(key) {

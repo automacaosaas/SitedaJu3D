@@ -1,9 +1,10 @@
-import {PRODUCTS,PALETTE,ALIASES,defaults,color,validSelection} from './products.js';
+import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection} from './products.js';
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
+// Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
@@ -21,27 +22,33 @@ export function presetSelection(key,preset,random=Math.random){
 export const pixPrice=cents=>cents-Math.round(cents*COMMERCE.pixDiscountBps/10000);
 // Link de uma combinação (auditoria D3): #produto/<peça>/personalizar/<cor>.<cor>… reabre a peça nessas cores.
 export const comboPath=(key,selection)=>`#produto/${key}/personalizar/${PRODUCTS[key].parts.map(part=>selection[part.id]).join('.')}`;
-export function comboFrom(key,text){const ids=String(text||'').split('.');if(!ids[0])return null;return validSelection(key,Object.fromEntries(PRODUCTS[key].parts.map((part,i)=>[part.id,ids[i]])));}
+export function comboFrom(key,text){if(!PRODUCTS[key])return null;const ids=String(text||'').split('.');if(!ids[0])return null;return validSelection(key,Object.fromEntries(PRODUCTS[key].parts.map((part,i)=>[part.id,ids[i]])));}
 function save(){try{localStorage.setItem(storageKey,JSON.stringify(selections));}catch{}}
-function hexColors(){return Object.fromEntries(Object.entries(selections[activeProduct]).map(([id,value])=>[id,color(value).hex]));}
+const product=key=>PRODUCTS[key]||SOON[key],preview=()=>!PRODUCTS[activeProduct]&&!!SOON[activeProduct];
+function hexColors(){if(!selections[activeProduct])return {};return Object.fromEntries(Object.entries(selections[activeProduct]).map(([id,value])=>[id,color(value).hex]));}
 function announce(message){$('#color-announcement').textContent=message;}
 function fillProduct(key){
-  const p=PRODUCTS[key],price=COMMERCE.prices[key];
+  const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
+  $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
-  $('#dialog-image').src=`assets/${p.image}`;$('#dialog-image').alt=`${p.title} sobre uma pilastra branca — imagem de apresentação`;$('#fixed-note').textContent=p.fixed;
-  $('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#pdp-production').textContent=COMMERCE.productionLabel;
+  $('#dialog-image').src=`assets/${p.image}`;$('#dialog-image').alt=`${p.title} sobre uma pilastra branca — imagem de apresentação`;$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
+  if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
+  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
+  $('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }
 function syncProduct(){
   const [raw,step,combo]=location.hash.replace('#produto/','').split('/'),key=ALIASES[raw]||raw;
-  if(!PRODUCTS[key]){if(dialog.open)dialog.close();document.title='Ju imprime pra mim • Coleção 3D';return;}
+  // a novidade só abre aqui pela rota /3d; #produto/<novidade> continua só levando a vitrine até ela
+  if(!PRODUCTS[key]&&!(SOON[key]&&step==='3d')){if(dialog.open)dialog.close();document.title='Ju imprime pra mim • Coleção 3D';return;}
+  const soon=!PRODUCTS[key];
   // Uma combinação compartilhada vira as cores da peça; o endereço volta ao normal para não prender as próximas escolhas.
   const shared=step==='personalizar'?comboFrom(key,combo):null;
   if(shared){selections[key]=shared;save();history.replaceState(null,'',`#produto/${key}/personalizar`);if(key===activeProduct&&dialog.open)updateControls();}
-  const changed=key!==activeProduct||!dialog.open;activeProduct=key;dialog.dataset.mode='compact';
-  if(changed){fillProduct(key);selectedPart='body';closeSheet(false);renderControls();}
+  const changed=key!==activeProduct||!dialog.open;activeProduct=key;dialog.dataset.mode=soon?'preview':'compact';
+  if(changed){fillProduct(key);selectedPart='body';closeSheet(false);if(!soon)renderControls();}
   if(!dialog.open)dialog.showModal();lockPage();
-  if(step==='personalizar'){if(changed||view!=='model')setView('model');requestAnimationFrame(()=>$('#palette [aria-checked="true"]')?.focus({preventScroll:true}));}
+  if(step==='personalizar'||step==='3d'){if(changed||view!=='model')setView('model');if(!soon)requestAnimationFrame(()=>$('#palette [aria-checked="true"]')?.focus({preventScroll:true}));}
   else if(changed)setView('photo');
 }
 let lockedScroll=null;
@@ -54,7 +61,7 @@ async function setView(next){
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
   $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
-  $('.view-note').textContent=next==='photo'?'Imagem de apresentação • cores originais.':'Arraste para girar · as cores mudam na hora.';
+  $('.view-note').textContent=next==='photo'?'Imagem de apresentação • cores originais.':preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
   dialog.dataset.view=next;
   if(next==='photo'){viewer?.hide();return;}
   $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
@@ -62,7 +69,7 @@ async function setView(next){
     viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;
     if(id!==request||!dialog.open||view!=='model')return;
     viewer??=new ProductViewer($('#viewer-host'),viewerError);
-    const shown=await viewer.show(activeProduct,hexColors(),PRODUCTS[activeProduct].title);
+    const shown=await viewer.show(activeProduct,hexColors(),product(activeProduct).title);
     if(!shown||id!==request||!dialog.open||view!=='model')return;
     $('.viewer-message').hidden=true;$('.viewer-tools').hidden=false;
   }catch(error){

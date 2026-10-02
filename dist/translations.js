@@ -753,6 +753,11 @@ Pausar mensagens|Pause messages|Pausar mensajes
 Retomar mensagens|Resume messages|Reanudar mensajes
 Personalizar o meu|Customize mine|Personalizar el mío
 Ver encaixado|See it fitted|Ver encajado
+Ver em 3D|See it in 3D|Ver en 3D
+Ver o Macacoscópio em 3D|See the Macacoscópio in 3D|Ver el Macacoscópio en 3D
+Cores da peça|The piece's colors|Colores de la pieza
+Ainda não está à venda. Gire a peça e veja cada detalhe.|Not on sale yet. Turn the piece and see every detail.|Aún no está a la venta. Gira la pieza y mira cada detalle.
+Arraste para girar e ver cada detalhe.|Drag to rotate and see every detail.|Arrastra para girar y ver cada detalle.
 Ver o Macacoscópio encaixado|See the Macacoscópio fitted|Ver el Macacoscópio encajado
 Marrom|Brown|Marrón
 Bege|Beige|Beige
