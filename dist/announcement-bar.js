@@ -1,8 +1,9 @@
 import {COMMERCE} from './commerce-config.js';
 
 // Rotating bar above the header (envio, Pix e cartão, prazo). Five seconds per message, each one rising into place. It stops while
-// the pointer or the keyboard is on it; the up/down arrows at its side move one message and hand the bar over to the visitor (it no
-// longer moves by itself: the way to stop it, WCAG 2.2.2); it never moves by itself with prefers-reduced-motion.
+// the pointer or the keyboard is on it; the arrows (up on the left, down on the right, the message centred between them) move one
+// message and hand the bar over to the visitor (it no longer moves by itself: the way to stop it, WCAG 2.2.2); it never moves
+// by itself with prefers-reduced-motion.
 // Colors follow the active product theme (--theme-wash / --theme-accent, see journey.js).
 // The Pix symbol is the official one (path from Simple Icons, CC0), filled; the other symbols are line drawings.
 export const PIX_PATH = 'M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156';
@@ -44,9 +45,9 @@ export function mountAnnouncementBar({doc = document, win = window} = {}) {
   const bar = doc.createElement('div');
   bar.className = 'announce-bar';
   bar.setAttribute('role', 'region'); bar.setAttribute('aria-roledescription', 'carrossel'); bar.setAttribute('aria-label', 'Vantagens da loja');
-  bar.innerHTML = `<div class="announce-track" aria-live="off">${MESSAGES.map((m, i) => `<p class="announce-msg" role="group" aria-roledescription="mensagem" aria-label="${i + 1} de ${MESSAGES.length}"><span class="announce-icons">${m.icons.map(svg).join('')}</span><strong>${m.title}</strong><span class="announce-text">${m.text}</span></p>`).join('')}</div>`
-    + `<span class="announce-nav"><button type="button" class="announce-btn" data-announce="prev" aria-label="Mensagem anterior">${svg('up')}</button>`
-    + `<button type="button" class="announce-btn" data-announce="next" aria-label="Próxima mensagem">${svg('down')}</button></span>`;
+  bar.innerHTML = `<button type="button" class="announce-btn" data-announce="prev" aria-label="Mensagem anterior">${svg('up')}</button>`
+    + `<div class="announce-track" aria-live="off">${MESSAGES.map((m, i) => `<p class="announce-msg" role="group" aria-roledescription="mensagem" aria-label="${i + 1} de ${MESSAGES.length}"><span class="announce-icons">${m.icons.map(svg).join('')}</span><strong>${m.title}</strong><span class="announce-text">${m.text}</span></p>`).join('')}</div>`
+    + `<button type="button" class="announce-btn" data-announce="next" aria-label="Próxima mensagem">${svg('down')}</button>`;
   const page = doc.querySelector('.page');
   if (page) page.before(bar); else doc.body.prepend(bar);
 

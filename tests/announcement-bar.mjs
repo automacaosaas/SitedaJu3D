@@ -55,11 +55,13 @@ assert.match(css, /prefers-reduced-motion:reduce\)\{\.announce-msg/, 'reduced mo
 const bar = await read('announcement-bar.js');
 assert.match(bar, /aria-live', rotator\.stopped \? 'polite' : 'off'/, 'the live region speaks only when nothing moves by itself');
 assert.doesNotMatch(bar, /data-announce="pause"|Pausar mensagens/, 'no pause button: the arrows stop it');
-assert.match(bar, /<span class="announce-nav"><button[^]*data-announce="prev" aria-label="Mensagem anterior">\$\{svg\('up'\)\}/, 'the arrows sit together at the side, pointing up and down (the messages rise)');
-assert.match(bar, /data-announce="next" aria-label="Próxima mensagem">\$\{svg\('down'\)\}/);
+assert.match(bar, /bar\.innerHTML = `<button type="button" class="announce-btn" data-announce="prev" aria-label="Mensagem anterior">\$\{svg\('up'\)\}<\/button>`\s*\+ `<div class="announce-track"/, 'the up arrow on the left of the message');
+assert.match(bar, /<\/div>`\s*\+ `<button type="button" class="announce-btn" data-announce="next" aria-label="Próxima mensagem">\$\{svg\('down'\)\}<\/button>`;/, 'the down arrow on the right');
+assert.doesNotMatch(bar, /announce-nav/, 'the arrows are no longer side by side');
 const {PIX_PATH} = await import('../dist/announcement-bar.js');
 assert.ok(PIX_PATH.startsWith('M5.283 18.36') && /pix: `<path fill="currentColor" stroke="none" d="\$\{PIX_PATH\}"\/>`/.test(bar), 'the official Pix symbol, filled');
 assert.ok((await read('icons.js')).includes(PIX_PATH), 'the same Pix symbol in the cart and at checkout');
-assert.match(css, /\.announce-bar\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;[^}]*padding:0 6px 0 94px/, 'the message stays centred on the page (room on the left as wide as the arrows)');
+assert.match(css, /\.announce-bar\{display:grid;grid-template-columns:44px minmax\(0,1fr\) 44px;[^}]*padding:0 6px;/, 'arrows on opposite sides, the message centred between them');
+assert.match(css, /@media\(max-width:600px\)\{\.announce-bar\{padding:0\}/, 'the same on the phone');
 
 console.log('PASS: announcement bar — rotation every 5 s with wrap-around, up/down arrows that take over (no pause button), hold on pointer/focus, reduced motion, messages and the official Pix symbol, shop pages only, 44px controls.');

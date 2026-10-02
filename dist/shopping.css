@@ -15,7 +15,7 @@
 .purchase-free-ship{margin:0 0 8px;font-size:12px;color:#25664c;font-weight:600}
 
 /* Barra rotativa acima do cabeçalho (announcement-bar.js): envio, Pix e cartão, prazo. Cores do tema ativo. */
-.announce-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;min-height:44px;padding:0 6px 0 94px;background:var(--theme-wash,#e5f5ec);color:var(--theme-accent,#25664c);border-bottom:1px solid color-mix(in srgb,var(--theme-accent,#25664c) 14%,transparent);transition:background-color .6s ease,color .6s ease;position:relative;z-index:31}
+.announce-bar{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;min-height:44px;padding:0 6px;background:var(--theme-wash,#e5f5ec);color:var(--theme-accent,#25664c);border-bottom:1px solid color-mix(in srgb,var(--theme-accent,#25664c) 14%,transparent);transition:background-color .6s ease,color .6s ease;position:relative;z-index:31}
 .announce-btn{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:inherit;padding:0}
 .announce-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .announce-btn:hover{background:color-mix(in srgb,#fff 60%,transparent)}
@@ -25,11 +25,10 @@
 .announce-msg.is-on{opacity:1;transform:none;pointer-events:auto}
 .announce-msg.is-out{opacity:0;transform:translateY(-100%)}
 /* As setas ficam juntas na lateral, no sentido do movimento (as mensagens sobem); a de cima traz a anterior descendo. */
-.announce-nav{display:flex}
 .announce-bar[data-direction=down] .announce-msg{transform:translateY(-100%)}.announce-bar[data-direction=down] .announce-msg.is-out{transform:translateY(100%)}.announce-bar[data-direction=down] .announce-msg.is-on{transform:none}
 .announce-msg strong{font-size:12px;font-weight:700;letter-spacing:.09em}
 .announce-text{color:var(--theme-text,#282326);opacity:.78}
 .announce-icons{display:flex;gap:4px}
 .announce-icons svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.announce-icons svg:has(path[fill]){width:18px;height:18px}
-@media(max-width:600px){.announce-bar{padding:0 0 0 10px}.announce-msg{gap:7px;font-size:12px}.announce-msg strong{font-size:12px;letter-spacing:.06em}.announce-text{display:none}.announce-icons svg{width:17px;height:17px}}
+@media(max-width:600px){.announce-bar{padding:0}.announce-msg{gap:7px;font-size:12px}.announce-msg strong{font-size:12px;letter-spacing:.06em}.announce-text{display:none}.announce-icons svg{width:17px;height:17px}}
 @media(prefers-reduced-motion:reduce){.announce-msg,.announce-msg.is-out,.announce-bar[data-direction] .announce-msg{transform:none;transition:opacity .2s}}
