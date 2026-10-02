@@ -39,6 +39,7 @@
   background: linear-gradient(90deg, rgba(0, 0, 0, var(--tool-dim-l, 0)) 0%, transparent 40%, transparent 60%, rgba(0, 0, 0, var(--tool-dim-r, 0)) 100%),
     linear-gradient(90deg, var(--demo-bounce) 0%, transparent 22%, transparent 78%, var(--demo-bounce) 100%), linear-gradient(transparent 55%, var(--demo-bounce));
   -webkit-mask: var(--tool-src) 0 0 / 100% 100% no-repeat; mask: var(--tool-src) 0 0 / 100% 100% no-repeat; }
+.hero-demo[data-plain-tool] .demo-tool::after { display: none; }
 /* Sombra do equipamento nas paredes internas da abertura (recortada pela camada de trás da peça). */
 .demo-cast { opacity: .5; -webkit-mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; mask: var(--back-src) 50% calc(var(--size) * var(--back-shift, 0)) / calc((1 - var(--back-depth, 0)) * 100%) 100% no-repeat; }
 .demo-cast-image { display: block; height: auto; filter: brightness(0) blur(calc(var(--size) * .012)); translate: calc(var(--size) * .008) calc(var(--size) * .012); }
@@ -85,7 +86,7 @@
 @media (hover: hover) { .demo-close:hover { background: #fff; transform: scale(1.05); } }
 
 @media (max-width: 900px) {
-  .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom, 1)); --cy: calc(40% + var(--cy-shift-compact, 0%)); }
+  .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom-compact, var(--demo-zoom, 1))); --cy: calc(40% + var(--cy-shift-compact, 0%)); }
   .demo-callout[data-layout="wide"] { display: none; }
   .demo-callout[data-layout="compact"] { display: block; }
   .demo-callout-label { letter-spacing: .16em; }

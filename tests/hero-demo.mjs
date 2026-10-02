@@ -34,8 +34,9 @@ for (const [key, {demo}] of demos) {
   assert.ok(tool.fade[0] < tool.fade[1], `${key}: o equipamento se dissolve de cima para baixo`);
   assert.ok(!tool.turn || Math.abs(tool.turn) <= 20, `${key}: giro do equipamento discreto (acompanha a foto da peça)`);
   assert.ok(!tool.shift || Math.abs(tool.shift) < .05, `${key}: deslocamento do equipamento discreto`);
-  // o cabo some logo abaixo da peça (o foco fica no encaixe); num equipamento em duas partes a carcaça embaixo da peça faz parte da cena
-  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < (demo.head ? 1.8 : 1.25), `${key}: o equipamento se dissolve logo abaixo da peça`);
+  // o cabo some logo abaixo da peça (o foco fica no encaixe); num equipamento em duas partes a carcaça embaixo da peça faz parte da cena,
+  // e na montagem a régua aparece inteira, com o cabo nítido (pedido de 01/10/2026: nada de cabo desbotando)
+  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < (demo.head ? 1.8 : demo.assemble ? 1.4 : 1.25), `${key}: o equipamento se dissolve logo abaixo da peça`);
   for (const name of ['back', 'front']) if (layers[name]) assert.ok(fs.existsSync(path.join(root, 'dist/assets', layers[name])), `${key}: camada ${name} existe`);
   assert.ok(!layers.depth || (layers.back && layers.depth > 0 && layers.depth < .3), `${key}: recuo da camada de trás discreto`);
   for (const item of demo.callouts || []) {
@@ -43,11 +44,13 @@ for (const [key, {demo}] of demos) {
     for (const {points, align} of [item.wide, item.compact]) assert.ok(points.length >= 2 && points.every(p => p.length === 2) && ['left', 'right', 'below'].includes(align), `${key}: linha da chamada ${item.label}`);
   }
   for (const name of ['glow', 'halo', 'accent', 'shade']) assert.match(demo[name], /^#[0-9a-f]{6}$/i, `${key}: cor ${name}`);
-  assert.ok(!demo.zoom || (demo.zoom >= .7 && demo.zoom <= 1.25), `${key}: zoom discreto`);
+  // zoom: um número, ou {wide, compact} quando o desktop e o celular pedem enquadramentos diferentes
+  for (const z of [demo.zoom?.wide ?? demo.zoom, demo.zoom?.compact]) assert.ok(z === undefined || (z >= .7 && z <= 1.25), `${key}: zoom discreto`);
   assert.ok(demo.message && translate(demo.message, 'en') !== demo.message && translate(demo.message, 'es') !== demo.message, `${key}: aviso traduzido`);
 }
 assert.equal(showcase('produto-sem-demo').demo, null, 'produto sem demo continua abrindo o popup');
 assert.ok(showcase('aviaoscopia').demo?.assemble, 'o avião é montado: o equipamento sobe por entre as duas metades, que se fecham em volta dele');
+assert.ok(SHOWCASE.aviaoscopia.demo.tool.bounce === false && SHOWCASE.aviaoscopia.demo.tool.fade[0] >= .98 && read('hero-demo.css').includes('.hero-demo[data-plain-tool] .demo-tool::after { display: none; }'), 'régua inteira e nítida: o cabo não desbota nem recebe o reflexo colorido');
 assert.ok(showcase('borboletoscopio').demo);
 assert.equal(SHOWCASE.borboletoscopio.demo.layers.front, PRODUCTS.borboletoscopio.catalogImage, 'a frente da demonstração é a própria imagem da vitrine');
 assert.deepEqual(SHOWCASE.borboletoscopio.demo.callouts.map(item => item.label), ['Borboletoscópio', 'Retinoscópio'], 'ficha técnica: só os dois rótulos pedidos');

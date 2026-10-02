@@ -79,25 +79,27 @@ export const SHOWCASE = {
       // assemble.open/apart = vista explodida enquanto a régua sobe: a metade da frente vem para perto (z em px de perspectiva) e a de trás recua;
       // x/y em % do quadrado, rx/ry em graus.
       assemble:{open:{z:96, x:-1.5, y:-3, rx:5, ry:-7}, apart:{z:-118, x:1.5, y:2.5, rx:-2, ry:6}},
-      tool:{src:'aviaoscopia-ruler.webp', width:.2201, top:.1762, ratio:.1865, fade:[.74, .9]},
+      // a régua aparece inteira e nítida: fade só na última linha de pixels e sem o reflexo colorido por cima (bounce: false)
+      tool:{src:'aviaoscopia-ruler.webp', width:.2233, top:.1675, ratio:.1872, fade:[.99, 1], bounce:false},
       layers:{front:'aviaoscopia-front.webp', back:'aviaoscopia-back.webp'},
       callouts:[
         {label:'Aviãoscopia', wide:{points:[[.283, .522], [.17, .6], [-.04, .6]], align:'left'}, compact:{points:[[.283, .522], [.2, .66], [.2, 1.05]], align:'below'}},
-        {label:'Régua de esquiascopia', wide:{points:[[.5, 1.04], [.43, 1.09], [-.04, 1.09]], align:'left'}, compact:{points:[[.5, 1.04], [.74, 1.04], [.74, 1.08]], align:'below'}}
+        {label:'Régua de esquiascopia', wide:{points:[[.5, 1.04], [.43, 1.09], [-.04, 1.09]], align:'left'}, compact:{points:[[.5, 1.338], [.5, 1.39]], align:'below'}}
       ],
-      glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
+      // desktop: peça e régua inteira cabem na área do banner (o cabo nunca chega à borda que desbota); no celular, o enquadramento de sempre
+      zoom:{wide:.76, compact:.84}, cy:{wide:-7, compact:-4}, ctaY:{compact:1.03}, glow:'#f4fbff', halo:'#5aa7d9', accent:'#efcf59', shade:'#0e1c3d',
       message:'Aviãoscopia fechada em volta da régua de esquiascopia.'
     }
   },
   macacoscopio:{
-    art:{h:.87, bottom:.055, foot:.311, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
+    art:{h:.8708, bottom:.0542, foot:.311, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
     theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
     demo:{
       // A lâmpada de fenda portátil em duas partes, renderizadas com a câmera da foto da vitrine (tools/render-aviao-macaco/monkeylamp.html):
       // tool = base, carcaça e coluna preta, que sobe por dentro do macaco; head = prisma e cabeça binocular, que descem por cima (top negativo:
       // acima do quadrado). As duas ficam atrás do macaco, como na peça montada.
-      tool:{src:'macacoscopio-base.webp', width:.7959, top:.0933, ratio:.3978, fade:[.66, .8]},
-      head:{src:'macacoscopio-head.webp', width:.6603, top:-.1762, ratio:1.6761},
+      tool:{src:'macacoscopio-base.webp', width:.799, top:.0925, ratio:.3981, fade:[.66, .8]},
+      head:{src:'macacoscopio-head.webp', width:.6635, top:-.1778, ratio:1.6808},
       callouts:[
         {label:'Macacoscópio', wide:{points:[[.43, .59], [.25, .5], [-.04, .5]], align:'left'}, compact:{points:[[.43, .59], [.06, .86], [.06, 1.62]], align:'below'}},
         {label:'Lâmpada de fenda', wide:{points:[[.61, .02], [.78, -.06], [1.04, -.06]], align:'right'}, compact:{points:[[.69, 1.26], [.94, 1.26], [.94, 1.62]], align:'below'}}

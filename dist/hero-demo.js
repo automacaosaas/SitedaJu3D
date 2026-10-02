@@ -90,7 +90,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       const vars = {'--tool-w': tool.width, '--tool-top': tool.top, '--tool-ratio': tool.ratio, '--tool-fade-a': tool.fade[0], '--tool-fade-b': tool.fade[1], '--tool-src': `url("${toolSrc}")`,
         '--tool-turn': `${turn}deg`, '--tool-shift': tool.shift || 0, [far[0]]: turn ? Math.min(.45, Math.abs(turn) * .04) : 0, [far[1]]: 0, '--tool-side': `${-Math.sign(turn) * Math.min(2, Math.abs(turn) * .16)}px`,
         '--demo-core': withAlpha(config.glow, .95), '--demo-halo': withAlpha(config.halo, .3), '--demo-halo-soft': withAlpha(config.halo, .1), '--demo-accent': withAlpha(config.accent, .12),
-        '--demo-bounce': withAlpha(config.halo, .85), '--demo-vignette': withAlpha(config.shade, .16), '--demo-zoom': config.zoom || 1, '--front-src': `url("${front}")`,
+        '--demo-bounce': withAlpha(config.halo, .85), '--demo-vignette': withAlpha(config.shade, .16), '--demo-zoom': config.zoom?.wide ?? config.zoom ?? 1, '--demo-zoom-compact': config.zoom?.compact ?? config.zoom?.wide ?? config.zoom ?? 1, '--front-src': `url("${front}")`,
         '--cy-shift': `${config.cy?.wide ?? 0}%`, '--cta-y-compact': config.ctaY?.compact ?? .78, '--cy-shift-compact': `${config.cy?.compact ?? config.cy?.wide ?? 0}%`,
         ...(config.head ? {'--head-w': config.head.width, '--head-top': config.head.top, '--head-ratio': config.head.ratio} : {})};
       // Camada de trás renderizada junto com a frente (depth 0) entra como veio; recortada de outra imagem (depth > 0) é
@@ -98,6 +98,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       if (layers.back) Object.assign(vars, {'--back-src': `url("assets/${layers.back}")`, '--back-depth': layers.depth || 0, '--back-shift': layers.depth ? .004 : 0});
       dom.stage.dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered';
       dom.stage.toggleAttribute('data-turned', !!turn);
+      // bounce: false — equipamento que já vem renderizado com a luz do estúdio (a régua): sem o reflexo colorido por cima, que lavaria o cabo preto
+      dom.stage.toggleAttribute('data-plain-tool', tool.bounce === false);
       for (const host of [dom.stage, dom.backdrop, dom.controls, dom.atmosphere]) for (const name in vars) host.style.setProperty(name, vars[name]);
       dom.cover.src = dom.drop.src = dom.shade.src = front;
       dom.back.hidden = dom.cast.hidden = !layers.back;

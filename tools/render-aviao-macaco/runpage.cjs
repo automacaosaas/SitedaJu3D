@@ -15,4 +15,4 @@ withBrowser(async b => {
   else fs.writeFileSync(out, Buffer.from((await b.eval('window.png')).split(',')[1], 'base64'));
   console.log('ok', Math.round((Date.now() - started) / 100) / 10 + 's', JSON.stringify(await b.eval('window.info || null')), b.consoleLog.filter(l => /error|exception/i.test(l)).slice(0, 3).join(' | '));
   if (process.env.SHOWLOG) console.log(b.consoleLog.join('\n'));
-}, {webgl: true, port: 9341});
+}, {webgl: true, port: Number(process.env.CDP_PORT) || 9400 + process.pid % 500});   // a port per run: two renders at once never share a browser

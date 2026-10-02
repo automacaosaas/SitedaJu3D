@@ -1,6 +1,21 @@
 # Aviãoscopia montado na vitrine + Macacoscópio (novidade)
 
-Branch `vitrine/aviao-macaco` (feita a partir de `integracao/mercado-pago`, 2026-10-01). Ainda não publicada.
+Feito na branch `vitrine/aviao-macaco` (a partir de `integracao/mercado-pago`, 2026-10-01) e levado para `vitrine/aviao-macaco-juncao`,
+que parte da `juncao/pr2-auditoria` do Pedro (891e57a). Ainda não publicada.
+
+## Ajustes pedidos depois (2026-10-01, segunda rodada)
+
+- **Macaco:** cabeça com o topo bem arredondado e um bojo leve, como a peça impressa. Orelhas em meia esfera, uma concha com o miolo bege
+  côncavo. Banana menor, centrada na parte de baixo da barriga e dentro dela.
+- **Avião:** as janelas da cabine eram um "tampão" plano posto sobre um nariz curvo; agora a face delas fica rente à curva do nariz, no lugar dos
+  furos (`drape` em `plane.html`). As duas metades do capacete vermelho vinham 4,8 mm afastadas do meio e soltas acima do topo; agora se
+  encontram no meio e assentam no topo (`capOn`), no mesmo tamanho.
+- **Régua:** o acrílico ganhou um contorno ardósia firme, e na demonstração a régua aparece inteira, com o cabo preto nítido (sem desbotar e
+  sem o reflexo colorido por cima: `tool.bounce: false`). No desktop o avião vem um pouco menor para a régua caber inteira (`zoom.wide`);
+  no celular o rótulo da régua fica centrado embaixo do cabo e o "Personalizar o meu" logo abaixo (`zoom.compact`, `ctaY`).
+- **Barra do topo:** símbolo oficial do Pix (também no carrinho e no pagamento), setas ▲▼ juntas na lateral e sem o botão de pausa. Usar uma
+  seta para a rotação automática, que também para com o mouse ou o foco em cima e não roda com movimento reduzido (WCAG 2.2.2).
+- **Prévia de link do avião** (`og-aviaoscopia.jpg`): a mesma arte, com o avião novo no lugar do antigo (`og-patch.html`).
 
 ## O que mudou
 
@@ -27,7 +42,7 @@ Branch `vitrine/aviao-macaco` (feita a partir de `integracao/mercado-pago`, 2026
 
 ## Verificação
 
-- 23 suítes verdes (`node tools/run-tests.mjs`).
+- 34 suítes verdes na branch da junção (`npm test`; eram 23 na branch original).
 - Chrome headless na vitrine local, quadros em instantes exatos: avião e macaco em 1280×720, 1440×900 e 1920×1080, e no celular/tablet em
   360×740, 390×844 e 820×1180. O encaixe do retinoscópio na borboleta continua igual.
 - Também conferidos: link direto `#produto/macacoscopio`, o ciclo das quatro vitrines, EN/ES, movimento reduzido, popup e card do avião,

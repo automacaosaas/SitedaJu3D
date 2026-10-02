@@ -13,7 +13,7 @@ const LABELS = [['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4'], ['5', '6', '7'
 const POWERS = [[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4], [5, 6, 7, 8, 9, 10, 12, 15]];
 export const RULER = {PLATE_W, THICK, TAB, ROW0, PITCH, COLS, HOLE_R, PLATE_BOTTOM, GRIP_TOP, GRIP_LEN, top: TAB, bottom: GRIP_TOP - GRIP_LEN};
 
-export function buildRuler({env: ENV = 1, acr = .05, print: withPrint = true} = {}) {
+export function buildRuler({env: ENV = 1, acr = .08, print: withPrint = true} = {}) {
   const root = new THREE.Group(), add = (o, {cast = true} = {}) => { o.castShadow = cast; o.receiveShadow = true; root.add(o); return o; };
   const holes = []; for (let r = 0; r < 8; r++) for (let c = 0; c < 2; c++) holes.push({x: COLS[c], y: ROW0 - r * PITCH, power: POWERS[c][r]});
 
@@ -24,10 +24,11 @@ export function buildRuler({env: ENV = 1, acr = .05, print: withPrint = true} = 
   outline.lineTo(nw, GRIP_TOP - 12); outline.lineTo(-nw, GRIP_TOP - 12); outline.lineTo(-nw, NECK_TOP - NECK_CURVE);
   outline.bezierCurveTo(-nw, NECK_TOP - NECK_CURVE * .45, -hw, NECK_TOP - NECK_CURVE * .55, -hw, NECK_TOP); outline.lineTo(-hw, TAB - r0); outline.absarc(-hw + r0, TAB - r0, r0, Math.PI, Math.PI / 2, true);
   for (const h of holes) { const p = new THREE.Path(); p.absarc(h.x, h.y, HOLE_R, 0, Math.PI * 2, false); outline.holes.push(p); }   // outline drawn clockwise, holes the other way
-  const acrylicGeo = new THREE.ExtrudeGeometry(outline, {depth: THICK - 1.2, bevelEnabled: true, bevelSize: .55, bevelThickness: .6, bevelSegments: 3, curveSegments: 64});
+  const acrylicGeo = new THREE.ExtrudeGeometry(outline, {depth: THICK - 1.2, bevelEnabled: true, bevelSize: .75, bevelThickness: .6, bevelSegments: 3, curveSegments: 64});
   acrylicGeo.translate(0, 0, -(THICK - 1.2) / 2);
-  const acrylicFace = new THREE.MeshPhysicalMaterial({color: 0xf2f8fa, transparent: true, opacity: acr, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 1.3 * ENV, depthWrite: false, side: THREE.DoubleSide});
-  const acrylicEdge = new THREE.MeshPhysicalMaterial({color: 0xd9f0ea, transparent: true, opacity: .78, roughness: .08, clearcoat: 1, envMapIntensity: 2.6 * ENV, depthWrite: false, side: THREE.DoubleSide});
+  const acrylicFace = new THREE.MeshPhysicalMaterial({color: 0xe8f1f5, transparent: true, opacity: acr, roughness: .03, clearcoat: 1, clearcoatRoughness: .02, envMapIntensity: 1.3 * ENV, depthWrite: false, side: THREE.DoubleSide});
+  // the acrylic's edge is drawn as a firm slate contour (a clear paddle otherwise fades into a light page), with the studio's glint on its bevel
+  const acrylicEdge = new THREE.MeshPhysicalMaterial({color: 0x6e8a98, transparent: true, opacity: .96, roughness: .12, clearcoat: 1, clearcoatRoughness: .06, envMapIntensity: 1.25 * ENV, depthWrite: false, side: THREE.DoubleSide});
   const acrylic = add(new THREE.Mesh(acrylicGeo, [acrylicFace, acrylicEdge]), {cast: false}); acrylic.renderOrder = 1;
 
   // ── black screen print on both faces, with the holes ──────────────────────────────────────

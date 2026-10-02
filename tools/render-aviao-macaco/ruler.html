@@ -12,7 +12,7 @@ const W = Number(P.w || 600), H = Number(P.h || 2400), PASSES = Number(P.passes 
 const renderer = makeRenderer(W, H, {exposure: Number(P.exposure || 1)});
 const scene = new THREE.Scene();
 scene.environment = studioEnvironment(renderer, {top: Number(P.top || 6), left: Number(P.left || 3.4), right: Number(P.right || 2.4)});
-scene.add(buildRuler({env: Number(P.env || 1), acr: Number(P.acr || .05)}));
+scene.add(buildRuler({env: Number(P.env || 1), acr: Number(P.acr || .08)}));
 
 const top = RULER.top + 1.2, bottom = RULER.bottom - 1.2, frameH = (top - bottom) / Number(P.fill || .965), fov = 6;
 const camera = new THREE.PerspectiveCamera(fov, W / H, 10, 20000);

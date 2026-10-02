@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<body style="margin:0"><script type="module">
+// Link preview of the airplane (dist/assets/og-aviaoscopia.jpg, 1200×630): keeps the artwork as it is and swaps only the airplane for the
+// new render (card-aviaoscopia.webp). The old airplane's rectangle is refilled with the background (blended from its four edges), then the
+// new one is laid at the same height and centre with a soft contact shadow.
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const load = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+const [og, card] = await Promise.all([load('/assets/og-aviaoscopia.jpg?' + Date.now()), load('/assets/card-aviaoscopia.webp?' + Date.now())]);
+const W = og.width, H = og.height, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(og, 0, 0);
+const R = {x0: Number(P.x0 || 612), x1: Number(P.x1 || 1076), y0: Number(P.y0 || 60), y1: Number(P.y1 || 626)};
+const img = g.getImageData(0, 0, W, H), d = img.data;
+// Coons patch: each pixel of the rectangle blends the four edges just outside it (averaged over a few pixels), so the refill meets the
+// artwork without a seam and keeps its soft glow
+const at = (x, y, ch) => d[(Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) * 4 + ch];
+const edge = (x, y, dx, dy, ch) => { let s = 0; for (let k = 1; k <= 4; k++) s += at(x + dx * k, y + dy * k, ch); return s / 4; };
+const Wr = R.x1 - R.x0 - 1, Hr = R.y1 - R.y0 - 1;
+const T = [], B = [], L = [], Rt = [];
+for (let ch = 0; ch < 3; ch++) {
+  T[ch] = Array.from({length: Wr + 1}, (_, i) => edge(R.x0 + i, R.y0, 0, -1, ch)); B[ch] = Array.from({length: Wr + 1}, (_, i) => edge(R.x0 + i, R.y1 - 1, 0, 1, ch));
+  L[ch] = Array.from({length: Hr + 1}, (_, j) => edge(R.x0, R.y0 + j, -1, 0, ch)); Rt[ch] = Array.from({length: Hr + 1}, (_, j) => edge(R.x1 - 1, R.y0 + j, 1, 0, ch));
+}
+let seed = 7; const noise = () => { seed = (seed * 16807) % 2147483647; return (seed / 2147483647 - .5) * 1.4; };
+for (let j = 0; j <= Hr; j++) for (let i = 0; i <= Wr; i++) {
+  const u = i / Wr, v = j / Hr, k = ((R.y0 + j) * W + R.x0 + i) * 4;
+  for (let ch = 0; ch < 3; ch++) {
+    const c = (1 - v) * T[ch][i] + v * B[ch][i] + (1 - u) * L[ch][j] + u * Rt[ch][j]
+      - ((1 - u) * (1 - v) * T[ch][0] + u * (1 - v) * T[ch][Wr] + (1 - u) * v * B[ch][0] + u * v * B[ch][Wr]);
+    d[k + ch] = Math.max(0, Math.min(255, c + noise()));
+  }
+}
+g.putImageData(img, 0, 0);
+// soft contact shadow, then the airplane: same height (505 px) and centre (x 835) as the old one, resting on y 592
+const PH = Number(P.ph || 505), CX = Number(P.cx || 835), BASE = Number(P.base || 592), artH = Number(P.arth || .9323), artB = Number(P.artb || .0339);
+const S = PH / artH, left = CX - S / 2, top = BASE + artB * S - S;
+const sh = g.createRadialGradient(CX, BASE + 6, 0, CX, BASE + 6, 170); sh.addColorStop(0, 'rgba(30, 45, 70, .26)'); sh.addColorStop(1, 'rgba(30, 45, 70, 0)');
+g.save(); g.translate(CX, BASE + 6); g.scale(1, .09); g.translate(-CX, -(BASE + 6)); g.fillStyle = sh; g.fillRect(CX - 180, BASE + 6 - 180, 360, 360); g.restore();
+g.imageSmoothingQuality = 'high'; g.drawImage(card, left, top, S, S);
+window.results = {og: c.toDataURL('image/png')}; window.info = {rect: R, card: {left: +left.toFixed(1), top: +top.toFixed(1), size: +S.toFixed(1)}}; window.done = true;
+</script>

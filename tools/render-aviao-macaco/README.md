@@ -18,7 +18,9 @@ fica no quadrado da vitrine) e `artBox` (os números `art` de `products.js`: h, 
 - `monkey.js` — Macacoscópio: luva em C aberta atrás, rosto, orelhas, braços, banana e patinhas. Na escala da lâmpada (coluna Ø 32).
 - O avião vem dos STL do projeto de 21/08/2026 (`C:\Users\LUIZ\Documents\modelos_ju3d\Airplane Oftalmology1\airplane 21 08 2026\STL`).
   As metades chegam na posição de impressão: `plane.html` dá meia-volta em cada uma para as faces planas (ímãs) se encontrarem no meio e as
-  faces bojudas (bandeja funda, janelas, estrelas) ficarem para fora. Os números gravados já estão no STL.
+  faces bojudas (bandeja funda, janelas, estrelas) ficarem para fora. Os números gravados já estão no STL. As janelas (um tampão plano para
+  os furos de um nariz curvo) são assentadas na superfície do nariz ajustada em volta dos furos (`drape`); as metades do capacete vermelho se
+  encontram no meio e descem até o topo (`capOn`).
 
 ## Páginas
 
@@ -30,6 +32,7 @@ node runpage.cjs "w=1000&h=1550&exposure=1.06" saida.png slitlamp.html          
 node runpage.cjs "w=600&h=2400" saida.png ruler.html                             # régua sozinha
 node runpage.cjs "" saida.png monkey.html                                        # macaco sozinho
 node art.cjs imagem.webp                                                          # h, bottom e foot de uma imagem de vitrine
+node runpage.cjs "" og.png og-patch.html                                          # prévia de link do avião: troca só o avião na arte
 ```
 
 Cada `runpage` grava `saida-<camada>.png` e imprime as frações para `products.js` (`tool`/`head`: width, top, ratio; âncoras das chamadas).

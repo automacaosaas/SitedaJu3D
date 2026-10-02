@@ -61,6 +61,13 @@ for (const k of ["glass", "stars"]) assemble(mesh[k], FLAT.front);   // the engi
 // small parts keep facing the viewer; they move onto the rounded front (offsets in world millimetres, checked on oblique renders)
 function nudge(m, dx, dy, dz) { const q = m.parent.getWorldQuaternion(new THREE.Quaternion()).invert(); m.position.add(new THREE.Vector3(dx, dy, dz).applyQuaternion(q)); }
 nudge(mesh.glass, 0, Number(P.gy || 0), Number(P.gz || 0)); nudge(mesh.stars, 0, Number(P.sy || 0), Number(P.sz || 0)); nudge(mesh.pylons, 0, Number(P.py || 0), Number(P.pz || 0));
+// grow a part about its own centre (world), so it fills its recess
+function scaleAbout(m, s) {
+  if (s === 1) return; scene.updateMatrixWorld(true);
+  const c0 = new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3()); m.scale.multiplyScalar(s); scene.updateMatrixWorld(true);
+  const c1 = new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3()); nudge(m, c0.x - c1.x, c0.y - c1.y, c0.z - c1.z);
+}
+scaleAbout(mesh.glass, Number(P.gs || 1));
 scene.updateMatrixWorld(true);
 // seat a part on the front: cast rays straight back from its vertices onto the front half and slide it along z until it just touches,
 // then sink it by `embed` (the windows and the stars sit in their recesses)
@@ -76,8 +83,87 @@ function seat(m, embed) {
 }
 // the ray casts take half a minute in software WebGL: their result (gap before seating, mm) is kept here; ?reseat=1 measures again
 const GAPS = {glass: -27.56, stars: -11.32}, sit = (k, embed) => { if (P.reseat) return seat(mesh[k], embed); nudge(mesh[k], 0, 0, -GAPS[k] - embed); scene.updateMatrixWorld(true); return GAPS[k]; };
-const seated = {glass: sit("glass", Number(P.gembed ?? 3.5)), stars: sit("stars", Number(P.sembed ?? .5))};
+const seated = {stars: sit("stars", Number(P.sembed ?? .5))};
 window.FLAT = FLAT;
+
+// ── height fields: the outermost surface of a part seen along z (over x, y) or along y (over x, z), rasterised from its triangles ──
+function heightField(m, axis, u0, u1, v0, v1, {cell = .2, keep = 'max'} = {}) {
+  const U = 'x', V = axis === 'z' ? 'y' : 'z', nu = Math.ceil((u1 - u0) / cell) + 1, nv = Math.ceil((v1 - v0) / cell) + 1;
+  const field = new Float32Array(nu * nv).fill(keep === 'max' ? -Infinity : Infinity), better = keep === 'max' ? (a, b) => a > b : (a, b) => a < b;
+  const p = m.geometry.attributes.position, a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  scene.updateMatrixWorld(true);
+  for (let t = 0; t + 2 < p.count; t += 3) {
+    a.fromBufferAttribute(p, t).applyMatrix4(m.matrixWorld); b.fromBufferAttribute(p, t + 1).applyMatrix4(m.matrixWorld); c.fromBufferAttribute(p, t + 2).applyMatrix4(m.matrixWorld);
+    const lu = Math.min(a[U], b[U], c[U]), hu = Math.max(a[U], b[U], c[U]), lv = Math.min(a[V], b[V], c[V]), hv = Math.max(a[V], b[V], c[V]);
+    if (hu < u0 || lu > u1 || hv < v0 || lv > v1) continue;
+    const den = (b[V] - c[V]) * (a[U] - c[U]) + (c[U] - b[U]) * (a[V] - c[V]); if (Math.abs(den) < 1e-9) continue;
+    for (let iu = Math.max(0, Math.ceil((lu - u0) / cell)); iu <= Math.min(nu - 1, Math.floor((hu - u0) / cell)); iu++) for (let iv = Math.max(0, Math.ceil((lv - v0) / cell)); iv <= Math.min(nv - 1, Math.floor((hv - v0) / cell)); iv++) {
+      const u = u0 + iu * cell, v = v0 + iv * cell, w1 = ((b[V] - c[V]) * (u - c[U]) + (c[U] - b[U]) * (v - c[V])) / den, w2 = ((c[V] - a[V]) * (u - c[U]) + (a[U] - c[U]) * (v - c[V])) / den, w3 = 1 - w1 - w2;
+      if (w1 < -1e-6 || w2 < -1e-6 || w3 < -1e-6) continue;
+      const h = w1 * a[axis] + w2 * b[axis] + w3 * c[axis], k = iv * nu + iu; if (better(h, field[k])) field[k] = h;
+    }
+  }
+  return (u, v) => { const iu = Math.round((u - u0) / cell), iv = Math.round((v - v0) / cell); return iu < 0 || iv < 0 || iu >= nu || iv >= nv ? NaN : field[iv * nu + iu]; };
+}
+// The cockpit windows: the STL part is a plug for the two openings in the nose, but it is flat where the nose is curved, so as it came it
+// stood proud of the body and sat low. Its outline is moved up and stretched onto the openings (dy, sy, measured on the front render); then
+// the outer surface of the nose is fitted across the openings (a quadratic surface through the shell round them) and the plug's front face
+// is laid on it, its body kept `depth` deep behind: the windows follow the nose and sit flush, like the printed ones.
+function drape(m, {dy = 0, sy = 1, sx = 1, depth = 2.5, lift = 0} = {}) {
+  scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(m), cx = (box.min.x + box.max.x) / 2, cy = (box.min.y + box.max.y) / 2;
+  const p = m.geometry.attributes.position, mw = m.matrixWorld, inv = mw.clone().invert(), v = new THREE.Vector3(), world = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(mw); world[i * 3] = cx + (v.x - cx) * sx; world[i * 3 + 1] = cy + (v.y - cy) * sy + dy; world[i * 3 + 2] = v.z; }
+  const moved = new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(world, 3)));   // in world coordinates
+  const b = new THREE.Box3().setFromObject(moved), u0 = b.min.x - 6, u1 = b.max.x + 6, v0 = b.min.y - 6, v1 = b.max.y + 6;
+  const back = heightField(moved, 'z', u0, u1, v0, v1, {keep: 'min'}), front = heightField(moved, 'z', u0, u1, v0, v1, {keep: 'max'});
+  const outer = heightField(mesh.front, 'z', u0, u1, v0, v1);
+  // least squares cubic z(x, y) through the shell's outer surface in a band round the plug (1.2 to 4.5 mm from it): near enough to follow
+  // the strong curve at the top of the nose, outside the openings themselves
+  const has = (x, y, r) => { for (let dx = -r; dx <= r; dx += .6) for (let dy2 = -r; dy2 <= r; dy2 += .6) if (Number.isFinite(front(x + dx, y + dy2))) return true; return false; };
+  const ox = (b.min.x + b.max.x) / 2, oy = (b.min.y + b.max.y) / 2, terms = (x, y) => { const X = (x - ox) / 20, Y = (y - oy) / 20; return [1, X, Y, X * X, X * Y, Y * Y, X * X * X, X * X * Y, X * Y * Y, Y * Y * Y]; };
+  let samples = [];
+  for (let x = u0; x <= u1; x += .5) for (let y = v0; y <= v1; y += .5) { const z = outer(x, y); if (Number.isFinite(z) && !has(x, y, 1.2) && has(x, y, 4.5)) samples.push([x, y, z]); }
+  const fit = pts => {
+    const n = 10, A = Array.from({length: n}, () => new Float64Array(n)), r = new Float64Array(n);
+    for (const [x, y, z] of pts) { const t = terms(x, y); for (let i = 0; i < n; i++) { r[i] += t[i] * z; for (let j = 0; j < n; j++) A[i][j] += t[i] * t[j]; } }
+    for (let i = 0; i < n; i++) { let k = i; for (let j = i + 1; j < n; j++) if (Math.abs(A[j][i]) > Math.abs(A[k][i])) k = j; [A[i], A[k]] = [A[k], A[i]]; [r[i], r[k]] = [r[k], r[i]];
+      for (let j = 0; j < n; j++) if (j !== i) { const q = A[j][i] / A[i][i]; for (let c = i; c < n; c++) A[j][c] -= q * A[i][c]; r[j] -= q * r[i]; } }
+    const C = r.map((value, i) => value / A[i][i]); return (x, y) => terms(x, y).reduce((sum, t, i) => sum + t * C[i], 0);
+  };
+  // the edge of the tray below and the openings' own walls sit deeper than the skin: drop what lies well under the fit and fit again
+  let surface = fit(samples);
+  for (let pass = 0; pass < 3; pass++) { samples = samples.filter(([x, y, z]) => z - surface(x, y) > -.6); surface = fit(samples); }
+  // plus what the fit misses, spread from the band by inverse distance: at the openings' edges the windows meet the shell exactly
+  const smooth = surface, cellB = 2, buckets = new Map(), key = (i, j) => i * 100003 + j;
+  for (const [x, y, z] of samples) { const k = key(Math.floor(x / cellB), Math.floor(y / cellB)); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push([x, y, z - smooth(x, y)]); }
+  surface = (x, y) => {
+    let wsum = 0, rsum = 0; const i0 = Math.floor(x / cellB), j0 = Math.floor(y / cellB);
+    for (let i = i0 - 3; i <= i0 + 3; i++) for (let j = j0 - 3; j <= j0 + 3; j++) for (const [sx, sy, res] of buckets.get(key(i, j)) || []) { const d2 = (sx - x) ** 2 + (sy - y) ** 2 + .04, w = 1 / (d2 * d2); wsum += w; rsum += w * res; }
+    return smooth(x, y) + (wsum ? rsum / wsum : 0);
+  };
+  const pos = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const x = world[i * 3], y = world[i * 3 + 1], z = world[i * 3 + 2], bk = back(x, y), fr = front(x, y);
+    const t = Number.isFinite(bk) && Number.isFinite(fr) && fr - bk > .05 ? Math.min(1, Math.max(0, (z - bk) / (fr - bk))) : 1;   // 0 at the plug's back, 1 at its face
+    v.set(x, y, surface(x, y) + lift - (1 - t) * depth).applyMatrix4(inv); pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); m.geometry = toCreasedNormals(g, 32 * Math.PI / 180);
+  scene.updateMatrixWorld(true);
+}
+drape(mesh.glass, {dy: Number(P.gdy ?? 3.85), sy: Number(P.gsy ?? 1.13), sx: Number(P.gsx ?? 1), depth: Number(P.gdepth ?? .04), lift: Number(P.glift ?? .2)});   // a thin pane just over the skin: the plug's walls collapse and never show
+// The nose cap halves were placed by hand too high: each one comes down onto the top of its half until it touches (embed: a hair into it)
+function capOn(m, shell, embed = .15) {
+  scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(m), top = heightField(shell, 'y', box.min.x - 1, box.max.x + 1, box.min.z - 1, box.max.z + 1, {cell: .25});
+  const p = m.geometry.attributes.position, v = new THREE.Vector3(); let gap = Infinity;
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld); const h = top(v.x, v.z); if (Number.isFinite(h)) gap = Math.min(gap, v.y - h); }
+  if (Number.isFinite(gap)) nudge(m, 0, -gap - embed, 0);
+  scene.updateMatrixWorld(true); return +gap.toFixed(2);
+}
+// the two halves of the cap meet on the plane where the airplane halves meet (they came 4.8 mm off it, leaving a gap in the middle)
+for (const [m, s] of [[mesh.nosef, -1], [mesh.noseb, 1]]) { const b = new THREE.Box3().setFromObject(m); nudge(m, 0, 0, s > 0 ? -b.max.z : -b.min.z); }
+seated.nose = [capOn(mesh.nosef, mesh.front, Number(P.nembed ?? .6)), capOn(mesh.noseb, mesh.back, Number(P.nembed ?? .6))];
 // world from here on: x right (body centre x = 0), y up, the halves meet at z = 0, the front bulges toward +z
 
 // ── measured on the STL: 16 through holes, 2 columns × 8 rows, Ø 16.28, relative to the body centre (height 105.243) ──
@@ -96,7 +182,7 @@ function numbersDecal() {
 const decal = numbersDecal(); scene.add(decal);
 
 // the ruler: its lenses on the holes, centred between the two flat faces
-const ruler = buildRuler({acr: .05}); ruler.position.set(-(COL[0] + COL[1]) / 2, CY + ROW0 - RULER.ROW0, Number(P.ruler_z || 0)); scene.add(ruler);   // x: the halves are mirrored by the half turn
+const ruler = buildRuler(); ruler.position.set(-(COL[0] + COL[1]) / 2, CY + ROW0 - RULER.ROW0, Number(P.ruler_z || 0)); scene.add(ruler);   // x: the halves are mirrored by the half turn
 
 // ── camera ─────────────────────────────────────────────────────────────────────────────
 const box = new THREE.Box3(); for (const k of ['front', 'back', 'glass', 'pylons', 'stars', 'nosef']) box.expandByObject(mesh[k]);
@@ -157,5 +243,6 @@ vitrine();
 const toPx = v => { camera.clearViewOffset(); const q = v.clone().project(camera); return [+((q.x + 1) / 2).toFixed(4), +((1 - q.y) / 2).toFixed(4)]; };
 // where the parts are on the square picture (fractions), for the callouts
 info.anchors = {plateTop: toPx(new THREE.Vector3(0, ruler.position.y, ruler.position.z)), gripTop: toPx(new THREE.Vector3(0, ruler.position.y + RULER.GRIP_TOP, ruler.position.z)), wingL: toPx(new THREE.Vector3(-52, CY - 8, 6)), nose: toPx(new THREE.Vector3(0, box.max.y - 6, 10))};
+info.boxes = Object.fromEntries(["front", "back", "nosef", "noseb", "glass"].map(k => { const b = new THREE.Box3().setFromObject(mesh[k]); return [k, b.min.toArray().concat(b.max.toArray()).map(v => +v.toFixed(1))]; }));
 finish(out, info);
 </script>
