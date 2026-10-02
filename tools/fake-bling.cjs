@@ -37,6 +37,8 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
   function validate(body) {
     const c = body?.contato || {}, a = c.endereco || {};
     if (body?.tipo !== 1) return 'Tipo da nota inválido';
+    if (![body.dataEmissao, body.dataOperacao].every(d => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(String(d || '')))) return 'Data de operação inválida';   // as the real Bling (01/10/2026)
+    if ((body.parcelas || []).some(p => !/^\d{4}-\d{2}-\d{2}$/.test(String(p.data || '')))) return 'Data da parcela inválida';
     if (!natures.some(n => n.id === body.naturezaOperacao?.id)) return 'Natureza de operação não encontrada';
     if (!c.nome || !/^(\d{11}|\w{12}\d{2})$/.test(String(c.numeroDocumento || ''))) return 'Documento do contato inválido';
     if (!['F', 'J'].includes(c.tipoPessoa) || ![1, 2, 9].includes(c.contribuinte) || (c.contribuinte === 1 && !c.ie)) return 'Tipo de pessoa, contribuinte ou inscrição estadual do contato';

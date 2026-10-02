@@ -23,12 +23,15 @@ const money = cents => Math.round(Number(cents) || 0) / 100;
 const cep = value => String(value || '').replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
 const ncm = value => String(value || '').replace(/\D/g, '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3');   // Bling writes the NCM as 9999.99.99
 const https = value => /^https:\/\//.test(String(value || '')) ? String(value) : null;
+// Bling takes local date-times ("AAAA-MM-DD HH:MM:SS", Brasília time) and refuses a note without dataEmissao and
+// dataOperacao ("Data de operação inválida"); the site keeps UTC, which would also turn an evening sale into the next day.
+const brasilia = iso => new Intl.DateTimeFormat('sv-SE', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}).format(new Date(iso));
 
 // Bling's body for the note (API v3, POST/PUT /nfe).
 function toBling(invoice, paymentMethodId) {
-  const r = invoice.recipient, a = r.address;
+  const r = invoice.recipient, a = r.address, when = brasilia(invoice.issuedAt);
   return {
-    tipo: 1, finalidade: 1,
+    tipo: 1, finalidade: 1, dataEmissao: when, dataOperacao: when,
     naturezaOperacao: {id: Number(invoice.bling.natureId)},
     contato: {
       nome: r.name, tipoPessoa: r.cnpj ? 'J' : 'F', numeroDocumento: r.cnpj || r.cpf, contribuinte: Number(r.ieIndicator),
@@ -36,7 +39,7 @@ function toBling(invoice, paymentMethodId) {
       endereco: {endereco: a.street, numero: a.number, complemento: a.complement || '', bairro: a.district, cep: cep(a.cep), municipio: a.city, uf: a.state, pais: 'Brasil'}
     },
     itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin)})),
-    parcelas: [{data: invoice.issuedAt.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
+    parcelas: [{data: when.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
     transporte: {fretePorConta: Number(invoice.freight.mode), frete: money(invoice.freight.cents)},
     ...(invoice.totals?.discountCents ? {desconto: money(invoice.totals.discountCents)} : {}),   // Pix discount, on the whole note
     observacoes: invoice.additionalInfo

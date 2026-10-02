@@ -75,6 +75,9 @@ const creations = () => fake.calls.filter(c => c.method === 'POST' && c.path ===
   assert.deepEqual(person.transporte, {fretePorConta: 0, frete: 18});
   assert.equal(person.parcelas[0].valor, 276); assert.deepEqual(person.parcelas[0].formaPagamento, {id: 501});
   assert.match(person.observacoes, /Pedido nº: JU-/);
+  // Dates in Brasília time, as Bling wants them: an order concluded at 21:11 on 01/10 (00:11 UTC on 02/10) is issued on 01/10.
+  const evening = toBling(buildInvoice({order: order(), city: SP, environment: 'homologacao', provider: 'bling', env: ENV, ...fiscal.EXAMPLE, now: Date.UTC(2026, 9, 2, 0, 11, 5)}).invoice, null);
+  assert.deepEqual([evening.dataEmissao, evening.dataOperacao, evening.parcelas[0].data], ['2026-10-01 21:11:05', '2026-10-01 21:11:05', '2026-10-01'], 'dataEmissao, dataOperacao and the installment in Brasília time');
   assert(!('desconto' in person), 'no discount, no field');
   const pixNote = toBling(built(order({totalCents: 25800 - 1290 + 1800})), '501');
   assert.equal(pixNote.desconto, 12.9, 'the Pix 5% of the pieces as the note discount'); assert.equal(pixNote.parcelas[0].valor, 263.1);
