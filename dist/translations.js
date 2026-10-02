@@ -762,6 +762,10 @@ Surpreenda-me|Surprise me|Sorpréndeme
 Detalhes|Details|Detalles
 Trocas|Returns|Cambios
 Sobre a peça|About this piece|Sobre la pieza
+Ateliê de cores|Color studio|Taller de colores
+Dê o seu toque.|Add your touch.|Dale tu toque.
+Combinações e compartilhamento|Combinations and sharing|Combinaciones y compartir
+Foto|Photo|Foto
 Fechar informações|Close information|Cerrar información
 Informações da peça|Piece information|Información de la pieza
 Mais sobre a peça|More about this piece|Más sobre la pieza

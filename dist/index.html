@@ -74,9 +74,13 @@
     </div>
   </div>
   <dialog id="product-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-subtitle">
-    <button class="close" aria-label="Fechar produto">×</button>
+    <header class="pdp-head">
+      <button type="button" class="close" aria-label="Fechar produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></button>
+      <div class="pdp-heading"><p class="eyebrow" id="dialog-number">Ateliê de cores</p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p></div>
+      <button type="button" class="pdp-info" id="pdp-info" aria-haspopup="dialog" aria-label="Sobre a peça"></button>
+    </header>
     <div class="detail-visual">
-      <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Imagem</button><button type="button" data-view="model" aria-pressed="false">Prévia 3D</button></div>
+      <div class="view-tabs" role="group" aria-label="Tipo de visualização"><button type="button" data-view="photo" aria-pressed="true">Foto</button><button type="button" data-view="model" aria-pressed="false">3D</button></div>
       <div class="image-area"><img id="dialog-image" src="assets/borboletoscopio.webp" alt="Borboletoscópio sobre pilastra branca" width="1024" height="1024"></div>
       <div id="viewer-host" hidden></div>
       <div class="viewer-message" role="status" hidden></div>
@@ -85,19 +89,20 @@
       <p class="pdp-preview" aria-hidden="true"><span>Suas cores</span><span id="pdp-preview-dots"></span></p>
     </div>
     <div class="detail-copy">
-      <p class="eyebrow" id="dialog-number"></p><h2 id="dialog-title"></h2><p class="detail-subtitle" id="dialog-subtitle"></p>
-      <div class="pdp-price purchase-price"><p><strong id="product-price"></strong><span class="pdp-pix" id="product-pix"></span></p><small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</small></div>
       <section class="pdp-colors" aria-labelledby="pdp-colors-title">
-        <div class="pdp-colors-head"><h3 id="pdp-colors-title">Suas cores</h3><span id="selected-color"></span></div>
+        <div class="pdp-colors-head"><h3 id="pdp-colors-title">Dê o seu toque.</h3><span id="selected-color"></span></div>
         <div id="part-tabs" role="group" aria-label="Parte do produto"></div>
         <div id="palette" role="radiogroup" aria-label="Cor da parte"></div>
         <p class="part-hint" id="part-hint"></p>
-        <div class="pdp-presets" id="presets" role="group" aria-label="Combinações prontas"></div><button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores</button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores">
+        <details class="pdp-more"><summary>Combinações e compartilhamento</summary><div class="pdp-more-body"><div class="pdp-presets" id="presets" role="group" aria-label="Combinações prontas"></div><button type="button" class="pdp-share" id="share-colors">Compartilhar estas cores</button><input class="pdp-share-link" id="share-link" readonly hidden aria-label="Link das cores"></div></details>
       </section>
       <div class="pdp-facts" role="group" aria-label="Mais sobre a peça"><button type="button" data-sheet="0" data-icon="info" aria-haspopup="dialog">Detalhes</button><button type="button" data-sheet="1" data-icon="palette" aria-haspopup="dialog">Cores</button><button type="button" data-sheet="2" data-icon="truck" aria-haspopup="dialog">Entrega</button><button type="button" data-sheet="3" data-icon="returns" aria-haspopup="dialog">Trocas</button></div>
       <p class="sr-only" aria-live="polite" id="color-announcement"></p>
     </div>
-    <div class="modal-actions"><div id="purchase-panel"><p id="purchase-status" class="purchase-status" role="status"></p><div class="purchase-actions"><button type="button" class="primary" id="add-to-cart"></button><button type="button" class="primary buy-now" id="buy-now">Comprar agora</button></div></div></div>
+    <div class="modal-actions">
+      <div class="pdp-price purchase-price"><p><strong id="product-price"></strong><span class="pdp-pix" id="product-pix"></span></p><small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</small></div>
+      <div id="purchase-panel"><p id="purchase-status" class="purchase-status" role="status"></p><div class="purchase-actions"><button type="button" class="primary" id="add-to-cart"></button><button type="button" class="primary buy-now" id="buy-now">Comprar agora</button></div></div>
+    </div>
     <section class="pdp-sheet" id="pdp-sheet" role="dialog" aria-modal="true" aria-labelledby="pdp-sheet-title" hidden>
       <div class="pdp-sheet-head"><h3 id="pdp-sheet-title">Sobre a peça</h3><button type="button" class="pdp-sheet-close" aria-label="Fechar informações">×</button></div>
       <div class="pdp-sheet-tabs" role="tablist" aria-label="Informações da peça"><button type="button" role="tab" id="pdp-tab-0" aria-controls="pdp-panel-0">Detalhes</button><button type="button" role="tab" id="pdp-tab-1" aria-controls="pdp-panel-1">Cores</button><button type="button" role="tab" id="pdp-tab-2" aria-controls="pdp-panel-2">Entrega</button><button type="button" role="tab" id="pdp-tab-3" aria-controls="pdp-panel-3">Trocas</button></div>

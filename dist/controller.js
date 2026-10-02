@@ -27,7 +27,7 @@ function hexColors(){return Object.fromEntries(Object.entries(selections[activeP
 function announce(message){$('#color-announcement').textContent=message;}
 function fillProduct(key){
   const p=PRODUCTS[key],price=COMMERCE.prices[key];
-  $('#dialog-number').textContent=`COLEÇÃO 01 / PEÇA ${p.number}`;$('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
+  $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
   $('#dialog-image').src=`assets/${p.image}`;$('#dialog-image').alt=`${p.title} sobre uma pilastra branca — imagem de apresentação`;$('#fixed-note').textContent=p.fixed;
   $('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
@@ -83,8 +83,10 @@ function updateControls(){
   document.querySelectorAll('#palette [data-color]').forEach(b=>{const on=b.dataset.color===s[selectedPart];b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;});
   $('#selected-color').textContent=`${part.name}: ${color(s[selectedPart]).name}`;$('#part-hint').textContent=part.hint;
   $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=color(s[item.id]).hex;i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
-  viewer?.update(hexColors());
+  viewer?.update(hexColors());revealSwatch();
 }
+// No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista.
+function revealSwatch(){const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 // A foto mostra só as cores originais: ao escolher uma cor, a prévia passa para o 3D.
 function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
 function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
@@ -98,6 +100,8 @@ document.querySelectorAll('[data-sheet]').forEach(b=>{b.insertAdjacentHTML('afte
 tabs.forEach((tab,i)=>tab.addEventListener('click',()=>showTab(i)));
 sheet.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();showTab(e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length,true);});
 $('.pdp-sheet-close').addEventListener('click',()=>closeSheet());
+// (i) no topo: abre "Sobre a peça" nos detalhes.
+$('#pdp-info').insertAdjacentHTML('afterbegin',icon('info'));$('#pdp-info').addEventListener('click',e=>openSheet(0,e.currentTarget));
 
 $('.close').addEventListener('click',closeProduct);
 dialog.addEventListener('cancel',e=>{e.preventDefault();if(!sheet.hidden)closeSheet();else closeProduct();});

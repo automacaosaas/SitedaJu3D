@@ -218,8 +218,12 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       //     sombra nas paredes internas, a peça projeta sombra nele e, no contato, cede um pouco
       {el: d.tool, delay: T.tool, duration: 600, keyframes: rise},
       // a cabeça do equipamento desce por cima, encaixa o pino e assenta (1,0–1,56 s)
-      ...(config.head ? [{el: d.head, delay: T.head, duration: 560, keyframes: [
-        {offset: 0, opacity: 0, transform: 'translate3d(0, -22%, 0)', easing: EASE.out}, {offset: .3, opacity: 1}, {offset: .8, transform: 'translate3d(0, 1.4%, 0)', easing: EASE.settle}, {offset: .92, transform: 'translate3d(0, -.4%, 0)', easing: EASE.settle}, {offset: 1, opacity: 1, transform: 'translate3d(0, 0, 0)'}]}] : []),
+      ...(config.head ? [{el: d.head, delay: T.head, duration: 560, keyframes: g.closing ? [
+        // na volta (a linha do tempo toca de trás para frente, lida de baixo para cima): a cabeça solta do pino com um leve
+        // tranco para cima, sobe acelerando, ainda inteira, e só se dissolve quando já saiu de cima da peça
+        {offset: 0, opacity: 0, transform: 'translate3d(0, -66%, 0)'}, {offset: .2, opacity: 1, transform: 'translate3d(0, -50%, 0)', easing: 'cubic-bezier(.2, .7, .3, 1)'},
+        {offset: .84, transform: 'translate3d(0, -3%, 0)', easing: EASE.settle}, {offset: 1, opacity: 1, transform: 'translate3d(0, 0, 0)'}]
+        : [{offset: 0, opacity: 0, transform: 'translate3d(0, -22%, 0)', easing: EASE.out}, {offset: .3, opacity: 1}, {offset: .8, transform: 'translate3d(0, 1.4%, 0)', easing: EASE.settle}, {offset: .92, transform: 'translate3d(0, -.4%, 0)', easing: EASE.settle}, {offset: 1, opacity: 1, transform: 'translate3d(0, 0, 0)'}]}] : []),
       {el: cast, delay: T.tool, duration: 600, keyframes: rise},
       {el: d.shade, delay: T.shade, duration: 300, keyframes: [
         {offset: 0, opacity: 0, easing: EASE.soft},
@@ -241,7 +245,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
 
   async function open(i) {
     if (state === 'opening' || state === 'open') return;
-    if (state === 'closing') { run('opening'); return; }
+    if (state === 'closing') { timeline.load(tracks(measure()), timeline.time); run('opening'); return; }   // reaberta no meio da saída: volta com a entrada normal
     const ready = prepare(i);
     if (!ready) return;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
@@ -287,7 +291,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (immediate || !timeline.animations.length || timeline.time <= 0) { finish(); return; }
     const time = timeline.time;
     stopIdle(false);
-    timeline.load(tracks(measure()), time);   // medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
+    timeline.load(tracks({...measure(), closing: true}), time);   // saída própria onde precisa (closing); medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
     run('closing');
   }
 

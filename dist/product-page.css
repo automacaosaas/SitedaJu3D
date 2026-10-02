@@ -1,87 +1,201 @@
-/* Página de produto compacta (controller.js): tudo o que decide a compra numa tela;
-   detalhes num painel com abas. Carregado depois de theme.css e mobile-modal.css. */
-#product-dialog .detail-copy { display: flex; flex-direction: column; gap: 14px; padding: 52px 36px 18px; }
-#product-dialog .detail-copy h2 { margin: 0; }
-#product-dialog .detail-copy .eyebrow { margin: 0; }
-#product-dialog .detail-subtitle { margin: -8px 0 0; }
+/* Área do produto — "Ateliê de cores" (controller.js): o mesmo desenho em todos os tamanhos.
+   Topo: voltar · "Ateliê de cores", nome e subtítulo · (i) "Sobre a peça". Depois a peça (Foto | 3D), "Dê o seu toque." com as partes,
+   as cores e as combinações, e embaixo a barra de compra sempre à vista (preço, Pix, "Adicionar ao carrinho" e "Comprar agora").
+   Celular: tela cheia, uma coluna. Tablet: o mesmo, num cartão. Computador: a peça à esquerda e o ateliê à direita, com o mesmo topo.
+   Cores do produto ativo (--theme-*, journey.js). Carregado depois de theme.css e mobile-modal.css. */
+#product-dialog {
+  --pd-accent: var(--theme-accent, #25664c); --pd-strong: var(--theme-accent-strong, #1e523d); --pd-text: var(--theme-text, #10281e);
+  --pd-muted: var(--theme-muted, #356650); --pd-wash: var(--theme-wash, #e5f5ec); --pd-soft: var(--theme-soft, #cfe1d8);
+  --pd-line: color-mix(in srgb, var(--pd-accent) 16%, #ece7e9); --pd-tint: color-mix(in srgb, var(--pd-wash) 72%, #fff);
+  --pd-ease: cubic-bezier(.22, 1, .36, 1);
+  width: min(1160px, calc(100vw - 48px)); max-width: none; height: min(860px, calc(100dvh - 40px)); max-height: none;
+  padding: 0; border: 0; border-radius: 28px; color: var(--ink); background: #fff;
+  box-shadow: 0 40px 120px #14231b38, 0 0 0 1px #ffffffc0; overflow: hidden; overflow: clip;
+}
+#product-dialog[open] {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(400px, .9fr); grid-template-rows: auto minmax(0, 1fr) auto;
+  animation: pd-in .42s var(--pd-ease) both;
+}
+#product-dialog::backdrop { background: color-mix(in srgb, var(--pd-text) 42%, transparent); backdrop-filter: blur(10px); }
+@keyframes pd-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+@keyframes pd-rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes pd-up { from { opacity: 0; transform: translateY(32px); } }
+#product-dialog[open] :is(.pdp-head, .detail-visual, .detail-copy > *, .modal-actions) { animation: pd-rise .5s var(--pd-ease) both; }
+#product-dialog[open] .detail-visual { animation-delay: .05s; }
+#product-dialog[open] .detail-copy > * { animation-delay: .1s; }
+#product-dialog[open] .detail-copy > * + * { animation-delay: .16s; }
+#product-dialog[open] .modal-actions { animation-delay: .18s; }
 
-/* Preço com o valor no Pix */
-#product-dialog .pdp-price { display: grid; justify-items: start; gap: 6px; margin: 0; }
-.pdp-price p { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; }
-#product-dialog .pdp-price strong { font-size: 28px; font-weight: 650; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
-.pdp-pix { padding: 5px 10px; border-radius: 999px; background: #13864a; color: #fff; font-size: 12.5px; font-weight: 700; }
-#product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--muted); text-align: left; }
-#product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
+/* ── Topo ─────────────────────────────────────────────────────────────────────── */
+.pdp-head { grid-column: 1 / -1; grid-row: 1; position: relative; z-index: 4; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: 16px 22px 14px; background: var(--pd-tint); border-bottom: 1px solid color-mix(in srgb, var(--pd-accent) 10%, transparent); }
+#product-dialog .close, .pdp-info { position: static; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid color-mix(in srgb, var(--pd-accent) 18%, #fff); border-radius: 50%; background: #fff; color: var(--pd-text); box-shadow: 0 2px 10px #14231b12; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .2s, border-color .2s; }
+#product-dialog .close svg, .pdp-info .icon { width: 20px; height: 20px; }
+#product-dialog .close:hover, .pdp-info:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); box-shadow: 0 6px 16px #14231b1f; }
+#product-dialog .close:focus-visible, .pdp-info:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
+.pdp-heading { min-width: 0; text-align: center; }
+#product-dialog .pdp-heading .eyebrow { margin: 0 0 3px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--pd-accent); }
+#product-dialog .pdp-heading h2 { margin: 0; font: 500 clamp(24px, 2.3vw, 31px) / 1.15 'Playfair Display', Georgia, serif; letter-spacing: -.4px; color: var(--pd-text); overflow-wrap: anywhere; }
+#product-dialog .pdp-heading .detail-subtitle { margin: 3px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--pd-muted); }
 
-/* Cores: parte em controle segmentado, cores em círculos, combinações prontas */
-.pdp-colors { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
-.pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.pdp-colors-head h3 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
-#selected-color { font-size: 12.5px; color: var(--theme-accent, var(--rose)); text-align: right; }
-#product-dialog #part-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--bg); }
-#product-dialog #part-tabs button { flex: 1 1 0; justify-content: center; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 9px; background: transparent; font-size: 12.5px; text-align: center; }
-#product-dialog #part-tabs button[aria-pressed=true] { background: #fff; color: var(--theme-accent, var(--rose)); font-weight: 650; box-shadow: 0 1px 5px #2823261a; }
-#product-dialog #palette { display: flex; flex-wrap: wrap; gap: 4px; }
-#product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; }
-#product-dialog .swatch i { width: 30px; height: 30px; transition: transform .15s ease; }
-#product-dialog .swatch:hover { background: transparent; }
-#product-dialog .swatch:hover i { transform: scale(1.1); }
-#product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--theme-accent, var(--rose)); }
-#product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
-#product-dialog .swatch:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 0; }
-#product-dialog .part-hint { margin: -4px 0 0; font-size: 12px; }
-.pdp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 12px; }
-.pdp-presets button:hover { border-color: var(--theme-accent, var(--rose)); }
-.preset-dots { display: inline-flex; color: var(--theme-accent, var(--rose)); }
-.preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; }
-.preset-dots i:first-child { margin-left: 0; }
-
-/* Atalhos para o painel de informações */
-.pdp-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.pdp-facts button { display: grid; justify-items: center; gap: 4px; min-height: 60px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 12px; color: var(--ink); transition: border-color .2s, transform .2s; }
-.pdp-facts button:hover { border-color: var(--theme-accent, var(--rose)); transform: translateY(-1px); }
-.pdp-facts .icon { width: 19px; height: 19px; color: var(--theme-accent, var(--rose)); }
-
-/* Prévia das cores escolhidas sobre a imagem */
-.pdp-preview { position: absolute; top: 19px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px; border-radius: 999px; background: #fffcfbe6; font-size: 12px; color: var(--muted); box-shadow: 0 1px 4px #2823261a; }
+/* ── A peça ───────────────────────────────────────────────────────────────────── */
+#product-dialog .detail-visual { grid-column: 1; grid-row: 2 / 4; position: relative; min-height: 0; height: auto; display: block; overflow: hidden; border-radius: 0;
+  background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
+#product-dialog .image-area { position: absolute; inset: 66px 24px 96px; width: auto; height: auto; padding: 0; display: grid; place-items: center; background: transparent; }
+/* as fotos têm fundo cinza-claro próprio: as bordas se dissolvem no fundo do ateliê, sem o retângulo da foto */
+#product-dialog .image-area img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; mix-blend-mode: multiply; -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); mask-image: radial-gradient(closest-side, #000 72%, transparent 100%); }
+#product-dialog #viewer-host { inset: 60px 12px 92px; }
+#product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 3px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffd9; box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
+#product-dialog .view-tabs button { min-height: 36px; min-width: 52px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--pd-muted); transition: background .2s, color .2s; }
+#product-dialog .view-tabs button[aria-pressed=true] { background: var(--pd-accent); color: #fff; box-shadow: 0 3px 10px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
+#product-dialog .viewer-tools { bottom: 44px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffe6; box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
+#product-dialog .viewer-tools button { min-height: 40px; min-width: 40px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--pd-text); }
+#product-dialog .viewer-tools button:hover, #product-dialog .viewer-tools button[aria-pressed=true] { background: var(--pd-tint); color: var(--pd-accent); }
+#product-dialog .view-note { bottom: 16px; font-size: 12px; color: var(--pd-muted); }
+#product-dialog .viewer-message { color: var(--pd-muted); }
+#product-dialog .pdp-preview { position: absolute; top: 18px; right: 18px; left: auto; z-index: 3; display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); border-radius: 999px; background: #ffffffd9; font-size: 12px; color: var(--pd-muted); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
 #pdp-preview-dots { display: flex; gap: 3px; }
 #pdp-preview-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0002; }
 
-/* Compra sempre à vista */
-#product-dialog .purchase-actions { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
-#product-dialog #add-to-cart { gap: 8px; }
+/* ── "Dê o seu toque." ────────────────────────────────────────────────────────── */
+#product-dialog .detail-copy { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 26px 32px 22px; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+.pdp-colors { display: grid; gap: 14px; padding: 0; border: 0; background: none; }
+.pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pdp-colors-head h3 { margin: 0; font: 500 clamp(22px, 2vw, 26px) / 1.15 'Playfair Display', Georgia, serif; letter-spacing: -.3px; color: var(--pd-text); }
+#selected-color { font-size: 13px; color: var(--pd-muted); text-align: right; }
+#product-dialog #part-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; background: none; }
+#product-dialog #part-tabs button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13.5px; color: var(--pd-text); box-shadow: none; transition: border-color .2s, background .2s, box-shadow .2s; }
+#product-dialog #part-tabs button:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); }
+#product-dialog #part-tabs button[aria-pressed=true] { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 55%, #fff); color: var(--pd-text); font-weight: 650; box-shadow: inset 0 0 0 1px var(--pd-accent); }
+#product-dialog .part-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; flex: none; transition: background .25s; }
+#product-dialog #palette { position: relative; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
+#product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; flex: none; }
+#product-dialog .swatch i { width: 32px; height: 32px; transition: transform .2s var(--pd-ease), box-shadow .2s; }
+#product-dialog .swatch:hover { background: transparent; }
+#product-dialog .swatch:hover i { transform: scale(1.1); }
+#product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pd-accent); animation: pd-pick .32s var(--pd-ease); }
+#product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
+#product-dialog .swatch:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 0; }
+@keyframes pd-pick { 40% { transform: scale(1.16); } }
+#product-dialog .part-hint { margin: -6px 0 0; font-size: 12.5px; color: var(--pd-muted); }
 
-/* Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular */
-.pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: 50%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: var(--panel); box-shadow: -18px 0 40px #2823261f; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+/* Combinações prontas e o link das cores, recolhidos */
+.pdp-more { border-top: 1px solid var(--pd-line); border-bottom: 1px solid var(--pd-line); }
+.pdp-more summary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 13px; font-weight: 600; color: var(--pd-muted); cursor: pointer; list-style: none; }
+.pdp-more summary::-webkit-details-marker { display: none; }
+.pdp-more summary::after { content: ''; width: 7px; height: 7px; margin-top: -4px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); transition: transform .25s var(--pd-ease), margin .25s; }
+.pdp-more[open] summary::after { margin-top: 4px; transform: rotate(-135deg); }
+.pdp-more summary:hover { color: var(--pd-accent); }
+.pdp-more summary:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -2px; border-radius: 8px; }
+.pdp-more-body { display: grid; gap: 4px; padding: 0 0 14px; }
+.pdp-more[open] .pdp-more-body { animation: pd-rise .3s var(--pd-ease) both; }
+.pdp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13px; color: var(--pd-text); transition: border-color .2s, transform .2s var(--pd-ease); }
+.pdp-presets button:hover { border-color: var(--pd-accent); transform: translateY(-1px); }
+.preset-dots { display: inline-flex; color: var(--pd-accent); }
+.preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; }
+.preset-dots i:first-child { margin-left: 0; }
+/* Compartilhar estas cores (auditoria D3): um link que reabre a mesma combinação. */
+.pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; padding: 0 2px; border: 0; background: none; color: var(--pd-accent); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; justify-self: start; }
+.pdp-share .icon { width: 18px; height: 18px; }
+.pdp-share-link { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--pd-line); border-radius: 10px; background: #fff; font: inherit; font-size: 12px; color: inherit; }
+.pdp-share:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
+
+/* Atalhos para o painel "Sobre a peça" */
+.pdp-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pdp-facts button { display: grid; justify-items: center; gap: 4px; min-height: 60px; padding: 9px 4px; border: 0; border-radius: 14px; background: color-mix(in srgb, var(--pd-wash) 50%, #fff); font-size: 12px; color: var(--pd-text); transition: background .2s, transform .2s var(--pd-ease); }
+.pdp-facts button:hover { background: var(--pd-wash); transform: translateY(-1px); }
+.pdp-facts .icon { width: 19px; height: 19px; color: var(--pd-accent); }
+
+/* ── Barra de compra ──────────────────────────────────────────────────────────── */
+#product-dialog .modal-actions { grid-column: 2; grid-row: 3; position: relative; z-index: 2; display: grid; gap: 12px; padding: 16px 32px 22px; border-top: 1px solid var(--pd-line); background: #fff; box-shadow: 0 -16px 28px -22px #14231b40; }
+#product-dialog .pdp-price { display: grid; justify-items: start; gap: 3px; margin: 0; }
+.pdp-price p { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; }
+#product-dialog .pdp-price strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; color: var(--pd-text); font-variant-numeric: tabular-nums; }
+.pdp-pix { padding: 4px 11px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; }
+#product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--pd-muted); text-align: left; }
+#product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
+#product-dialog #purchase-panel { display: grid; gap: 8px; }
+#product-dialog .purchase-status:empty { display: none; }
+#product-dialog .purchase-actions { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 10px; }
+#product-dialog .purchase-actions .primary { justify-content: center; gap: 9px; min-height: 52px; padding: 0 16px; border-radius: 14px; font-size: 14.5px; font-weight: 650; transition: background .2s, border-color .2s, transform .2s var(--pd-ease), box-shadow .2s; }
+#product-dialog .purchase-actions .primary .icon { width: 19px; height: 19px; }
+#product-dialog #add-to-cart { border: 1.5px solid color-mix(in srgb, var(--pd-accent) 40%, #dcd6d8); background: #fff; color: var(--pd-text); }
+#product-dialog #add-to-cart:hover { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 45%, #fff); }
+#product-dialog #buy-now { border: 1.5px solid var(--pd-accent); background: var(--pd-accent); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
+#product-dialog #buy-now:hover { background: var(--pd-strong); border-color: var(--pd-strong); transform: translateY(-1px); }
+#product-dialog .purchase-actions .primary:active { transform: scale(.985); }
+#product-dialog .purchase-actions .primary:focus-visible { outline: 2px solid var(--pd-text); outline-offset: 2px; }
+/* Editando uma peça do carrinho: uma ação só, em destaque */
+#product-dialog[data-cart-edit] .purchase-actions { grid-template-columns: 1fr; }
+#product-dialog[data-cart-edit] #add-to-cart { border-color: var(--pd-accent); background: var(--pd-accent); color: #fff; }
+
+/* ── Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular ── */
+.pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: min(460px, 46%); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: #fff; box-shadow: -18px 0 40px #14231b24; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 .pdp-sheet.is-open { transform: none; }
 .pdp-sheet-head { display: flex; align-items: center; justify-content: space-between; }
-.pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', Georgia, serif; }
-.pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--panel); font-size: 24px; line-height: 1; }
-.pdp-sheet-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', Georgia, serif; color: var(--pd-text); }
+.pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--pd-line); border-radius: 50%; background: #fff; font-size: 24px; line-height: 1; }
+.pdp-sheet-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--pd-line); overflow-x: auto; }
 .pdp-sheet-tabs button { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13px; color: var(--muted); white-space: nowrap; margin-bottom: -1px; }
-.pdp-sheet-tabs button[aria-selected=true] { border-bottom-color: var(--theme-accent, var(--rose)); color: var(--ink); font-weight: 650; }
+.pdp-sheet-tabs button[aria-selected=true] { border-bottom-color: var(--pd-accent); color: var(--ink); font-weight: 650; }
 .pdp-sheet-panel { overflow-y: auto; font-size: 14.5px; line-height: 1.65; color: #5f525a; }
 .pdp-sheet-panel p { margin: 0 0 12px; }
-.pdp-sheet-panel a { color: var(--theme-accent, var(--rose)); text-decoration: underline; text-underline-offset: 3px; }
+.pdp-sheet-panel a { color: var(--pd-accent); text-decoration: underline; text-underline-offset: 3px; }
 .pdp-ship { color: #13864a; }
 
-@media (max-width: 600px) {
-  #product-dialog .detail-copy { gap: 12px; padding: 16px 18px 12px; }
-  #product-dialog .pdp-price strong { font-size: 24px; }
-  .pdp-colors { padding: 12px; }
-  #product-dialog #palette { gap: 2px; }
-  .pdp-preview { display: none; }
-  .pdp-facts button { min-height: 56px; font-size: 12px; }
-  .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #2823261f; transform: translateY(100%); }
+/* ── Tablet e celular: uma coluna — topo, peça, ateliê e a barra de compra ─────── */
+@media (max-width: 900px) {
+  #product-dialog { width: min(720px, calc(100vw - 32px)); height: min(1080px, calc(100dvh - 32px)); border-radius: 26px; }
+  #product-dialog[open] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto clamp(250px, 42dvh, 500px) minmax(0, 1fr) auto; }
+  #product-dialog .detail-visual { grid-column: 1; grid-row: 2; }
+  #product-dialog .detail-copy { grid-column: 1; grid-row: 3; padding: 20px 24px 18px; gap: 16px; }
+  #product-dialog .modal-actions { grid-column: 1; grid-row: 4; padding: 14px 24px 18px; }
+  #product-dialog .image-area { inset: 60px 16px 78px; }
+  #product-dialog #viewer-host { inset: 56px 8px 74px; }
+  #product-dialog .viewer-tools { bottom: 34px; }
+  #product-dialog .view-note { bottom: 10px; }
+  #product-dialog .pdp-preview { display: none; }
 }
+@media (max-width: 600px) {
+  #product-dialog { inset: 0; width: 100vw; height: 100dvh; margin: 0; border-radius: 0; box-shadow: none; }
+  #product-dialog[open] { grid-template-rows: auto clamp(220px, 40dvh, 420px) minmax(0, 1fr) auto; animation-name: pd-up; animation-duration: .45s; }
+  .pdp-head { padding: max(10px, env(safe-area-inset-top)) 12px 10px; gap: 8px; }
+  #product-dialog .pdp-heading .eyebrow { letter-spacing: .18em; }
+  #product-dialog .pdp-heading h2 { font-size: 23px; }
+  #product-dialog .pdp-heading .detail-subtitle { display: block; font-size: 13px; }
+  #product-dialog .view-tabs { top: 12px; left: 12px; }
+  #product-dialog .view-tabs button { min-height: 34px; padding: 0 12px; }
+  #product-dialog .image-area { inset: 54px 10px 70px; }
+  #product-dialog #viewer-host { inset: 50px 4px 68px; }
+  #product-dialog .viewer-tools { bottom: 30px; }
+  #product-dialog .view-note { bottom: 8px; left: 10px; right: 10px; line-height: 1.2; }
+  #product-dialog .detail-copy { padding: 16px 16px 14px; gap: 14px; }
+  .pdp-colors { gap: 12px; }
+  .pdp-colors-head h3 { font-size: 22px; }
+  #selected-color { font-size: 12.5px; }
+  #product-dialog #part-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  #product-dialog #part-tabs::-webkit-scrollbar { display: none; }
+  /* as cores numa fileira que rola de lado, com o fim esmaecido sugerindo que há mais */
+  #product-dialog #palette { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: -4px -16px; padding: 4px 12px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  #product-dialog #palette::-webkit-scrollbar { display: none; }
+  #product-dialog .swatch { scroll-snap-align: start; }
+  .pdp-facts { gap: 6px; }
+  .pdp-facts button { min-height: 56px; font-size: 12px; }
+  #product-dialog .modal-actions { gap: 10px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
+  #product-dialog .pdp-price strong { font-size: 23px; }
+  #product-dialog .purchase-actions { gap: 8px; }
+  #product-dialog .purchase-actions .primary { min-height: 50px; padding: 0 8px; gap: 6px; font-size: 13px; white-space: nowrap; }
+  #product-dialog .purchase-actions .primary .icon { width: 18px; height: 18px; }
+  .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #14231b24; transform: translateY(100%); }
+}
+@media (max-width: 374px) { #product-dialog #add-to-cart .icon { display: none; } }
+@media (max-width: 600px) and (max-height: 700px) {
+  #product-dialog[open] { grid-template-rows: auto clamp(200px, 34dvh, 300px) minmax(0, 1fr) auto; }
+  #product-dialog .pdp-heading .detail-subtitle { display: none; }
+}
+/* Celular: na barra do 3D ficam "Girar", aproximar, afastar e "Início" (arrastar gira a peça; pinça também aproxima). */
+@media (max-width: 600px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools > span { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .pdp-sheet, .pdp-facts button, #product-dialog .swatch i { transition: none; }
+  #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
-/* Compartilhar estas cores (auditoria D3): um link que reabre a mesma combinação. */
-.pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; padding: 0 2px; border: 0; background: none; color: var(--theme-accent, var(--rose)); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.pdp-share .icon { width: 18px; height: 18px; }
-.pdp-share-link { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: inherit; font-size: 12px; color: inherit; }
-.pdp-share:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 2px; }
-/* Phones (audit D4): the 3D bar keeps only "Girar" and "Início"; drag turns the piece and a pinch zooms. */
-@media (max-width: 600px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools [data-camera="in"], .viewer-tools [data-camera="out"], .viewer-tools > span { display: none; } }
