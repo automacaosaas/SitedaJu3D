@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFile, readdir, stat} from 'node:fs/promises';
 
 const dist = new URL('../dist/', import.meta.url);
-const {PRODUCTS} = await import('../dist/products.js');
+const {PRODUCTS, SOON} = await import('../dist/products.js');
 const exists = async name => stat(new URL(`assets/${name}`, dist)).then(() => true, () => false);
 
 // Literal "assets/…" references in pages, scripts and styles.
@@ -16,7 +16,7 @@ for (const file of (await readdir(dist)).filter(f => /\.(html|js|css)$/.test(f))
 // Names that code joins with "assets/" at runtime (product images, showcase layers and tools).
 for (const product of Object.values(PRODUCTS)) for (const name of [product.image, product.catalogImage].filter(Boolean)) referenced.add(name);
 // The showcase cards load a light preview first (catalog.js builds `card-preview-<id>.webp` next to each card-<id>.webp).
-for (const id of Object.keys(PRODUCTS)) if (await exists(`card-${id}.webp`)) referenced.add(`card-preview-${id}.webp`);
+for (const id of [...Object.keys(PRODUCTS), ...Object.keys(SOON)]) if (await exists(`card-${id}.webp`)) referenced.add(`card-preview-${id}.webp`);   // also the novelties (SOON)
 const productsSource = await readFile(new URL('products.js', dist), 'utf8');
 for (const [, name] of productsSource.matchAll(/'([\w-]+\.(?:webp|png|jpe?g|svg))'/g)) referenced.add(name);
 

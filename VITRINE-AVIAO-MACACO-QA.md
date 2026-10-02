@@ -53,3 +53,12 @@ que parte da `juncao/pr2-auditoria` do Pedro (891e57a). Ainda não publicada.
 
 - (resolvido em 02/10/2026) A prévia 3D da personalização do avião agora é o CAD real (`export-glb.cjs`).
 - O subtítulo do avião continua "Avião magnético para régua de grau" (texto da loja); as chamadas da demonstração usam "régua de esquiascopia".
+
+## Macacoscópio na coleção e na página Produtos (02/10/2026, proposta A do Pedro)
+
+- Um card do Macacoscópio no fim de "Nossa coleção" (home) e da grade da página Produtos: foto, nome, "Capa para lâmpada de fenda
+  portátil", o selo "Em breve" e "Ver encaixado" no lugar de preço e carrinho. Sem personalização nem página própria.
+- "Ver encaixado" usa o endereço novo `#produto/<peça>/encaixe` (`carousel.js`, `demoFromRoute`): a vitrine vai para a peça, a página
+  sobe até o banner e a demonstração abre; o endereço volta a `#produto/<peça>`. Da página Produtos, vai para `index.html#produto/macacoscopio/encaixe`.
+- Imagens novas `card-macacoscopio.webp` e `card-preview-macacoscopio.webp` (mesmo enquadramento dos outros cards).
+- Testes: `tests/storefront.mjs` confere o card da grade e do carrossel e o endereço; `tests/assets.mjs` e `tests/catalog.cjs` conhecem as novidades.

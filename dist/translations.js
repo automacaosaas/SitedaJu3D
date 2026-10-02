@@ -753,6 +753,9 @@ Pausar mensagens|Pause messages|Pausar mensajes
 Retomar mensagens|Resume messages|Reanudar mensajes
 Personalizar o meu|Customize mine|Personalizar el mío
 Ver encaixado|See it fitted|Ver encajado
+Ver o Macacoscópio encaixado|See the Macacoscópio fitted|Ver el Macacoscópio encajado
+Marrom|Brown|Marrón
+Bege|Beige|Beige
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original

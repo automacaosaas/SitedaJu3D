@@ -79,6 +79,7 @@ function init() {
     window.finishJuOpening?.();
     // Pré-monta a demonstração num momento ocioso (no máximo 1,5 s depois), para as imagens já estarem prontas no clique.
     if (window.requestIdleCallback) requestIdleCallback(() => demo.prepare(active), {timeout: 1500}); else setTimeout(() => demo.prepare(active), 300);
+    demoFromRoute();   // chegou da página Produtos por "Ver encaixado"
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
   if (total < 2) { prevButton.hidden = nextButton.hidden = true; }
@@ -244,6 +245,19 @@ function init() {
   function fromRoute() {
     const index = fromHash();
     if (index >= 0 && index !== mod(Math.round(target), total)) { demo.close({immediate: true}); stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
+    demoFromRoute();
+  }
+  // #produto/<peça>/encaixe ("Ver encaixado" nos cards da coleção e da página Produtos): a vitrine já está na peça; a página sobe
+  // até o banner e a demonstração abre. O endereço volta a #produto/<peça>, para fechar e voltar não reabrirem a demonstração.
+  function demoFromRoute() {
+    const [raw, step] = location.hash.replace('#produto/', '').split('/'), index = keys.indexOf(ALIASES[raw] || raw);
+    if (step !== 'encaixe' || index < 0) return;
+    history.replaceState(null, '', `#produto/${keys[index]}`);
+    if (!demo.has(index)) return;
+    const started = performance.now();
+    if (scrollY > 4) scrollTo({top: 0, behavior: reduced.matches ? 'auto' : 'smooth'});
+    const open = () => { if (scrollY > 4 && performance.now() - started < 1200) { requestAnimationFrame(open); return; } if (!locked) demo.open(index); };
+    requestAnimationFrame(open);
   }
   addEventListener('hashchange', fromRoute);
   addEventListener('resize', measure);
