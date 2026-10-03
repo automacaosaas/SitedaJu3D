@@ -92,7 +92,7 @@ export const SHOWCASE = {
     }
   },
   macacoscopio:{
-    art:{h:.8732, bottom:.0534, foot:.3118, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
+    art:{h:.8708, bottom:.0542, foot:.311, alt:'Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
     theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
     demo:{
       // A lâmpada de fenda portátil em duas partes, renderizadas com a câmera da foto da vitrine (tools/render-aviao-macaco/monkeylamp.html):

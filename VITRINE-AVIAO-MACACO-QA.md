@@ -95,7 +95,8 @@ transparente). `tools/modelo-macaco/recortar_foto.py` (Blender) a encaixa no qua
 de baixo das outras e o tubo centrado no eixo da lâmpada; a coluna preta (350 px no quadro de 1254) fica atrás do tubo da foto (cerca de
 388 px), então a demonstração encaixa igual, com as mesmas camadas da lâmpada. Se vier uma foto com fundo claro, o mesmo script recorta:
 o fundo e a sombra no chão são a região neutra ligada à borda da imagem, e a borda do macaco tem alfa pela mistura com o fundo.
-`products.js`: art h .8732, bottom .0534, foot .3118. `tools/modelo-macaco/vitrine_webp.py` grava os WebP (foto e cards com a altura e a
+O `SHOWCASE.macacoscopio` do `products.js` não muda: a foto ocupa o mesmo quadro da anterior (h .8708, bottom .0542, foot .311, com
+diferença de uns 3 px em 1254); se uma foto futura tiver outro enquadramento, quem ajusta o encaixe são as posições de lá. `tools/modelo-macaco/vitrine_webp.py` grava os WebP (foto e cards com a altura e a
 margem de baixo dos cards anteriores). Para fazer a foto a partir do modelo 3D, `monkeylamp.html?model=rodin`
 (`tools/render-aviao-macaco/monkey-rodin.js`) renderiza o modelo do site com a câmera da vitrine.
 
