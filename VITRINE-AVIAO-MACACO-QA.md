@@ -88,12 +88,14 @@ orelhas e os pés), `features` (preto: olhos, sobrancelhas, nariz e boca), `bana
 (300 mil triângulos); depois, `meshopt` como abaixo: 1.197 KB. `tests/model-details.mjs` confere as cores em pontos do rosto, dos
 olhos, das orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo.
 
-**Foto da vitrine e cards (02/10/2026):** `product-macacoscopio-cutout.webp`, `card-macacoscopio.webp` e `card-preview-macacoscopio.webp`
-mostram o mesmo modelo 3D, no estúdio e com a câmera da vitrine: `monkeylamp.html?model=rodin` (`tools/render-aviao-macaco/monkey-rodin.js`
-coloca o modelo do site no lugar e no tamanho do macaco procedural). As camadas da lâmpada (`macacoscopio-base`, `macacoscopio-head`)
-saem com os mesmos números de antes, então a demonstração encaixa igual; no `products.js` mudaram só `art.h` (0,8716) e `art.foot`
-(0,3421). Sem ffmpeg, `tools/modelo-macaco/vitrine_webp.py` (Blender) grava os WebP: a foto como renderizada e os cards com a altura e a
-margem de baixo dos cards anteriores.
+**Foto da vitrine e cards (02/10/2026):** `product-macacoscopio-cutout.webp` (banner, aba "Foto" e demonstração), `card-macacoscopio.webp`
+e `card-preview-macacoscopio.webp` vêm da foto enviada em 02/10/2026 (`design/originais/macacoscopio-foto.webp`), recortada do
+fundo por `tools/modelo-macaco/recortar_foto.py` (Blender): o fundo e a sombra no chão são a região neutra ligada à borda da imagem; a
+borda do macaco tem alfa pela mistura com o fundo. A peça fica com a mesma altura e a mesma margem de baixo das outras fotos e o tubo
+centrado no eixo da lâmpada: a coluna preta (350 px no quadro de 1254) fica atrás do tubo da foto (366 px), então a demonstração encaixa
+igual, com as mesmas camadas da lâmpada. `products.js`: art h .874, bottom .0518, foot .2935. `tools/modelo-macaco/vitrine_webp.py` grava
+os WebP (foto e cards com a altura e a margem de baixo dos cards anteriores). Para refazer a foto a partir do modelo 3D em vez da foto,
+`monkeylamp.html?model=rodin` (`tools/render-aviao-macaco/monkey-rodin.js`) renderiza o modelo do site com a câmera da vitrine.
 
 **Pendências para pôr à venda** (sem elas o macaco não pode entrar em `PRODUCTS`: o frete para de calcular para todos sem o peso,
 e a nota fiscal pausa sem o NCM):

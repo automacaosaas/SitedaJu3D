@@ -43,7 +43,8 @@ Converter para o site: `ffmpeg -i x.png -c:v libwebp -quality 90 x.webp`. `plane
 `envtest.html` mostra o ambiente em três esferas.
 
 Arquivos do site gerados aqui: `product-aviaoscopia-cutout`, `aviaoscopia` (popup), `card-aviaoscopia`, `card-preview-aviaoscopia` (384),
-`aviaoscopia-front`, `aviaoscopia-back`, `aviaoscopia-ruler`, `product-macacoscopio-cutout`, `macacoscopio-base`, `macacoscopio-head`.
+`aviaoscopia-front`, `aviaoscopia-back`, `aviaoscopia-ruler`, `macacoscopio-base`, `macacoscopio-head` (a foto do macaco,
+`product-macacoscopio-cutout`, agora vem da foto recortada por `tools/modelo-macaco/recortar_foto.py`; veja `VITRINE-AVIAO-MACACO-QA.md`).
 
 ## Conferir a animação
 
