@@ -22,9 +22,9 @@ Ele não substitui um teste em aparelho físico ou um navegador com toque nativo
 Validar primeiro 360 × 800, 390 × 844 e 430 × 932; depois desktop amplo.
 Em cada tamanho e em cada um dos três produtos:
 
-- Abrir imagem, personalização/3D e resumo; editar e voltar.
+- Abrir a página do produto na imagem e no 3D; abrir o painel de informações; editar pelo carrinho e voltar.
 - Conferir peça completa, fechamento e ação principal dentro da tela.
-- Escolher cada parte e uma cor; conferir a prévia e o resumo.
+- Escolher cada parte e uma cor; conferir a prévia 3D e as combinações prontas.
 - Rolar as opções: somente o painel inferior deve rolar; a prévia e os
   botões externos permanecem imóveis. Não pode haver salto ao selecionar cor.
 - Fechar e reabrir: o modal fechado não pode aparecer sobre a vitrine,

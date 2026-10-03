@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0"><script type="module">
+// The procedural Macacoscópio as a GLB (the provisional 3D preview of the site until 02/10/2026, now the Rodin model): the model of monkey.js (made from the
+// photos for the showcase). Fixed colours: the painted face and belly are baked into vertex colours
+// (COLOR_0) and nothing is selectable. Two materials: "fixed" (the printed plastic) and "gloss" (eyes and nose). Read by export-glb.cjs.
+import * as THREE from 'three';
+import {mergeVertices} from '/vendor/utils/BufferGeometryUtils.js';
+import {buildMonkey} from './monkey.js';
+import {writeGlb} from './glb.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const monkey = buildMonkey({detail: Number(P.detail || .75)}); monkey.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(monkey), centre = box.getCenter(new THREE.Vector3()), MM = Number(P.glbmm || 60);
+const toGlb = new THREE.Matrix4().makeScale(1 / MM, 1 / MM, 1 / MM).multiply(new THREE.Matrix4().makeTranslation(-centre.x, -centre.y, -centre.z));
+const srgbToLinear = v => v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4);
+const groups = {fixed: {pos: [], nor: [], col: []}, gloss: {pos: [], nor: [], col: []}};
+const sampled = new Map();
+monkey.traverse(o => {
+  if (!o.isMesh) return;
+  const mat = o.material, gloss = mat.roughness < .2, target = groups[gloss ? 'gloss' : 'fixed'];
+  const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry; if (!g.attributes.normal) g.computeVertexNormals();
+  const m = new THREE.Matrix4().multiplyMatrices(toGlb, o.matrixWorld), nm = new THREE.Matrix3().getNormalMatrix(m);
+  const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv, v = new THREE.Vector3();
+  let pixels = null, W = 0, H = 0;
+  if (mat.map?.image) { const c = mat.map.image; W = c.width; H = c.height; if (!sampled.has(c)) sampled.set(c, c.getContext('2d').getImageData(0, 0, W, H).data); pixels = sampled.get(c); }
+  const base = mat.color;
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).applyMatrix4(m); target.pos.push(v.x, v.y, v.z);
+    v.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); target.nor.push(v.x, v.y, v.z);
+    if (pixels && uv) {
+      const x = Math.min(W - 1, Math.max(0, Math.round(((uv.getX(i) % 1) + 1) % 1 * (W - 1)))), y = Math.min(H - 1, Math.max(0, Math.round((1 - uv.getY(i)) * (H - 1)))), k = (y * W + x) * 4;
+      target.col.push(srgbToLinear(pixels[k] / 255) * base.r, srgbToLinear(pixels[k + 1] / 255) * base.g, srgbToLinear(pixels[k + 2] / 255) * base.b);
+    } else target.col.push(base.r, base.g, base.b);
+  }
+});
+const primitives = Object.entries(groups).map(([name, {pos, nor, col}]) => {
+  let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g = mergeVertices(g, 1e-6);
+  return {geometry: g, material: {name, doubleSided: true, pbrMetallicRoughness: {baseColorFactor: [1, 1, 1, 1], roughnessFactor: name === 'gloss' ? .15 : .52, metallicFactor: 0}}};
+});
+const {base64, bytes} = writeGlb({name: 'macacoscopio', generator: 'siteju3d tools/render-aviao-macaco/monkey-glb.html', primitives});
+window.glbB64 = base64;
+window.info = {bytes, glbMm: MM, parts: primitives.map(({material, geometry}) => [material.name, geometry.attributes.position.count, geometry.index.count / 3])};
+window.done = true;
+</script>

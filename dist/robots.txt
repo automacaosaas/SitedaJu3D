@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /api/
+Disallow: /checkout.html
+Disallow: /comprar-agora.html
+Disallow: /conta.html
+Disallow: /email-preview.html
+
+Sitemap: https://juimprimepramim.com.br/sitemap.xml

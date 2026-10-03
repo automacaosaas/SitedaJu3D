@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import * as T from '../dist/vendor/three.module.js';
+import * as T from '../dist/vendor/three.module.min.js';
 
 // The text canvas is stubbed; raycasts use the production Three.js geometry.
 globalThis.document={createElement(){return {getContext(){return {fillText(){}};}};}};
-const threeURL=new URL('../dist/vendor/three.module.js',import.meta.url).href;
+const threeURL=new URL('../dist/vendor/three.module.min.js',import.meta.url).href;
 const source=(await readFile(new URL('../dist/models.js',import.meta.url),'utf8')).replace("from 'three'",`from '${threeURL}'`);
 const {createModel}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const colors={body:'#183c99',details:'#db354c',engines:'#efcf59'};

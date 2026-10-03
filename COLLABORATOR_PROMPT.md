@@ -6,7 +6,7 @@ Trabalhe diretamente no repositório oficial:
 
 - GitHub: https://github.com/automacaosaas/SitedaJu3D.git
 - Branch de produção: `main`
-- Produção: https://siteda-ju3-d.vercel.app/
+- Produção: https://wheat-llama-936569.hostingersite.com/ (Hostinger, publicada por upload de .zip; ver `HOSTINGER-SETUP.md`)
 - Baseline deste handoff: commit `64aa4ea2eed21e5714fe864a88b596d7f0bd42ac`
 
 Antes de editar, clone o repositório ou atualize sua cópia e confirme a branch e
@@ -50,7 +50,7 @@ de efeitos. A interação chama atenção com profundidade e movimento suave.
 - Tipografia de interface: **DM Sans**.
 - Títulos editoriais: **Playfair Display**.
 - Frases manuscritas: **Parisienne**.
-- Logotipo oficial: `dist/assets/logo-ju.png`.
+- Logotipo oficial: `design/originais/logo-ju.png` (original); o site usa `dist/assets/logo-ju.webp` (336 px).
 
 Use bastante respiro, hierarquia editorial, bordas suaves e animações discretas.
 Preserve contraste, legibilidade, áreas de toque de pelo menos 44 px e estados
@@ -83,20 +83,23 @@ publicados ficam em `dist/`:
   `SHOWCASE` (enquadramento do recorte e tema de cada produto).
 - `models.js`: geometria 3D ilustrativa e grupos de materiais.
 - `viewer.js`: Three.js, câmera, enquadramento, luzes e controles.
-- `controller.js`: rotas por hash, modal, personalização, resumo e persistência.
-- `vendor/`: Three.js e OrbitControls locais.
+- `controller.js`: rotas por hash e página de produto compacta (cores, combinações, painel de informações, persistência).
+- `vendor/`: Three.js r180 minificado (`three.module.min.js`), OrbitControls, GLTFLoader e o decodificador Meshopt locais.
 - `assets/`: logo e imagens de apresentação (`logo-ju-email.png` é o logo sem fundo
   usado no e-mail).
 - `i18n.js`, `i18n-core.js` e `translations.js`: idiomas (PT/EN/ES), seletor e a
   sugestão de idioma na primeira visita.
-- `account.js` e `auth-service.js`: conta em fluxo “e-mail primeiro” (e-mail → código →
-  nome/senha só para conta nova) e verificação por e-mail.
+- `account.js` e `auth-service.js`: contas reais no servidor, em fluxo “e-mail primeiro” (e-mail → código ou
+  senha → nome/senha só para conta nova). `identification.js`: etapa Identificação do checkout e “Meus dados”.
+  Detalhes em `AUTH-INTEGRATION.md`.
 - `loading-ui.js` (janela de carregamento por etapas e decodificação de imagens),
   `page-entry.js` (abertura com logo da home), `header-scroll.js` (cabeçalho compacto que
   some ao descer), `shopping-navigation.js` (aviso ao adicionar ao carrinho e volta ao
   catálogo), `hero-scenery.js` (folhas e nuvens decorativas) e `experience.css`. Imagens
-  em WebP ao lado dos PNG originais. Detalhes em `EXPERIENCE-QA.md`.
-- `api/` (fora de `dist/`): funções da Vercel para o e-mail de verificação.
+  em WebP; os PNG originais ficam em `design/originais/` (fora do site publicado). Detalhes em `EXPERIENCE-QA.md` e `PERFORMANCE-QA.md`.
+- `api/` (fora de `dist/`): contas (`api/auth`, `api/account`) e e-mail, para Vercel e Hostinger. `db/migrations/`: tabelas
+  do MySQL, aplicadas quando o servidor liga.
+- `server.cjs` (entrada) e `server/create-server.cjs`: servidor de produção para a Hostinger (serve `dist/` e `api/` com os cabeçalhos de `vercel.json`). Ver `HOSTINGER-SETUP.md`.
 - `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
 
@@ -164,6 +167,14 @@ seleções salvas em `localStorage` nem mude os IDs sem uma migração.
 
 ## Regras específicas do Aviãoscopia
 
+> **Atualização (2026-10-01):** as imagens do banner, do catálogo e do popup (`product-aviaoscopia-cutout.webp`, `card-aviaoscopia*.webp`,
+> `aviaoscopia.webp`) agora são renders do CAD real (STL do projeto de 21/08/2026), montado como o avião de verdade: faces bojudas para fora,
+> bandeja funda com as 16 aberturas **vazadas** (a régua é do cliente), números gravados, janelas, estrelas, motores e nariz. A régua de
+> esquiascopia só aparece na demonstração do banner: `aviaoscopia-ruler.webp` sobe por entre `aviaoscopia-back.webp` e `aviaoscopia-front.webp`,
+> que se fecham em volta dela. Para refazer as imagens: `tools/render-aviao-macaco/README.md`. As regras abaixo valem para o **modelo 3D da
+> prévia** antiga (`models.js`, testado por `tests/plane-geometry.mjs`). A prévia 3D da personalização usa `assets/models/aviaoscopia.glb`,
+> que desde 02/10/2026 é o CAD real (`tools/render-aviao-macaco/export-glb.cjs`).
+
 O avião não pode aparecer como uma moldura vazia nem com um furo redondo na
 base. Ele representa a régua encaixada:
 
@@ -179,14 +190,16 @@ base. Ele representa a régua encaixada:
 - A parte inferior usa um rasgo retangular horizontal, largo e baixo, que
   atravessa a base para acomodar a haste plana da régua. Nunca desenhe uma
   bolinha, tubo ou ponto pintado nesse local.
-- A imagem principal do modal é `dist/assets/aviaoscopia-regua.png`; o banner e o
-  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.png`.
+- A imagem principal do modal é `dist/assets/aviaoscopia.webp` (o avião na pilastra); o banner e o
+  catálogo usam o recorte `dist/assets/product-aviaoscopia-cutout.webp`.
 - O teste estrutural é `node tests/plane-geometry.mjs`.
 
 ## Vitrine principal (banner temático)
 
-O banner mostra um produto por vez: categoria, nome, subtítulo, a peça sobre uma
-pilastra branca e o botão “Escolha sua cor” com as cores originais logo abaixo.
+O banner mostra um produto por vez, no formato “banner limpo”: categoria, nome,
+subtítulo, preço com o selo verde “5% off no Pix”, a peça sobre uma pilastra branca
+e os botões “Personalizar o meu” (principal) e “Ver encaixado” (só nas peças com
+demonstração).
 A troca é uma passagem lateral: peça e pilastra saem juntas, a próxima entra pelo
 lado oposto, e fundo, header, textos e paleta trocam na mesma transição
 (780 ms, `cubic-bezier(.22, 1, .36, 1)`). Um único valor contínuo (`position`,
@@ -206,8 +219,7 @@ arraste nunca abre o modal; um toque simples na peça abre o produto. Setas,
 teclado e arraste com mouse funcionam. O tratamento de `lostpointercapture` é
 intencional: ao transferir a captura implícita do toque do link para a vitrine,
 o evento propagado pelo link não pode cancelar o gesto. Respeite
-`prefers-reduced-motion` (só crossfade, sem translação nem escala, e o botão do
-card ganha um contorno estático em vez de pulsar).
+`prefers-reduced-motion` (só crossfade, sem translação nem escala).
 
 Fundo e tema: uma faixa de cor por tema (`data-hero-bg`) cobre a página inteira,
 atrás do banner e do catálogo; o degradê do banner continua por baixo dele e um
@@ -221,19 +233,31 @@ originais do site. Não altere `catalog.css` nem `catalog.js` para isso: os
 ajustes ficam em `carousel.css`, sempre com o prefixo `.home`, e a página
 Produtos não muda.
 
-“Escolha sua cor” leva ao card do produto ativo no carrossel do catálogo (clique
-programático no card, o mesmo caminho do toque em um card lateral), rola até ele
-e faz pulsar o botão “Personalize o seu” até a pessoa interagir. Isso depende de
-`data-product-id` nos cards.
+“Personalizar o meu” segue o padrão dos marketplaces: cor sólida do tema, verbo
+claro, ícone de paleta à esquerda, sem seta, 52 px de altura. É um link para
+`#produto/<peça>/personalizar`, que abre o modal direto no configurador. “Ver
+encaixado” abre a demonstração do produto ativo (`demo.open`), a mesma do toque na
+peça. A demonstração usa o mesmo botão.
 
-Desktop (≥ 901 px): os cards do catálogo da home são um pouco menores
-(ativo 352 px) para o carrossel caber inteiro ao chegar pelo botão. O celular usa
-a coluna única, com o botão logo abaixo da pilastra.
+Desktop (≥ 901 px): texto e botões à esquerda, peça à direita. Celular: coluna
+única; o botão principal ocupa a largura entre as setas (até 340 px) e “Ver
+encaixado” fica logo abaixo. Abaixo de 380 px o botão compacta para o rótulo caber
+numa linha. Acima do cabeçalho das páginas da loja fica a barra rotativa
+(`announcement-bar.js`).
 
 ## Modal e configurador
 
-O mesmo modal tem três estados: apresentação, personalização e resumo. No
-celular, ele usa quase toda a altura útil com `dvh` e safe areas. A prévia fica
+O produto é uma **página compacta numa tela só** (`controller.js` + `product-page.css`),
+sem etapas. Ela reúne nome, preço com o valor no Pix, “Suas cores” (parte em
+controle segmentado, cores em círculos como grupo de opções navegável por setas e
+combinações prontas Original, Pastel, Vibrante e Surpreenda-me) e a compra sempre
+à vista (“Adicionar ao carrinho” e “Comprar agora”). Ao escolher uma cor, a prévia
+passa da imagem para o 3D. Os atalhos Detalhes, Cores, Entrega e Trocas abrem um
+painel com abas: ao lado no desktop, de baixo para cima no celular. O Esc fecha
+primeiro o painel. O painel só traz informação real; compatibilidade e medidas
+entram quando a Ju fornecer. `#produto/<peça>` abre na imagem e
+`#produto/<peça>/personalizar` abre no 3D. No celular, a página usa quase toda a
+altura útil com `dvh` e safe areas. A prévia fica
 estável na parte superior, somente o painel inferior de opções rola, e a ação
 principal permanece acessível no rodapé. O botão de fechar fica sempre visível e
 a página de fundo permanece travada.
@@ -241,8 +265,7 @@ a página de fundo permanece travada.
 A imagem usa `object-fit: contain`. A prévia 3D enquadra o produto completo e a
 pilastra com base nos limites reais da geometria. Há giro, zoom e retorno à vista
 inicial. Os controles não cobrem o objeto. A troca de parte ou cor não pode
-causar salto do modal, rolagem externa ou perda de foco. O resumo lista cada
-parte e a cor escolhida; essa etapa ainda não envia pedido.
+causar salto do modal, rolagem externa ou perda de foco.
 
 ## Acessibilidade e compatibilidade
 
@@ -256,7 +279,7 @@ parte e a cor escolhida; essa etapa ainda não envia pedido.
 
 ## Validação obrigatória
 
-Antes de publicar, execute:
+Antes de publicar, execute `npm test` (roda todas as suítes de `tests/`) e confira também:
 
 ```text
 node tests/carousel.cjs
@@ -276,11 +299,11 @@ node --check dist/viewer.js
 ```
 
 Faça a matriz visual descrita em `QA.md` em 360 × 800, 390 × 844 e 430 × 932,
-além de notebook e desktop amplo. Valide os três produtos, os três estados do
-modal, imagem e 3D, todas as partes, cores, resumo, fechamento, rolagem interna,
+além de notebook e desktop amplo. Valide os três produtos, a página de produto,
+imagem e 3D, todas as partes, cores, combinações, o painel de informações, fechamento, rolagem interna,
 carrossel nos dois sentidos e ausência de erros no console. Para mudanças no
 banner, siga também a matriz de `HERO-BANNER-QA.md` (1920 a 360, gestos,
-movimento reduzido e o fluxo “Escolha sua cor”). Para mudanças no Aviãoscopia,
+movimento reduzido e os botões “Personalizar o meu” e “Ver encaixado”). Para mudanças no Aviãoscopia,
 confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 
 ## Processo de colaboração e Git
@@ -294,8 +317,8 @@ confira visualmente os 16 furos, os 16 números e o rasgo retangular.
 4. Antes de integrar, rode os testes e revise o diff inteiro.
 5. Envie ao responsável o hash do commit, arquivos alterados, comportamento
    final, testes executados e qualquer limite que ainda exija aparelho físico.
-6. A produção oficial é a Vercel conectada à branch `main`. Após integração,
-   confirme que https://siteda-ju3-d.vercel.app/ recebeu exatamente o commit.
+6. A produção oficial é a Hostinger (a Vercel não é mais usada). Após o envio do .zip,
+   confirme que https://wheat-llama-936569.hostingersite.com/ recebeu exatamente o commit.
 7. Apesar de existir `.openai/hosting.json`, não migre nem publique este projeto
    em outro serviço sem solicitação explícita. O fluxo oficial atual é
    GitHub `main` → Vercel.

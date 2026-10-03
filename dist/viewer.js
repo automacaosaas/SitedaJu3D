@@ -39,7 +39,9 @@ export class ProductViewer{
   resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;const changed=w!==this.width||h!==this.height;this.width=w;this.height=h;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();if(changed)this.fit();this.render();}
   fit(){
     if(!this.model)return;
-    const bounds=new T.Box3().setFromObject(this.model.group);bounds.union(new T.Box3().setFromObject(this.pedestal));
+    // Phones (audit D4): frame the piece itself, not the wide pedestal, so it reads larger; the pedestal may run off the sides.
+    const phone=this.width>0&&this.width<=480;
+    const bounds=new T.Box3().setFromObject(this.model.group);if(!phone)bounds.union(new T.Box3().setFromObject(this.pedestal));
     const center=bounds.getCenter(new T.Vector3());
     const vertical=T.MathUtils.degToRad(this.camera.fov/2),horizontal=Math.atan(Math.tan(vertical)*this.camera.aspect);
     const direction=this.camera.position.clone().sub(this.controls.target).normalize();
@@ -49,7 +51,7 @@ export class ProductViewer{
     // Fit the actual projected bounds, including the pedestal, with a safe margin.
     for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
       const p=new T.Vector3(x,y,z).sub(center);
-      distance=Math.max(distance,p.dot(direction)+1.1*Math.max(Math.abs(p.dot(right))/Math.tan(horizontal),Math.abs(p.dot(up))/Math.tan(vertical)));
+      distance=Math.max(distance,p.dot(direction)+(phone?1.12:1.1)*Math.max(Math.abs(p.dot(right))/Math.tan(horizontal),Math.abs(p.dot(up))/Math.tan(vertical)));
     }
     this.controls.target.copy(center);this.camera.position.copy(center).addScaledVector(direction,distance);
     this.controls.minDistance=distance*.65;this.controls.maxDistance=distance*2;

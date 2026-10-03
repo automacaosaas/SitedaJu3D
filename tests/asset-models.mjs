@@ -2,10 +2,10 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {registerHooks} from 'node:module';
-registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.js',import.meta.url).href:specifier,context);}});
-const T=await import('../dist/vendor/three.module.js');
+registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.min.js',import.meta.url).href:specifier,context);}});
+const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
-const {PRODUCTS,PALETTE}=await import('../dist/products.js');
+const {PRODUCTS,PALETTE,SOON}=await import('../dist/products.js');
 const {createAssetModel,PRESENTATION_SCALE}=await import('../dist/asset-models.js');
 // The native renderer decodes images in browser checks; no image shim affects geometry.
 const originalParse=GLTFLoader.prototype.parseAsync;
@@ -42,15 +42,28 @@ try{
   assert.ok(Math.abs(bounds.max.y-bounds.min.y-4.1*(PRESENTATION_SCALE[key]||1))<.001,'Consistent fit across products (the butterfly alone is presented larger)');
   for(const x of [bounds.min.x,bounds.max.x])for(const z of [bounds.min.z,bounds.max.z])assert.ok(Math.hypot(x,z)<1.9,'The whole product stands within the pedestal');
   if(key==='aviaoscopia'){
-   // Rodin (6) contains actual through holes. Repainting must not close them.
+   // The real CAD has actual through holes (centres measured on the STL). Repainting must not close them.
    const ray=new T.Raycaster(),direction=new T.Vector3(0,0,-1);
    const hits=(x,y)=>{ray.set(new T.Vector3(x,y,2).applyMatrix4(model.group.matrixWorld),direction);return ray.intersectObject(model.group,true);};
-   for(const x of [-.08,.08])for(const y of [.397,.241,.087,-.069,-.224,-.380,-.535,-.690]){
+   for(const x of [-.0789,.0793])for(const y of [.383,.2232,.0635,-.0963,-.2561,-.4158,-.5756,-.7353]){
     assert.equal(hits(x,y).length,0,'All sixteen panel openings remain unobstructed');
    }
    assert.ok(hits(.27,-.1).length>0,'Solid frame remains around the openings');
   }
   model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
+ }
+ // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
+ for(const key of Object.keys(SOON)){
+  const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
+  const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
+  // The loader reads embedded images through a blob: fetch, which the site's CSP (connect-src) blocks: colours go in the materials.
+  assert.equal(json.textures?.length||0,0,`${key}: fixed colours in the materials, no texture`);
+  const model=await createAssetModel(key,{},new AbortController().signal);
+  assert.equal(model.parts.size,0,`${key}: fixed colours, no selectable part`);
+  model.group.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model.group);
+  assert.ok(Math.abs(bounds.min.y+1.9)<.001&&Math.abs(bounds.max.y-bounds.min.y-4.1)<.001,`${key}: rests on the pedestal at the shared height`);
+  for(const x of [bounds.min.x,bounds.max.x])for(const z of [bounds.min.z,bounds.max.z])assert.ok(Math.hypot(x,z)<1.9,`${key}: stands within the pedestal`);
+  model.dispose();console.log(`PASS ${key}: novelty model loads, fixed colours and consistent bounds.`);
  }
  const aborted=new AbortController();aborted.abort();await assert.rejects(createAssetModel('borboletoscopio',{},aborted.signal),{name:'AbortError'});
 }finally{globalThis.fetch=originalFetch;GLTFLoader.prototype.parseAsync=originalParse;}

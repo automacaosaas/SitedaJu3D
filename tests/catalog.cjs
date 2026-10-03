@@ -7,7 +7,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../dist/catalog.js'), 'utf8')
   .replace(/^import .*;\r?\n/gm, '');
 const context = vm.createContext({
-  PRODUCTS: {}, document: {querySelectorAll: () => [], addEventListener() {}},
+  PRODUCTS: {}, SOON: {}, document: {querySelectorAll: () => [], addEventListener() {}},
   window: {addEventListener() {}},
   matchMedia: () => ({matches:false}), setTimeout: fn => fn()
 });

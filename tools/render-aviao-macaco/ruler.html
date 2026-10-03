@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// The degree ruler alone (model in ruler.js), straight on with a long lens, on a tall transparent canvas.
+import * as THREE from 'three';
+import {makeRenderer, studioEnvironment, renderStudio, finish} from './studio.js';
+import {buildRuler, RULER} from './ruler.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const W = Number(P.w || 600), H = Number(P.h || 2400), PASSES = Number(P.passes || 40);
+const renderer = makeRenderer(W, H, {exposure: Number(P.exposure || 1)});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: Number(P.top || 6), left: Number(P.left || 3.4), right: Number(P.right || 2.4)});
+scene.add(buildRuler({env: Number(P.env || 1), acr: Number(P.acr || .08)}));
+
+const top = RULER.top + 1.2, bottom = RULER.bottom - 1.2, frameH = (top - bottom) / Number(P.fill || .965), fov = 6;
+const camera = new THREE.PerspectiveCamera(fov, W / H, 10, 20000);
+const dist = frameH / 2 / Math.tan(fov * Math.PI / 360);
+camera.position.set(0, (top + bottom) / 2, dist); camera.lookAt(0, (top + bottom) / 2, 0);
+
+const out = renderStudio(renderer, scene, camera, {width: W, height: H, passes: PASSES,
+  key: {dir: [Number(P.kx ?? -.5), Number(P.ky ?? .7), Number(P.kz ?? .75)], spread: .25, intensity: Number(P.key || 1.6)},
+  dome: {intensity: Number(P.dome || .9), minElevation: -.2}, shadowMap: 4096});
+// where things are in the image, as fractions of the width/height (for the demo data)
+const toPx = (x, y) => { const v = new THREE.Vector3(x, y, 0).project(camera); return [+((v.x + 1) / 2).toFixed(4), +((1 - v.y) / 2).toFixed(4)]; };
+finish({ruler: out}, {pxPerMm: +(H / frameH).toFixed(3), tabTop: toPx(0, RULER.TAB), plateTop: toPx(0, 0), plateBottom: toPx(0, RULER.PLATE_BOTTOM), gripTop: toPx(0, RULER.GRIP_TOP)});
+</script>

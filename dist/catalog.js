@@ -1,18 +1,24 @@
-import {goToCart} from './shopping-navigation.js';
-import {PRODUCTS, PRODUCT_CATEGORIES, color, defaults} from './products.js';
-import {COMMERCE, money} from './commerce-config.js';
+import {openMiniCart, addedItemId} from './mini-cart.js';
+import {productGrid} from './product-grid.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, color, defaults} from './products.js';
+import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
 import {imageReady} from './loading-ui.js';
 
-const entries = Object.entries(PRODUCTS).map(([id, product]) => ({id, product}));
+// As novidades (SOON, products.js) entram no fim da coleção: foto, nome, selo "Em breve" e "Ver encaixado", sem preço nem carrinho.
+const entries = [...Object.entries(PRODUCTS), ...Object.entries(SOON)].map(([id, product]) => ({id, product}));
 const cardArt = Object.freeze({
   borboletoscopio: 'card-borboletoscopio.webp',
   dinossauroscopio: 'card-dinossauroscopio.webp',
-  aviaoscopia: 'card-aviaoscopia.webp'
+  aviaoscopia: 'card-aviaoscopia.webp',
+  macacoscopio: 'card-macacoscopio.webp'
 });
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
+// "Ver encaixado": a vitrine vai para a peça e abre a demonstração (carousel.js, #produto/<peça>/encaixe).
+const demoHref = id => `${productHref(id)}/encaixe`;
+
 const category = key => PRODUCT_CATEGORIES[key] || {label:key};
 const offsetFrom = (index, active, length) => {
   let offset = (index - active) % length;
@@ -21,11 +27,16 @@ const offsetFrom = (index, active, length) => {
   return offset;
 };
 function colorsFor(id, product) { const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
+function soonCard({id, product}) {
+  const categoryLabel = category(product.category).label, href = demoHref(id);
+  return `<article class="product-rail-card is-soon" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${href}" aria-label="Ver o ${product.title} encaixado"><img src="assets/card-preview-${id}.webp" data-full-src="assets/card-${id}.webp" alt="${product.title}" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${href}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${product.colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><span class="product-soon">Em breve</span></div><div class="product-rail-actions is-single"><a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="${productHref(id)}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></div></article>`;
+}
 function productCard({id, product}) {
+  if (product.soon) return soonCard({id, product});
   const colors = colorsFor(id, product), categoryLabel = category(product.category).label;
   const fullArt = cardArt[id] || product.catalogImage || product.image;
   const previewArt = cardArt[id] ? `card-preview-${id}.webp` : fullArt;
-  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${productHref(id)}" aria-label="Personalizar ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note">Preço ilustrativo</span></div><div class="product-rail-actions"><a class="product-customize" href="${productHref(id)}">Personalize o seu</a><button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho">${icon('cart')}</button></div></div></article>`;
+  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${productHref(id)}" aria-label="Personalizar ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note">Preço ilustrativo</span><span class="product-rail-pix">${money(pixPrice(COMMERCE.prices[id]))} no Pix</span></div><div class="product-rail-actions"><a class="product-customize" href="${productHref(id)}/personalizar">Personalizar o meu</a><button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho nas cores originais" title="Adicionar nas cores originais">${icon('cart')}</button></div></div></article>`;
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 
@@ -107,13 +118,15 @@ class ProductCarousel {
 }
 function mountCarousel(host, key = host.dataset.category) { const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); return; } new ProductCarousel(host, list); }
 for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
+// Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
+for (const host of document.querySelectorAll('[data-product-grid]')) { const html = productGrid(host.dataset.category); if (host.innerHTML.trim() !== html) host.innerHTML = html; }
 for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
   const categories = Object.entries(PRODUCT_CATEGORIES);
   const initialTabs = [...tabs.querySelectorAll('[data-catalog-filter]')];
   if (initialTabs.length !== categories.length || initialTabs.some((tab, index) => tab.dataset.catalogFilter !== categories[index][0]))
     tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
-  tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel]'); host.dataset.category = button.dataset.catalogFilter; mountCarousel(host, button.dataset.catalogFilter); });
+  tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel], [data-product-grid]'); host.dataset.category = button.dataset.catalogFilter; if (host.matches('[data-product-grid]')) host.innerHTML = productGrid(button.dataset.catalogFilter); else mountCarousel(host, button.dataset.catalogFilter); });
 }
-document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await goToCart(); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note'); if (notice) notice.textContent = error.message; } });
+document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); const cart = writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); openMiniCart({itemId: addedItemId(cart, id, defaults(id)), original: true}); button.disabled = false; button.classList.remove('is-loading'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note, .product-grid-note'); if (notice) notice.textContent = error.message; } });
 
 window.addEventListener('pageshow', () => document.querySelectorAll('[data-add-product]').forEach(button => {button.disabled = false; button.classList.remove('is-loading');}));

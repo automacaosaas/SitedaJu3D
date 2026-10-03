@@ -1,17 +1,19 @@
 // Vitrine principal: um produto por vez, apoiado na pilastra, com fundo e header temáticos.
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
-import {PRODUCTS, PRODUCT_CATEGORIES, ALIASES, originalColors, showcase} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
+import {COMMERCE, money} from './commerce-config.js';
+import {icon} from './icons.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
 if (region && shell) init();
 
 function init() {
-  const keys = Object.keys(PRODUCTS), total = keys.length;
+  const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)], total = keys.length;   // as novidades (SOON) vêm depois: só vitrine, sem compra
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const easeOut = cubicBezier(...EASE);
   const status = region.querySelector('#gallery-status');
@@ -25,10 +27,10 @@ function init() {
   const lower = text => text.charAt(0).toLowerCase() + text.slice(1);
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
-    const product = PRODUCTS[key], {art, theme, demo} = showcase(key), colors = originalColors(key);
+    const product = PRODUCTS[key] || SOON[key], soon = !PRODUCTS[key], {art, theme, demo} = showcase(key);
     // wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo.
     const wash = mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3);
-    return {key, product, art, theme, demo, colors, wash, category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    return {key, product, art, theme, demo, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
   let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false;
@@ -43,10 +45,13 @@ function init() {
   // ── Estrutura ────────────────────────────────────────────────────────────────
   bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
-  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme}) =>
-    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p></div>`).join('');
-  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, colors, theme}) =>
-    `<div class="palette" style="${themeVars(theme)}"><button class="palette-button" type="button" data-role="palette" data-go-card aria-label="Escolha sua cor: ver ${product.title} na coleção e personalizar. Cores originais: ${colors.map(c => c.name).join(', ')}"><span>Escolha sua cor</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><span class="palette-dots" aria-hidden="true">${colors.map(c => `<i style="--dot:${c.hex}"></i>`).join('')}</span></div>`).join('');
+  region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price, soon}) =>
+    `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : soon ? '<p class="copy-price"><span class="palette-soon">Novidade · em breve</span></p>' : ''}</div>`).join('');
+  // Banner limpo: uma ação principal (abre o configurador do produto ativo) e, nas peças com demonstração,
+  // uma secundária que mostra a peça encaixada no equipamento. O nome do produto completa o rótulo para leitores de tela.
+  // Novidade (SOON): sem configurador nem preço; no lugar da ação principal, um selo "Novidade · em breve".
+  region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, theme, demo, soon}) =>
+    `<div class="palette" style="${themeVars(theme)}">${soon ? `<a class="palette-button" href="#produto/${key}/3d" data-role="palette">${icon('cube')}<span>Ver em 3D</span><span class="sr-only"> ${product.title}</span></a>` : `<a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="sr-only"> ${product.title}</span></a>`}${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
     const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
     return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
@@ -74,6 +79,7 @@ function init() {
     window.finishJuOpening?.();
     // Pré-monta a demonstração num momento ocioso (no máximo 1,5 s depois), para as imagens já estarem prontas no clique.
     if (window.requestIdleCallback) requestIdleCallback(() => demo.prepare(active), {timeout: 1500}); else setTimeout(() => demo.prepare(active), 300);
+    demoFromRoute();   // chegou da página Produtos por "Ver encaixado"
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
   if (total < 2) { prevButton.hidden = nextButton.hidden = true; }
@@ -93,9 +99,8 @@ function init() {
     slots.forEach((slot, i) => { slot.dataset.front = String(i === active); slot.toggleAttribute('inert', i !== active); });
     copies.forEach((block, i) => block.toggleAttribute('inert', i !== active));
     palettes.forEach((block, i) => block.toggleAttribute('inert', i !== active));
-    clearPulse();
     if (stage.getAttribute('aria-busy') === 'false') demo.prepare(active);
-    if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]')).focus({preventScroll: true});
+    if (role) (role === 'slot' ? slots[active] : palettes[active].querySelector('[data-role]'))?.focus({preventScroll: true});
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -160,34 +165,7 @@ function init() {
   prevButton.addEventListener('click', () => move(-1));
   nextButton.addEventListener('click', () => move(1));
 
-  // ── Ir ao card: "Escolha sua cor" e a seta pulsante levam ao card do produto ativo ──
-  let pulseAbort = null;
-  function clearPulse() {
-    pulseAbort?.abort(); pulseAbort = null;
-    document.querySelectorAll('.product-customize.is-pulsing').forEach(button => button.classList.remove('is-pulsing'));
-  }
-  function goToCard() {
-    const key = entries[active].key, card = document.querySelector(`.product-rail-card[data-product-id="${key}"]`);
-    const section = card?.closest('[data-product-carousel]') || document.querySelector('#produtos');
-    if (!section) return;
-    clearPulse();
-    card?.click(); // traz o card ao centro do carrossel, igual ao toque em um card lateral
-    section.scrollIntoView({behavior: reduced.matches ? 'auto' : 'smooth', block: 'center'});
-    status.textContent = `${entries[active].product.title}: use Personalize o seu para escolher as cores.`;
-    const button = card?.querySelector('.product-customize');
-    if (!button) return;
-    let started = false;
-    const begin = () => {
-      if (started) return;
-      started = true;
-      button.classList.add('is-pulsing');
-      pulseAbort = new AbortController();
-      for (const type of ['pointerenter', 'focus', 'click', 'animationend']) button.addEventListener(type, clearPulse, {once: true, signal: pulseAbort.signal});
-    };
-    addEventListener('scrollend', begin, {once: true});
-    setTimeout(begin, reduced.matches ? 60 : 1100);
-  }
-  region.addEventListener('click', e => { if (e.target.closest('[data-go-card]')) goToCard(); });
+  region.addEventListener('click', e => { if (e.target.closest('[data-demo-open]') && !locked && demo.has(active)) demo.open(active); });
 
   // ── Hover: a peça ativa inclina até ~2,5° seguindo o cursor (só mouse; o CSS aplica em :hover) ──
   let tiltFrame = 0, tiltAt = null;
@@ -267,6 +245,19 @@ function init() {
   function fromRoute() {
     const index = fromHash();
     if (index >= 0 && index !== mod(Math.round(target), total)) { demo.close({immediate: true}); stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
+    demoFromRoute();
+  }
+  // #produto/<peça>/encaixe ("Ver encaixado" nos cards da coleção e da página Produtos): a vitrine já está na peça; a página sobe
+  // até o banner e a demonstração abre. O endereço volta a #produto/<peça>, para fechar e voltar não reabrirem a demonstração.
+  function demoFromRoute() {
+    const [raw, step] = location.hash.replace('#produto/', '').split('/'), index = keys.indexOf(ALIASES[raw] || raw);
+    if (step !== 'encaixe' || index < 0) return;
+    history.replaceState(null, '', `#produto/${keys[index]}`);
+    if (!demo.has(index)) return;
+    const started = performance.now();
+    if (scrollY > 4) scrollTo({top: 0, behavior: reduced.matches ? 'auto' : 'smooth'});
+    const open = () => { if (scrollY > 4 && performance.now() - started < 1200) { requestAnimationFrame(open); return; } if (!locked) demo.open(index); };
+    requestAnimationFrame(open);
   }
   addEventListener('hashchange', fromRoute);
   addEventListener('resize', measure);

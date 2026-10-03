@@ -1,8 +1,11 @@
 import {icon} from './icons.js';
 import {mountLanguagePicker} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
-import {getSession, signOut} from './auth-service.js';
+import {getSession, refreshSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
+import {mountAnnouncementBar} from './announcement-bar.js';
+import {PRODUCTS} from './products.js';
+import {COMMERCE} from './commerce-config.js';
 import './shopping-navigation.js';
 import './account-drawer.js';
 
@@ -13,6 +16,16 @@ const MAIN_NAVIGATION = [
   {label:'Contato', href:'contato.html', active:() => /\/contato\.html$/.test(location.pathname)}
 ];
 const primaryNav = () => MAIN_NAVIGATION.map(item => `<a href="${item.href}"${item.active() ? ' aria-current="page"' : ''}>${item.label}</a>`).join('');
+// The phone menu beyond the four links (audit H1): the pieces with thumbnails, "Meus pedidos", "Fale com a Ju" once the
+// WhatsApp number exists, Instagram and the signature.
+const INSTAGRAM = 'https://www.instagram.com/juimprimepramim/';
+function drawerExtras() {
+  const pieces = Object.entries(PRODUCTS).map(([id, product]) => `<li><a href="${id}.html"><img src="assets/card-preview-${id}.webp" alt="" width="56" height="56" loading="lazy" decoding="async"><span><strong>${product.title}</strong><small>${product.subtitle}</small></span></a></li>`).join('');
+  const whatsapp = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? `<a href="https://wa.me/${COMMERCE.whatsapp}" target="_blank" rel="noopener">${icon('mail')}<span>Fale com a Ju</span></a>` : '';
+  return `<section class="drawer-products" aria-labelledby="drawer-products-title"><h2 id="drawer-products-title">Nossas peças</h2><ul>${pieces}</ul></section>`
+    + `<nav class="drawer-more" aria-label="Mais"><a href="conta.html#pedidos">${icon('bag')}<span>Meus pedidos</span></a>${whatsapp}<a href="${INSTAGRAM}" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Ju, imprime pra mim? (abre em uma nova aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a></nav>`
+    + '<p class="drawer-signature">feito com carinho, pela Ju.</p>';
+}
 
 function setupSiteHeader(host) {
   const header = host.closest('.header');
@@ -26,7 +39,7 @@ function setupSiteHeader(host) {
 
 function setupMobileDrawer() {
   if (!document.querySelector('.menu-toggle') || document.querySelector('#mobile-drawer')) return;
-  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju.webp" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav></aside></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju.webp" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav>${drawerExtras()}</aside></div>`);
   const layer = document.querySelector('.mobile-drawer-layer'), drawer = layer.querySelector('.mobile-drawer');
   let opener = null, closingTimer = null, openingFrame = null;
   const headerToggles = () => [...document.querySelectorAll('.menu-toggle')];
@@ -105,7 +118,11 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
   document.addEventListener('click', e => { if (!host.contains(e.target)) close(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { close(); trigger.focus(); } });
 }
+// The session is an HttpOnly cookie; ask the server who is signed in so a new tab shows the right name in the menu.
+refreshSession();
 setupMobileDrawer();
+// The rotating bar is for the shop pages; cart, checkout and account keep the buyer focused on finishing.
+if (!document.body.matches('.commerce-page, .account-page')) mountAnnouncementBar();
 setupScrollHeader(document.querySelector('.site-header'));
 window.addEventListener('hashchange', () => {
   document.querySelectorAll('.primary-nav a, .drawer-links a').forEach(link => {

@@ -4,16 +4,22 @@
 //   node tools/dev-server.cjs              → e-mails are written to a temp folder instead of being sent
 //   node tools/dev-server.cjs --ask-key    → asks for the Resend key (hidden) and sends real e-mails
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
-// Optional: MAIL_FROM, MAIL_REPLY_TO, PORT (default 8844), SITE_URL.
+//   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
+//   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
+//   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
+//   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
+// Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
+const {createFakeMercadoPago} = require('./fake-mercadopago.cjs');
+const {createFakeBling} = require('./fake-bling.cjs');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
-const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary'};
+const TYPES = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary', '.webp': 'image/webp'};
 
 // Reads a secret without echoing it. Pasting works. Falls back to a plain line when stdin is not a terminal.
 function askHidden(question) {
@@ -40,6 +46,17 @@ function askHidden(question) {
   });
 }
 
+// vercel.json `headers` rules as {pattern, headers}. Sources here are plain "/prefix/(.*)" patterns, which are also valid
+// regular expressions; tests/headers.mjs keeps it that way.
+function readHeaderRules() {
+  const file = path.join(__dirname, '..', 'vercel.json');
+  if (!fs.existsSync(file)) return [];
+  return (JSON.parse(fs.readFileSync(file, 'utf8')).headers || []).map(rule => ({
+    pattern: new RegExp(`^${rule.source}$`),
+    headers: rule.headers.filter(header => header.key.toLowerCase() !== 'cache-control')
+  }));
+}
+
 async function main() {
   const env = {...process.env, SITE_URL: process.env.SITE_URL || `http://localhost:${PORT}`};
   if (process.argv.includes('--ask-key')) {
@@ -49,7 +66,23 @@ async function main() {
     if (!env.RESEND_API_KEY.startsWith('re_')) console.warn('Aviso: chaves do Resend começam com "re_". Confira se copiou a chave inteira.');
     else console.log(`Chave recebida (${env.RESEND_API_KEY.length} caracteres).`);
   }
+  const fakeMp = process.argv.includes('--fake-mp'), fakeCorreios = process.argv.includes('--fake-correios'), fakeCep = process.argv.includes('--fake-cep');
+  // --fake-nfe: simulated NF-e service with example tax data (never in production), to see the whole invoice flow locally.
+  if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
+  // --fake-bling: the NF-e goes through a simulated Bling, with example tax data; its authorization page is local.
+  const fakeBling = process.argv.includes('--fake-bling') ? createFakeBling() : null;
+  if (fakeBling) Object.assign(env, {NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', BLING_CLIENT_ID: fakeBling.clientId, BLING_CLIENT_SECRET: fakeBling.clientSecret, BLING_AUTHORIZE_URL: `http://localhost:${PORT}/__fake-bling/authorize`});
+  if (process.argv.includes('--ask-mp')) {
+    console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
+    env.MP_ACCESS_TOKEN = await askHidden('Cole o Access Token de teste e tecle Enter (não aparece na tela): ');
+    env.MP_PUBLIC_KEY = await askHidden('Cole a Public Key de teste e tecle Enter: ');
+    if (!env.MP_ACCESS_TOKEN || !env.MP_PUBLIC_KEY) { console.error('Faltou uma das chaves. Encerrando.'); process.exit(1); }
+  }
+  if (fakeMp) { env.MP_ACCESS_TOKEN = 'TEST-fake-access-token-local'; env.MP_PUBLIC_KEY = 'TEST-fake-public-key-local'; env.MP_WEBHOOK_SECRET = 'fake-webhook-secret-local'; env.ORDER_NOTIFY_EMAIL = env.ORDER_NOTIFY_EMAIL || 'ju@exemplo.test'; }
   env.AUTH_SECRET = env.AUTH_SECRET || crypto.randomBytes(32).toString('hex');
+  // The admin panel (dist/admin.html) always works locally, with a fixed local-only login unless you set your own.
+  env.ADMIN_EMAIL = env.ADMIN_EMAIL || 'ju@exemplo.test';
+  env.ADMIN_PASSWORD = env.ADMIN_PASSWORD || 'painel-local-123';
   if (!env.RESEND_API_KEY && !env.MAIL_TRANSPORT) env.MAIL_TRANSPORT = 'console';
 
   const outboxDir = path.join(os.tmpdir(), 'ju-mail-outbox');
@@ -58,11 +91,13 @@ async function main() {
   const outbox = mail => {
     const id = `${Date.now()}-${mail.to.replace(/[^\w.@-]/g, '_')}`;
     fs.writeFileSync(path.join(outboxDir, id + '.html'), mail.html);
-    latest = {id, to: mail.to, subject: mail.subject, purpose: mail.purpose, code: mail.code, url: mail.url, file: path.join(outboxDir, id + '.html')};
+    latest = {id, to: mail.to, subject: mail.subject, purpose: mail.purpose, kind: mail.kind, reference: mail.reference, code: mail.code, url: mail.url, file: path.join(outboxDir, id + '.html')};
+    if (mail.kind) { console.log(`[mail] pedido ${mail.reference} (${mail.kind}) para ${mail.to} · ${mail.subject} → ${latest.file}`); return; }
     console.log(`[mail] to ${mail.to} · ${mail.subject}\n       code ${mail.code}\n       ${mail.url}\n       ${latest.file}`);
   };
   // Logs what Resend answered (status and id or message) without ever printing the key.
   const loggedFetch = async (url, init) => {
+    if (!String(url).startsWith('https://api.resend.com/')) return fetch(url, init);   // CEP lookups and the like pass through
     const response = await fetch(url, init);
     const info = await response.clone().json().catch(() => ({}));
     const to = JSON.parse(init.body).to?.[0] || '?';
@@ -70,17 +105,62 @@ async function main() {
     return response;
   };
 
+  // Accounts use the in-memory store here (no database locally): they last until the server stops. Codes go to the
+  // terminal and to the outbox folder (or by Resend with --ask-key).
+  // Calls to Mercado Pago go to the simulator with --fake-mp, otherwise to the real API (only the status is logged, never a body).
+  const mpFetch = async (url, init) => { const response = await fetch(url, init); console.log(`[mp] ${init.method} ${String(url).replace('https://api.mercadopago.com', '')} → ${response.status}`); return response; };
+  let fake = null;
+  // Shipping: with --fake-correios the quote runs against a simulator and example shop data (NOT the real boxes).
+  const {createFakeCorreios, EXAMPLE_CONFIG} = require('./fake-correios.cjs');
+  const fakeCorreiosApi = fakeCorreios ? createFakeCorreios() : null;
+  if (fakeCorreiosApi) Object.assign(env, fakeCorreiosApi.creds);
+  const shippingConfig = fakeCorreiosApi ? EXAMPLE_CONFIG : undefined;
+  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
+  const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
   const routes = {
-    '/api/auth/send-code': require('../api/auth/send-code').create({env, outbox, fetchImpl: loggedFetch}),
-    '/api/auth/verify-code': require('../api/auth/verify-code').create({env}),
+    '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
     '/api/health': require('../api/health').create({env}),
-    '/api/email-preview': require('../api/email-preview').create({env})
+    '/api/email-preview': require('../api/email-preview').create({env}),
+    '/api/payments/config': require('../api/payments/config').create({env}),
+    '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
+    '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
+    '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
+    '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
+    '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
+  for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
+  for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
+
+  // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
+  // Cache-Control is left out on purpose: local files stay `no-store` while editing.
+  const headerRules = readHeaderRules();
+  if (fakeMp) {
+    // When the simulated customer "pays" a Pix, deliver a properly signed notification to our own webhook, like Mercado Pago would.
+    fake = createFakeMercadoPago({onPaid: async id => {
+      const ts = String(Date.now()), requestId = crypto.randomUUID(), sign = crypto.createHmac('sha256', env.MP_WEBHOOK_SECRET).update(`id:${id.toLowerCase()};request-id:${requestId};ts:${ts};`).digest('hex');
+      const res = {statusCode: 200, setHeader() {}, end() {}};
+      await routes['/api/payments/webhook']({method: 'POST', url: `/api/payments/webhook?data.id=${id}&type=order`, headers: {'x-signature': `ts=${ts},v1=${sign}`, 'x-request-id': requestId}, body: {type: 'order', data: {id}}, socket: {}}, res);
+      console.log(`[mp] pagamento simulado de ${id} → o webhook respondeu ${res.statusCode}`);
+    }});
+  }
 
   http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
+    for (const rule of headerRules) if (rule.pattern.test(url.pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
     try {
       if (routes[url.pathname]) return await routes[url.pathname](req, res);
+      if (fake && url.pathname === '/__fake-mp/sdk.js') { res.setHeader('Content-Type', TYPES['.js']); return res.end(fs.readFileSync(path.join(__dirname, 'fake-brick.js'))); }
+      if (fake && url.pathname === '/__fake-mp/pay') { const ok = await fake.pay(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({paid: ok})); }
+      // The simulated Bling "allows" at once and sends the browser back to the panel with a code, like the real page.
+      if (fakeBling && url.pathname === '/__fake-bling/authorize') {
+        const allowed = fakeBling.authorize(url.href);
+        res.statusCode = allowed ? 302 : 400;
+        if (allowed) res.setHeader('Location', `${env.SITE_URL}/admin.html?code=${encodeURIComponent(allowed.code)}&state=${encodeURIComponent(allowed.state || '')}`);
+        return res.end();
+      }
+      // "Fixes" a rejected note in the simulated Bling, as the person would on Bling's screen, to try the panel's retry.
+      if (fakeBling && url.pathname === '/__fake-bling/corrigir') { const ok = fakeBling.correct(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({corrigida: ok})); }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
@@ -88,6 +168,8 @@ async function main() {
       if (!fs.existsSync(file)) { res.statusCode = 404; return res.end('Not found'); }
       res.setHeader('Content-Type', TYPES[path.extname(file)] || 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-store');
+      // With --fake-mp the checkout pages load the simulated Payment Brick instead of the real SDK.
+      if (fake && /^(checkout|comprar-agora)/.test(path.basename(file)) && file.endsWith('.html')) return res.end(fs.readFileSync(file, 'utf8').replace('</head>', "<script src='/__fake-mp/sdk.js'></script></head>"));
       fs.createReadStream(file).pipe(res);
     } catch (error) {
       console.error(error);
@@ -95,6 +177,8 @@ async function main() {
     }
   }).listen(PORT, () => {
     const real = env.MAIL_TRANSPORT !== 'console';
+    console.log(`Pagamentos: ${fakeMp ? `SIMULADOS (Mercado Pago e Brick de mentira). Para "pagar" um Pix aberto: http://localhost:${PORT}/__fake-mp/pay?id=<código do pedido>` : env.MP_ACCESS_TOKEN ? 'Mercado Pago de TESTE (credenciais informadas)' : 'desligados (o checkout usa a demonstração)'}`);
+    console.log(`Painel da Ju: http://localhost:${PORT}/admin.html  (e-mail ${env.ADMIN_EMAIL} · senha ${env.ADMIN_PASSWORD})`);
     console.log(`\nSite + API em http://localhost:${PORT}  (e-mails: ${real ? 'enviados de verdade pelo Resend' : 'gravados em ' + outboxDir})`);
     if (real) console.log(`Abra http://localhost:${PORT}/conta.html, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
   });

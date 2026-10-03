@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {registerHooks} from 'node:module';
-registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.js',import.meta.url).href:specifier,context);}});
-const T=await import('../dist/vendor/three.module.js');
+registerHooks({resolve(specifier,context,next){return next(specifier==='three'?new URL('../dist/vendor/three.module.min.js',import.meta.url).href:specifier,context);}});
+const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
+const {MeshoptDecoder}=await import('../dist/vendor/libs/meshopt_decoder.module.js');
 
 // Coordinates are the GLB's own (x right, y up, z towards the viewer); rays hit the first surface.
-for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
+for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscopio']){
  const bytes=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
- const {scene}=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const {scene}=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  scene.updateMatrixWorld(true);
  const ray=new T.Raycaster();
  const hitFrom=(origin,direction)=>{
@@ -86,30 +87,42 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
   assert.ok(teeth>0);
  }
  if(key==='aviaoscopia'){
+  // The real CAD (STL of 21/08/2026, tools/render-aviao-macaco/export-glb.cjs), 1 GLB unit = 122 mm, centred on the airplane.
   for(const sx of [-1,1]){
-   assert.equal(materialAt(sx*.377,.18),'engines','The turbine stays yellow');
-   assert.equal(materialAt(sx*.30,.18),'body','No yellow leaks onto the body');
-   assert.equal(materialAt(sx*.377,.05),'body','The wing below the turbine stays blue');
-   assert.equal(materialAt(sx*.315,.14),'body','The wing root between turbine and fuselage is blue');
-   // A clear gap: from beside the turbine, a ray towards the fuselage meets nothing until the wall.
-   const toWall=hitFrom([sx*.34,.20,0],[-sx,0,0]);
-   assert.equal(toWall.name,'body','Beside the turbine the first surface is the blue fuselage');
-   assert.ok(Math.abs(toWall.point.x)<.306&&Math.abs(toWall.point.x)>.29,'That surface is the fuselage wall itself');
+   assert.equal(materialAt(sx*.385,.14),'engines','The turbine stays yellow');
+   assert.equal(materialAt(sx*.30,.14),'body','No yellow leaks onto the fuselage beside it');
+   assert.equal(materialAt(sx*.385,.03),'body','The wing below the turbine stays blue');
+   // Regular, upright five-pointed wing stars: red along the five tip directions (90, 162, 234, 306 and 18 degrees), blue between them.
+   for(const a of [90,162,234,306,18])assert.equal(materialAt(sx*.4465+.055*Math.cos(a*Math.PI/180),-.1286+.055*Math.sin(a*Math.PI/180)),'details',`Star tip at ${a} deg`);
+   for(const a of [54,126,198,270,342])assert.equal(materialAt(sx*.4465+.055*Math.cos(a*Math.PI/180),-.1286+.055*Math.sin(a*Math.PI/180)),'body',`Gap between star tips at ${a} deg`);
+   assert.equal(materialAt(sx*.08,.66),'fixed','The cockpit windows keep their own colour');
   }
-  // Regular, upright five-pointed wing stars (same centre on both wings): red along the five tip directions
-  // (90, 162, 234, 306 and 18 degrees) and blue between them, where the old crooked stars had their pinched legs.
-  for(const sx of [-1,1]){
-   for(const a of [90,162,234,306,18])assert.equal(materialAt(sx*.4373+.075*Math.cos(a*Math.PI/180),-.0975+.075*Math.sin(a*Math.PI/180)),'details',`Star tip at ${a} deg`);
-   for(const a of [54,126,198,270,342])assert.equal(materialAt(sx*.4373+.075*Math.cos(a*Math.PI/180),-.0975+.075*Math.sin(a*Math.PI/180)),'body',`Gap between star tips at ${a} deg`);
+  assert.equal(materialAt(0,.66),'body','The frame between the windows is the body');
+  assert.equal(materialAt(0,.85),'details','The nose cap takes the detail colour');
+  // Sixteen through openings, two columns by eight rows: a ray through each centre crosses both halves without touching them.
+  for(const x of [-.0789,.0793])for(const y of [.383,.2232,.0635,-.0963,-.2561,-.4158,-.5756,-.7353]){
+   for(const z of [2,-2]){ray.set(new T.Vector3(x,y,z),new T.Vector3(0,0,-Math.sign(z)));assert.equal(ray.intersectObject(scene,true).length,0,`Opening at ${x}, ${y} is open from ${z>0?'the front':'the back'}`);}
   }
-  // The turbines no longer touch or cross the fuselage wall (at |x| ~ .30).
+  // The turbines stand on the wings, outside the fuselage wall (at |x| ~ .32 at their height).
   let nearest=Infinity;
   scene.traverse(o=>{
    if(!o.isMesh||o.material?.name!=='engines')return;
    const p=o.geometry.attributes.position,v=new T.Vector3();
-   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);nearest=Math.min(nearest,Math.abs(v.x));}
+   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.y>.1)nearest=Math.min(nearest,Math.abs(v.x));}
   });
-  assert.ok(nearest>.325,`Turbines keep a visible gap from the fuselage (closest |x| ${nearest.toFixed(4)})`);
+  assert.ok(nearest>.31,`The turbines sit outside the fuselage (closest |x| ${nearest.toFixed(4)})`);
  }
- console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
+ if(key==='macacoscopio'){
+  // The Rodin model with the texture's colours as five fixed materials (no texture: the site's CSP blocks the blob: fetch of
+  // embedded images). Brown fur, beige face plate, belly and inner ears, black eyes, brows, nose and mouth, a white shine on each eye.
+  for(const [x,y] of [[-.137,.56],[.118,.56]])assert.equal(materialAt(x,y),'features','Black eyes');
+  for(const [x,y] of [[-.132,.621],[.111,.617]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
+  for(const [x,y] of [[-.15,.72],[.13,.72]])assert.equal(materialAt(x,y),'features','Black brows');
+  assert.equal(materialAt(0,.50),'features','Black nose');
+  for(const [x,y] of [[-.17,.47],[.15,.47],[0,.64],[-.15,.78]])assert.equal(materialAt(x,y),'face','Beige face plate, the shaded cheek included');
+  for(const [x,y] of [[0,.05],[0,-.12],[-.4,.7],[.4,.7]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
+  assert.equal(materialAt(0,-.4),'banana','Yellow banana');
+  for(const [x,y] of [[-.3,.1],[.3,.1],[0,.28],[0,.8]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
+  for(const [x,y] of [[0,0],[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown, without painted light spots');
+ } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
 }

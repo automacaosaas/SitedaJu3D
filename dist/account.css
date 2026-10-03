@@ -11,14 +11,14 @@
 .account-header .brand img { display: block; width: 82px; height: 82px; }
 .back-collection { justify-self: start; display: flex; align-items: center; gap: 9px; min-height: 44px; font-size: 12px; color: var(--auth-muted); }
 .account-tools { justify-self: end; display: flex; align-items: center; gap: 18px; }
-.account-tools > span { font-size: 9px; letter-spacing: 2px; color: var(--auth-muted); }
+.account-tools > span { font-size: 12px; letter-spacing: 2px; color: var(--auth-muted); }
 .auth-skip { position: fixed; left: 16px; top: 12px; z-index: 10; padding: 12px 20px; border-radius: 12px; background: white; transform: translateY(-160%); }
 .auth-skip:focus { transform: none; }
 .auth-composition { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 580px) minmax(0, 1fr); max-width: 1280px; padding: 0 24px; margin: 2px auto 0; }
 .ju-scene { grid-column: 2; position: relative; z-index: 2; width: min(94%, 455px); justify-self: center; margin-bottom: -27px; pointer-events: none; }
 .julia-character { display: block; width: 100%; height: auto; object-fit: contain; }
 .account-card { grid-column: 2; min-width: 0; padding: 40px clamp(24px, 4vw, 54px) 22px; border: 1px solid #ffffff; border-radius: 40px; background: linear-gradient(150deg, #ffffffed, #fffdfdf5); box-shadow: 0 20px 50px -25px #b6567b60, 0 2px 10px #aa68700a; }
-.account-panel .eyebrow { text-align: center; font-size: 10px; letter-spacing: 2.7px; color: var(--auth-rose); margin: 0 0 12px; }
+.account-panel .eyebrow { text-align: center; font-size: 12px; letter-spacing: 2.7px; color: var(--auth-rose); margin: 0 0 12px; }
 .account-panel h2 { font: 500 clamp(34px, 3.5vw, 46px)/1.08 'Playfair Display', Georgia, serif; letter-spacing: -1.5px; text-align: center; margin: 0 0 15px; overflow-wrap: anywhere; scroll-margin-top: 20px; }
 .account-panel #account-title:focus { outline: none; }
 .account-lead { font-size: 15px; line-height: 1.6; color: var(--auth-muted); margin: 0 auto 24px; text-align: center; text-wrap: pretty; max-width: 420px; overflow-wrap: anywhere; }
@@ -42,7 +42,7 @@
 .password-toggle:hover { background: #f7edf3; color: var(--auth-rose); }
 .password-toggle .icon { width: 21px; height: 21px; }
 .password-toggle[aria-pressed="true"]::after { content: ''; position: absolute; width: 24px; height: 1.5px; background: currentColor; transform: rotate(-45deg); }
-.password-help { display: block; font-size: 11px; color: var(--auth-muted); margin: 7px 0 0; line-height: 1.6; }
+.password-help { display: block; font-size: 12px; color: var(--auth-muted); margin: 7px 0 0; line-height: 1.6; }
 .auth-links { display: flex; justify-content: flex-end; margin: -10px 0 13px; }
 .auth-links button { min-height: 44px; padding: 7px 2px; border: 0; background: none; color: var(--auth-rose); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .account-submit { justify-content: center; min-height: 54px; margin-top: 19px; gap: 16px; border-radius: 16px; background: linear-gradient(110deg, #b7496c, #a94062); border-color: transparent; box-shadow: 0 7px 16px #ac436318; font-size: 14px; }
@@ -55,7 +55,7 @@
 .account-switch button:hover, .back-auth:hover, .auth-links button:hover { color: #84344f; text-decoration: underline; text-underline-offset: 3px; }
 #account-feedback { font-size: 12px; line-height: 1.55; color: #993953; border-radius: 10px; min-height: 1.55em; margin: 4px 0 0; overflow-wrap: anywhere; }
 #account-feedback:not(:empty) { padding: 10px 12px; background: #fbedf1; }
-.preview-details { border-top: 1px solid #f0e6ee; padding-top: 3px; color: var(--auth-muted); font-size: 10px; line-height: 1.65; }
+.preview-details { border-top: 1px solid #f0e6ee; padding-top: 3px; color: var(--auth-muted); font-size: 12px; line-height: 1.65; }
 .preview-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 7px; }
 .preview-details summary::before { content: '+'; font-size: 16px; color: var(--auth-rose); }
 .preview-details[open] summary::before { content: '−'; }
@@ -72,13 +72,13 @@
 .account-empty > .icon { width: 32px; height: 32px; color: var(--auth-rose); }
 .account-empty h3 { font: 500 24px 'Playfair Display', serif; }
 .account-empty p { font-size: 13px; line-height: 1.6; color: var(--auth-muted); }
-.account-empty small { color: var(--auth-muted); font-size: 11px; }
+.account-empty small { color: var(--auth-muted); font-size: 12px; }
 .account-panel .buy-now { background: #f3d7e1; color: #71334c; box-shadow: none; }
 .account-panel .primary + .text-button { min-height: 44px; }
 .order-preview { border: 1px solid var(--auth-line); padding: 16px; border-radius: 14px; margin: 12px 0; overflow-wrap: anywhere; }
 .order-preview h3 { font-size: 13px; margin: 0 0 9px; }
 .order-preview p { font-size: 12px; color: var(--auth-muted); line-height: 1.6; }
-.order-preview small { font-size: 10px; color: var(--auth-rose); }
+.order-preview small { font-size: 12px; color: var(--auth-rose); }
 .account-page :is(a,button,summary):focus-visible { outline: 2px solid var(--auth-rose); outline-offset: 4px; }
 .account-panel form[aria-busy="true"] .account-submit::after { content: ''; width: 14px; height: 14px; border: 2px solid #ffffff60; border-top-color: white; border-radius: 50%; animation: auth-spin 800ms linear infinite; }
 .account-panel form[aria-busy="true"] .account-submit .icon { display: none; }
@@ -99,10 +99,10 @@
 .auth-flourish { position: absolute; bottom: 3%; right: -1%; width: 22%; color: #cf86a4; }
 .auth-heart { position: absolute; top: 14%; left: 19%; font: 62px/1 'DM Sans', sans-serif; color: #cc7b9b; transform: rotate(-18deg); }
 .account-footer { position: relative; display: flex; flex-direction: column; gap: 6px; max-width: 580px; margin: 30px auto 0; padding: 0 20px max(28px, env(safe-area-inset-bottom)); border: 0; text-align: center; color: #a65676; }
-.account-footer p { display: flex; align-items: center; gap: 24px; margin: 0; font-size: 8px; font-weight: 600; letter-spacing: 2.8px; line-height: 1.9; }
+.account-footer p { display: flex; align-items: center; gap: 24px; margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 2.2px; line-height: 1.9; }
 .account-footer p::before, .account-footer p::after { content: ''; width: clamp(20px, 6vw, 65px); height: 1px; background: #cf91aa; flex-shrink: 0; }
 .account-footer > span { font: 22px/1 'DM Sans', sans-serif; }
-.account-footer a { display: flex; align-items: center; min-height: 44px; font-size: 11px; color: var(--auth-muted); }
+.account-footer a { display: flex; align-items: center; min-height: 44px; font-size: 12px; color: var(--auth-muted); }
 @media (max-width: 1020px) {
   .auth-note { font-size: 24px; }
   .auth-note-left { left: 1%; }
@@ -120,12 +120,12 @@
   .account-header { min-height: 70px; padding-right: 17px; padding-left: 17px; }
   .account-header .brand img { width: 66px; height: 66px; }
   .account-tools > span { display: none; }
-  .back-collection { font-size: 11px; gap: 5px; line-height: 1.4; }
+  .back-collection { font-size: 12px; gap: 5px; line-height: 1.4; }
   .back-collection span { max-width: 70px; }
   .auth-composition { display: flex; flex-direction: column; align-items: center; padding: 0 max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right)); margin-top: 0; }
   .ju-scene { width: clamp(222px, 62vw, 266px); margin-bottom: -16px; }
   .account-card { width: 100%; padding: 29px clamp(20px, 6vw, 30px) 15px; border-radius: 29px; }
-  .account-panel .eyebrow { font-size: 9px; letter-spacing: 2px; margin-bottom: 10px; }
+  .account-panel .eyebrow { font-size: 12px; letter-spacing: 2px; margin-bottom: 10px; }
   .account-panel h2 { font-size: clamp(30px, 8.4vw, 36px); line-height: 1.1; letter-spacing: -1px; margin-bottom: 12px; }
   .account-lead { font-size: 13px; line-height: 1.55; margin-bottom: 20px; }
   .account-tabs { border-radius: 16px; margin-bottom: 20px; }
@@ -143,7 +143,7 @@
   .auth-leaves-right { top: 22%; }
   .auth-flourish { display: none; }
   .account-footer { margin-top: 24px; }
-  .account-footer p { gap: 13px; font-size: 7px; letter-spacing: 2px; }
+  .account-footer p { gap: 13px; font-size: 12px; letter-spacing: 1.4px; }
   .code-input input { font-size: 25px; }
 }
 /* A smaller desktop composition, sized by available height without scaling controls. */
@@ -153,7 +153,7 @@
   .auth-composition { max-width: 1080px; grid-template-columns: minmax(0, 1fr) minmax(0, 480px) minmax(0, 1fr); }
   .ju-scene { width: clamp(210px, 30svh, 300px); margin-bottom: -20px; }
   .account-card { padding: 22px 36px 10px; border-radius: 30px; }
-  .account-panel .eyebrow { font-size: 9px; margin-bottom: 6px; letter-spacing: 2px; }
+  .account-panel .eyebrow { font-size: 12px; margin-bottom: 6px; letter-spacing: 2px; }
   .account-panel h2 { font-size: clamp(30px, 3.7svh, 36px); margin-bottom: 8px; letter-spacing: -1px; }
   .account-lead { font-size: 13px; line-height: 1.4; margin-bottom: 12px; }
   .account-tabs { padding: 3px; margin-bottom: 12px; border-radius: 14px; }
@@ -164,7 +164,7 @@
   .auth-field input { min-height: 44px; padding-top: 9px; padding-bottom: 9px; font-size: 14px; border-radius: 11px; }
   .auth-field input::placeholder { font-size: 13px; }
   .password-toggle { top: 0; right: 2px; }
-  .password-help { font-size: 10px; line-height: 1.4; margin-top: 5px; }
+  .password-help { font-size: 12px; line-height: 1.4; margin-top: 5px; }
   .auth-links { margin: -5px 0 0; }
   .account-submit { min-height: 46px; margin-top: 9px; padding: 11px 16px; border-radius: 12px; }
   .account-switch { margin-top: 13px; padding-top: 4px; }
@@ -194,19 +194,21 @@
 .auth-reassurance > svg { flex-shrink:0; width:21px; height:21px; color:var(--auth-rose); }
 .auth-reassurance strong { color:#68516a; font-weight:600; }
 .auth-reassurance p { margin:4px 0 0; }
-.auth-demo-note { font-size:10px; line-height:1.5; color:var(--auth-muted); margin:13px 0 0; }
+.auth-demo-note { font-size:12px; line-height:1.5; color:var(--auth-muted); margin:13px 0 0; }
 .auth-optin { display:flex; align-items:flex-start; gap:10px; padding:9px 0; cursor:pointer; font-size:12px; line-height:1.55; }
 .auth-optin input { width:19px; height:19px; flex:0 0 19px; margin:2px 0; accent-color:var(--auth-rose); }
-.auth-optin small { display:block; color:var(--auth-muted); font-size:11px; }
+.auth-optin small { display:block; color:var(--auth-muted); font-size:12px; }
 .profile-summary { padding:20px; margin:18px 0; border:1px solid var(--auth-line); background:#fff8fa; border-radius:18px; overflow-wrap:anywhere; }
-.profile-summary > span { display:flex; align-items:center; gap:7px; font-size:11px; color:#41755e; margin-bottom:14px; }
+.profile-summary > span { display:flex; align-items:center; gap:7px; font-size:12px; color:#41755e; margin-bottom:14px; }
 .profile-summary > strong { font-size:16px; }
 .profile-summary p { font-size:13px; color:var(--auth-muted); }
-.profile-summary small { display:block; margin-top:9px; font-size:11px; color:var(--auth-muted); }
+.profile-summary small { display:block; margin-top:9px; font-size:12px; color:var(--auth-muted); }
 .signout { float:right; }
+/* Profile links: "Meus dados" and "Meus pedidos" side by side. */
+.back-auth[data-screen="details"] { margin-right:22px; }
 #demo-inbox:empty { display:none; }
 .account-card > #demo-inbox { margin:14px 0 8px; }
-.account-card > #demo-inbox .demo-code { padding:9px 13px; font-size:10px; }
+.account-card > #demo-inbox .demo-code { padding:9px 13px; font-size:12px; }
 .account-card > #demo-inbox .demo-code strong { font-size:19px; margin:3px 0 0; }
 @media(min-width:821px) {
   .account-page .ju-scene { width:180px; }
@@ -224,3 +226,28 @@
   .auth-reassurance { margin-top:18px; padding-top:15px; }
   .account-page .account-footer { margin-top:18px; }
 }
+/* Meus pedidos: status line and test marker; Excluir minha conta: a quiet link in Meus dados, then its own screen. */
+.order-preview small { display: block; }
+.order-preview .order-test { color: var(--auth-muted); margin-top: 3px; }
+.order-preview.status-cancelado small, .order-preview.status-recusado small { color: var(--auth-muted); }
+.account-danger { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--auth-line); }
+.account-danger h3 { font-size: 13px; margin: 0 0 6px; }
+.account-danger p { font-size: 12px; color: var(--auth-muted); line-height: 1.6; margin: 0 0 4px; }
+.danger-link { border: 0; background: none; padding: 6px 0; color: #98364e; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.delete-facts { margin: 0 0 20px; padding-left: 18px; font-size: 13px; line-height: 1.7; color: var(--auth-muted); }
+.account-page .account-submit.danger { background: #98364e; border-color: #98364e; }
+.account-page .account-submit.danger:hover { background: #7f2c41; }
+/* Legal block in the account footer: plain text, without the decorative lines of the tagline above it. */
+.account-footer .footer-legal { flex-direction: column; align-items: center; gap: 2px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--auth-line); }
+.account-footer .footer-legal nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; }
+.account-footer .footer-legal a { min-height: 32px; text-decoration: underline; text-underline-offset: 3px; }
+.account-footer .footer-company { display: block; font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--auth-muted); }
+.account-footer .footer-company::before, .account-footer .footer-company::after { content: none; }
+/* Sign-up: creating the account is agreeing to the Termos (and having read the Privacidade). */
+.auth-terms { margin: 14px 0 4px; font-size: 12px; line-height: 1.5; color: var(--auth-muted); }
+.auth-terms-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; font-size: 12px; }
+.auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+/* "Ver nota fiscal": the NF-e of the order, once authorized. */
+.order-invoice { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+/* Sign-up: the password is optional (without one, the buyer always signs in with an e-mailed code). */
+.auth-hint { margin: -4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--auth-muted); }

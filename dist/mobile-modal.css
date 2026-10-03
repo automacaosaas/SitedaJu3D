@@ -29,10 +29,10 @@ dialog[open]{grid-template-rows:minmax(0,1fr) auto;overflow:hidden;overflow:clip
   .viewer-tools{bottom:27px;padding:2px;gap:0;max-width:calc(100% - 16px);}
   .viewer-tools button{padding:3px 7px;font-size:12px;}
   .viewer-tools span{margin:0 1px;}
-  .view-note{font-size:10px;line-height:1.2;bottom:4px;left:8px;right:8px;max-height:24px;}
+  .view-note{font-size:12px;line-height:1.2;bottom:4px;left:8px;right:8px;max-height:24px;}
   dialog .detail-copy,dialog:is([data-mode="custom"],[data-mode="summary"]) .detail-copy{grid-row:2;min-height:0;padding:16px 18px 10px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
   .detail-copy h2,dialog:is([data-mode="custom"],[data-mode="summary"]) .detail-copy h2{font-size:25px;line-height:1.16;letter-spacing:-.5px;margin:0 0 7px;}
-  .detail-copy .eyebrow{font-size:10px;margin:0 0 7px;}
+  .detail-copy .eyebrow{font-size:12px;margin:0 0 7px;}
   .detail-subtitle{font-size:14px;}
   .detail-rule{margin:14px 0;}
   #dialog-description{font-size:15px;line-height:1.5;}

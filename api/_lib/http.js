@@ -1,5 +1,6 @@
 'use strict';
-// Small helpers so handlers work on Vercel and on the local dev server (plain Node req/res).
+// Small helpers so handlers work on Vercel, on the Hostinger server (server.cjs) and on the local dev server (plain Node req/res).
+const {isProduction} = require('./runtime');
 const MAX_BODY = 4096;
 
 function json(res, status, body, headers = {}) {
@@ -11,15 +12,15 @@ function json(res, status, body, headers = {}) {
   res.end(JSON.stringify(body));
 }
 
-async function readJson(req) {
+async function readJson(req, limit = MAX_BODY) {
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
   let text = typeof req.body === 'string' ? req.body : '';
   if (!text) {
     const chunks = []; let size = 0;
-    for await (const chunk of req) { size += chunk.length; if (size > MAX_BODY) throw Object.assign(new Error('body too large'), {status: 413}); chunks.push(chunk); }
+    for await (const chunk of req) { size += chunk.length; if (size > limit) throw Object.assign(new Error('body too large'), {status: 413}); chunks.push(chunk); }
     text = Buffer.concat(chunks).toString('utf8');
   }
-  if (text.length > MAX_BODY) throw Object.assign(new Error('body too large'), {status: 413});
+  if (text.length > limit) throw Object.assign(new Error('body too large'), {status: 413});
   try { const value = JSON.parse(text || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
   catch { throw Object.assign(new Error('invalid json'), {status: 400}); }
 }
@@ -40,7 +41,7 @@ function sameOrigin(req, env) {
   if (!origin) return false;
   let url; try { url = new URL(origin); } catch { return false; }
   if (allowedOrigins(env).has(url.host)) return true;
-  return env.VERCEL_ENV !== 'production' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
+  return !isProduction(env) && /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
 }
 
 // Best-effort limiter kept in memory. Serverless instances are short-lived, so this only slows down naive loops;

@@ -42,14 +42,7 @@
 .home .product-rail-card.is-active .product-rail-art { background: linear-gradient(to bottom, var(--theme-wash, #fff) 0%, #fff 82%); }
 .home .catalog-home .product-customize, .home .catalog-home .product-cart { background: var(--theme-accent, var(--rose)); box-shadow: 0 6px 15px var(--theme-glow, #b64c6824); }
 .home .catalog-home .product-customize:hover, .home .catalog-home .product-cart:hover { background: var(--theme-accent-strong, #9e3e59); box-shadow: 0 10px 18px var(--theme-glow, #b64c6833); }
-/* "Escolha sua cor" leva ao card do produto e este botão pulsa até a pessoa interagir. */
-.home .product-customize.is-pulsing { animation: cta-pulse 1.5s ease-out 5; }
-@keyframes cta-pulse {
-  0% { box-shadow: 0 0 0 0 var(--theme-pulse, rgba(182, 76, 104, .55)); transform: scale(1); }
-  65% { box-shadow: 0 0 0 16px var(--theme-pulse-off, rgba(182, 76, 104, 0)); transform: scale(1.045); }
-  100% { box-shadow: 0 0 0 0 var(--theme-pulse-off, rgba(182, 76, 104, 0)); transform: scale(1); }
-}
-/* Desktop: cards um pouco menores para o carrossel caber inteiro na tela ao chegar pelo "Escolha sua cor". */
+/* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
   .home .product-carousel-stage { height: 526px; }
   .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 336px + var(--drag)), 22px) scale(.91); }
@@ -82,31 +75,40 @@
 .showcase {
   --ped-w: clamp(290px, calc(var(--u) * 0.27), 500px);
   grid-area: 2 / 1; position: relative; z-index: 1; display: grid; align-items: center;
-  grid-template-columns: minmax(0, 37fr) minmax(0, 30fr) minmax(0, 33fr);
+  grid-template-columns: minmax(0, 37fr) minmax(0, 30fr) minmax(0, 33fr); grid-template-rows: 1fr 1fr;
   min-height: clamp(540px, calc(var(--u) * 0.46), 800px); padding: clamp(20px, calc(var(--u) * 0.026), 48px) var(--hero-inset) clamp(36px, calc(var(--u) * 0.042), 72px); overflow-x: clip;
   touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; cursor: grab;
 }
 .showcase.is-dragging { cursor: grabbing; }
 .hero-copy, .hero-palette { position: relative; z-index: 3; display: grid; }
-.hero-copy { grid-column: 1; grid-row: 1; justify-items: start; padding-left: clamp(0px, calc(var(--u) * 0.042), 78px); }
-.hero-palette { grid-column: 3; grid-row: 1; justify-items: center; }
-.hero-stage { grid-column: 2; grid-row: 1; position: relative; z-index: 2; height: calc(var(--ped-w) * 1.3); }
+/* Banner limpo: texto e botões juntos à esquerda (ordem de leitura), peça à direita. */
+.hero-copy { grid-column: 1; grid-row: 1; align-self: end; justify-items: start; padding-left: clamp(0px, calc(var(--u) * 0.042), 78px); }
+.hero-palette { grid-column: 1; grid-row: 2; align-self: start; justify-items: start; padding-left: clamp(0px, calc(var(--u) * 0.042), 78px); margin-top: clamp(18px, calc(var(--u) * 0.016), 30px); }
+.hero-stage { grid-column: 2 / 4; grid-row: 1 / 3; position: relative; z-index: 2; height: calc(var(--ped-w) * 1.3); }
 
 /* Textos e paleta do produto ativo (um bloco por produto, empilhados na mesma célula) */
 .copy, .palette { grid-area: 1 / 1; will-change: transform, opacity; }
-.copy-category { margin: 0; font: 650 clamp(11px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.copy-category { margin: 0; font: 650 clamp(12px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
 .copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
 .copy-sub { margin: 0; max-width: 15em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', sans-serif; color: var(--muted); }
-.palette { display: grid; justify-items: center; gap: clamp(12px, calc(var(--u) * 0.014), 22px); padding: 14px 18px; border-radius: 22px; text-align: center; }
-.palette-dots { display: flex; justify-content: center; gap: clamp(10px, calc(var(--u) * 0.013), 20px); }
-.palette-dots i { width: clamp(28px, calc(var(--u) * 0.031), 48px); height: clamp(28px, calc(var(--u) * 0.031), 48px); border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 clamp(3px, calc(var(--u) * 0.0035), 5px) #fff, 0 6px 14px rgba(30, 50, 70, .16); transition: transform .25s ease; }
+.copy-price { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: clamp(12px, calc(var(--u) * 0.012), 20px) 0 0; color: var(--text); }
+.copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', sans-serif; font-variant-numeric: tabular-nums; }
+.copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', sans-serif; letter-spacing: .02em; }
+.palette { display: flex; flex-wrap: wrap; align-items: center; gap: clamp(10px, calc(var(--u) * 0.011), 18px); width: max-content; max-width: 100%; }
 .copy[inert], .palette[inert] { pointer-events: none; }
-.palette-button { display: inline-flex; align-items: center; gap: .6em; min-height: 44px; padding: .78em 1.35em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(14px, calc(var(--u) * 0.0125), 19px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; cursor: pointer; box-shadow: 0 10px 24px var(--glow); transition: background-color .2s ease, transform .2s ease, box-shadow .2s ease; }
-.palette-button svg { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.palette-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-/* A seta dentro do botão pulsa de leve, sem exagero. */
-.palette-button svg { animation: chevron-nudge 1.9s ease-in-out infinite; }
-@keyframes chevron-nudge { 0%, 100% { transform: translateY(-1.5px); opacity: .78; } 50% { transform: translateY(2.5px); opacity: 1; } }
+/* Ação principal no padrão dos marketplaces: cor sólida, verbo claro, ícone à esquerda e área de toque generosa. */
+.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.6em 0 1.3em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; text-decoration: none; cursor: pointer; box-shadow: 0 10px 24px -8px var(--glow); transition: background .2s, transform .2s, box-shadow .2s; }
+.palette-button svg { width: 1.3em; height: 1.3em; flex: none; }
+.palette-button, .hero-demo-button { white-space: nowrap; }
+.palette-button:active { transform: scale(.98); }
+.palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+/* Secundária: discreta, só nas peças com demonstração. */
+.hero-demo-button { display: inline-flex; align-items: center; gap: .55em; min-height: 48px; padding: 0 1.2em 0 .9em; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .72); color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0105), 16px) / 1 'DM Sans', sans-serif; cursor: pointer; transition: background .2s, border-color .2s; }
+.hero-demo-button svg { width: 1.35em; height: 1.35em; flex: none; }
+/* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
+.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
+/* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
+.copy-price .palette-soon { min-height: 34px; padding: 0 1em; font-size: clamp(12px, calc(var(--u) * .009), 14px); letter-spacing: .04em; }
 .slot[data-front=true] { cursor: pointer; }
 
 /* Produto + pilastra: um bloco só; a escala nasce na base para a pilastra não sair do chão. */
@@ -142,10 +144,10 @@
 @media (hover: hover) {
   .hero-arrow:hover { background: #fff; scale: 1.05; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
-  .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px var(--glow); }
+  .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px -8px var(--glow); }
+  .hero-demo-button:hover { background: #fff; border-color: var(--accent); }
   .slot[data-front=true]:hover .piece img { transform: translateY(-8px) scale(1.012) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
   .slot[data-front=true]:hover .piece-shadow { transform: scale(.94); opacity: .8; }
-  .palette:hover .palette-dots i { transform: translateY(-3px); }
 }
 
 /* Tablet e celular: tudo empilhado — título, peça, cores, setas. */
@@ -159,21 +161,35 @@
   .copy-category { letter-spacing: .26em; }
   .copy-name { font-size: clamp(32px, 9.4vw, 52px); }
   .copy-sub { font-size: clamp(14px, 4vw, 19px); max-width: 17em; }
+
+  .hero-copy { align-self: start; }
   .hero-stage { grid-column: 1 / -1; grid-row: 2; margin-top: clamp(14px, 3vw, 26px); }
-  .hero-palette { grid-column: 2; grid-row: 3; align-self: center; margin-top: clamp(20px, 6vw, 34px); }
-  .palette { gap: 10px; padding: 8px 10px; }
-  .palette-button { font-size: clamp(13px, 3.7vw, 16px); padding: .7em 1.1em; }
-  .palette-dots i { width: clamp(28px, 7.4vw, 38px); height: clamp(28px, 7.4vw, 38px); }
-  .hero-arrow { position: static; translate: none; grid-row: 3; align-self: center; width: 48px; height: 48px; margin-top: clamp(20px, 6vw, 34px); }
+  .copy-price { justify-content: center; }
+  .hero-palette { grid-column: 2; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
+  .palette { width: min(100%, 340px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 8px; }
+  .palette-button { width: 100%; padding: 0 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
+  .hero-demo-button { align-self: center; min-height: 44px; border-color: transparent; background: transparent; }
+  .hero-arrow { position: static; translate: none; grid-row: 3; align-self: start; width: 48px; height: 48px; margin-top: calc(clamp(20px, 6vw, 34px) + 2px); }
   .hero-prev { grid-column: 1; margin-left: clamp(12px, 3vw, 24px); }
   .hero-next { grid-column: 3; margin-right: clamp(12px, 3vw, 24px); }
 }
 @media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
+/* Celulares estreitos (até ~380 px): o rótulo cabe numa linha, sem perder a área de toque. */
+@media (max-width: 380px) {
+  .palette-button { gap: .45em; padding: 0 .85em; font-size: 14.5px; }
+  .hero-prev { margin-left: 4px; }
+  .hero-next { margin-right: 4px; }
+}
+@media (max-width: 340px) {
+  .palette-button { font-size: 13.5px; padding: 0 .7em; }
+  .hero-arrow { width: 44px; height: 44px; }
+  .hero-prev { margin-left: 0; }
+  .hero-next { margin-right: 0; }
+}
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
-  .piece img, .piece-shadow, .hero-arrow, .palette-dots i, .palette-button { transition: none; }
-  .palette-button svg { animation: none; }
-  .home .product-customize.is-pulsing { animation: none; outline: 3px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
+  .piece img, .piece-shadow, .hero-arrow, .palette-button, .hero-demo-button { transition: none; }
+  .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
 

@@ -1,12 +1,12 @@
 import {COMMERCE} from './commerce-config.js';
-import {normalizeCart, totals} from './cart-store.js';
+import {normalizeCart, totals, pixTotals} from './cart-store.js';
 // Local simulator. Never authorizes a shipment or contacts a payment provider.
-export function createDemoOrder(items, method, now = Date.now()) {
+export function createDemoOrder(items, method, now = Date.now(), shippingCents) {
   if (!['pix', 'card'].includes(method)) throw new Error('Escolha uma forma de pagamento.');
   const snapshot = normalizeCart(items);
   if (!snapshot.length) throw new Error('Adicione uma peça ao carrinho.');
   const suffix = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36)).replaceAll('-', '').slice(-6).toUpperCase();
-  return {id: `DEMO-${suffix}`, mode: 'demo', method, items: snapshot, amounts: totals(snapshot),
+  return {id: `DEMO-${suffix}`, mode: 'demo', method, items: snapshot, amounts: (method === 'pix' ? pixTotals : totals)(snapshot, shippingCents),
     status: 'pending', createdAt: now, expiresAt: now + COMMERCE.pixDurationMs, attempt: 1};
 }
 export function paymentStatus(order, now = Date.now()) {
