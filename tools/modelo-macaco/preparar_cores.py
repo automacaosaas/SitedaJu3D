@@ -8,6 +8,7 @@ Uso: blender -b -P preparar_cores.py -- <rodin.glb> <saida.glb> 0.6     (0.6 = f
 """
 import bpy,bmesh,os,sys,numpy as np
 from mathutils import Vector
+from mathutils.geometry import delaunay_2d_cdt
 a=sys.argv[sys.argv.index('--')+1:]
 src,dst=os.path.abspath(a[0]),os.path.abspath(a[1]);ratio=float(a[2])
 SMOOTH,ISLAND,FEATURE_MIN=4,400,60
@@ -43,6 +44,103 @@ def abrir_topo(obj):
     mi=np.zeros(nf_,np.int32);me.polygons.foreach_get('material_index',mi)
     wall=(C_[:,2]>zin)&(np.abs(np.hypot(C_[:,0]-c[0],C_[:,1]-c[1])-rc)<.004);mi[wall]=0;me.polygons.foreach_set('material_index',mi);me.update()
     print('TOPO aberto: eixo (%.4f, %.4f), raio de dentro %.4f, furo %.4f, parede do furo %d faces, faces %d'%(c[0],c[1],rin,rc,int(wall.sum()),nf_),flush=True)
+
+# Buraco nos ombros: atrás de cada braço o Rodin deixou uma fenda que atravessa a parede (a raiz do braço não encosta no corpo).
+# Ela aparece como um vão escuro atrás do ombro. Raios saindo do eixo acham a fenda (não batem em nada); um bloco com a forma da
+# parede (a casca de fora medida em volta, a de dentro ajustada) entra encaixado nela e a fecha, e a casca do corpo em volta é
+# assentada na mesma superfície (sem degrau). A cor é a do pelo.
+def tampar_ombros(obj,center):
+    me=obj.data;bm=bmesh.new();bm.from_mesh(me);tree=BVHTree.FromBMesh(bm);bm.free()
+    def raios(t,z):
+        d=Vector((np.sin(t),-np.cos(t),0));o=Vector((center[0],center[1],z));p=o.copy();rs=[]
+        for _ in range(10):
+            loc,n,i,dist=tree.ray_cast(p,d,1.0)
+            if loc is None:break
+            rs.append(float(np.hypot(loc.x-center[0],loc.y-center[1])));p=loc+d*1e-5
+        return rs
+    Qf=lambda t,z:np.stack([np.ones_like(t),t,z,t*t,z*z,t*z],-1)
+    fechou=0
+    for s in (-1,1):
+        TH=np.radians(np.arange(85,135.01,.5))*s;ZS=np.arange(-.2,.2001,.005)
+        gap=[(t,z) for t in TH for z in ZS if not raios(t,z)]
+        if not gap:continue
+        g=np.array(gap);ga,gb=np.abs(g[:,0]).min(),np.abs(g[:,0]).max();za,zb=g[:,1].min(),g[:,1].max()
+        # as cascas em volta: atrás da fenda (qualquer altura) e acima/abaixo dela (longe da raiz do braço), com parede simples
+        smp=[]
+        for t in np.radians(np.arange(np.degrees(ga)-15,np.degrees(gb)+3.01,1)):
+            for z in np.arange(za-.1,zb+.1001,.01):
+                if t>=ga-np.radians(1) and za-.03<z<zb+.03:continue
+                rs=raios(s*t,z)
+                if len(rs)==2 and .27<rs[0]<rs[1]<.345:smp.append((t,z,rs[0],rs[1]))
+        S_=np.array(smp);cin=np.linalg.lstsq(Qf(S_[:,0],S_[:,1]),S_[:,2],rcond=None)[0];cout=np.linalg.lstsq(Qf(S_[:,0],S_[:,1]),S_[:,3],rcond=None)[0]
+        t0_,t1_=ga-np.radians(7),gb+np.radians(7);z0_,z1_=za-.03,zb+.03      # ga: o lado do braço (na frente)
+        # a casca de fora medida numa grade em volta (último toque de cada raio); na tampa, no encaixe e sob o braço ela é refeita como
+        # uma membrana lisa presa ao que foi medido em volta (Laplace na grade), partindo do ajuste
+        GT=np.arange(t0_-.12,t1_+.1201,np.radians(.5));GZ=np.arange(z0_-.04,z1_+.0401,.004)
+        RG=np.array([[float(Qf(np.array(t),np.array(z))@cout) for z in GZ] for t in GT]);known=np.zeros(RG.shape,bool)
+        for i,t in enumerate(GT):
+            for j,z in enumerate(GZ):
+                if t0_<=t<=t1_ and z0_<=z<=z1_:continue
+                rs=raios(s*t,z)
+                if rs and rs[-1]<.345 and abs(rs[-1]-RG[i,j])<.004:RG[i,j]=rs[-1];known[i,j]=True
+        known[[0,-1],:]=True;known[:,[0,-1]]=True
+        for it in range(3000):
+            av=RG.copy();av[1:-1,1:-1]=(RG[2:,1:-1]+RG[:-2,1:-1]+RG[1:-1,2:]+RG[1:-1,:-2])/4;RG=np.where(known,RG,av)
+        def rout(t,z):
+            fi=np.clip((t-GT[0])/(GT[1]-GT[0]),0,len(GT)-1.001);fj=np.clip((z-GZ[0])/(GZ[1]-GZ[0]),0,len(GZ)-1.001);i,j=int(fi),int(fj);a,b=fi-i,fj-j
+            return float(RG[i,j]*(1-a)*(1-b)+RG[i+1,j]*a*(1-b)+RG[i,j+1]*(1-a)*b+RG[i+1,j+1]*a*b)
+        T_=np.linspace(t0_,t1_,max(8,int(np.degrees(t1_-t0_)/.5)));Z_=np.linspace(z0_,z1_,max(8,int((z1_-z0_)/.004)))
+        bp=bmesh.new()
+        def ring(off,rf):
+            return [[bp.verts.new((center[0]+(r:=rf(t,z)+off)*np.sin(s*t),center[1]-r*np.cos(s*t),z)) for z in Z_] for t in T_]
+        # a face de fora fica 0,1 mm abaixo da casca medida e desce devagar até 0,7 mm na borda (lá o corpo fica por cima); a de dentro,
+        # no meio da parede
+        def borda(t,z):return min(1.,max(0.,min((t-t0_)/.045,(t1_-t)/.045,(z-z0_)/.015,(z1_-z)/.015)))     # 0 na borda da tampa, 1 a 1,5 cm dentro
+        O=ring(-.0001,lambda t,z:rout(t,z)-.0006*(1-borda(t,z))**2);I=ring(.010,lambda t,z:float(Qf(np.array(t),np.array(z))@cin));nt,nz_=len(T_),len(Z_)
+        for i in range(nt-1):
+            for j in range(nz_-1):
+                bp.faces.new((O[i][j],O[i+1][j],O[i+1][j+1],O[i][j+1]));bp.faces.new((I[i][j],I[i][j+1],I[i+1][j+1],I[i+1][j]))
+        for i in range(nt-1):bp.faces.new((O[i][0],I[i][0],I[i+1][0],O[i+1][0]));bp.faces.new((O[i][-1],O[i+1][-1],I[i+1][-1],I[i][-1]))
+        for j in range(nz_-1):bp.faces.new((O[0][j],O[0][j+1],I[0][j+1],I[0][j]));bp.faces.new((O[-1][j],I[-1][j],I[-1][j+1],O[-1][j+1]))
+        bmesh.ops.recalc_face_normals(bp,faces=bp.faces[:])
+        pm=bpy.data.meshes.new('tampa');bp.to_mesh(pm);bp.free()
+        # a tampa entra como peça à parte, encaixada na parede (sem união booleana: a malha em volta da fenda já se cruza, o braço entra
+        # no corpo, e a união exata deixava arestas com 3 ou 4 faces); fica 0,1 mm abaixo da casca, que é assentada em cima dela
+        bm2=bmesh.new();bm2.from_mesh(obj.data)
+        # a malha do corpo ali tem triângulos grandes (a corda afunda até 0,3 mm da casca curva): parte as arestas de mais de 4 mm da
+        # casca de fora
+        def na_area(co):
+            t=float(np.arctan2(co.x-center[0],-(co.y-center[1])))*s
+            return t0_-.1<t<t1_+.1 and z0_-.03<co.z<z1_+.03 and abs(float(np.hypot(co.x-center[0],co.y-center[1]))-rout(t,co.z))<.004
+        for it in range(4):
+            bm2.edges.index_update()
+            ed=sorted((e for e in bm2.edges if e.calc_length()>.004 and na_area(e.verts[0].co) and na_area(e.verts[1].co)),key=lambda e:e.index)
+            if not ed:break
+            bmesh.ops.subdivide_edges(bm2,edges=ed,cuts=1);bmesh.ops.triangulate(bm2,faces=[f for f in bm2.faces if len(f.verts)>3])
+        n0=len(bm2.verts);nf0=len(bm2.faces);bm2.from_mesh(pm);bpy.data.meshes.remove(pm)
+        bm2.faces.ensure_lookup_table()
+        for f in bm2.faces[nf0:]:f.material_index=0;f.smooth=True
+        # a casca de fora em volta vai para a superfície medida: sem degrau entre a tampa e o corpo; dentro da tampa, meio milímetro
+        # abaixo dela (fica escondida); some aos poucos fora (2 cm de lado, 2 cm em cima e embaixo)
+        bm2.verts.ensure_lookup_table();k2=0;mx=0.
+        for v in bm2.verts[:n0]:
+            t=float(np.arctan2(v.co.x-center[0],-(v.co.y-center[1])))*s;z=v.co.z
+            if not(t0_-.08<t<t1_+.08 and z0_-.025<z<z1_+.025):continue
+            r=float(np.hypot(v.co.x-center[0],v.co.y-center[1]));rf=rout(t,z)
+            e=borda(t,z) if t0_<t<t1_ and z0_<z<z1_ else 0.
+            if e>=1 and rf-.015<r<rf+.003:nr=rf-.0005          # dentro da tampa: a casca, a borda do encaixe e a raiz do braço ficam por baixo dela
+            elif abs(r-rf)<=.003:
+                w=min(1.,max(0.,1-max(t0_-.02-t,t-t1_-.02,0)/.06))*min(1.,max(0.,1-max(z0_-.005-z,z-z1_-.005,0)/.02))
+                if w<=0:continue
+                nr=r+(rf-.0005*e-r)*w
+            else:continue
+            v.co.x=center[0]+nr*np.sin(s*t);v.co.y=center[1]-nr*np.cos(s*t);k2+=1;mx=max(mx,abs(nr-r))
+        bm2.to_mesh(obj.data);bm2.free()
+        res_=RG[known]-np.array([float(Qf(np.array(t),np.array(z))@cout) for i,t in enumerate(GT) for j,z in enumerate(GZ) if known[i,j]])
+        k=nf0
+        fechou+=1
+        print('OMBRO %s: fenda %.1f..%.1f graus, z %.3f..%.3f; tampa %dx%d (casca de fora medida em %d pontos, longe do ajuste %.4f), corpo com %d faces; %d vértices assentados (até %.4f)'%('ED'[s>0],np.degrees(ga),np.degrees(gb),za,zb,nt,nz_,int(known.sum()),res_.std(),k,k2,mx),flush=True)
+    return fechou
 
 # Superfície lisa. O Rodin deixou ondinhas horizontais de "camada de impressão" (e risquinhos verticais na barriga), com 1 a 3
 # milésimos de altura e 8 a 12 arestas de comprimento. Alisa só isso: cada vértice anda na direção da normal (no máximo 3
@@ -152,7 +250,7 @@ for rnd in range(3):
         d=border.setdefault(inv[f],np.zeros(5,np.int64));d[cls[g]]+=1
     changed=0
     for comp in np.where(size<ISLAND)[0]:
-        b=border.get(comp)
+        faces=None;b=border.get(comp)
         if b is None:continue
         k=cls[ids[comp]];target=int(b.argmax())
         if k==4 and target==2:continue                       # brilho cercado de preto: é o reflexo do olho, fica
@@ -207,7 +305,7 @@ print('POSICOES rosto z %.3f..%.3f, barriga z %.3f..%.3f, olhos'%(facecomp['lo']
 # Placa do rosto. A textura pinta a parede do sulco em volta do rosto num marrom-claro igual ao bege na sombra, então a cor
 # não decide sozinha. A geometria decide: enche a partir de pontos da placa (testa, bochechas e focinho) sem atravessar
 # dobras côncavas acima de 10 graus (o fundo do sulco). Dentro: bege (os detalhes pretos ficam); fora, na frente da cabeça: marrom.
-from collections import deque
+from collections import deque,Counter
 bm=bmesh.new();bm.from_mesh(me);bm.faces.ensure_lookup_table();bm.edges.ensure_lookup_table()
 cen3=np.array([f.calc_center_median() for f in bm.faces])
 ang=np.array([e.calc_face_angle_signed() if len(e.link_faces)==2 else 0 for e in bm.edges]);lim=-np.radians(10)
@@ -435,7 +533,8 @@ for lx,lz in LINES:
 # volta); numa área justa em volta dela (longe do sulco da barriga e da borda de baixo), a superfície do corpo é ajustada pela parte
 # de baixo dos pontos e a patinha é o que se ergue acima dela, cortada a 35% da altura máxima.
 A=lambda q:np.stack([np.ones(len(q)),q[:,0],q[:,2],q[:,0]**2,q[:,2]**2,q[:,0]*q[:,2]],1)
-for side in (-1,1):
+PES_BEGE=False       # 03/10/2026: pés na cor do corpo, como na foto (com True voltam a bege, almofada e dedos)
+for side in ((-1,1) if PES_BEGE else ()):
     out=lambda co,nr:(co.x-axis[0])*nr.x+(co.y-axis[1])*nr.y>0
     cand=[i for i,p in enumerate(_V) if side*p[0]>.05 and abs(p[0])<.27 and PAW_Z[0]<p[2]<PAW_Z[1] and p[1]<-.15]
     d=DET[cand];top=np.array(cand)[d>.5*d.max()];cx,cz=_V[top,0].mean(),_V[top,2].mean()
@@ -462,6 +561,195 @@ for side in (-1,1):
     for f in zf:
         if f.material_index!=FACE and f not in outside:f.material_index=FACE
     print('PATINHA centro (%.3f, %.3f) altura maxima %.4f corte %.4f bege'%(cx,cz,hmax,h0),k,flush=True)
+# Banana no meio da barriga. O relevo dela (as faces amarelas e a borda marrom que desce até a barriga) gira em volta do eixo do
+# tubo até o centro da banana, em largura, coincidir com o da barriga. A barriga sem a banana vem do espelho da própria barriga,
+# que é simétrica (onde o espelho cai na banana, de um ajuste liso): ela diz o que é relevo e refaz o lugar antigo, com a forma e a
+# cor do espelho (a ponta da banana cobria o sulco da borda). A borda da banana afunda um pouco na superfície (sem fresta).
+BAN=3
+tag=bm.faces.layers.int.get('remendo') or bm.faces.layers.int.new('remendo')   # antes de guardar referências (criar camada realoca os dados)
+btag=bm.faces.layers.int.get('banana') or bm.faces.layers.int.new('banana')
+bm.verts.ensure_lookup_table();bm.edges.ensure_lookup_table();bm.faces.ensure_lookup_table()
+# o centro: no plano de simetria da barriga (o que melhor casa cada ponto da frente com o espelho dele), na altura do eixo do tubo
+tree=BVHTree.FromBMesh(bm);mats=[f.material_index for f in bm.faces]
+def casca(o,d):
+    """o último ponto da superfície na direção d saindo de o (a casca de fora), até 0,45 do centro"""
+    p=o.copy();last=None
+    for _ in range(8):
+        loc,n,i,dist=tree.ray_cast(p,d,.6)
+        if loc is None:break
+        if (loc-o).length<.45:last=(loc,i)
+        p=loc+d*1e-5
+    return last
+_vs=[v for v in bm.verts if v.co.y<-.15 and (-.75<v.co.z<-.5 or -.33<v.co.z<-.26) and abs(v.co.x)<.3 and v.normal.y<-.3]
+_vs=[_vs[i] for i in np.random.default_rng(0).choice(len(_vs),min(3000,len(_vs)),replace=False)]
+def assimetria(xm):
+    hs=[]
+    for v in _vs:
+        o=Vector((xm,axis[1],v.co.z));q=casca(o,Vector((xm-v.co.x,v.co.y-axis[1],0)).normalized())
+        if q:hs.append(abs((v.co-o).length-(q[0]-o).length))
+    return float(np.median(hs))
+CX=min(np.arange(-.006,.00601,.0005),key=assimetria);CEN=(float(CX),float(axis[1]))
+print('BANANA plano de simetria x=%.4f (diferença mediana do espelho %.5f)'%(CX,assimetria(CX)),flush=True)
+def theta(co):return float(np.arctan2(co.x-CEN[0],-(co.y-CEN[1])))      # 0 = frente, positivo = para a direita
+def radius(co):return float(np.hypot(co.x-CEN[0],co.y-CEN[1]))
+def put(v,r,t):v.co.x=CEN[0]+r*np.sin(t);v.co.y=CEN[1]-r*np.cos(t)
+seen=set();best=set()
+for f in bm.faces:
+    if f.material_index==BAN and f not in seen and f.calc_center_median().y<-.1:
+        c=connected(bm,f,lambda g:g.material_index==BAN);seen|=c
+        if len(c)>len(best):best=c
+if best:
+    bv={v for f in best for v in f.verts};th=[theta(v.co) for v in bv];zs=[v.co.z for v in bv]
+    bz0,bz1,t0,t1=min(zs),max(zs),min(th),max(th)
+    belly_th=[theta(f.calc_center_median()) for f in bm.faces if f.material_index==FACE and bz0<f.calc_center_median().z<bz1 and BELLY_LO[0]-.03<f.calc_center_median().x<BELLY_HI[0]+.03 and f.calc_center_median().y<-.15 and front_out(f)]
+    thc=(min(belly_th)+max(belly_th))/2;dth=thc-(t0+t1)/2
+    print('BANANA largura %.1f..%.1f graus, barriga %.1f..%.1f graus: gira %.2f graus'%tuple(np.degrees([t0,t1,min(belly_th),max(belly_th),dth])),flush=True)
+    if abs(dth)>np.radians(.3):
+        kd=kdtree.KDTree(len(bv))
+        for i,v in enumerate(bv):kd.insert(v.co,i)
+        kd.balance()
+        Q=lambda t,z:np.stack([np.ones_like(t),t,z,t*t,z*z,t*z],-1)
+        pts=np.array([(theta(v.co),v.co.z,radius(v.co)) for v in bm.verts if v.co.y<-.1 and bz0-.06<v.co.z<bz1+.06 and t0-.15<theta(v.co)<t1+.15 and all(g.material_index==FACE for g in v.link_faces)])
+        for it in range(8):
+            cf=np.linalg.lstsq(Q(pts[:,0],pts[:,1]),pts[:,2],rcond=None)[0];res=pts[:,2]-Q(pts[:,0],pts[:,1])@cf;pts=pts[res<max(.0008,2*res.std())]
+        def ref(t,z):
+            """raio da barriga sem a banana em (t,z) e a cor do espelho (None onde vale o ajuste)"""
+            fit=float(Q(np.array(t),np.array(z))@cf);last=casca(Vector((CEN[0],CEN[1],z)),Vector((np.sin(-t),-np.cos(-t),0)))
+            if not last or abs(radius(last[0])-fit)>=.02:return fit,None        # sem espelho, ou ele caiu numa mão
+            w=float(np.clip((kd.find(last[0])[2]-.035)/.03,0,1));w=w*w*(3-2*w)      # passagem suave do ajuste (perto da banana) ao espelho
+            return fit+(radius(last[0])-fit)*w,(mats[last[1]] if w>.5 else None)
+        # o relevo: a partir das faces amarelas, as vizinhas que estão acima da barriga (mais 1,5 milésimo, na média dos vértices; até
+        # 5 cm da banana e 5 cm de altura, para não pegar as mãos) e as faces em pé ou viradas para baixo da borda dela (a parte de baixo
+        # da aba, que achatada ficaria dobrada)
+        def radial(f):
+            c=f.calc_center_median();dx,dy=c.x-CEN[0],c.y-CEN[1];return (f.normal.x*dx+f.normal.y*dy)/max(np.hypot(dx,dy),1e-9)
+        hv={}
+        def H(v):
+            if v not in hv:hv[v]=radius(v.co)-ref(theta(v.co),v.co.z)[0]
+            return hv[v]
+        R=set(best);front=sorted(best,key=lambda f:f.index)
+        for k in range(40):
+            nxt=[]
+            for f in front:
+                for e in f.edges:
+                    for g in e.link_faces:
+                        if g in R or kd.find(g.calc_center_median())[2]>=.05:continue
+                        h=np.mean([H(v) for v in g.verts])
+                        if .0015<h<.05 or (-.005<h<.05 and radial(g)<.5):R.add(g);nxt.append(g)
+            front=nxt
+        # faces baixas cercadas pelo relevo também vão
+        rim=[g for f in R for e in f.edges for g in e.link_faces if g not in R];done=set();k=0
+        for g in dict.fromkeys(rim):
+            if g in done:continue
+            comp={g};q=[g];closed=True
+            while q and closed:
+                for e in q.pop().edges:
+                    for h in e.link_faces:
+                        if h not in R and h not in comp:comp.add(h);q.append(h)
+                if len(comp)>300:closed=False
+            done|=comp
+            if closed:R|=comp;k+=len(comp)
+        out_h=[np.mean([H(v) for v in g.verts]) for g in dict.fromkeys(g for f in R for e in f.edges for g in e.link_faces if g not in R)]
+        print('BANANA relevo %d faces (%d amarelas, %d cercadas); em volta a altura fica <= %.4f (p99)'%(len(R),len(best),k,np.quantile(out_h,.99)),flush=True)
+        # a cor segue o relevo: amarelo onde a banana sobe mais de 2,5 milésimos da barriga, bege em volta (as cores da textura
+        # deixavam dentes amarelos na borda de cima e uma linha marrom serrilhada na de baixo)
+        for f in R:f[btag]=1;f.material_index=FACE
+        bm.faces.index_update();kb=cut(bm,None,sorted(R,key=lambda f:f.index),BAN,domain=lambda f:f[btag]==1,fnv=lambda v:.0025-(radius(v.co)-ref(theta(v.co),v.co.z)[0]))
+        bm.faces.ensure_lookup_table();R={f for f in bm.faces if f[btag]==1}
+        print('BANANA amarela pelo relevo: %d faces'%kb,flush=True)
+        bm.faces.index_update();res=bmesh.ops.split(bm,geom=sorted(R,key=lambda f:f.index),use_only_faces=False)      # devolve a cópia solta; as faces originais saem da malha
+        moved=set(g for g in res['geom'] if isinstance(g,bmesh.types.BMFace))
+        bm.verts.ensure_lookup_table();bm.edges.ensure_lookup_table();bm.faces.ensure_lookup_table()
+        hole=[e for e in bm.edges if len(e.link_faces)==1 and e.link_faces[0] not in moved and bz0-.1<e.verts[0].co.z<bz1+.1 and e.verts[0].co.y<-.1 and t0-.3<theta(e.verts[0].co)<t1+.3]
+        # o lugar antigo: triângulos novos no plano (ângulo x altura) -- Delaunay com a borda do buraco e uma grade de pontos de 6
+        # milésimos dentro --, cada ponto assentado no raio da barriga sem a banana (o preenchimento direto em 3D dobrava faces)
+        adj={}
+        for e in hole:
+            a_,b_=e.verts;adj.setdefault(a_,[]).append(b_);adj.setdefault(b_,[]).append(a_)
+        bm.verts.index_update();loops=[];left=set(adj)
+        while left:
+            cur=min(left,key=lambda v:v.index);loop=[cur];left.discard(cur);prev=None
+            while True:
+                nx=sorted((u for u in adj[cur] if u!=prev and u in left),key=lambda v:v.index)
+                if not nx:break
+                prev,cur=cur,nx[0];loop.append(cur);left.discard(cur)
+            loops.append(loop)
+        loop=max(loops,key=len);Rm=float(np.mean([radius(v.co) for v in loop]));n=len(loop)
+        P2=np.array([(theta(v.co)*Rm,v.co.z) for v in loop]);S=.006
+        gx,gz=np.meshgrid(np.arange(P2[:,0].min()+S/2,P2[:,0].max(),S),np.arange(P2[:,1].min()+S/2,P2[:,1].max(),S));G=np.c_[gx.ravel(),gz.ravel()]
+        A2,B2=P2,np.roll(P2,-1,0)
+        cross=((A2[None,:,1]>G[:,None,1])!=(B2[None,:,1]>G[:,None,1]))&(G[:,None,0]<A2[None,:,0]+(G[:,None,1]-A2[None,:,1])*(B2[None,:,0]-A2[None,:,0])/np.where(B2[None,:,1]==A2[None,:,1],1e-12,B2[None,:,1]-A2[None,:,1]))
+        G=G[cross.sum(1)%2==1]
+        AB=B2-A2;tt=np.clip(((G[:,None,:]-A2[None])*AB[None]).sum(2)/np.maximum((AB**2).sum(1),1e-18)[None],0,1)
+        G=G[np.linalg.norm(G[:,None,:]-(A2[None]+tt[...,None]*AB[None]),axis=2).min(1)>.6*S]
+        out_=delaunay_2d_cdt([Vector(p) for p in P2]+[Vector(p) for p in G],[(i,(i+1)%n) for i in range(n)],[list(range(n))],1,1e-9)
+        vco,_e,tris,orig=out_[0],out_[1],out_[2],out_[3]
+        vmap_=[];novos=0
+        for i,co in enumerate(vco):
+            src_=orig[i]
+            if src_ and min(src_)<n:vmap_.append(loop[min(src_)])
+            else:
+                t=co[0]/Rm;r=ref(t,co[1])[0];vmap_.append(bm.verts.new((CEN[0]+r*np.sin(t),CEN[1]-r*np.cos(t),co[1])));novos+=1
+        new=[]
+        for tri in tris:
+            try:f=bm.faces.new([vmap_[i] for i in tri])
+            except ValueError:continue
+            f.normal_update()
+            if radial(f)<0:f.normal_flip()
+            new.append(f)
+        for lp in loops:
+            if lp is not loop:new+=bmesh.ops.holes_fill(bm,edges=[e for e in hole if e.verts[0] in lp],sides=0)['faces']
+        for f in new:f[tag]=1
+        print('BANANA remendo: %d triângulos, %d pontos novos, borda %d (%d buracos)'%(len(new),novos,n,len(loops)),flush=True)
+        pf=[f for f in bm.faces if f[tag]]
+        fixed_b=[v for v in dict.fromkeys(v for f in pf for v in f.verts) if not all(g[tag] for g in v.link_faces)]
+        inner=[v for v in dict.fromkeys(v for f in pf for v in f.verts) if all(g[tag] for g in v.link_faces)]   # a borda do remendo fica onde está
+        for v in inner:
+            t=theta(v.co);put(v,ref(t,v.co.z)[0],t)
+        for f in pf:
+            c=f.calc_center_median();m=ref(theta(c),c.z)[1];f.material_index=FACE if m is None else m
+        # em volta do lugar antigo (1,5 cm), o que sobrou de borda desce suave até a barriga, com a cor do espelho
+        D=.015;edge_kd=kdtree.KDTree(len(fixed_b))
+        for i,v in enumerate(fixed_b):edge_kd.insert(v.co,i)
+        edge_kd.balance();skip=set(inner)|{v for f in moved for v in f.verts};zone={};nz=0
+        for v in bm.verts:
+            if v in skip or v.co.y>-.05 or not bz0-.05<v.co.z<bz1+.05:continue
+            d=edge_kd.find(v.co)[2]
+            if d<D:
+                t=theta(v.co);r0=ref(t,v.co.z)[0];h=radius(v.co)-r0
+                if abs(h)<.02:w=(d/D)**2*(3-2*d/D);put(v,r0+h*w,t);zone[v]=d;nz+=1
+        for f in bm.faces:
+            if not f[tag] and f not in moved and all(v in zone for v in f.verts):
+                c=f.calc_center_median();m=ref(theta(c),c.z)[1];f.material_index=FACE if m is None else m
+        # faces que ficaram viradas (a parte de baixo de alguma aba fora do relevo): os vértices vão para a média dos vizinhos no plano
+        zf=[f for f in bm.faces if not f[tag] and f not in moved and all(v in zone for v in f.verts)]
+        for it in range(20):
+            for f in zf:f.normal_update()
+            bad=[f for f in zf if radial(f)<0]
+            if it==0:nbad=len(bad)
+            if not bad:break
+            for v in list(dict.fromkeys(v for f in bad for v in f.verts)):
+                nb=[e.other_vert(v) for e in v.link_edges];t=float(np.mean([theta(u.co) for u in nb]));z=float(np.mean([u.co.z for u in nb]))
+                h=radius(v.co)-ref(theta(v.co),v.co.z)[0];v.co.z=z;put(v,ref(t,z)[0]+h,t)
+        print('BANANA borda antiga alisada: %d vértices em volta (%d faces viradas acertadas, sobram %d)'%(nz,nbad,len(bad)),flush=True)
+        # só o amarelo muda de lugar: a aba bege em volta não casa com a barriga no lugar novo (ela foi refeita no antigo)
+        bm.faces.index_update();bmesh.ops.delete(bm,geom=sorted((f for f in moved if f.material_index!=BAN),key=lambda f:f.index),context='FACES')
+        moved={f for f in moved if f.is_valid}
+        bm.verts.ensure_lookup_table();bm.edges.ensure_lookup_table();bm.faces.ensure_lookup_table()
+        # a banana no lugar novo, com a borda afundada 6 milésimos (sem fresta); a parede nova tem a cor da face ao lado
+        mv={v for f in moved for v in f.verts}
+        for v in mv:put(v,radius(v.co),theta(v.co)+dth)
+        # (feita à mão, em ordem fixa: o extrude_edge_only cria os elementos numa ordem que muda a cada execução)
+        bm.verts.index_update();bm.edges.index_update()
+        bedges=sorted({e for f in moved for e in f.edges if len(e.link_faces)==1},key=lambda e:e.index);nv={}
+        for v in sorted({v for e in bedges for v in e.verts},key=lambda v:v.index):
+            r,t=radius(v.co)-.006,theta(v.co);nv[v]=bm.verts.new((CEN[0]+r*np.sin(t),CEN[1]-r*np.cos(t),v.co.z))
+        for e in bedges:
+            a_,b_=e.verts;h=e.link_faces[0];l=next(l for l in e.link_loops if l.face is h)
+            if l.vert is not a_:a_,b_=b_,a_        # na face da banana a aresta vai de a_ para b_; na parede nova, ao contrário
+            g=bm.faces.new((b_,a_,nv[a_],nv[b_]));g.material_index=h.material_index;g.smooth=True
+        bm.normal_update();bm.verts.ensure_lookup_table();bm.faces.ensure_lookup_table()
+        print('BANANA centralizada: lugar antigo refeito (%d faces, %d vértices assentados; cores %s)'%(len(pf),len(inner),dict(Counter(f.material_index for f in pf))),flush=True)
 # por segurança, no fim: dentro do tubo (virado para o eixo) é sempre marrom
 bm.faces.ensure_lookup_table();k=0
 for f in bm.faces:
@@ -471,6 +759,7 @@ print("DENTRO no fim",k,"faces ->marrom",flush=True)
 bm.to_mesh(me);bm.free();me.update()
 # furo no alto da cabeça, depois das cores (a testa sobe pela cúpula: cortar antes abriria caminho no sulco do rosto)
 abrir_topo(obj);me=obj.data
+tampar_ombros(obj,axis);me=obj.data
 while me.uv_layers:me.uv_layers.remove(me.uv_layers[0])
 for im in list(bpy.data.images):bpy.data.images.remove(im)
 for mat in list(bpy.data.materials):

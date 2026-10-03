@@ -114,7 +114,8 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
  }
  if(key==='macacoscopio'){
   // The Rodin model (9) with the monkey's fixed colours as five materials (no texture: the site's CSP blocks the blob: fetch of embedded
-  // images). Brown fur; beige face plate, belly, inner ears and feet; black eyes, brows, nose and mouth; a white shine on each eye; banana.
+  // images). Brown fur and feet (the paw prints are relief); beige face plate, belly and inner ears; black eyes, brows, nose and mouth;
+  // a white shine on each eye; banana.
   for(const [x,y] of [[-.134,.54],[.136,.54]])assert.equal(materialAt(x,y),'features','Black eyes');
   for(const [x,y] of [[-.124,.604],[.126,.602]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
   for(const [x,y] of [[-.137,.693],[.143,.694]])assert.equal(materialAt(x,y),'features','Black brows');
@@ -126,8 +127,33 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   for(const [x,y] of [[-.377,.77],[-.49,.65],[.393,.77],[.5,.66]])assert.equal(materialAt(x,y),'fur','The ear rim and its outside stay brown');
   for(const [x,y] of [[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown');
   for(const [x,y] of [[-.142,-.3],[0,-.1],[-.12,.57],[.12,.57]])assert.equal(hitFrom([x,y,0],[0,0,1]).name,'fur','The inside of the tube is brown, behind the eyes too');
-  for(const [x,y] of [[-.166,-.81],[.166,-.81],[-.166,-.75],[.166,-.75]])assert.equal(materialAt(x,y),'face','Beige feet, pad and toes');
+  for(const [x,y] of [[-.166,-.81],[.166,-.81],[-.166,-.75],[.166,-.75]])assert.equal(materialAt(x,y),'fur','Brown feet, pad and toes');
   for(const [x,y] of [[-.31,-.79],[0,-.79]])assert.equal(materialAt(x,y),'fur','Brown beside and between the feet');
+  // The banana sits in the middle of the belly (the Rodin model had it 3.5 cm to the left): its width and the belly's, at its
+  // height, share the centre; where its tip was is plain belly.
+  const verts=name=>{
+   const out=[];
+   scene.traverse(o=>{
+    if(!o.isMesh||o.material.name!==name)return;
+    const p=o.geometry.attributes.position,v=new T.Vector3();
+    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.z>0)out.push(v.clone());}
+   });
+   return out;
+  };
+  const banana=verts('banana'),bx=banana.map(v=>v.x),by=banana.map(v=>v.y),y0=Math.min(...by),y1=Math.max(...by);
+  const belly=verts('face').filter(v=>v.z>.15&&v.y>y0&&v.y<y1&&Math.abs(v.x)<.3).map(v=>v.x);
+  const off=(Math.min(...bx)+Math.max(...bx))/2-(Math.min(...belly)+Math.max(...belly))/2;
+  assert.ok(Math.abs(off)<.012,`The banana is centred on the belly (off by ${off.toFixed(4)})`);
+  assert.equal(materialAt(-.19,-.35),'face','Where the banana tip was is plain beige belly');
+  // No slot behind the shoulders (the Rodin model left one through the wall behind each arm): rays out of the tube's axis there
+  // meet the wall, and from outside the first surface is the brown outer shell.
+  for(const s of [-1,1])for(const y of [-.05,0,.05])for(const a of [100,106,112]){
+   const t=a*Math.PI/180,d=new T.Vector3(s*Math.sin(t),0,Math.cos(t)),axis=new T.Vector3(.0035,y,-.0312);
+   ray.set(axis,d);assert.ok(ray.intersectObject(scene,true).length>0,`The wall behind the ${s<0?'left':'right'} shoulder is closed (${a} deg, ${y})`);
+   const hit=hitFrom(axis.clone().addScaledVector(d,1.5).toArray(),d.clone().negate().toArray());
+   assert.equal(hit.name,'fur','Brown shell behind the shoulder');
+   assert.ok(Math.hypot(hit.point.x-axis.x,hit.point.z-axis.z)>.315,'The outer shell, not the inside wall');
+  }
   // Open at the top, like the printed piece (the lamp column passes through): a ray down the axis crosses it without touching it.
   ray.set(new T.Vector3(0,1.5,.03),new T.Vector3(0,-1,0));assert.equal(ray.intersectObject(scene,true).length,0,'The head is open at the top');
  } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
