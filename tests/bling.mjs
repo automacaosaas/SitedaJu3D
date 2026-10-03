@@ -183,16 +183,42 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   assert.equal(fake.notes.get(debit.providerId).body.parcelas[0].formaPagamento.id, 503);
   assert.equal(count('GET', '/formas-pagamentos'), 1, 'payment methods looked up once an hour');
 
-  // Rejected: Bling's words are kept; after the fix, the retry updates and resends the same note.
+  // Refused by the tax authority: Bling's words are kept, with what to do. The panel cannot edit the buyer, so the fix is
+  // made on the note in Bling, and the retry resends that same note as it is there, never rewritten with the order's data.
   const rejected = order({buyer: {name: 'Ana REJEITAR', email: 'ana@example.com', company: null}});
   const refused = await issue(rejected);
-  assert.equal(refused.status, 'erro'); assert.match(refused.message, /Rejeição 539/); assert.match(refused.providerId, /^\d+$/, 'the note id is kept for the retry');
-  const createdBefore = creations();
-  const fixed = await invoicing.issue({...rejected, buyer: {...rejected.buyer, name: 'Ana Souza'}});
+  assert.equal(refused.status, 'erro'); assert.match(refused.message, /^Nota recusada pela Fazenda: .*Rejeição 539/);
+  assert.match(refused.message, /Corrija a nota no Bling e clique em Tentar de novo: o site reenvia a nota como ela está no Bling\.$/);
+  assert.match(refused.providerId, /^\d+$/, 'the note id is kept for the retry');
+  const createdBefore = creations(), putsBefore = count('PUT', `/nfe/${refused.providerId}`);
+  assert.equal((await issue(rejected)).status, 'erro', 'not fixed in Bling yet: refused again');
+  assert(fake.correct(refused.providerId));
+  const fixed = await issue(rejected);
   assert.equal(fixed.status, 'autorizada'); assert.equal(fixed.providerId, refused.providerId, 'same note');
   assert.equal(fixed.message, null, 'the old reason goes away');
   assert.equal(creations(), createdBefore, 'no second note created');
-  assert(fake.calls.some(c => c.method === 'PUT' && c.path === `/nfe/${refused.providerId}`), 'updated in Bling before resending');
+  assert.equal(count('PUT', `/nfe/${refused.providerId}`), putsBefore, "never rewritten with the order's data");
+  assert.equal(fake.notes.get(refused.providerId).body.contato.nome, 'Ana', 'the fix made in Bling is what was sent');
+
+  // A refusal that left the note "Pendente" in Bling: the panel's last message still says it was the tax authority's.
+  const pendingOrder = order();
+  const pending = await issue(pendingOrder);
+  Object.assign(fake.notes.get(pending.providerId), {situacao: 1, numero: null, key: null});
+  await store.invoices.update(pending.id, {status: 'erro', message: 'Nota recusada pela Fazenda: 234 - Rejeicao: IE do destinatario nao vinculada ao CNPJ. Corrija a nota no Bling…'});
+  assert.equal((await issue(pendingOrder)).status, 'autorizada');
+  assert.equal(count('PUT', `/nfe/${pending.providerId}`), 0, 'resent as it is in Bling');
+
+  // Never reached the tax authority (the sending broke on the way): the retry rewrites the note with the site's data.
+  const unsentOrder = order();
+  const unsent = await issue(unsentOrder);
+  Object.assign(fake.notes.get(unsent.providerId), {situacao: 1, numero: null, key: null});
+  await store.invoices.update(unsent.id, {status: 'erro', message: 'O Bling não respondeu. Tente de novo em alguns minutos.'});
+  const resent = await issue(unsentOrder);
+  assert.equal(resent.status, 'autorizada'); assert.equal(resent.providerId, unsent.providerId, 'same note');
+  assert.equal(count('PUT', `/nfe/${unsent.providerId}`), 1, 'updated with the order before resending');
+
+  // A note Bling shows as rejected when the panel checks it: the same instructions.
+  assert.match(outcome({situacao: 4}, 9).message, /corrija a nota lá mesmo e clique em Tentar de novo: o site reenvia a nota como ela está no Bling/);
 
   // Waiting for the protocol: processando, then the panel check finds it authorized.
   const slow = order({buyer: {name: 'Ana DEMORAR', email: 'ana@example.com', company: null}});
@@ -295,4 +321,4 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   assert.equal(idle.status, 'erro'); assert.match(idle.message, /não está conectado/);
 }
 
-console.log('PASS: Bling — connection from the panel (state per session, encrypted tokens, shared renewal, single-use refresh, weekly keep-alive, expired and reconnected), the note sent from the order (person or company, payment method, freight), once per order, rejections kept and retried on the same note, cancelled notes replaced, environment checked in the XML (a real note on the test site pauses issuing), disconnecting.');
+console.log('PASS: Bling — connection from the panel (state per session, encrypted tokens, shared renewal, single-use refresh, weekly keep-alive, expired and reconnected), the note sent from the order (person or company, payment method, freight), once per order, rejections kept and the same note resent as fixed in Bling, cancelled notes replaced, environment checked in the XML (a real note on the test site pauses issuing), disconnecting.');

@@ -159,6 +159,8 @@ async function main() {
         if (allowed) res.setHeader('Location', `${env.SITE_URL}/admin.html?code=${encodeURIComponent(allowed.code)}&state=${encodeURIComponent(allowed.state || '')}`);
         return res.end();
       }
+      // "Fixes" a rejected note in the simulated Bling, as the person would on Bling's screen, to try the panel's retry.
+      if (fakeBling && url.pathname === '/__fake-bling/corrigir') { const ok = fakeBling.correct(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({corrigida: ok})); }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }

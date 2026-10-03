@@ -26,7 +26,7 @@ autorizada não emite outra.
 | "sai quando você marcar como concluído" | Pedido pago, ainda pendente | Nada |
 | "emitindo…" | O serviço ainda está processando | Clicar em **Atualizar** depois de alguns instantes |
 | "Nota fiscal nº … · PDF · XML" | Autorizada | Nada; o cliente já recebeu |
-| "Nota fiscal com problema: …" | Recusada ou faltando dado (a mensagem diz o quê) | Corrigir e clicar em **Tentar de novo** |
+| "Nota fiscal com problema: …" | Recusada ou faltando dado (a mensagem diz o quê) | Corrigir e clicar em **Tentar de novo** (recusa da Fazenda: corrigir a nota no Bling) |
 | "Pedido recusado com nota emitida" | A nota saiu e depois o pedido foi recusado | Cancelar a nota no painel do serviço (a Fazenda aceita em até 24 horas) |
 
 ## Emissor: Bling
@@ -108,9 +108,15 @@ Roteiro:
 - Pedido concluído → `POST /nfe` (a nota com o comprador, as peças, o frete e a forma de pagamento) →
   `POST /nfe/{id}/enviar` (sem o e-mail do Bling; quem avisa o cliente é o site) → `GET /nfe/{id}` (número, chave,
   PDF e XML).
-- O código da nota no Bling fica guardado no pedido. "Tentar de novo" corrige e reenvia **a mesma nota**
-  (`PUT /nfe/{id}`), nunca cria outra. Uma nota cancelada no Bling é substituída por uma nova.
-- Uma rejeição da Fazenda aparece no pedido com as palavras do Bling (ex.: "Rejeição 539: …").
+- O código da nota no Bling fica guardado no pedido. "Tentar de novo" reenvia **a mesma nota**, nunca cria outra. Uma
+  nota cancelada no Bling é substituída por uma nova.
+- Uma rejeição da Fazenda aparece no pedido com as palavras do Bling (ex.: "Nota recusada pela Fazenda: 234 - Rejeicao:
+  IE do destinatario nao vinculada ao CNPJ…"). O painel não edita os dados do cliente, então **a correção é feita na
+  própria nota, no Bling** (IE, CNPJ, endereço…). Depois, "Tentar de novo" reenvia a nota **como ela está no Bling**, sem
+  regravar com os dados do pedido, para não desfazer a correção. Também dá para enviar pelo próprio Bling: o "Tentar de
+  novo" seguinte só busca a nota autorizada.
+- Se a nota não chegou à Fazenda (o envio falhou no caminho), "Tentar de novo" atualiza a nota com os dados do pedido
+  (`PUT /nfe/{id}`) e envia.
 - `/api/health` mostra `"bling"`: `off`, `not_configured` (faltam as variáveis), `disconnected`, `connected` ou
   `paused`.
 

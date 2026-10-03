@@ -76,7 +76,7 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
       if (!built.ok) return record(invoice, {status: 'erro', message: clean(built.problems.join(' · '))}, order, {kind: 'nfe:erro', detail: clean(built.problems[0]), actor});
 
       let result;
-      try { result = await provider().emit(built.invoice, {providerId: invoice.providerId || null}); }
+      try { result = await provider().emit(built.invoice, {providerId: invoice.providerId || null, lastError: invoice.status === 'erro' ? invoice.message : null}); }
       catch (error) {
         console.error(`invoicing: the NF-e service failed for ${order.reference} —`, error.status || '', error.code || '', error.message);
         return record(invoice, {status: 'erro', message: error.code === 'provider_not_supported' ? `Emissor "${settings.provider}" ainda não integrado` : 'O emissor de notas não respondeu. Tente de novo em alguns minutos.'}, order, {kind: 'nfe:erro', detail: 'emissor', actor});

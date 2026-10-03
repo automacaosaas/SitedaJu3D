@@ -2,8 +2,9 @@
 // NF-e through Bling: turns the neutral invoice of api/_lib/nfe.js into Bling's NF-e (POST /nfe), sends it to the tax
 // authority (POST /nfe/{id}/enviar) and reads back the number, access key and links (GET /nfe/{id}). Same contract as
 // fake.js, plus providerId: Bling's id for the note, saved on the invoice, so a new attempt updates and resends that same
-// note (PUT /nfe/{id}) and never creates a second one. The tax rules (CFOP, CSOSN, PIS/COFINS) come from the "natureza de
-// operação" the accountant set up in Bling; the payment method is Bling's own for Pix, credit or debit card.
+// note (PUT /nfe/{id}) and never creates a second one; a note the tax authority refused is resent as it is in Bling, where
+// it was fixed. The tax rules (CFOP, CSOSN, PIS/COFINS) come from the "natureza de operação" the accountant set up in
+// Bling; the payment method is Bling's own for Pix, credit or debit card.
 //
 // Homologação or produção is a setting of the Bling account, not of each call, so the site reads the environment in the
 // XML of every note it sends (tpAmb). A note authorized in produção on a site expecting homologação is recorded as what
@@ -15,10 +16,11 @@ const AUTHORIZED = new Set([5, 6, 7]), WAITING = new Set([3, 8, 10]);   // 5 aut
 const PROBLEM = {
   1: 'A nota foi criada no Bling, mas ainda não foi enviada à Fazenda. Clique em Tentar de novo.',
   2: 'A nota foi cancelada no Bling. Tentar de novo emite uma nota nova.',
-  4: 'A Fazenda rejeitou a nota. Veja o motivo no Bling, corrija e clique em Tentar de novo.',
+  4: 'A Fazenda rejeitou a nota. Veja o motivo no Bling, corrija a nota lá mesmo e clique em Tentar de novo: o site reenvia a nota como ela está no Bling.',
   9: 'Uso denegado pela Fazenda. Resolva com o contador antes de emitir de novo.',
   11: 'A nota está bloqueada no Bling. Veja no Bling o que falta.'
 };
+const FAZENDA_REFUSAL = /rejei[cç][aã]o/i;   // the tax authority's refusals ("234 - Rejeicao: …", "Rejeição 539: …"); Bling's own checks never say it
 const money = cents => Math.round(Number(cents) || 0) / 100;
 const cep = value => String(value || '').replace(/\D/g, '').replace(/^(\d{5})(\d{3})$/, '$1-$2');
 const ncm = value => String(value || '').replace(/\D/g, '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1.$2.$3');   // Bling writes the NCM as 9999.99.99
@@ -74,8 +76,9 @@ function createBlingProvider({store, env = process.env, now, fetchImpl}) {
   return {
     name: 'bling',
 
-    async emit(invoice, {providerId = null} = {}) {
-      let id = providerId ? String(providerId) : null;
+    // lastError: the reason the previous attempt failed, as the panel shows it (null on the first attempt).
+    async emit(invoice, {providerId = null, lastError = null} = {}) {
+      let id = providerId ? String(providerId) : null, asInBling = false;
       try {
         const {pausedReason} = await bling.status();
         if (pausedReason) return {status: 'erro', providerId: id, message: `Emissão pausada: ${pausedReason}`};
@@ -84,18 +87,28 @@ function createBlingProvider({store, env = process.env, now, fetchImpl}) {
           const situation = Number(current?.situacao);
           if (AUTHORIZED.has(situation) || WAITING.has(situation) || situation === 9 || situation === 11) return outcome(current, id);   // done, on its way, or needs a person: never twice
           if (situation === 2) id = null;   // cancelled in Bling on purpose: this attempt issues a new note
+          // Refused by the tax authority: the panel cannot edit the buyer's data, so the fix is made on the note in Bling and
+          // it goes again as it is there. Rewriting it with the order's data would undo the fix and bring the same refusal back.
+          else asInBling = situation === 4 || FAZENDA_REFUSAL.test(String(lastError || ''));
         }
-        const body = toBling(invoice, await bling.paymentMethodId(invoice.payment.code).catch(() => null));
-        if (id) await bling.api('PUT', `/nfe/${encodeURIComponent(id)}`, body);
-        else {
-          const created = (await bling.api('POST', '/nfe', body))?.data;
-          if (!created?.id) return {status: 'erro', providerId: null, message: 'O Bling não devolveu o código da nota. Confira no Bling antes de tentar de novo.'};
-          id = String(created.id);
+        if (!asInBling) {
+          const body = toBling(invoice, await bling.paymentMethodId(invoice.payment.code).catch(() => null));
+          if (id) await bling.api('PUT', `/nfe/${encodeURIComponent(id)}`, body);
+          else {
+            const created = (await bling.api('POST', '/nfe', body))?.data;
+            if (!created?.id) return {status: 'erro', providerId: null, message: 'O Bling não devolveu o código da nota. Confira no Bling antes de tentar de novo.'};
+            id = String(created.id);
+          }
         }
         let sent;
         try { sent = await bling.api('POST', `/nfe/${encodeURIComponent(id)}/enviar?enviarEmail=false`, {}); }   // the site e-mails the buyer itself
         catch (error) {
-          if (error instanceof BlingError && error.code === 'bling_rejected') return {status: 'erro', providerId: id, message: `Nota recusada: ${error.message}`};
+          if (error instanceof BlingError && error.code === 'bling_rejected') {
+            const message = FAZENDA_REFUSAL.test(error.message)
+              ? `Nota recusada pela Fazenda: ${error.message.replace(/[.\s]+$/, '')}. Corrija a nota no Bling e clique em Tentar de novo: o site reenvia a nota como ela está no Bling.`
+              : `Nota recusada: ${error.message}`;
+            return {status: 'erro', providerId: id, message};
+          }
           throw error;
         }
         const result = outcome((await bling.api('GET', `/nfe/${encodeURIComponent(id)}`))?.data, id);

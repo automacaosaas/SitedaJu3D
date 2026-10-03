@@ -3,7 +3,8 @@
 // OAuth calls (authorize → code, token with authorization_code and refresh_token, revoke) and the NF-e calls the site
 // makes (POST/PUT/GET /nfe, POST /nfe/{id}/enviar, GET /naturezas-operacoes, GET /formas-pagamentos), with Bling's shapes
 // and error format. Refresh tokens are single-use (the strictest reading of Bling's docs). A recipient named with
-// "REJEITAR" is rejected when sent; one with "DEMORAR" waits for the protocol once. state.environment '1' answers as
+// "REJEITAR" is rejected when sent; correct(id) plays the person who fixes that note in Bling (locally:
+// /__fake-bling/corrigir?id=…). One with "DEMORAR" waits for the protocol once. state.environment '1' answers as
 // produção, '2' (default) as homologação. Nothing here talks to the real Bling.
 const crypto = require('node:crypto');
 
@@ -115,6 +116,12 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
 
   return {
     fetchImpl, authorize, notes, calls, state, clientId, clientSecret,
+    correct(id) {   // the recipient fixed by hand on the note, as in Bling's screen; false when there is no such note
+      const note = notes.get(String(id));
+      if (!note) return false;
+      note.body = {...note.body, contato: {...note.body.contato, nome: note.body.contato.nome.replace(/\s*REJEITAR\s*/gi, ' ').trim() || 'Corrigido no Bling'}};
+      return true;
+    },
     expireAccessTokens() { for (const token of access.keys()) access.set(token, 0); },
     forgetRefreshTokens() { refresh.clear(); }
   };
