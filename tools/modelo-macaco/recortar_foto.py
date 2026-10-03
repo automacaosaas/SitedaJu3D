@@ -1,6 +1,6 @@
 """Recorta a foto do Macacoscópio (fundo cinza-claro neutro) e a encaixa no quadro das fotos da vitrine.
 Uso: blender -b -P recortar_foto.py -- <foto> <saida.png> [h=.8716] [bottom=.0542] [S=1254]
-- fundo: região neutra (pouca saturação) ligada à borda da imagem: o fundo claro e a sombra no chão, também neutra, saem juntos;
+- se a foto já tem fundo transparente, usa o alfa dela; senão, fundo: região neutra (pouca saturação) ligada à borda da imagem: o fundo claro e a sombra no chão, também neutra, saem juntos;
   o que é claro mas fica cercado pelo macaco (patinhas, brilho dos olhos) não é alcançado e fica;
 - borda: alfa pela mistura entre a cor do macaco (vizinho de dentro) e a do fundo (superfície ajustada), e a cor sem a mistura;
 - quadro: quadrado S, a peça com altura h e margem de baixo `bottom` (os números `art` do products.js), centrada no eixo do tubo.
@@ -8,7 +8,8 @@ Uso: blender -b -P recortar_foto.py -- <foto> <saida.png> [h=.8716] [bottom=.054
 import bpy,os,sys,numpy as np
 a=sys.argv[sys.argv.index('--')+1:];src,dst=os.path.abspath(a[0]),os.path.abspath(a[1])
 H=float(a[2]) if len(a)>2 else .8716;BOT=float(a[3]) if len(a)>3 else .0542;S=int(a[4]) if len(a)>4 else 1254
-im=bpy.data.images.load(src);w,h=im.size;x=np.array(im.pixels[:],np.float32).reshape(h,w,4)[::-1,:,:3].copy();bpy.data.images.remove(im)
+im=bpy.data.images.load(src);w,h=im.size;x4=np.array(im.pixels[:],np.float32).reshape(h,w,4)[::-1].copy();bpy.data.images.remove(im);x=x4[...,:3].copy()
+HAS_ALPHA=x4[...,3].min()<.99      # a foto já vem recortada (fundo transparente): usa o alfa dela
 mx=x.max(2);mn=x.min(2);sat=(mx-mn)/np.maximum(mx,1e-6)
 def shift(m,dy,dx):
     o=np.zeros_like(m);ys=slice(max(dy,0),h+min(dy,0));yd=slice(max(-dy,0),h+min(-dy,0));xs=slice(max(dx,0),w+min(dx,0));xd=slice(max(-dx,0),w+min(-dx,0))
@@ -16,7 +17,7 @@ def shift(m,dy,dx):
 def dil(m,k=1):
     for _ in range(k):m=m|shift(m,1,0)|shift(m,-1,0)|shift(m,0,1)|shift(m,0,-1)
     return m
-cand=(sat<.14)&(mx>.25)        # neutro: fundo claro e a sombra (de contato também), mais escura
+cand=np.zeros((h,w),bool) if HAS_ALPHA else (sat<.14)&(mx>.25)        # neutro: fundo claro e a sombra (de contato também), mais escura
 bg=np.zeros((h,w),bool);bg[0,:]=cand[0,:];bg[-1,:]=cand[-1,:];bg[:,0]=cand[:,0];bg[:,-1]=cand[:,-1]
 while True:
     n=dil(bg)&cand
@@ -40,6 +41,7 @@ for _ in range(8):
 d=F-B;al=np.clip(((x-B)*d).sum(2)/np.maximum((d*d).sum(2),1e-6),0,1)
 alpha=np.where(core,1.,np.where(band,al,0.)).astype(np.float32)
 col=np.where(alpha[...,None]>.02,B+(x-B)/np.maximum(alpha[...,None],.02),F);col=np.clip(np.where(core[...,None],x,col),0,1)
+if HAS_ALPHA:alpha,col=x4[...,3].copy(),x
 ys,xs=np.where(alpha>.5);top,bot=ys.min(),ys.max()
 # eixo do tubo: centro das linhas entre 55% e 85% da altura (abaixo das mãos, acima dos pés)
 mid=[(np.where(alpha[r]>.5)[0].min()+np.where(alpha[r]>.5)[0].max())/2 for r in range(int(top+.55*(bot-top)),int(top+.85*(bot-top)))]
