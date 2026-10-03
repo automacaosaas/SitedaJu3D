@@ -113,25 +113,22 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   assert.ok(nearest>.31,`The turbines sit outside the fuselage (closest |x| ${nearest.toFixed(4)})`);
  }
  if(key==='macacoscopio'){
-  // The Rodin model with the texture's colours as five fixed materials (no texture: the site's CSP blocks the blob: fetch of
-  // embedded images). Brown fur, beige face plate, belly and inner ears, black eyes, brows, nose and mouth, a white shine on each eye.
-  for(const [x,y] of [[-.137,.56],[.118,.56]])assert.equal(materialAt(x,y),'features','Black eyes');
-  for(const [x,y] of [[-.132,.621],[.111,.617]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
-  for(const [x,y] of [[-.15,.72],[.13,.72]])assert.equal(materialAt(x,y),'features','Black brows');
-  assert.equal(materialAt(0,.50),'features','Black nose');
-  for(const [x,y] of [[-.17,.47],[.15,.47],[0,.64],[-.15,.78]])assert.equal(materialAt(x,y),'face','Beige face plate, the shaded cheek included');
-  for(const [x,y] of [[0,.05],[0,-.12],[-.4,.7],[.4,.7]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
+  // The Rodin model (9) with the monkey's fixed colours as five materials (no texture: the site's CSP blocks the blob: fetch of embedded
+  // images). Brown fur; beige face plate, belly, inner ears and feet; black eyes, brows, nose and mouth; a white shine on each eye; banana.
+  for(const [x,y] of [[-.134,.54],[.136,.54]])assert.equal(materialAt(x,y),'features','Black eyes');
+  for(const [x,y] of [[-.124,.604],[.126,.602]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
+  for(const [x,y] of [[-.137,.693],[.143,.694]])assert.equal(materialAt(x,y),'features','Black brows');
+  assert.equal(materialAt(0,.47),'features','Black nose');
+  for(const [x,y] of [[-.19,.45],[.19,.45],[0,.72],[-.05,.62]])assert.equal(materialAt(x,y),'face','Beige face plate');
+  for(const [x,y] of [[0,0],[0,-.55],[-.377,.651],[.393,.659]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
   assert.equal(materialAt(0,-.4),'banana','Yellow banana');
-  for(const [x,y] of [[-.3,.1],[.3,.1],[0,.28],[0,.8]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
-  for(const [x,y] of [[0,0],[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown, without painted light spots');
-  // Smooth outlines cut along the shape: no brown ring around the eyes, the whole flat bowl of each ear beige up to where the
-  // rim rises (rim and outside brown), and the inside of the tube brown (the texture had projected the belly onto it).
-  for(const [x,y] of [[-.195,.589],[.175,.589]])assert.equal(materialAt(x,y),'face','Beige right around the eye, no brown ring');
-  for(const [x,y] of [[-.398,.703],[-.43,.7],[.377,.681],[.41,.68]])assert.equal(materialAt(x,y),'face','The ear bowl is beige');
-  for(const [x,y] of [[-.398,.8],[-.48,.7],[.377,.79],[.46,.68]])assert.equal(materialAt(x,y),'fur','The ear rim and its outside stay brown');
-  for(const [x,y] of [[-.142,-.3],[0,-.1],[.1,.3],[-.12,.59],[.1,.59]])assert.equal(hitFrom([x,y,0],[0,0,1]).name,'fur','The inside of the tube is brown, behind the eyes too');
-  // The feet (paw prints at the bottom) in the skin colour, pad and toes; the body around them brown.
-  for(const [x,y] of [[-.149,-.77],[.166,-.78],[-.149,-.69],[.166,-.7]])assert.equal(materialAt(x,y),'face','Beige feet');
-  for(const [x,y] of [[-.27,-.75],[0,-.75]])assert.equal(materialAt(x,y),'fur','Brown beside and between the feet');
+  for(const [x,y] of [[-.32,.1],[.32,.1],[0,.28],[0,.82]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
+  for(const [x,y] of [[-.377,.77],[-.49,.65],[.393,.77],[.5,.66]])assert.equal(materialAt(x,y),'fur','The ear rim and its outside stay brown');
+  for(const [x,y] of [[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown');
+  for(const [x,y] of [[-.142,-.3],[0,-.1],[-.12,.57],[.12,.57]])assert.equal(hitFrom([x,y,0],[0,0,1]).name,'fur','The inside of the tube is brown, behind the eyes too');
+  for(const [x,y] of [[-.166,-.81],[.166,-.81],[-.166,-.75],[.166,-.75]])assert.equal(materialAt(x,y),'face','Beige feet, pad and toes');
+  for(const [x,y] of [[-.31,-.79],[0,-.79]])assert.equal(materialAt(x,y),'fur','Brown beside and between the feet');
+  // Open at the top, like the printed piece (the lamp column passes through): a ray down the axis crosses it without touching it.
+  ray.set(new T.Vector3(0,1.5,.03),new T.Vector3(0,-1,0));assert.equal(ray.intersectObject(scene,true).length,0,'The head is open at the top');
  } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
 }

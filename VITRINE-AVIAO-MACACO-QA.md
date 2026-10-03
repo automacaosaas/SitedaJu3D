@@ -73,20 +73,21 @@ e nos cards da coleção e da página Produtos. Abre a área do produto **só pa
 Foto | 3D, as cores fixas da peça e o aviso "Ainda não está à venda" no lugar do preço e da compra. `#produto/macacoscopio` continua só
 levando a vitrine até ele.
 
-**Modelo 3D (02/10/2026):** `dist/assets/models/macacoscopio.glb` é o macaco do Rodin (`rodin-v2_-0 (7).glb`, recebido em 01/10/2026), no lugar do
-provisório da vitrine. A textura de cor virou cinco materiais fixos, sem textura: `fur` (marrom), `face` (bege: rosto, barriga,
-orelhas e os pés), `features` (preto: olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de cada olho).
-- A placa do rosto e a barriga são decididas pela forma (o sulco em volta de cada uma), porque a textura pinta a parede do sulco num
-  marrom-claro igual ao bege na sombra.
-- Os contornos que se veem de perto são cortados na própria malha, ao longo da forma: o olho até onde o relevo começa (com um brilho
-  oval igual nos dois), a concha das orelhas até onde a borda começa a subir, os pés (almofada e dedos) até onde o relevo deles começa.
-- Por dentro do tubo tudo é marrom (a textura projetava ali a barriga e os olhos).
-- Superfície lisa: as ondinhas de "camada de impressão" do Rodin (1 a 3 milésimos) são alisadas na direção da normal; ficam parados os
-  relevos de verdade (olhos, nariz, boca, sobrancelhas, banana, mãos, orelhas, sulcos e pés).
+**Modelo 3D (02/10/2026):** `dist/assets/models/macacoscopio.glb` é o macaco do Rodin `rodin-v2_-0 (9).glb` (refeito em 02/10/2026; antes, o
+(7) de 01/10), no lugar do provisório da vitrine. Sem textura: cinco materiais com as cores fixas do macaco, iguais em qualquer versão do
+modelo: `fur` (marrom), `face` (bege: rosto, barriga, orelhas e pés), `features` (preto: olhos, sobrancelhas, nariz e boca), `banana` e
+`highlight` (o brilho branco de cada olho).
+- A textura do Rodin diz onde fica cada cor; as posições de cada parte saem dela, então o script serve para outras versões do modelo.
+- A placa do rosto e a barriga são decididas pela forma (o sulco em volta de cada uma); os pés, pelo relevo deles sobre o corpo.
+- Olhos, orelhas, sobrancelhas, nariz e boca: o desenho vem da textura e o contorno é alisado e cortado na própria malha (o olho dentro de
+  um oval, com um brilho oval igual nos dois).
+- Por dentro do tubo tudo é marrom. Superfície lisa, sem as ondinhas de "camada de impressão" (os relevos de verdade ficam parados).
+- A cabeça é aberta em cima, como a peça impressa (a coluna da lâmpada passa por dentro): o (9) veio com uma cúpula, que o script tira com
+  um furo do raio de dentro da cabeça.
 
-`tools/modelo-macaco/preparar_cores.py` (Blender) refaz o arquivo, igual byte a byte, a partir do GLB do Rodin, com 60% das faces
-(300 mil triângulos); depois, `meshopt` como abaixo: 1.197 KB. `tests/model-details.mjs` confere as cores em pontos do rosto, dos
-olhos, das orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo.
+`tools/modelo-macaco/preparar_cores.py` (Blender) refaz o arquivo, igual byte a byte, a partir do GLB do Rodin, com 60% das faces;
+depois, `meshopt` como abaixo: 1.637 KB. `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos, das orelhas, da
+barriga, da banana, dos pés, das costas e de dentro do tubo, e que a cabeça é aberta em cima.
 
 **Foto da vitrine e cards (02/10/2026):** `product-macacoscopio-cutout.webp` (banner, aba "Foto" e demonstração), `card-macacoscopio.webp`
 e `card-preview-macacoscopio.webp` vêm da foto enviada em 02/10/2026 (`design/originais/macacoscopio-foto.webp`, já com o fundo
