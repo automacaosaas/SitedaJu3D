@@ -9,7 +9,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
-const {PRODUCTS, defaults, color} = await site('products.js');
+const {PRODUCTS, SOON, defaults, color} = await site('products.js');
 const {COMMERCE, money, pixPrice} = await site('commerce-config.js');
 const html = string => string.replace(/ /g, '&nbsp;');
 
@@ -18,7 +18,23 @@ const html = string => string.replace(/ /g, '&nbsp;');
   const page = read('dist/produtos.html');
   assert.match(page, /<div class="product-grid" data-product-grid data-category="oftalmologia" aria-label="Produtos de oftalmologia"><!-- grid -->/, 'a grid instead of the carousel (audit B2)');
   assert.doesNotMatch(page, /data-product-carousel/);
-  const cards = page.split('<article class="product-grid-card"').slice(1);
+  const chunks = page.split('<article class="product-grid-card').slice(1), cards = chunks.filter(c => c.startsWith('"')), soonCards = chunks.filter(c => c.startsWith(' is-soon"')).map(c => c.slice(0, c.indexOf('</article>')));
+  // the novelty (SOON): photo, name, "Em breve" and "Ver encaixado", which opens its demonstration in the showcase; no price, cart or page
+  assert.equal(soonCards.length, Object.keys(SOON).length, 'one card per novelty, after the products');
+  for (const card of soonCards) {
+    const id = /data-product-id="([a-z]+)"/.exec(card)?.[1], demo = `index.html#produto/${id}/encaixe`;
+    assert(id && SOON[id], `novelty card for a known novelty: ${id}`);
+    assert(card.includes(`<h2><a href="${demo}">${SOON[id].title}</a></h2>`) && card.includes(`<p class="product-grid-sub">${SOON[id].subtitle}</p>`), `${id}: name and subtitle`);
+    assert(card.includes('<span class="product-soon">Em breve</span>') && card.includes(`<a class="product-customize product-see-fit" href="${demo}">`) && card.includes('<span>Ver encaixado</span>'), `${id}: "Em breve" and "Ver encaixado"`);
+    assert(card.includes(`<a class="product-see-3d" href="index.html#produto/${id}/3d">`) && card.includes('<span>Ver em 3D</span>'), `${id}: "Ver em 3D" opens the piece to turn around`);
+    assert(!/R\$|no Pix|data-add-product|personalizar|\.html"/.test(card.replace(/index\.html#/g, '#')), `${id}: no price, cart, customization or page of its own`);
+    for (const name of [`card-${id}.webp`, `card-preview-${id}.webp`]) assert(fs.existsSync(path.join(root, 'dist/assets', name)), name);
+  }
+  const catalog = read('dist/catalog.js'), banner = read('dist/carousel.js');
+  assert(/const entries = \[\.\.\.Object\.entries\(PRODUCTS\), \.\.\.Object\.entries\(SOON\)\]/.test(catalog) && /if \(product\.soon\) return soonCard\(\{id, product\}\);/.test(catalog), 'the collection carousel shows the novelties after the products');
+  assert(/<span class="product-soon">Em breve<\/span>[^`]*<a class="product-customize product-see-fit" href="\$\{href\}">\$\{icon\('play'\)\}<span>Ver encaixado<\/span><\/a>/.test(catalog) && !/function soonCard[^}]*data-add-product/.test(catalog), 'carousel novelty card: "Em breve" and "Ver encaixado", no cart');
+  assert(catalog.includes("<a class=\"product-see-3d\" href=\"${productHref(id)}/3d\">${icon('cube')}<span>Ver em 3D</span></a>") && banner.includes('${soon ? `<a class="palette-button" href="#produto/${key}/3d" data-role="palette">'), '"Ver em 3D" on the collection card and as the main action of the novelty in the showcase');
+  assert(/if \(step !== 'encaixe' \|\| index < 0\) return;/.test(banner) && /history\.replaceState\(null, '', `#produto\/\$\{keys\[index\]\}`\)/.test(banner) && /demoFromRoute\(\);   \/\/ chegou da página Produtos/.test(banner), '#produto/<piece>/encaixe opens the demonstration and the address goes back to normal');
   assert.equal(cards.length, Object.keys(PRODUCTS).length, 'one pre-rendered card per product');
   for (const card of cards) {
     const id = /data-product-id="([a-z]+)"/.exec(card)?.[1];

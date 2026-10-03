@@ -1,19 +1,24 @@
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {productGrid} from './product-grid.js';
-import {PRODUCTS, PRODUCT_CATEGORIES, color, defaults} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, color, defaults} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
 import {imageReady} from './loading-ui.js';
 
-const entries = Object.entries(PRODUCTS).map(([id, product]) => ({id, product}));
+// As novidades (SOON, products.js) entram no fim da coleção: foto, nome, selo "Em breve" e "Ver encaixado", sem preço nem carrinho.
+const entries = [...Object.entries(PRODUCTS), ...Object.entries(SOON)].map(([id, product]) => ({id, product}));
 const cardArt = Object.freeze({
   borboletoscopio: 'card-borboletoscopio.webp',
   dinossauroscopio: 'card-dinossauroscopio.webp',
-  aviaoscopia: 'card-aviaoscopia.webp'
+  aviaoscopia: 'card-aviaoscopia.webp',
+  macacoscopio: 'card-macacoscopio.webp'
 });
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
+// "Ver encaixado": a vitrine vai para a peça e abre a demonstração (carousel.js, #produto/<peça>/encaixe).
+const demoHref = id => `${productHref(id)}/encaixe`;
+
 const category = key => PRODUCT_CATEGORIES[key] || {label:key};
 const offsetFrom = (index, active, length) => {
   let offset = (index - active) % length;
@@ -22,7 +27,12 @@ const offsetFrom = (index, active, length) => {
   return offset;
 };
 function colorsFor(id, product) { const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
+function soonCard({id, product}) {
+  const categoryLabel = category(product.category).label, href = demoHref(id);
+  return `<article class="product-rail-card is-soon" data-product-id="${id}" tabindex="-1"><a class="product-rail-art" href="${href}" aria-label="Ver o ${product.title} encaixado"><img src="assets/card-preview-${id}.webp" data-full-src="assets/card-${id}.webp" alt="${product.title}" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${href}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${product.colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><span class="product-soon">Em breve</span></div><div class="product-rail-actions is-single"><a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="${productHref(id)}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></div></article>`;
+}
 function productCard({id, product}) {
+  if (product.soon) return soonCard({id, product});
   const colors = colorsFor(id, product), categoryLabel = category(product.category).label;
   const fullArt = cardArt[id] || product.catalogImage || product.image;
   const previewArt = cardArt[id] ? `card-preview-${id}.webp` : fullArt;

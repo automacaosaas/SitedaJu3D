@@ -30,7 +30,7 @@ function samples(group){
 }
 try{
  const heights={};
- for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia']){
+ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscopio']){
   const model=await assets.createAssetModel(key,{},new AbortController().signal);const pts=samples(model.group);
   for(const host of HOSTS){
    const v=viewerFor(model,host);const target=v.controls.target;

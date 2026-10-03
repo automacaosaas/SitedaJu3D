@@ -9,7 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = file => fs.readFileSync(path.join(root, 'dist', file), 'utf8');
 const load = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const {planTracks} = await load('motion-timeline.js');
-const {PRODUCTS, SHOWCASE, showcase} = await load('products.js');
+const {PRODUCTS, SOON, SHOWCASE, showcase} = await load('products.js');
 const {translate} = await load('i18n-core.js');
 
 // ── linha do tempo: todas as trilhas terminam juntas, então tocar ao contrário espelha a ordem ──
@@ -24,13 +24,19 @@ const demos = Object.entries(SHOWCASE).filter(([, entry]) => entry.demo);
 assert.ok(demos.length >= 1);
 for (const [key, {demo}] of demos) {
   const {tool, layers = {}} = demo;
-  assert.ok(PRODUCTS[key], `${key}: produto existe`);
+  assert.ok(PRODUCTS[key] || SOON[key], `${key}: produto (ou novidade) existe`);
+  if (demo.head) {
+    assert.ok(fs.existsSync(path.join(root, 'dist/assets', demo.head.src)), `${key}: imagem da cabeça do equipamento existe`);
+    assert.ok(demo.head.width > 0 && demo.head.width <= 1 && demo.head.ratio > 0 && demo.head.top > -.6 && demo.head.top < .5, `${key}: cabeça do equipamento em fração do quadrado, acima ou sobre a peça`);
+  }
   assert.ok(fs.existsSync(path.join(root, 'dist/assets', tool.src)), `${key}: imagem do equipamento existe`);
   for (const value of [tool.width, tool.top, tool.ratio, ...tool.fade]) assert.ok(value > 0 && value <= 1, `${key}: medidas em fração do quadrado`);
   assert.ok(tool.fade[0] < tool.fade[1], `${key}: o equipamento se dissolve de cima para baixo`);
   assert.ok(!tool.turn || Math.abs(tool.turn) <= 20, `${key}: giro do equipamento discreto (acompanha a foto da peça)`);
   assert.ok(!tool.shift || Math.abs(tool.shift) < .05, `${key}: deslocamento do equipamento discreto`);
-  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < 1.25, `${key}: o cabo some logo abaixo da peça (o foco fica no encaixe)`);
+  // o cabo some logo abaixo da peça (o foco fica no encaixe); num equipamento em duas partes a carcaça embaixo da peça faz parte da cena,
+  // e na montagem a régua aparece inteira, com o cabo nítido (pedido de 01/10/2026: nada de cabo desbotando)
+  assert.ok(tool.top + tool.fade[1] * tool.width / tool.ratio < (demo.head ? 1.8 : demo.assemble ? 1.4 : 1.25), `${key}: o equipamento se dissolve logo abaixo da peça`);
   for (const name of ['back', 'front']) if (layers[name]) assert.ok(fs.existsSync(path.join(root, 'dist/assets', layers[name])), `${key}: camada ${name} existe`);
   assert.ok(!layers.depth || (layers.back && layers.depth > 0 && layers.depth < .3), `${key}: recuo da camada de trás discreto`);
   for (const item of demo.callouts || []) {
@@ -38,15 +44,18 @@ for (const [key, {demo}] of demos) {
     for (const {points, align} of [item.wide, item.compact]) assert.ok(points.length >= 2 && points.every(p => p.length === 2) && ['left', 'right', 'below'].includes(align), `${key}: linha da chamada ${item.label}`);
   }
   for (const name of ['glow', 'halo', 'accent', 'shade']) assert.match(demo[name], /^#[0-9a-f]{6}$/i, `${key}: cor ${name}`);
-  assert.ok(!demo.zoom || (demo.zoom >= .8 && demo.zoom <= 1.25), `${key}: zoom discreto`);
+  // zoom: um número, ou {wide, compact} quando o desktop e o celular pedem enquadramentos diferentes
+  for (const z of [demo.zoom?.wide ?? demo.zoom, demo.zoom?.compact]) assert.ok(z === undefined || (z >= .7 && z <= 1.25), `${key}: zoom discreto`);
   assert.ok(demo.message && translate(demo.message, 'en') !== demo.message && translate(demo.message, 'es') !== demo.message, `${key}: aviso traduzido`);
 }
-assert.equal(showcase('aviaoscopia').demo, null, 'produto sem demo continua abrindo o popup');
+assert.equal(showcase('produto-sem-demo').demo, null, 'produto sem demo continua abrindo o popup');
+assert.ok(showcase('aviaoscopia').demo?.assemble, 'o avião é montado: o equipamento sobe por entre as duas metades, que se fecham em volta dele');
+assert.ok(SHOWCASE.aviaoscopia.demo.tool.bounce === false && SHOWCASE.aviaoscopia.demo.tool.fade[0] >= .98 && read('hero-demo.css').includes('.hero-demo[data-plain-tool] .demo-tool::after { display: none; }'), 'régua inteira e nítida: o cabo não desbota nem recebe o reflexo colorido');
 assert.ok(showcase('borboletoscopio').demo);
 assert.equal(SHOWCASE.borboletoscopio.demo.layers.front, PRODUCTS.borboletoscopio.catalogImage, 'a frente da demonstração é a própria imagem da vitrine');
 assert.deepEqual(SHOWCASE.borboletoscopio.demo.callouts.map(item => item.label), ['Borboletoscópio', 'Retinoscópio'], 'ficha técnica: só os dois rótulos pedidos');
 assert.deepEqual(SHOWCASE.dinossauroscopio.demo.callouts.map(item => item.label), ['Dinossauroscópio', 'Retinoscópio']);
-for (const key of Object.keys(SHOWCASE)) if (SHOWCASE[key].demo?.layers?.front) assert.equal(SHOWCASE[key].demo.layers.front, PRODUCTS[key].catalogImage, `${key}: a frente da demonstração é a própria imagem da vitrine`);
+for (const key of Object.keys(SHOWCASE)) if (SHOWCASE[key].demo?.layers?.front && !SHOWCASE[key].demo.assemble) assert.equal(SHOWCASE[key].demo.layers.front, PRODUCTS[key].catalogImage, `${key}: a frente da demonstração é a própria imagem da vitrine`);
 assert.equal(translate('Retinoscópio', 'en'), 'Retinoscope');
 
 // ── regras do pedido, direto no código ──────────────────────────────────────────
@@ -65,9 +74,16 @@ assert.ok(/timeline\.cancel\(\)/.test(demo) && /float\.cancel\(\)/.test(demo) &&
 assert.ok(!/setInterval/.test(demo + timeline));
 assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered'") && css.includes('.hero-demo[data-back="recessed"] .demo-back {') && !/^\.demo-back \{[^}]*(filter|mask|scale)/m.test(css), 'camadas renderizadas juntas (depth 0) entram sem nenhuma compensação');
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
-assert.ok(ends.length > 10 && Math.max(...ends) <= 1700, `sequência completa em até 1,7 s (${Math.max(...ends)} ms)`);
+assert.ok(ends.length > 8 && Math.max(...ends) <= 2700, `nenhuma trilha passa de 2,7 s (${Math.max(...ends)} ms)`);
+const timing = demo.match(/const T = asm \? \{([^}]*)\} : config\.head \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);
+assert.ok(timing, 'tempos do encaixe e da montagem na mesma tabela');
+assert.ok(field(timing[3], 'cta') + 340 <= 1700, 'encaixe: sequência completa em até 1,7 s');
+assert.ok(field(timing[2], 'cta') + 340 <= 2200 && field(timing[2], 'head') > field(timing[2], 'tool'), 'equipamento em duas partes: até 2,2 s, e a cabeça só desce depois de a base começar a subir');
+assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 520, 'montagem: até 2,7 s, e o equipamento só sobe depois de a peça se abrir');
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /icon\('palette'\) \+ '<span>Personalizar o meu<\/span>'/.test(demo), 'a demonstração usa o mesmo botão do banner (paleta, sem seta)');
+assert.ok(/entries\[i\]\.soon/.test(demo) && /'Ver em 3D'/.test(demo) && demo.includes('#produto/${key}/3d'), 'novidade sem compra (cores fixas): o convite leva a ver a peça em 3D');
+for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
 for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 
 console.log('hero-demo: ok');

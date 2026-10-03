@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// The slit lamp alone (model in slitlamp.js), framed on its whole height with a long lens a touch above the column top.
+// Layers (same camera, they register pixel for pixel): full, base (stand + housing), column, top (prism + head).
+import * as THREE from 'three';
+import {makeRenderer, studioEnvironment, renderStudio, finish} from './studio.js';
+import {buildLamp} from './slitlamp.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const W = Number(P.w || 900), H = Number(P.h || 1400), PASSES = Number(P.passes || 40);
+const renderer = makeRenderer(W, H, {exposure: Number(P.exposure || 1)});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: Number(P.top || 6), left: Number(P.left || 3.4), right: Number(P.right || 2.6), scrim: Number(P.scrim || 1.6), glint: Number(P.glint ?? 40)});
+const {root, groups, COL_R, COL_Y0, COL_Y1} = buildLamp({env: Number(P.env || 1)}); scene.add(root);
+// ── camera: long lens, a touch above the column top, looking slightly down ─────────────────
+const all = new THREE.Box3().setFromObject(scene), fov = Number(P.fov || 10), elev = Number(P.elev || 8) * Math.PI / 180;
+const camera = new THREE.PerspectiveCamera(fov, W / H, 50, 30000);
+// frame on what the camera really sees (the stand's tip is nearer, so it sits lower in the picture than the bounding box says):
+// project every vertex, then move and pull back until the picture's top and bottom margins are equal
+const target = new THREE.Vector3(0, (all.min.y + all.max.y) / 2, 0), FILL = Number(P.fill || .92);
+let dist = (all.max.y - all.min.y) / FILL / 2 / Math.tan(fov * Math.PI / 360);
+const verts = []; scene.updateMatrixWorld(true);
+scene.traverse(o => { if (!o.isMesh) return; const p = o.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / 4000)); for (let i = 0; i < p.count; i += step) verts.push(new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)); });
+for (let it = 0; it < 6; it++) {
+  camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
+  let lo = Infinity, hi = -Infinity; for (const v of verts) { const y = v.clone().project(camera).y; lo = Math.min(lo, y); hi = Math.max(hi, y); }
+  target.y += (hi + lo) / 2 * dist * Math.tan(fov * Math.PI / 360) / Math.cos(elev); dist *= (hi - lo) / 2 / FILL;
+}
+camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(elev), Math.cos(elev)).multiplyScalar(dist)); camera.lookAt(target);
+
+const LAYERS = (P.layers || 'full').split(',');
+const out = {};
+for (const name of LAYERS) {
+  for (const [k, g] of Object.entries(groups)) g.visible = name === 'full' || name === k;
+  out[name] = renderStudio(renderer, scene, camera, {width: W, height: H, passes: PASSES, subject: scene,
+    key: {dir: [Number(P.kx ?? -.55), Number(P.ky ?? .72), Number(P.kz ?? .6)], spread: Number(P.spread || .3), intensity: Number(P.key || 1.7), distance: Number(P.kdist ?? 4)},
+    dome: {intensity: Number(P.dome || 1), minElevation: -.1}, shadowMap: 4096});
+}
+const toPx = v => { const q = v.clone().project(camera); return [+((q.x + 1) / 2).toFixed(4), +((1 - q.y) / 2).toFixed(4)]; };
+finish(out, {box: {min: all.min.toArray().map(v => +v.toFixed(1)), max: all.max.toArray().map(v => +v.toFixed(1))}, colTop: toPx(new THREE.Vector3(0, COL_Y1, COL_R)), colBottom: toPx(new THREE.Vector3(0, COL_Y0, COL_R)), colLeft: toPx(new THREE.Vector3(-COL_R, 150, 0)), colRight: toPx(new THREE.Vector3(COL_R, 150, 0))});
+</script>

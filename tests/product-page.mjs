@@ -26,6 +26,7 @@ for (const [id, name] of [['original', 'Original'], ['pastel', 'Pastel'], ['vibr
 assert.equal((dialog.match(/data-sheet="\d"/g) || []).length, 4);
 assert.equal((dialog.match(/role="tab"/g) || []).length, 4);
 assert(js.includes("if(!sheet.hidden)closeSheet();else closeProduct();") && js.includes('sheetOpener?.focus'));
+assert(js.includes("dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){e.preventDefault();closeSheet();}});"), 'Esc fecha o painel mesmo sem um clique antes (o navegador nem sempre deixa segurar o cancel)');
 assert(js.includes("['ArrowLeft','ArrowRight','Home','End']"));
 // Sem dados inventados: trocas apontam para a política real; nada de "a confirmar".
 assert(dialog.includes('href="trocas.html"') && !/a confirmar|compatível com/i.test(dialog));
@@ -35,5 +36,9 @@ assert(/\.pdp-sheet-tabs button \{ min-height: 44px;/.test(css) && /\.pdp-sheet-
 assert(/@media \(prefers-reduced-motion: reduce\) \{\s*\.pdp-sheet/.test(css));
 assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-sheet \{ top: auto; left: 0;/.test(css), 'no celular o painel sobe de baixo');
 assert(html.includes('<link rel="stylesheet" href="product-page.css">'));
+// Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
+assert(js.includes("dialog.dataset.mode=soon?'preview':'compact'") && js.includes("if(!PRODUCTS[key]&&!(SOON[key]&&step==='3d'))") && js.includes('if(!PRODUCTS[key])return null;'), 'novidade: modo só para ver, pela rota /3d');
+assert(dialog.includes('id="fixed-colors"') && dialog.includes('<p class="pdp-soon-bar">'), 'novidade: as cores fixas e o aviso no lugar da compra');
+assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-facts, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade: sem escolha de cor, preço nem compra');
 
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
