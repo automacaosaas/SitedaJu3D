@@ -14,8 +14,8 @@ for (const id of ['product-price', 'product-pix', 'part-tabs', 'palette', 'prese
 
 // Rotas mantidas: #produto/<peça> abre na imagem; /personalizar abre na prévia 3D.
 assert(js.includes("step==='personalizar'") && js.includes("setView('model')") && js.includes("else if(changed)setView('photo')"));
-// Escolher uma cor leva a prévia para o 3D (a foto só mostra as cores originais).
-assert(/if\(view!=='model'\)setView\('model'\)/.test(js));
+// Na aba Foto (galeria de vistas), escolher uma cor repinta as vistas nas cores escolhidas, sem pular para o 3D (tests/gallery.mjs).
+assert(js.includes("announce(message);if(view==='photo')paintGallery();}") && !/if\(view!=='model'\)setView\('model'\)/.test(js));
 // Preço no Pix com a mesma regra do servidor (pixDiscountBps).
 assert(js.includes("cents-Math.round(cents*COMMERCE.pixDiscountBps/10000)") && js.includes('no Pix`'));
 // Cores como grupo de opções acessível: role=radio, aria-checked, tabindex itinerante e setas.
@@ -41,4 +41,4 @@ assert(js.includes("dialog.dataset.mode=soon?'preview':'compact'") && js.include
 assert(dialog.includes('id="fixed-colors"') && dialog.includes('<p class="pdp-soon-bar">'), 'novidade: as cores fixas e o aviso no lugar da compra');
 assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-facts, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade: sem escolha de cor, preço nem compra');
 
-console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
+console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, the photo gallery repainted on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');

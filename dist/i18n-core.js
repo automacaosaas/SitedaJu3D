@@ -30,6 +30,11 @@ const dynamic = [
     (t, name, colors) => `Choose your color: view ${name} in the collection and customize. Original colors: ${list(t, colors)}`,
     (t, name, colors) => `Elige tu color: ver ${name} en la colección y personalizar. Colores originales: ${list(t, colors)}`],
   [/^Cores fixas: (.+)\.$/, (t, colors) => `Fixed colors: ${list(t, colors)}.`, (t, colors) => `Colores fijos: ${list(t, colors)}.`],
+  // galeria de vistas da página do produto (gallery.js): a nota, os rótulos das vistas e o texto alternativo das imagens
+  [/^(Frente|Três quartos|Lado|Três quartos de trás|Costas) · (.+)$/, (t, view, colors) => `${t(view)} · ${t(colors)}`, (t, view, colors) => `${t(view)} · ${t(colors)}`],
+  [/^(Frente|Três quartos|Lado|Três quartos de trás|Costas), (\d+) de (\d+)$/, (t, view, n, total) => `${t(view)}, ${n} of ${total}`, (t, view, n, total) => `${t(view)}, ${n} de ${total}`],
+  [/^(.+?)( nas cores escolhidas)? — (Frente|Três quartos|Lado|Três quartos de trás|Costas)$/,
+    (t, name, chosen, view) => `${name}${chosen ? ' in the chosen colors' : ''} — ${t(view)}`, (t, name, chosen, view) => `${name}${chosen ? ' en los colores elegidos' : ''} — ${t(view)}`],
   [/^(.+), (\d+) de (\d+)\.$/, '$1, $2 of $3.', '$1, $2 de $3.'],
   [/^Pedido (.+)$/, 'Order $1', 'Pedido $1'],
   [/^PEDIDO (.+)$/, 'ORDER $1', 'PEDIDO $1'],

@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vistas da galeria</title>
+<!-- Gera as vistas prontas da galeria (aba Foto) com o próprio visualizador do site: mesma câmera, luz e cores do modelo 3D.
+     Aberta por gerar.cjs; ?pecas=borboletoscopio,aviaoscopia gera só essas. -->
+<script type="importmap">{"imports":{"three":"/dist/vendor/three.module.min.js"}}</script>
+<div id="host" style="position:fixed;left:0;top:0;width:400px;height:400px"></div>
+<script type="module">
+import {ProductViewer} from '/dist/viewer.js';
+import {PRODUCTS,SOON,color} from '/dist/products.js';
+import {VIEWS} from '/dist/gallery.js';
+const asData=blob=>new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(blob);});
+const keys=new URLSearchParams(location.search).get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
+const viewer=new ProductViewer(document.getElementById('host'),()=>{window.error='WebGL perdido';});
+window.results={};
+try{
+  for(const key of keys){
+    // as cores da vitrine: as cores padrão de cada parte (o macaco tem cores fixas no próprio modelo)
+    const colors=Object.fromEntries((PRODUCTS[key]?.parts||[]).map(part=>[part.id,color(part.default).hex]));
+    const big=await viewer.renderViews(key,colors,VIEWS,{size:1000,quality:.9});
+    const mini=await viewer.renderViews(key,colors,VIEWS,{size:200,quality:.86});
+    for(const [i,view] of VIEWS.entries()){window.results[`${key}-${view.id}`]=await asData(big[i]);window.results[`${key}-${view.id}-mini`]=await asData(mini[i]);}
+  }
+}catch(error){window.error=String(error?.stack||error);}
+window.done=true;
+</script>

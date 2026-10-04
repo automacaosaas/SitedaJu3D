@@ -786,4 +786,20 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+Vistas da peça|Views of the piece|Vistas de la pieza
+Escolher a vista|Choose a view|Elegir la vista
+Vista anterior|Previous view|Vista anterior
+Próxima vista|Next view|Vista siguiente
+galeria|gallery|galería
+vista|view|vista
+Frente|Front|Frente
+Três quartos|Three-quarter|Tres cuartos
+Lado|Side|Lado
+Três quartos de trás|Three-quarter back|Tres cuartos trasero
+Costas|Back|Parte trasera
+cores da vitrine|showcase colors|colores de la vitrina
+nas suas cores|in your colors|en tus colores
+cores da peça|the piece's colors|colores de la pieza
+cores da vitrine (as suas aparecem no 3D)|showcase colors (yours show in 3D)|colores de la vitrina (los tuyos se ven en 3D)
+Pintando as vistas nas suas cores…|Painting the views in your colors…|Pintando las vistas en tus colores…
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
