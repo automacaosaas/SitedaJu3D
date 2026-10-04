@@ -88,11 +88,17 @@ olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de c
 - O furo de cima é redondo: a borda de dentro da cabeça vira uma superfície de revolução (o perfil médio dela). E a fresta embaixo da placa
   da barriga, que atravessava a parede, é coberta por fora.
 - A banana ficou onde o Meshy a pôs: a ponta dela encosta na mão direita, então ela não vai para o meio da barriga como no modelo do Rodin.
+- Acertos de 04/10: o brilho de cada olho é um oval inteiro, igual nos dois (a elipse que passa pelo sulco em volta do domo; num olho
+  saía uma meia-lua). Visto de cima, o alto do nariz, das sobrancelhas e dos olhos é pintado (a vista de frente é testada com um raio por
+  face; o mapa em grade errava nas faces quase horizontais). Em volta dos punhos e da banana a cor vem da altura sobre a placa (o que
+  sobe acima dela é mão ou banana; na altura dela, placa): sem as pontas marrons na placa nem as pontas amarelas na banana. O
+  fundo da placa da barriga é uma curva lisa (sem o dente do Meshy): a faixa é redesenhada e entra como folha por cima, emendada na casca.
 
 `tools/modelo-macaco/meshy/preparar_meshy.py` (Blender, com os módulos da mesma pasta) refaz o arquivo, igual byte a byte, a partir do GLB
-do Meshy; depois, `meshopt` como abaixo: 1.606 KB (`?v=meshy-1`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos,
+do Meshy; depois, `meshopt` como abaixo: 1.739 KB (`?v=meshy-2`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos,
 das orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo, as patinhas iguais, que os ombros não têm bolso, que por dentro
-da barriga é liso e que a cabeça é aberta em cima, com o furo redondo. `tools/modelo-macaco/preparar_cores.py` é o do macaco do Rodin.
+da barriga é liso e que a cabeça é aberta em cima, com o furo redondo; e, de 04/10, o brilho oval inteiro, o alto do nariz visto de cima,
+a placa lisa ao lado dos punhos e o fundo da placa sem o dente. `tools/modelo-macaco/preparar_cores.py` é o do macaco do Rodin.
 
 **Foto da vitrine e cards (02/10/2026):** `product-macacoscopio-cutout.webp` (banner, aba "Foto" e demonstração), `card-macacoscopio.webp`
 e `card-preview-macacoscopio.webp` vêm da foto enviada em 02/10/2026 (`design/originais/macacoscopio-foto.webp`, já com o fundo

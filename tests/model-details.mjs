@@ -118,6 +118,16 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   // and mouth; a white shine on each eye; banana.
   for(const [x,y] of [[-.147,.563],[.142,.563]])assert.equal(materialAt(x,y),'features','Black eyes');
   for(const [x,y] of [[-.128,.63],[.131,.641]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
+  // The shine is a whole oval, the same on both eyes (it came out as a crescent on one of them): white 2 cm above and below its centre.
+  for(const [x,y] of [[-.1285,.644],[.1292,.643]])for(const dy of [-.02,.02])assert.equal(materialAt(x,y+dy),'highlight',`Whole oval shine (${x}, ${dy})`);
+  // Seen from above, the top of the nose is black too (faces hidden from the front view were left brown).
+  for(const x of [-.02,0,.02])assert.equal(hitFrom([x,1.5,.405],[0,-1,0]).name,'features',`Top of the nose, from above (${x})`);
+  // No brown spikes on the belly plate beside the fists, and its bottom edge is a smooth curve (Meshy's had a notch near the middle).
+  for(const [x,y] of [[-.165,-.1],[.165,-.1],[-.165,-.15],[.165,-.15]])assert.equal(materialAt(x,y),'face','Plain beige plate beside the fists');
+  for(const x of [-.03,.03]){
+   assert.equal(materialAt(x,-.655),'face',`Bottom of the plate, no notch (${x})`);
+   assert.equal(materialAt(x,-.675),'fur',`Brown below the plate (${x})`);
+  }
   for(const [x,y] of [[-.13,.753],[.129,.753]])assert.equal(materialAt(x,y),'features','Black brows');
   assert.equal(materialAt(0,.513),'features','Black nose');
   for(const [x,y] of [[-.19,.45],[.19,.45],[0,.74],[-.05,.66],[0,.42]])assert.equal(materialAt(x,y),'face','Beige face plate and muzzle');
