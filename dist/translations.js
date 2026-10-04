@@ -812,4 +812,13 @@ Encaixe para|Made to fit the|Encaje para
 Ver as peças|See the pieces|Ver las piezas
 Ver todas as peças|See all pieces|Ver todas las piezas
 Outros encaixes|Other fits|Otros encajes
+FICHA TÉCNICA|SPECIFICATIONS|FICHA TÉCNICA
+Encaixe|Fits|Encaje
+Produção|Production|Producción
+Para todo o Brasil|All over Brazil|A todo Brasil
+Feito em|Made with|Hecho con
+Impressão 3D|3D printing|Impresión 3D
+Disponibilidade|Availability|Disponibilidad
+Peças de oftalmologia|Ophthalmology pieces|Piezas de oftalmología
+ENCONTRE A PEÇA DO SEU EQUIPAMENTO|FIND THE PIECE FOR YOUR INSTRUMENT|ENCUENTRA LA PIEZA DE TU EQUIPO
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
