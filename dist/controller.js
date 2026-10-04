@@ -2,16 +2,17 @@ import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection} from './pro
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
-import {VIEWS,staticViews,createGallery} from './gallery.js';
+import {staticViews,createGallery,realPhotos,galleryBg} from './gallery.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
-// A aba Foto é uma galeria de fotos da peça (frente, três quartos, costas), nas cores da vitrine (gallery.js).
+// A aba Foto é uma galeria de fotos reais da peça (frente, três quartos, detalhes…; gallery.js); sem elas, a foto da vitrine.
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
-const gallery=createGallery($('.image-area'),{onChange:i=>{if(view==='photo')$('.view-note').textContent=`${VIEWS[i].name} · ${preview()?'cores da peça':'cores da vitrine'}`;}});
+const photoNote=()=>`${gallery.current?.name} · ${realPhotos(activeProduct)?'foto real':preview()?'cores da peça':'cores da vitrine'}`;
+const gallery=createGallery($('.image-area'),{onChange:()=>{if(view==='photo')$('.view-note').textContent=photoNote();}});
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
 export const PRESETS=[{id:'original',name:'Original'},{id:'pastel',name:'Pastel',colors:['pink','lilac','cream']},{id:'vibrante',name:'Vibrante',colors:['sky','orange','yellow']},{id:'surpresa',name:'Surpreenda-me'}];
 export function presetSelection(key,preset,random=Math.random){
@@ -34,7 +35,7 @@ function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
-  gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
+  $('.image-area').style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
   else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
@@ -64,7 +65,7 @@ async function setView(next){
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
   $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
-  $('.view-note').textContent=next==='photo'?`${VIEWS[gallery.index].name} · ${preview()?'cores da peça':'cores da vitrine'}`:preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
+  $('.view-note').textContent=next==='photo'?photoNote():preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
   dialog.dataset.view=next;
   if(next==='photo'){viewer?.hide();return;}
   $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
@@ -110,6 +111,10 @@ document.querySelectorAll('[data-sheet]').forEach(b=>{b.insertAdjacentHTML('afte
 tabs.forEach((tab,i)=>tab.addEventListener('click',()=>showTab(i)));
 sheet.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();showTab(e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length,true);});
 $('.pdp-sheet-close').addEventListener('click',()=>closeSheet());
+// No celular, as combinações prontas e o link das cores saem da tela da peça e ficam no (i), na aba Cores (já abertas).
+const more=$('.pdp-more'),moreHome=more.parentElement,phone=matchMedia('(max-width: 600px)');
+function placeMore(){if(phone.matches){more.open=true;$('#pdp-panel-1').prepend(more);}else if(more.parentElement!==moreHome){moreHome.append(more);more.open=false;}}
+phone.addEventListener('change',placeMore);placeMore();
 // (i) no topo: abre "Sobre a peça" nos detalhes.
 $('#pdp-info').insertAdjacentHTML('afterbegin',icon('info'));$('#pdp-info').addEventListener('click',e=>openSheet(0,e.currentTarget));
 

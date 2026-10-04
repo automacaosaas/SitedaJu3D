@@ -31,9 +31,9 @@ const dynamic = [
     (t, name, colors) => `Elige tu color: ver ${name} en la colección y personalizar. Colores originales: ${list(t, colors)}`],
   [/^Cores fixas: (.+)\.$/, (t, colors) => `Fixed colors: ${list(t, colors)}.`, (t, colors) => `Colores fijos: ${list(t, colors)}.`],
   // galeria de fotos da página do produto (gallery.js): a nota, os rótulos das vistas e o texto alternativo das imagens
-  [/^(Frente|Três quartos|Costas) · (.+)$/, (t, view, colors) => `${t(view)} · ${t(colors)}`, (t, view, colors) => `${t(view)} · ${t(colors)}`],
-  [/^(Frente|Três quartos|Costas), (\d+) de (\d+)$/, (t, view, n, total) => `${t(view)}, ${n} of ${total}`, (t, view, n, total) => `${t(view)}, ${n} de ${total}`],
-  [/^(.+) — (Frente|Três quartos|Costas)$/, (t, name, view) => `${name} — ${t(view)}`, (t, name, view) => `${name} — ${t(view)}`],
+  [/^(.+) · (foto real|cores da vitrine|cores da peça)$/, (t, view, about) => `${t(view)} · ${t(about)}`, (t, view, about) => `${t(view)} · ${t(about)}`],
+  [/^(.+), (\d+) de (\d+)$/, (t, view, n, total) => `${t(view)}, ${n} of ${total}`, (t, view, n, total) => `${t(view)}, ${n} de ${total}`],
+  [/^(.+) — (Frente|Três quartos|Lado|Costas|Três quartos de trás|.+ de perto)$/, (t, name, view) => `${name} — ${t(view)}`, (t, name, view) => `${name} — ${t(view)}`],
   [/^(.+), (\d+) de (\d+)\.$/, '$1, $2 of $3.', '$1, $2 de $3.'],
   [/^Pedido (.+)$/, 'Order $1', 'Pedido $1'],
   [/^PEDIDO (.+)$/, 'ORDER $1', 'PEDIDO $1'],

@@ -1,16 +1,19 @@
-// Galeria de vistas da aba Foto (pedido do Luiz, 04/10/2026), no jeito das lojas grandes: no computador, as miniaturas numa coluna
-// à esquerda e a vista escolhida grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. São fotos de produto nas
-// cores da vitrine, padronizadas (tools/galeria-vistas): a primeira é a própria foto da vitrine, de frente; as outras, a mesma peça vista
-// de outros ângulos. O 3D continua na aba ao lado. az/el: o ângulo de cada foto (graus em volta da peça e altura da câmera), usado para
-// as poses de referência das fotos e para as provisórias tiradas do 3D.
-export const VIEWS=[
-  {id:'frente',name:'Frente',az:0,el:8},
-  {id:'tres-quartos',name:'Três quartos',az:35,el:12},
-  {id:'costas',name:'Costas',az:-150,el:12}
-];
+// Galeria de fotos da aba Foto, no jeito das lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto escolhida
+// grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. São fotos reais da peça (pedido de 04/10/2026: nem o 3D
+// nem imagens geradas), recortadas por tools/galeria-vistas das fontes de design/vistas/; o 3D continua na aba ao lado.
+// Cada peça: a cor do fundo das fotos (bg, para o quadro em volta delas, que não são quadradas) e as vistas, na ordem (a primeira abre a
+// galeria). Peça ainda sem fotos reais: só a foto da vitrine.
+export const GALLERY={
+  borboletoscopio:{bg:'#000000',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
+  dinossauroscopio:{bg:'#000000',views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
+  aviaoscopia:{bg:'#f7f7f7',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',numeros:'Aberturas de perto',asa:'Asa e motor de perto'}}
+};
+export const viewsOf=key=>Object.entries(GALLERY[key]?.views||{frente:'Frente'}).map(([id,name])=>({id,name}));
+export const realPhotos=key=>!!GALLERY[key];
+export const galleryBg=key=>GALLERY[key]?.bg||'';
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='2';
-export const staticViews=key=>VIEWS.map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
+export const VIEWS_VERSION='4';
+export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){
   const track=root.querySelector('.gallery-track'),rail=root.querySelector('.gallery-rail'),dots=root.querySelector('.gallery-dots');
@@ -21,7 +24,7 @@ export function createGallery(root,{onChange}={}){
     [...track.children].forEach((slide,i)=>slide.setAttribute('aria-hidden',String(i!==index)));
     for(const list of [rail,dots])[...list.children].forEach((b,i)=>b.setAttribute('aria-current',String(i===index)));
     prev.disabled=index===0;next.disabled=index===items.length-1;
-    onChange?.(index);
+    onChange?.(index,items[index]);
   }
   function go(i,{smooth=true}={}){
     i=Math.max(0,Math.min(items.length-1,i));
@@ -51,7 +54,7 @@ export function createGallery(root,{onChange}={}){
       track.children[i].setAttribute('aria-label',`${item.name}, ${i+1} de ${list.length}`);
       rail.children[i].firstElementChild.src=item.thumb;rail.children[i].setAttribute('aria-label',item.name);dots.children[i].setAttribute('aria-label',`${item.name}, ${i+1} de ${list.length}`);
     });
-    items=list;index=0;target=null;track.scrollTo({left:0,behavior:'instant'});mark();
+    root.toggleAttribute('data-single',list.length<2);items=list;index=0;target=null;track.scrollTo({left:0,behavior:'instant'});mark();
   }
-  return {set,go,get index(){return index;}};
+  return {set,go,get index(){return index;},get current(){return items[index];}};
 }

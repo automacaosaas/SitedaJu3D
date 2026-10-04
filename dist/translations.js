@@ -795,6 +795,16 @@ vista|view|vista
 Frente|Front|Frente
 Três quartos|Three-quarter|Tres cuartos
 Costas|Back|Parte trasera
+Lado|Side|Lado
+Três quartos de trás|Three-quarter back|Tres cuartos trasero
+Rostinho de perto|Face up close|Carita de cerca
+Rosto de perto|Face up close|Cara de cerca
+Asa de perto|Wing up close|Ala de cerca
+Crista de perto|Crest up close|Cresta de cerca
+Pés de perto|Feet up close|Pies de cerca
+Aberturas de perto|Openings up close|Aberturas de cerca
+Asa e motor de perto|Wing and engine up close|Ala y motor de cerca
+foto real|real photo|foto real
 cores da vitrine|showcase colors|colores de la vitrina
 cores da peça|the piece's colors|colores de la pieza
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

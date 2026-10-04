@@ -1,83 +1,53 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Fotos da galeria</title>
-<!-- Aberta por gerar.cjs. modo=site: as fotos da galeria (dist/assets/vistas), padronizadas a partir das originais de design/vistas/
-     (fontes={"<peça>-<vista>":"/design/vistas/…"}); sem original, a frente é a foto da vitrine e as outras saem do 3D (provisórias).
-     modo=kit: as referências do kit do ChatGPT, em PNG com fundo branco: a foto da vitrine e a pose das outras vistas, tirada do 3D. -->
-<script type="importmap">{"imports":{"three":"/dist/vendor/three.module.min.js"}}</script>
-<div id="host" style="position:fixed;left:0;top:0;width:400px;height:400px"></div>
+<!-- Aberta por gerar.cjs: as fotos reais da galeria (dist/assets/vistas), recortadas das fontes de design/vistas/ como manda
+     design/vistas/fotos.json (foto ou quadro de vídeo, e o recorte). Peça ainda sem fotos reais: só a foto da vitrine, num quadrado. -->
 <script type="module">
-import * as T from 'three';
-import {ProductViewer} from '/dist/viewer.js';
-import {PRODUCTS,SOON,color} from '/dist/products.js';
-import {VIEWS} from '/dist/gallery.js';
-const q=new URLSearchParams(location.search),mode=q.get('modo')||'site',fontes=JSON.parse(q.get('fontes')||'{}');
-const keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
-const FILL=.86;   // a peça ocupa 86% do lado do quadrado (a maior medida dela), centralizada
-
-// O visualizador do site fotografando a peça parada: sem a pilastra, só uma sombra curta e macia no chão (de uma luz alta e sem brilho),
-// as luzes girando junto com a câmera (a peça num prato giratório diante das mesmas luzes) e a mesma distância em todas as vistas.
-class Fotografo extends ProductViewer{
-  constructor(host){
-    super(host,()=>{window.error='WebGL perdido';});
-    this.lights=this.scene.children.filter(o=>o.isDirectionalLight);this.lights.find(l=>l.castShadow).castShadow=false;this.pedestal.visible=false;
-    const ground=new T.Mesh(new T.PlaneGeometry(16,16).rotateX(-Math.PI/2),new T.ShadowMaterial({opacity:.22}));ground.position.y=-1.9;ground.receiveShadow=true;this.scene.add(ground);
-    const shade=new T.DirectionalLight(0xffffff,0);shade.position.set(.6,12,1.8);shade.castShadow=true;shade.shadow.mapSize.set(256,256);shade.shadow.bias=-.002;
-    Object.assign(shade.shadow.camera,{left:-3.5,right:3.5,top:3.5,bottom:-3.5});this.scene.add(shade);this.lights.push(shade);
-  }
-  async fotos(key,colors,size,white){
-    await this.show(key,colors,key);this.active=false;
-    const camera=new T.PerspectiveCamera(30,1,.1,100),bounds=new T.Box3().setFromObject(this.model.group),center=bounds.getCenter(new T.Vector3()),half=Math.tan(T.MathUtils.degToRad(15));
-    const dir=v=>{const az=T.MathUtils.degToRad(v.az),el=T.MathUtils.degToRad(v.el);return new T.Vector3(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el));};
-    let distance=0;
-    for(const v of VIEWS){const d=dir(v),right=new T.Vector3().crossVectors(new T.Vector3(0,1,0),d).normalize(),up=new T.Vector3().crossVectors(d,right);
-      for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=new T.Vector3(x,y,z).sub(center);distance=Math.max(distance,p.dot(d)+1.1*Math.max(Math.abs(p.dot(right)),Math.abs(p.dot(up)))/half);}}
-    const base=this.lights.map(l=>l.position.clone()),out={};
-    this.renderer.setPixelRatio(1);this.renderer.setSize(size,size,false);this.renderer.setClearColor(0xffffff,white?1:0);
-    for(const v of VIEWS){
-      this.lights.forEach((l,i)=>l.position.copy(base[i]).applyAxisAngle(new T.Vector3(0,1,0),T.MathUtils.degToRad(v.az)));
-      camera.position.copy(center).addScaledVector(dir(v),distance);camera.lookAt(center);this.renderer.render(this.scene,camera);
-      const c=document.createElement('canvas');c.width=c.height=size;c.getContext('2d').drawImage(this.renderer.domElement,0,0);out[v.id]=c;
-    }
-    this.lights.forEach((l,i)=>l.position.copy(base[i]));return out;
-  }
-}
+import {PRODUCTS,SOON} from '/dist/products.js';
+import {viewsOf} from '/dist/gallery.js';
+const q=new URLSearchParams(location.search),keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
 const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
-// Recorta em volta da peça e centraliza num quadrado: com transparência, a peça é o que não é transparente; sem, o que se afasta da cor
-// das bordas (o fundo liso das fotos). Sem transparência, o quadrado é completado com o próprio fundo.
-function frame(source,size,{white=false}={}){
-  const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height,c=document.createElement('canvas');c.width=w;c.height=h;
-  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(source,0,0);const px=g.getImageData(0,0,w,h).data;
-  let transparent=false;for(let i=3;i<px.length;i+=4*97)if(px[i]<250){transparent=true;break;}
-  const border=[];for(let x=0;x<w;x+=4){border.push(x*4,((h-1)*w+x)*4);}for(let y=0;y<h;y+=4){border.push(y*w*4,(y*w+w-1)*4);}
-  const bg=[0,1,2].map(k=>{const v=border.map(i=>px[i+k]).sort((a,b)=>a-b);return v[v.length>>1];});
-  const inside=i=>transparent?px[i+3]>12:Math.abs(px[i]-bg[0])+Math.abs(px[i+1]-bg[1])+Math.abs(px[i+2]-bg[2])>30;
-  let x0=w,y0=h,x1=-1,y1=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(inside((y*w+x)*4)){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
-  if(x1<0)throw new Error('imagem sem peça');
-  const side=Math.max(x1-x0+1,y1-y0+1)/FILL,cx=(x0+x1+1)/2,cy=(y0+y1+1)/2,out=document.createElement('canvas');out.width=out.height=size;const o=out.getContext('2d');
-  if(white||!transparent){o.fillStyle=transparent?'#fff':`rgb(${bg})`;o.fillRect(0,0,size,size);}
-  o.imageSmoothingQuality='high';o.drawImage(source,cx-side/2,cy-side/2,side,side,0,0,size,size);return out;
-}
-const encode=(canvas,type,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),type,quality));
+// um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá
+const videos=new Map();
+const still=async(src,t)=>{if(!videos.has(src))videos.set(src,URL.createObjectURL(await (await fetch(src)).blob()));const v=document.createElement('video');v.muted=true;v.preload='auto';v.src=videos.get(src);
+  await new Promise((resolve,reject)=>{v.onloadeddata=resolve;v.onerror=()=>reject(new Error(`vídeo ${src}`));});
+  v.currentTime=t;await new Promise(resolve=>{v.onseeked=resolve;});
+  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c;};
+const pixels=source=>{const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height,c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(source,0,0);return {w,h,px:g.getImageData(0,0,w,h).data};};
+// cor do fundo: a mediana das bordas da fonte
+function background(source){const {w,h,px}=pixels(source),at=[];for(let x=0;x<w;x+=3)at.push(x*4,((h-1)*w+x)*4);for(let y=0;y<h;y+=3)at.push(y*w*4,(y*w+w-1)*4);
+  return '#'+[0,1,2].map(k=>{const v=at.map(i=>px[i+k]).sort((a,b)=>a-b);return v[v.length>>1].toString(16).padStart(2,'0');}).join('');}
+// x "auto": o recorte centralizado na peça (o que se afasta da cor do fundo), para as vistas de uma peça que gira no vídeo
+function centerX(source,bg){const {w,h,px}=pixels(source),b=[1,3,5].map(i=>parseInt(bg.slice(i,i+2),16));let x0=w,x1=-1;
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){const i=(y*w+x)*4;if(Math.abs(px[i]-b[0])+Math.abs(px[i+1]-b[1])+Math.abs(px[i+2]-b[2])>60){if(x<x0)x0=x;if(x>x1)x1=x;}}
+  return (x0+x1)/2;}
+// o recorte [x, y, largura, altura], com o lado maior em `long` pixels; o que passar da fonte fica com a cor do fundo
+function cut(source,[x,y,w,h],long,bg){if(x==='auto')x=Math.round(centerX(source,bg)-w/2);const k=long/Math.max(w,h),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+  const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(source,x,y,w,h,0,0,c.width,c.height);return c;}
+// a foto da vitrine (fundo transparente), recortada em volta da peça e centralizada num quadrado
+function showcase(source,size){const {w,h,px}=pixels(source);let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[(y*w+x)*4+3]>12){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const side=Math.max(x1-x0+1,y1-y0+1)/.86,c=document.createElement('canvas');c.width=c.height=size;const g=c.getContext('2d');g.imageSmoothingQuality='high';
+  g.drawImage(source,(x0+x1+1)/2-side/2,(y0+y1+1)/2-side/2,side,side,0,0,size,size);return c;}
+const encode=(canvas,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),'image/webp',quality));
 const asData=blob=>new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});
 window.results={};window.info={};
 try{
-  const camera=new Fotografo(document.getElementById('host'));
+  const fotos=await (await fetch('/design/vistas/fotos.json')).json(),cache=new Map();
   for(const key of keys){
-    const p=PRODUCTS[key]||SOON[key],colors=Object.fromEntries((PRODUCTS[key]?.parts||[]).map(part=>[part.id,color(part.default).hex]));
-    if(mode==='kit'){
-      const renders=await camera.fotos(key,colors,1200,true);
-      window.results[`${key}-1-vitrine.png`]=await asData(await encode(frame(await image(`/dist/assets/${p.catalogImage}`),1024,{white:true}),'image/png'));
-      // a frente é a própria foto da vitrine; as outras vistas levam a pose tirada do 3D (só o ângulo, não o visual)
-      for(const [i,v] of VIEWS.entries())if(v.id!=='frente')window.results[`${key}-${i+1}-pose-${v.id}.png`]=await asData(await encode(frame(renders[v.id],1024,{white:true}),'image/png'));
-      continue;
-    }
-    let renders=null;
-    for(const v of VIEWS){
-      const src=fontes[`${key}-${v.id}`]||(v.id==='frente'?`/dist/assets/${p.catalogImage}`:null);
-      let source;if(src){source=await image(src);window.info[`${key}-${v.id}`]=src;}else{renders??=await camera.fotos(key,colors,1200,false);source=renders[v.id];window.info[`${key}-${v.id}`]='3D (provisória)';}
-      window.results[`${key}-${v.id}.webp`]=await asData(await encode(frame(source,1000),'image/webp',.9));
-      window.results[`${key}-${v.id}-mini.webp`]=await asData(await encode(frame(source,200),'image/webp',.86));
+    const p=PRODUCTS[key]||SOON[key];
+    for(const v of viewsOf(key)){
+      const spec=fotos[key]?.[v.id];let big,mini;
+      if(spec){
+        const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));
+        const source=cache.get(id),bg=background(source);big=cut(source,spec.recorte,1000,bg);mini=cut(source,spec.recorte,200,bg);
+        window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · fundo ${bg}`;
+      }else if(v.id==='frente'){const source=await image(`/dist/assets/${p.catalogImage}`);big=showcase(source,1000);mini=showcase(source,200);window.info[`${key}-${v.id}`]='foto da vitrine';}
+      else throw new Error(`${key}-${v.id}: falta a foto em design/vistas/fotos.json`);
+      window.results[`${key}-${v.id}.webp`]=await asData(await encode(big,.9));
+      window.results[`${key}-${v.id}-mini.webp`]=await asData(await encode(mini,.86));
     }
   }
 }catch(error){window.error=String(error?.stack||error);}
