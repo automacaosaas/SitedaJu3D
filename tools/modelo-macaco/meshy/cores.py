@@ -31,7 +31,30 @@ def elipse(e,x,z):
     cx,cz,a_,b_,ang=e;dx,dz=x-cx,z-cz;u=dx*np.cos(ang)+dz*np.sin(ang);v=-dx*np.sin(ang)+dz*np.cos(ang)
     return (np.sqrt((u/a_)**2+(v/b_)**2)-1)*min(a_,b_)
 PUNHOS=(-.28,.02)      # alturas dos punhos sobre a placa (z)
-def maos_na_barriga(bm,R,G,X,Z,Yf,amostra,ALT=.004,BAIXO=-.0005):
+def casco(M):
+    """o fecho convexo da área M (a placa da barriga é uma pílula, convexa: os punhos e a banana não a cortam)"""
+    rows=[i for i in range(M.shape[0]) if M[i].any()];P=[]
+    for i in rows:
+        jj=np.where(M[i])[0];P+=[(jj[0],i),(jj[-1],i)]
+    P=sorted(set(P))
+    def cr(o,a,b):return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])
+    lo,hi=[],[]
+    for p in P:
+        while len(lo)>=2 and cr(lo[-2],lo[-1],p)<=0:lo.pop()
+        lo.append(p)
+    for p in reversed(P):
+        while len(hi)>=2 and cr(hi[-2],hi[-1],p)<=0:hi.pop()
+        hi.append(p)
+    H=lo[:-1]+hi[:-1];out=np.zeros(M.shape,bool)
+    for i in range(min(r for _,r in H),max(r for _,r in H)+1):
+        xs=[]
+        for k in range(len(H)):
+            (x0,y0),(x1,y1)=H[k],H[(k+1)%len(H)]
+            if (y0-i)*(y1-i)<=0 and y0!=y1:xs.append(x0+(i-y0)*(x1-x0)/(y1-y0))
+            elif y0==y1==i:xs+=[x0,x1]
+        if xs:out[i,int(np.ceil(min(xs))):int(np.floor(max(xs)))+1]=True
+    return out
+def maos_na_barriga(bm,R,G,X,Z,Yf,amostra,silb,ALT=.004,BAIXO=-.0005):
     """As mãos encostam na placa da barriga, do lado de fora dela. Perto dos punhos o "sulco" (que é dividido entre o bege e o marrom)
     pega também a placa ao lado do punho, que fica abaixo da média em volta (o punho a levanta): ficavam pontas marrons na placa. Ali a
     cor vem da altura sobre a superfície da placa (estendida um pouco para fora dela): mais de 4 mm acima é mão (marrom); na altura da
@@ -58,7 +81,13 @@ def maos_na_barriga(bm,R,G,X,Z,Yf,amostra,ALT=.004,BAIXO=-.0005):
     # altura, do outro lado da fenda
     def acima(f):
         h=altura(f.calc_center_median());return np.isfinite(h) and h>BAIXO
-    faixa={f for f in fs if acima(f)};Pm=R['barriga'].astype(float)
+    # (só dentro do contorno da placa, mais 3 mm: o corpo do outro lado da fenda, na mesma altura, ficaria bege pela base do punho)
+    Sm=silb.copy()
+    for it in range(3):Sm=Sm|np.roll(Sm,1,0)|np.roll(Sm,-1,0)|np.roll(Sm,1,1)|np.roll(Sm,-1,1)
+    Sm=Sm.astype(float)
+    def na_sil(f):                       # algum vértice dentro (as faces ali são triângulos compridos da placa até o punho)
+        return any((lambda s_:np.isfinite(s_) and s_>.5)(amostra(Sm,v.co.x,v.co.z)) for v in f.verts)
+    faixa={f for f in fs if acima(f) and na_sil(f)};Pm=R['barriga'].astype(float)
     def na_placa(f):
         c=f.calc_center_median();s_=amostra(Pm,c.x,c.z);return np.isfinite(s_) and s_>.5
     sem=sorted((f for f in faixa if na_placa(f)),key=lambda f:f.index)
@@ -87,6 +116,46 @@ def maos_na_barriga(bm,R,G,X,Z,Yf,amostra,ALT=.004,BAIXO=-.0005):
     print('BANANA pela altura: %d faces de placa, %d de banana (mais de 2 mm acima)'%(k3-k4,k4),flush=True)
     bm.faces.layers.int.remove(hz)
     print('MAOS na barriga: zona de %d células, %d faces; %d na altura da placa, %d de mão (mais de %.0f mm acima)'%(zona.sum(),len(fs),k1,k2,ALT*1000),flush=True)
+    return zb,altura,ALT
+def bordas_das_placas(bm,sil,X,Z,amostra,banana,alto,FAIXA=6,INCL=.25,ZFUNDO=-.57):
+    """As bordas da placa do rosto e da barriga são fendas e degraus de paredes em pé; a divisa vista de frente caía na parede, ora de
+    um lado, ora do outro (manchas bege na fenda, borda bege serrilhada embaixo do rosto). Numa faixa de 7 mm em volta do contorno de
+    cada placa, a face inclinada vai pelo lado para onde olha: a parede da placa (olha para fora dela) é bege, a do corpo (olha para a
+    placa) é marrom; a cor troca no fundo da fenda (onde a inclinação troca de lado), cortada na malha. As faces deitadas ficam como
+    estavam, e também o que é mão (mais alto que a placa) e a volta da banana."""
+    from util import blur
+    P_=Polar((-0.0005,0.042));tot=0
+    for nome in ('placa','barriga'):
+        M=sil[nome].copy();ero=M.copy();dil_=M.copy()
+        for it in range(FAIXA):
+            ero=ero&np.roll(ero,1,0)&np.roll(ero,-1,0)&np.roll(ero,1,1)&np.roll(ero,-1,1)
+            dil_=dil_|np.roll(dil_,1,0)|np.roll(dil_,-1,0)|np.roll(dil_,1,1)|np.roll(dil_,-1,1)
+        faixa=dil_&~ero&~banana
+        if nome=='barriga':faixa&=(Z>ZFUNDO)[:,None]          # o fundo da placa da barriga é refeito à parte
+        Bm=blur(M.astype(float),4);gz,gx=np.gradient(Bm);gn=np.hypot(gx,gz)+1e-12;OX,OZ=-gx/gn,-gz/gn      # para fora da placa
+        Fm=faixa.astype(float);bm.normal_update();lay=bm.faces.layers.int.get('borda') or bm.faces.layers.int.new('borda')
+        def para_fora(co,no):
+            ox,oz=amostra(OX,co.x,co.z),amostra(OZ,co.x,co.z)
+            if not(np.isfinite(ox) and np.isfinite(oz)):return 0.
+            t=P_.theta(co);return no.x*np.cos(t)*ox+no.y*np.sin(t)*ox+no.z*oz     # componente da normal para fora da placa, na casca
+        val={};fs=[]
+        for f in bm.faces:
+            c=f.calc_center_median();s_=amostra(Fm,c.x,c.z)
+            if not(np.isfinite(s_) and s_>.5) or c.y>-.1 or P_.radius(c)<=.325 or f.material_index in (FEAT,HIGH,BAN):continue      # só a frente (as costas caem no mesmo contorno visto de frente)
+            if nome=='barriga' and any(alto(v.co) for v in f.verts):continue       # encosta no punho: fica com a regra da altura
+            for v in f.verts:
+                if v not in val:val[v]=para_fora(v.co,v.normal)
+            if abs(para_fora(c,f.normal))>=INCL or max(abs(val[v]) for v in f.verts)>=INCL:f[lay]=1;f.material_index=FUR;fs.append(f)
+        # a inclinação de cada vértice, suavizada entre vizinhos (as normais da malha do Meshy são ruidosas: a divisa sairia serrilhada)
+        vs=sorted(val,key=lambda v:v.index);ix={v:i for i,v in enumerate(vs)};a_=np.array([val[v] for v in vs])
+        nb_=[[ix[e.other_vert(v)] for e in v.link_edges if e.other_vert(v) in ix] for v in vs]
+        for it in range(4):a_=.5*a_+.5*np.array([a_[n].mean() if n else a_[i] for i,n in enumerate(nb_)])
+        val={v:float(a_[i]) for i,v in enumerate(vs)}
+        # nas faces inclinadas a cor troca onde a inclinação troca de lado (no fundo da fenda, no vinco do pé da parede), cortada na malha
+        k=cut(bm,None,fs,FACE,domain=lambda f:f[lay]==1,fnv=lambda v:-val[v] if v in val else -para_fora(v.co,v.normal))
+        bm.faces.ensure_lookup_table()
+        for f in bm.faces:f[lay]=0
+        bm.faces.layers.int.remove(lay);tot+=k;print('BORDA da %s: faixa de %d células, %d faces inclinadas, %d bege (a parede da placa)'%(nome,faixa.sum(),len(fs),k),flush=True)
 def colorir(obj,R,G,X,Z):
     from util import blur
     me=obj.data;me.materials.clear()
@@ -130,7 +199,15 @@ def colorir(obj,R,G,X,Z):
         k=cut(bm,None,fs,mat,domain=lambda f:f[vl]==1,fnv=fnv)
         bm.faces.ensure_lookup_table()
         print('COR %-9s %6d faces'%(NAMES[mat],k),flush=True)
-    maos_na_barriga(bm,R,G,X,Z,Yf,amostra)
+    # o contorno de cada placa: o bege final (com o que ele cerca) ligado ao meio da testa e ao meio da barriga
+    sil={}
+    for nome,(x_,z_) in (('placa',(0,.68)),('barriga',(0,-.15))):
+        c_=(int(round((z_-Z[0])/(Z[1]-Z[0]))),int(round((x_-X[0])/(X[1]-X[0]))));sil[nome]=tapar_furos(bfs(bege,c_))
+    # a da barriga: perto dos punhos o bege é incerto (era lá o problema); a placa é uma pílula, então o contorno é o fecho convexo dela
+    # (segue reto por baixo dos punhos)
+    sil['barriga']=casco(R['barriga']|R['banana'])
+    zb,altura,ALT=maos_na_barriga(bm,R,G,X,Z,Yf,amostra,sil['barriga'])
+    bordas_das_placas(bm,sil,X,Z,amostra,zb,lambda c:(lambda h:np.isfinite(h) and h>ALT)(altura(c)))
     bm.faces.layers.int.remove(vl);bm.to_mesh(me);bm.free();me.update()
     cnt=np.bincount([p.material_index for p in me.polygons],minlength=5)
     print('CORES',' '.join('%s %d'%(n,c) for n,c in zip(NAMES,cnt)),'faces',len(me.polygons),flush=True)

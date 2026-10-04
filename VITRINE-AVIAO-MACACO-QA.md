@@ -93,9 +93,12 @@ olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de c
   face; o mapa em grade errava nas faces quase horizontais). Em volta dos punhos e da banana a cor vem da altura sobre a placa (o que
   sobe acima dela é mão ou banana; na altura dela, placa): sem as pontas marrons na placa nem as pontas amarelas na banana. O
   fundo da placa da barriga é uma curva lisa (sem o dente do Meshy): a faixa é redesenhada e entra como folha por cima, emendada na casca.
+  Nas bordas da placa do rosto e da barriga (fendas e paredes em pé) a face inclinada vai pelo lado para onde olha: a parede da placa é
+  bege e a do corpo é marrom, com a troca no fundo da fenda (sem as manchas bege na fenda ao lado dos punhos nem a borda bege serrilhada
+  embaixo do rosto). O contorno da barriga é o fecho convexo da placa (ela é uma pílula: segue reto por baixo dos punhos).
 
 `tools/modelo-macaco/meshy/preparar_meshy.py` (Blender, com os módulos da mesma pasta) refaz o arquivo, igual byte a byte, a partir do GLB
-do Meshy; depois, `meshopt` como abaixo: 1.739 KB (`?v=meshy-2`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos,
+do Meshy; depois, `meshopt` como abaixo: 1.772 KB (`?v=meshy-3`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos,
 das orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo, as patinhas iguais, que os ombros não têm bolso, que por dentro
 da barriga é liso e que a cabeça é aberta em cima, com o furo redondo; e, de 04/10, o brilho oval inteiro, o alto do nariz visto de cima,
 a placa lisa ao lado dos punhos e o fundo da placa sem o dente. `tools/modelo-macaco/preparar_cores.py` é o do macaco do Rodin.
