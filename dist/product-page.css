@@ -42,7 +42,7 @@
   background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
 /* Galeria de vistas (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a vista
    escolhida grande, num quadro claro com um toque da cor da peça; no celular, a vista ocupa a largura toda e muda arrastando de lado.
-   As imagens não têm fundo, só a sombra no chão: o quadro é daqui. */
+   As fotos têm fundo branco (ou transparente): com multiply, o branco vira a cor do quadro e a sombra fica. */
 #product-dialog[data-view=photo] .detail-visual { background: #fff; }
 #product-dialog .image-area { position: absolute; inset: 70px 24px 46px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
 .gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
@@ -51,8 +51,7 @@
 .gallery-rail button:hover, .gallery-rail button[aria-current=true] { opacity: 1; }
 .gallery-rail button[aria-current=true] { box-shadow: inset 0 0 0 2px var(--pd-text); }
 .gallery-rail button:focus-visible, .gallery-arrows button:focus-visible, .gallery-dots button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
-#product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-user-drag: none; user-select: none; transition: opacity .3s, filter .3s; }
-#product-dialog .gallery[data-busy] img { opacity: .45; filter: saturate(.35); }
+#product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: multiply; -webkit-user-drag: none; user-select: none; }
 .gallery-main { position: relative; min-width: 0; min-height: 0; border-radius: 22px; background: var(--pd-stage); overflow: hidden; }
 .gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .gallery-track::-webkit-scrollbar { display: none; }

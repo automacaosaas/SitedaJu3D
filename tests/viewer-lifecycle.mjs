@@ -30,13 +30,5 @@ try{
  const same=viewer.model;viewer.hide();assert.equal(viewer.renderer.domElement.hidden,true);
  await viewer.show('dinossauroscopio',colors,'Dinossauro');assert.equal(viewer.model,same);assert.equal(viewer.renderer.domElement.hidden,false);
  viewer.hide();viewer.model.dispose();
- // Galeria de vistas (aba Foto): pausar a prévia 3D não cancela a carga, a galeria e o 3D usam a mesma carga, e fechar cancela.
- const shared=Object.assign(Object.create(ProductViewer.prototype),{active:false,frame:0,scene:new T.Scene(),renderer:{domElement:{hidden:false,setAttribute(){}}},reset(){},resize(){},render(){},loop(){}});
- holdFetch();const forGallery=shared.load('aviaoscopia');shared.pause();assert.equal(shared.load('aviaoscopia'),forGallery,'a mesma carga');release();
- assert.equal(await forGallery,true);assert.equal(shared.key,'aviaoscopia');assert.equal(shared.scene.children.length,1);
- assert.equal(await shared.show('aviaoscopia',{body:'#ee8eaa'},'Aviãoscopia'),true);assert.equal(shared.scene.children.length,1);
- holdFetch();const closed=shared.load('borboletoscopio');shared.hide();release();await assert.rejects(closed,{name:'AbortError'});
- holdFetch();const reopened=shared.load('borboletoscopio');release();assert.equal(await reopened,true,'reabrir depois de fechar carrega de novo, sem reaproveitar a carga cancelada');
- assert.equal(shared.scene.children.length,1);shared.hide();shared.model.dispose();
- console.log('PASS: close during load, product switch during load, latest colors, one scene and cached reopening; gallery load shared with the 3D view and kept when the 3D view pauses.');
+ console.log('PASS: close during load, product switch during load, latest colors, one scene and cached reopening.');
 }finally{globalThis.fetch=originalFetch;GLTFLoader.prototype.parseAsync=originalParse;}

@@ -1,25 +1,83 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Vistas da galeria</title>
-<!-- Gera as vistas prontas da galeria (aba Foto) com o próprio visualizador do site: mesma câmera, luz e cores do modelo 3D.
-     Aberta por gerar.cjs; ?pecas=borboletoscopio,aviaoscopia gera só essas. -->
+<title>Fotos da galeria</title>
+<!-- Aberta por gerar.cjs. modo=site: as fotos da galeria (dist/assets/vistas), padronizadas a partir das originais de design/vistas/
+     (fontes={"<peça>-<vista>":"/design/vistas/…"}); sem original, a frente é a foto da vitrine e as outras saem do 3D (provisórias).
+     modo=kit: as referências do kit do ChatGPT, em PNG com fundo branco: a foto da vitrine e a pose de cada vista tirada do 3D. -->
 <script type="importmap">{"imports":{"three":"/dist/vendor/three.module.min.js"}}</script>
 <div id="host" style="position:fixed;left:0;top:0;width:400px;height:400px"></div>
 <script type="module">
+import * as T from 'three';
 import {ProductViewer} from '/dist/viewer.js';
 import {PRODUCTS,SOON,color} from '/dist/products.js';
 import {VIEWS} from '/dist/gallery.js';
-const asData=blob=>new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.readAsDataURL(blob);});
-const keys=new URLSearchParams(location.search).get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
-const viewer=new ProductViewer(document.getElementById('host'),()=>{window.error='WebGL perdido';});
-window.results={};
+const q=new URLSearchParams(location.search),mode=q.get('modo')||'site',fontes=JSON.parse(q.get('fontes')||'{}');
+const keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
+const FILL=.86;   // a peça ocupa 86% do lado do quadrado (a maior medida dela), centralizada
+
+// O visualizador do site fotografando a peça parada: sem a pilastra, só uma sombra curta e macia no chão (de uma luz alta e sem brilho),
+// as luzes girando junto com a câmera (a peça num prato giratório diante das mesmas luzes) e a mesma distância em todas as vistas.
+class Fotografo extends ProductViewer{
+  constructor(host){
+    super(host,()=>{window.error='WebGL perdido';});
+    this.lights=this.scene.children.filter(o=>o.isDirectionalLight);this.lights.find(l=>l.castShadow).castShadow=false;this.pedestal.visible=false;
+    const ground=new T.Mesh(new T.PlaneGeometry(16,16).rotateX(-Math.PI/2),new T.ShadowMaterial({opacity:.22}));ground.position.y=-1.9;ground.receiveShadow=true;this.scene.add(ground);
+    const shade=new T.DirectionalLight(0xffffff,0);shade.position.set(.6,12,1.8);shade.castShadow=true;shade.shadow.mapSize.set(256,256);shade.shadow.bias=-.002;
+    Object.assign(shade.shadow.camera,{left:-3.5,right:3.5,top:3.5,bottom:-3.5});this.scene.add(shade);this.lights.push(shade);
+  }
+  async fotos(key,colors,size,white){
+    await this.show(key,colors,key);this.active=false;
+    const camera=new T.PerspectiveCamera(30,1,.1,100),bounds=new T.Box3().setFromObject(this.model.group),center=bounds.getCenter(new T.Vector3()),half=Math.tan(T.MathUtils.degToRad(15));
+    const dir=v=>{const az=T.MathUtils.degToRad(v.az),el=T.MathUtils.degToRad(v.el);return new T.Vector3(Math.sin(az)*Math.cos(el),Math.sin(el),Math.cos(az)*Math.cos(el));};
+    let distance=0;
+    for(const v of VIEWS){const d=dir(v),right=new T.Vector3().crossVectors(new T.Vector3(0,1,0),d).normalize(),up=new T.Vector3().crossVectors(d,right);
+      for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){const p=new T.Vector3(x,y,z).sub(center);distance=Math.max(distance,p.dot(d)+1.1*Math.max(Math.abs(p.dot(right)),Math.abs(p.dot(up)))/half);}}
+    const base=this.lights.map(l=>l.position.clone()),out={};
+    this.renderer.setPixelRatio(1);this.renderer.setSize(size,size,false);this.renderer.setClearColor(0xffffff,white?1:0);
+    for(const v of VIEWS){
+      this.lights.forEach((l,i)=>l.position.copy(base[i]).applyAxisAngle(new T.Vector3(0,1,0),T.MathUtils.degToRad(v.az)));
+      camera.position.copy(center).addScaledVector(dir(v),distance);camera.lookAt(center);this.renderer.render(this.scene,camera);
+      const c=document.createElement('canvas');c.width=c.height=size;c.getContext('2d').drawImage(this.renderer.domElement,0,0);out[v.id]=c;
+    }
+    this.lights.forEach((l,i)=>l.position.copy(base[i]));return out;
+  }
+}
+const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
+// Recorta em volta da peça e centraliza num quadrado: com transparência, a peça é o que não é transparente; sem, o que se afasta da cor
+// das bordas (o fundo liso das fotos). Sem transparência, o quadrado é completado com o próprio fundo.
+function frame(source,size,{white=false}={}){
+  const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height,c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(source,0,0);const px=g.getImageData(0,0,w,h).data;
+  let transparent=false;for(let i=3;i<px.length;i+=4*97)if(px[i]<250){transparent=true;break;}
+  const border=[];for(let x=0;x<w;x+=4){border.push(x*4,((h-1)*w+x)*4);}for(let y=0;y<h;y+=4){border.push(y*w*4,(y*w+w-1)*4);}
+  const bg=[0,1,2].map(k=>{const v=border.map(i=>px[i+k]).sort((a,b)=>a-b);return v[v.length>>1];});
+  const inside=i=>transparent?px[i+3]>12:Math.abs(px[i]-bg[0])+Math.abs(px[i+1]-bg[1])+Math.abs(px[i+2]-bg[2])>30;
+  let x0=w,y0=h,x1=-1,y1=-1;for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(inside((y*w+x)*4)){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  if(x1<0)throw new Error('imagem sem peça');
+  const side=Math.max(x1-x0+1,y1-y0+1)/FILL,cx=(x0+x1+1)/2,cy=(y0+y1+1)/2,out=document.createElement('canvas');out.width=out.height=size;const o=out.getContext('2d');
+  if(white||!transparent){o.fillStyle=transparent?'#fff':`rgb(${bg})`;o.fillRect(0,0,size,size);}
+  o.imageSmoothingQuality='high';o.drawImage(source,cx-side/2,cy-side/2,side,side,0,0,size,size);return out;
+}
+const encode=(canvas,type,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),type,quality));
+const asData=blob=>new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});
+window.results={};window.info={};
 try{
+  const camera=new Fotografo(document.getElementById('host'));
   for(const key of keys){
-    // as cores da vitrine: as cores padrão de cada parte (o macaco tem cores fixas no próprio modelo)
-    const colors=Object.fromEntries((PRODUCTS[key]?.parts||[]).map(part=>[part.id,color(part.default).hex]));
-    const big=await viewer.renderViews(key,colors,VIEWS,{size:1000,quality:.9});
-    const mini=await viewer.renderViews(key,colors,VIEWS,{size:200,quality:.86});
-    for(const [i,view] of VIEWS.entries()){window.results[`${key}-${view.id}`]=await asData(big[i]);window.results[`${key}-${view.id}-mini`]=await asData(mini[i]);}
+    const p=PRODUCTS[key]||SOON[key],colors=Object.fromEntries((PRODUCTS[key]?.parts||[]).map(part=>[part.id,color(part.default).hex]));
+    if(mode==='kit'){
+      const renders=await camera.fotos(key,colors,1200,true);
+      window.results[`${key}-1-vitrine.png`]=await asData(await encode(frame(await image(`/dist/assets/${p.catalogImage}`),1024,{white:true}),'image/png'));
+      for(const [i,v] of VIEWS.entries())window.results[`${key}-2-angulo-${i+1}-${v.id}.png`]=await asData(await encode(frame(renders[v.id],1024,{white:true}),'image/png'));
+      continue;
+    }
+    let renders=null;
+    for(const v of VIEWS){
+      const src=fontes[`${key}-${v.id}`]||(v.id==='frente'?`/dist/assets/${p.catalogImage}`:null);
+      let source;if(src){source=await image(src);window.info[`${key}-${v.id}`]=src;}else{renders??=await camera.fotos(key,colors,1200,false);source=renders[v.id];window.info[`${key}-${v.id}`]='3D (provisória)';}
+      window.results[`${key}-${v.id}.webp`]=await asData(await encode(frame(source,1000),'image/webp',.9));
+      window.results[`${key}-${v.id}-mini.webp`]=await asData(await encode(frame(source,200),'image/webp',.86));
+    }
   }
 }catch(error){window.error=String(error?.stack||error);}
 window.done=true;

@@ -6,11 +6,12 @@ import {VIEWS,staticViews,createGallery} from './gallery.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
-// A aba Foto é uma galeria de vistas (frente, três quartos, lado…): nas cores da vitrine, imagens prontas; nas cores escolhidas, geradas do 3D.
+// A aba Foto é uma galeria de fotos da peça (frente, três quartos, costas), nas cores da vitrine (gallery.js).
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
+const gallery=createGallery($('.image-area'),{onChange:i=>{if(view==='photo')$('.view-note').textContent=`${VIEWS[i].name} · ${preview()?'cores da peça':'cores da vitrine'}`;}});
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
 export const PRESETS=[{id:'original',name:'Original'},{id:'pastel',name:'Pastel',colors:['pink','lilac','cream']},{id:'vibrante',name:'Vibrante',colors:['sky','orange','yellow']},{id:'surpresa',name:'Surpreenda-me'}];
 export function presetSelection(key,preset,random=Math.random){
@@ -33,7 +34,7 @@ function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
-  $('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
+  gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
   else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
@@ -57,20 +58,20 @@ let lockedScroll=null;
 function lockPage(){if(lockedScroll!==null)return;lockedScroll=window.scrollY;document.documentElement.classList.add('modal-open');Object.assign(document.body.style,{position:'fixed',top:`-${lockedScroll}px`,width:'100%',overflow:'hidden'});}
 function unlockPage(){if(lockedScroll===null)return;const y=lockedScroll;lockedScroll=null;document.documentElement.classList.remove('modal-open');Object.assign(document.body.style,{position:'',top:'',width:'',overflow:''});window.scrollTo(0,y);}
 function closeProduct(){history.replaceState(null,'',location.pathname+location.search);dialog.close();document.title='Ju imprime pra mim • Coleção 3D';}
-async function ensureViewer(){viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;viewer??=new ProductViewer($('#viewer-host'),viewerError);return viewer;}
-function viewerError(){const msg=$('.viewer-message');msg.hidden=view!=='model';msg.textContent='A prévia 3D não está disponível neste navegador. Você pode continuar escolhendo as cores e consultar a imagem do produto.';$('.viewer-tools').hidden=true;viewer?.dispose();viewer=null;}
+function viewerError(){const msg=$('.viewer-message');msg.hidden=false;msg.textContent='A prévia 3D não está disponível neste navegador. Você pode continuar escolhendo as cores e consultar a imagem do produto.';$('.viewer-tools').hidden=true;viewer?.dispose();viewer=null;}
 async function setView(next){
   view=next;const id=++request;
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
   $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
-  $('.view-note').textContent=next==='photo'?'':preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
+  $('.view-note').textContent=next==='photo'?`${VIEWS[gallery.index].name} · ${preview()?'cores da peça':'cores da vitrine'}`:preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
   dialog.dataset.view=next;
-  if(next==='photo'){viewer?.pause();paintGallery();return;}
+  if(next==='photo'){viewer?.hide();return;}
   $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
   try{
-    await ensureViewer();
+    viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;
     if(id!==request||!dialog.open||view!=='model')return;
+    viewer??=new ProductViewer($('#viewer-host'),viewerError);
     const shown=await viewer.show(activeProduct,hexColors(),product(activeProduct).title);
     if(!shown||id!==request||!dialog.open||view!=='model')return;
     $('.viewer-message').hidden=true;$('.viewer-tools').hidden=false;
@@ -96,39 +97,8 @@ function updateControls(){
 }
 // No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista.
 function revealSwatch(){const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
-// Na aba Foto, escolher uma cor repinta as vistas da galeria; no 3D, a peça muda na hora.
-function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view==='photo')paintGallery();}
-
-// ── Galeria de vistas (aba Foto) ──
-// Nas cores da vitrine (as de products.js), as vistas prontas de assets/vistas/. Em outras cores, as mesmas vistas saem do modelo 3D
-// (o mesmo da aba 3D, carregado uma vez só); enquanto isso, a galeria fica apagada e a nota avisa.
-const gallery=createGallery($('.image-area'),{onChange:noteView});
-let galleryKey=null,galleryColors=null,galleryNote='',galleryJob=0,galleryTimer=0;
-const original=key=>!PRODUCTS[key]||PRODUCTS[key].parts.every(part=>selections[key][part.id]===part.default);
-function noteView(i){if(view==='photo')$('.view-note').textContent=galleryNote?`${VIEWS[i].name} · ${galleryNote}`:'Pintando as vistas nas suas cores…';}
-function showStatic(key,reset){galleryNote=preview()?'cores da peça':'cores da vitrine';gallery.busy(false);gallery.set(staticViews(key).map(item=>({...item,alt:`${product(key).title} — ${item.name}`})),{reset});}
-function paintGallery(){
-  const key=activeProduct,colors=JSON.stringify(hexColors()),fresh=key!==galleryKey;
-  if(!fresh&&colors===galleryColors)return noteView(gallery.index);
-  galleryKey=key;galleryColors=colors;const job=++galleryJob;clearTimeout(galleryTimer);
-  if(original(key))return showStatic(key,fresh);
-  if(fresh)showStatic(key,true);
-  galleryNote='';gallery.busy(true);noteView(gallery.index);
-  // várias cores seguidas (setas, Surpreenda-me) geram só a última
-  galleryTimer=setTimeout(async()=>{
-    try{
-      const blobs=await (await ensureViewer()).renderViews(key,JSON.parse(colors),VIEWS,{size:gallery.size()});
-      if(job!==galleryJob)return;
-      galleryNote='nas suas cores';gallery.busy(false);
-      gallery.set(VIEWS.map((item,i)=>({...item,src:URL.createObjectURL(blobs[i]),alt:`${product(key).title} nas cores escolhidas — ${item.name}`})),{blobs:true});
-    }catch(error){
-      // sem WebGL, ou a geração interrompida (a página saiu de cena): as vistas prontas, com aviso; a próxima vez tenta de novo
-      if(job!==galleryJob)return;
-      if(error.name!=='AbortError')console.error('Vistas nas cores escolhidas indisponíveis:',error);
-      galleryKey=null;showStatic(key,false);galleryNote='cores da vitrine (as suas aparecem no 3D)';noteView(gallery.index);
-    }
-  },fresh?0:150);
-}
+// As fotos mostram só as cores da vitrine: ao escolher uma cor, a prévia passa para o 3D.
+function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
 function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
 
 // ── Painel "Sobre a peça" (abas) ──
@@ -148,7 +118,7 @@ dialog.addEventListener('cancel',e=>{e.preventDefault();if(!sheet.hidden)closeSh
 // Esc com o painel aberto fecha só o painel, mesmo quando o navegador não deixa segurar o "cancel" (sem um clique antes).
 dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){e.preventDefault();closeSheet();}});
 dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProduct();}});
-dialog.addEventListener('close',()=>{++request;++galleryJob;galleryKey=null;clearTimeout(galleryTimer);viewer?.hide();closeSheet(false);unlockPage();document.querySelector(`[data-product="${activeProduct}"]`)?.focus({preventScroll:true});});
+dialog.addEventListener('close',()=>{++request;viewer?.hide();closeSheet(false);unlockPage();document.querySelector(`[data-product="${activeProduct}"]`)?.focus({preventScroll:true});});
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 $('#part-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-part]');if(!b)return;selectedPart=b.dataset.part;updateControls();});
 $('#palette').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b)chooseColor(b.dataset.color);});
@@ -165,6 +135,4 @@ $('#share-colors').addEventListener('click',async()=>{
 $('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset]');if(!b)return;const preset=PRESETS.find(p=>p.id===b.dataset.preset);applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);});
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
-// De volta pelo botão Voltar (página guardada pelo navegador): a geração das vistas foi interrompida ao sair; gera de novo.
-window.addEventListener('pageshow',e=>{if(e.persisted&&dialog.open&&view==='photo'){galleryKey=null;paintGallery();}});
-setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);renderControls();setView('model');}});
+setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);renderControls();setView('model');}});

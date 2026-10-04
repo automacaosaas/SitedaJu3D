@@ -794,12 +794,7 @@ galeria|gallery|galería
 vista|view|vista
 Frente|Front|Frente
 Três quartos|Three-quarter|Tres cuartos
-Lado|Side|Lado
-Três quartos de trás|Three-quarter back|Tres cuartos trasero
 Costas|Back|Parte trasera
 cores da vitrine|showcase colors|colores de la vitrina
-nas suas cores|in your colors|en tus colores
 cores da peça|the piece's colors|colores de la pieza
-cores da vitrine (as suas aparecem no 3D)|showcase colors (yours show in 3D)|colores de la vitrina (los tuyos se ven en 3D)
-Pintando as vistas nas suas cores…|Painting the views in your colors…|Pintando las vistas en tus colores…
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
