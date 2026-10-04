@@ -103,10 +103,11 @@ export function fitTour() {
   return '<header class="fit-tour-head fit-reveal"><p class="eyebrow">FEITO PARA ENCAIXAR</p><h2 id="fit-tour-title">O 3D nas suas consultas</h2>'
     + '<p>Cada peça é pensada para um equipamento da consulta.</p></header>'
     + `<div class="fit-story" style="${tone(items[0].key)}">`
-    + `<div class="fit-steps">${items.map(step).join('')}</div>`
+    // .fit-pin: no desktop, com o modo cinema, vira a tela fixa onde uma ficha sai antes da próxima entrar
+    + `<div class="fit-pin"><div class="fit-steps">${items.map(step).join('')}</div>`
     + `<div class="fit-stage" aria-hidden="true"><div class="fit-stage-pin"><i class="fit-glow"></i><div class="fit-slides">${slides}</div></div></div>`
-    + `<nav class="fit-dots" aria-label="Peças">${dots}</nav>`
-    // fundo da página nas cores de cada peça (fit-tour-motion.js leva para o <body> e troca pela rolagem)
+    + `<nav class="fit-dots" aria-label="Peças">${dots}</nav></div>`
+    // fundo da página nas cores de cada peça (fit-tour-motion.js leva para logo depois do fundo do banner e troca a cada peça)
     + `<div class="fit-backdrop" aria-hidden="true">${items.map(({key}) => `<i style="${tone(key)}"></i>`).join('')}</div></div>`
     + '<section class="fit-more" aria-labelledby="fit-more-title">'
     + `<header class="fit-more-head fit-reveal"><h3 id="fit-more-title">Peças de ${esc(category.toLowerCase())}</h3><p>ENCONTRE A PEÇA DO SEU EQUIPAMENTO</p></header>`

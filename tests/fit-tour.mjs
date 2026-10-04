@@ -176,20 +176,32 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /if \(!calm && Lenis\) \{\n    lenis = new Lenis\(\{lerp: \.1, allowNestedScroll: true, prevent: node => node\.matches\?\.\('dialog, \[role="dialog"\], \.language-menu, \[data-lenis-prevent\]'\)\}\);/);
   assert.match(motion, /lenis\.on\('scroll', ScrollTrigger\.update\);\n    gsap\.ticker\.add\(time => lenis\.raf\(time \* 1000\)\);/);
   assert.match(motion, /if \(now\) lenis\.stop\(\); else lenis\.start\(\);/);
-  // uma posição contínua manda no fundo, na peça fixa e na ficha ativa (só transform e opacidade)
-  assert.match(motion, /const p = progress\.reduce\(\(sum, value\) => sum \+ ease\(value\), 0\);/);
-  assert.match(motion, /layers\.forEach\(\(layer, i\) => \{ if \(i\) layer\.style\.opacity = clamp\(p - \(i - 1\), 0, 1\)\.toFixed\(3\); \}\);/);
-  assert.match(motion, /slide\.style\.transform = calm \? 'none' : `translate3d\(/);
+  // a rolagem é só o gatilho: nada preso ao progresso (sem scrub); a revelação roda sozinha até o fim
+  assert.doesNotMatch(motion, /scrub:/, 'nenhuma animação presa ao progresso da rolagem');
+  assert.match(motion, /const tl = gsap\.timeline\(\{defaults: \{ease: 'power3\.out'\}\}\);/);
+  assert.match(motion, /\.fromTo\(part\.title\.chars, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.8, stagger: \.03\}, \.06\)/, 'letras: opacidade 0 → 1, y 30 → 0, intervalo 0,03 s');
+  assert.match(motion, /\.fromTo\(part\.words\(\)\.words, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.65, stagger: \{amount: \.35\}\}, \.18\)/, 'palavras em sequência, sem passar de ~1,2 s');
+  assert.match(motion, /\.fromTo\(part\.specs, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.55, stagger: \.03\}, \.38\)/, 'ficha técnica em cascata');
+  // desktop: tela fixa, uma ficha por vez; a atual sai inteira antes de a próxima entrar
+  assert.match(css, /\.fit-tour\.is-pinned \.fit-pin \{ position: sticky; top: 0;/);
+  assert.match(css, /\.fit-tour\.is-pinned \.fit-story \{ display: block; height: calc\(100vh \+ \(var\(--fit-count, 4\) - 1\) \* 88vh\);/);
+  assert.match(css, /\.fit-tour\.is-pinned \.fit-step \{ grid-area: 1 \/ 1;/, 'as fichas ocupam o mesmo lugar: nenhuma vaza embaixo da outra');
+  assert.match(css, /\.fit-pin \{ display: contents; \}/, 'sem o modo cinema, o layout continua o de antes');
+  assert.match(motion, /mm\.add\('\(min-width: 980px\)', \(\) => \{\n    tour\.classList\.add\('is-pinned'\);/);
+  assert.match(motion, /leaving\.forEach\(part => tl\.to\(part\.copy, calm \? \{autoAlpha: 0, duration: \.2\} : \{autoAlpha: 0, y: -30, duration: \.4, ease: 'power2\.in'\}, 0\)\);/);
+  assert.match(motion, /const at = leaving\.length \? \(calm \? \.2 : \.4\) : 0;/, 'a próxima só começa depois que a atual saiu');
+  assert.match(motion, /ScrollTrigger\.create\(\{trigger: story, start: 'top 75%', end: 'bottom top',\n      onEnter: /, 'a primeira ficha dispara quando a história chega a 75% da tela');
+  assert.match(motion, /onLeaveBack: \(\) => \{ inside = false; show\(-1\); \}/, 'rolar de volta para cima esconde');
+  // celular: cada ficha dispara a 75% e volta a se esconder ao rolar de volta (play none none reverse)
+  assert.match(motion, /ScrollTrigger\.create\(\{trigger: part\.step, start: 'top 75%',\n        onEnter: \(\) => \{ played\.get\(i\)\?\.kill\(\); played\.set\(i, reveal\(part, \{art: true\}\)\); \},\n        onLeaveBack: \(\) => played\.get\(i\)\?\.reverse\(\)\}\);/);
+  assert.match(motion, /scrollTrigger: \{trigger: el, start: 'top 75%', toggleActions: 'play none none reverse'\}/);
   assert.match(css, /\.fit-backdrop \{ display: none; position: fixed; inset: 0; z-index: -1;/);
-  // texto: letras do nome saindo da máscara, palavras acendendo, ficha em cascata, foco no centro da tela
-  assert.match(motion, /SplitText\.create\(name, \{type: 'chars,lines', mask: 'lines', tag: 'span',[^}]*aria: 'auto', autoSplit: true,/);
-  assert.match(motion, /gsap\.from\(self\.chars, \{yPercent: 118, ease: 'none', stagger: \.05, scrollTrigger: scrub\(name,/);
-  assert.match(motion, /gsap\.from\(self\.words, \{yPercent: 100, opacity: \.15,/);
-  assert.match(motion, /gsap\.from\(rows, \{y: 36, autoAlpha: 0, ease: 'none', stagger: \.24,/);
-  assert.match(motion, /const scrub = \(trigger, start, end\) => \(\{trigger, start, end, scrub: true\}\);/, 'a revelação acompanha a velocidade da rolagem');
+  // texto dividido: letras do nome com máscara por linha; palavras já no idioma escolhido, refeitas quando ele muda
+  assert.match(motion, /SplitText\.create\(name, \{type: 'chars,lines', mask: 'lines', tag: 'span',[^}]*aria: 'auto', autoSplit: true\}\);/);
+  assert.match(css, /\.fit-tour\.is-gsap :is\(\.fit-char, \.fit-word\) \{ display: inline-block;/, 'peças em linha não se movem: as letras e palavras precisam ser inline-block');
   assert.match(motion, /para\.textContent = translate\(source\);/, 'a visão geral é dividida já no idioma escolhido');
   assert.match(motion, /addEventListener\('ju:language', \(\) => \{ build\(\); ScrollTrigger\.refresh\(\); \}\);/, 'e refeita quando o idioma muda');
-  assert.match(motion, /if \(calm\) return;\n  const scrub/, 'com movimento reduzido, nada de texto animado');
+  assert.match(motion, /if \(calm\) \{\n      tl\.fromTo\(\[part\.copy/, 'com movimento reduzido, só opacidade');
 }
 
 // ── Nossa coleção: cada card na cor da sua peça, com a foto (sem encaixe) e o card do meio por cima ──

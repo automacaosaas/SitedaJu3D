@@ -170,9 +170,11 @@
 .fit-tour.is-ready .fit-step-copy > .fit-actions { transition-delay: .46s; }
 
 /* ── Modo cinema (fit-tour-motion.js com GSAP + ScrollTrigger + SplitText + Lenis) ──
-   A página inteira troca de cor pela rolagem (.fit-backdrop, uma camada fixa por peça, só opacidade), sem a faixa em bloco;
-   a peça fixa sai girando e a próxima chega (transform e opacidade); a ficha se constrói letra a letra e palavra a palavra. */
+   A rolagem é só o gatilho: quando uma ficha chega na tela, ela se constrói sozinha até o fim (letras, palavras, linhas).
+   No desktop a história vira uma tela fixa (.fit-pin, sticky): a ficha atual sai inteira antes da próxima entrar, e a peça
+   e a cor da página trocam junto. A cor da página é .fit-backdrop (uma camada fixa por peça, só opacidade), sem faixa. */
 html.lenis, html.lenis body { height: auto; }
+.fit-pin { display: contents; }
 /* dentro de .page, logo depois de .hero-bg: acima do fundo do banner (que desce pela página inteira) e abaixo do conteúdo */
 .fit-backdrop { display: none; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; }
 .fit-backdrop.is-on { display: block; }
@@ -189,6 +191,15 @@ html.lenis, html.lenis body { height: auto; }
 .fit-tour.is-gsap .fit-line-mask { overflow: clip; padding-bottom: .12em; margin-bottom: -.12em; }
 .fit-tour.is-gsap :is(.fit-char, .fit-word) { display: inline-block; position: relative; will-change: transform, opacity; }
 .fit-tour.is-gsap .fit-step h3 .fit-name { display: block; }
+/* desktop: tela fixa, uma ficha por vez; a história mede uma tela + 88% de tela para cada peça seguinte (--fit-count) */
+.fit-tour.is-pinned .fit-story { display: block; height: calc(100vh + (var(--fit-count, 4) - 1) * 88vh); height: calc(100svh + (var(--fit-count, 4) - 1) * 88svh); padding: 0; }
+.fit-tour.is-pinned .fit-pin { position: sticky; top: 0; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); column-gap: clamp(20px, 3.5vw, 56px); align-items: center;
+  height: 100vh; height: 100svh; padding: clamp(56px, 8vh, 96px) clamp(28px, 4.5vw, 72px) clamp(16px, 3vh, 32px); }
+.fit-tour.is-pinned .fit-steps { grid-column: 1; grid-row: 1; display: grid; align-items: center; }
+.fit-tour.is-pinned .fit-step { grid-area: 1 / 1; display: block; min-height: 0; padding: 0; }
+.fit-tour.is-pinned .fit-stage { grid-column: 2; grid-row: 1; align-self: stretch; }
+.fit-tour.is-pinned .fit-stage-pin { position: relative; top: 0; height: 100%; }
+.fit-tour.is-pinned .fit-dots { position: absolute; top: 50%; right: clamp(4px, 1.2vw, 20px); margin: 0; translate: 0 -50%; }
 
 /* ── Telas menores: sem peça fixa; cada ficha traz a sua peça flutuando logo acima, e a faixa troca de cor do mesmo jeito ── */
 @media (max-width: 979px) {

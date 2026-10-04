@@ -4,6 +4,7 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
 - 2026-10-03: primeira versão.
 - 2026-10-04: refeita no estilo da referência "Product Information" (ficha técnica com o produto flutuando e, embaixo, as outras peças da categoria).
 - 2026-10-04, segunda rodada: modo cinema (GSAP + ScrollTrigger + SplitText + Lenis) e os cards de "Nossa coleção" com as cores das peças.
+- 2026-10-04, terceira rodada: a rolagem passou a ser só o gatilho (nada preso ao progresso). No desktop, a história virou uma tela fixa, com uma ficha por vez: a atual sai inteira antes da próxima entrar, e nenhum título vaza embaixo.
 
 ## O que é
 
@@ -13,16 +14,18 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
   1. Encaixe para retinoscópio: Borboletoscópio e Dinossauroscópio.
   2. Encaixe para régua de esquiascopia: Aviãoscopia.
   3. Encaixe para lâmpada de fenda: Macacoscópio, "Em breve".
-- **No desktop,** a peça já encaixada no equipamento fica fixa e flutuando à direita. Conforme a pessoa rola:
-  - o fundo da página inteira passa, de forma contínua, para as cores da peça (as mesmas do banner);
-  - a ficha da vez se constrói à esquerda (veja "Tecnologia");
-  - a peça troca: a anterior sobe girando para um lado e a nova chega de baixo girando ao contrário.
+- **No desktop,** a história é uma tela fixa: a ficha à esquerda e a peça já encaixada no equipamento, flutuando, à direita. Rolando, troca a peça da vez (a cada 88% de tela rolada):
+  - primeiro saem, inteiras, a ficha e a peça atuais (0,4 s);
+  - depois a nova peça chega girando, e a ficha dela se constrói sozinha até o fim (veja "Tecnologia");
+  - o fundo da página inteira passa para as cores da peça (as mesmas do banner).
+  
+  Nunca aparecem duas fichas ao mesmo tempo, nem o título da próxima cortado embaixo.
 - **Pontos na lateral** mostram onde a pessoa está e levam a cada peça.
 - **A ficha técnica** traz só o que a loja já afirma: encaixe (equipamento), partes com cores à sua escolha, produção (prazo da loja) e envio. O macaco mostra as cores fixas, "Feito em impressão 3D" e "Disponibilidade: em breve".
 - **As ações** de cada ficha:
   - "Personalizar o meu" abre o ateliê; no macaco, "Ver em 3D" abre a prévia.
   - "Ver encaixado" sobe até o banner e abre a demonstração.
-- **No celular e no tablet,** cada ficha traz a sua peça logo acima, e o fundo troca de cor do mesmo jeito.
+- **No celular e no tablet** (sem tela fixa), cada ficha traz a sua peça logo acima. Ela se constrói sozinha ao chegar a 75% da tela e volta a se esconder se a pessoa rolar de volta. O fundo troca de cor do mesmo jeito.
 - **Peças de oftalmologia.** Um carrossel com as peças da categoria: a peça encaixada flutuando sobre uma nuvem da sua cor (sem borda), o nome, o subtítulo e o preço (ou "Em breve").
   - Tocar num cartão leva, rolando suave, à ficha técnica da peça lá em cima.
   - No celular: deslizar com o dedo (rolagem nativa, encaixando no cartão).
@@ -47,17 +50,19 @@ Assim a política de segurança continua `script-src 'self'`. O módulo da seç�
   - Janelas (`dialog`, `[role="dialog"]`), o menu de idioma e o carrossel rolam por conta própria.
   - Para enquanto a área do produto trava a página (`html.modal-open`).
   - Com movimento reduzido, não liga.
-- **Uma posição contínua manda em tudo.** A rolagem vira uma posição entre as peças (0 → 1 → 2 → 3). Dela saem, sem animações brigando entre si:
-  - **a cor de fundo da página inteira:** `.fit-backdrop`, uma camada fixa por peça, só opacidade. Fica logo depois do fundo do banner (`.hero-bg`, que se estende pela página dentro de `.page`): acima dele e abaixo de todo o conteúdo;
-  - **a peça fixa:** só `transform` e opacidade; a sombra acompanha o tom de cada peça;
-  - **a ficha ativa e os pontos.**
-- **Texto (ScrollTrigger com `scrub`).** Acompanha a velocidade da rolagem e é suavizado pelo Lenis:
-  - as letras do nome sobem de dentro de uma máscara por linha (SplitText), da esquerda para a direita;
-  - as palavras da visão geral sobem e acendem em sequência;
-  - as linhas da ficha técnica entram em cascata;
-  - ao sair, a ficha inteira sobe e esmaece;
-  - cada linha ganha força ao chegar no centro da tela e esmaece de leve ao passar dele;
-  - o botão fica sempre inteiro quando a ficha está na tela.
+- **A rolagem é só o gatilho (sem `scrub`).** Quando uma ficha entra, a revelação roda sozinha até o fim, mesmo que a pessoa pare de rolar. É uma timeline com `ease: power3.out`, de cerca de 1,2 s:
+  - as letras do nome sobem de dentro de uma máscara por linha (SplitText): opacidade 0 → 1, `y` 30 → 0, intervalo de 0,03 s;
+  - as palavras da visão geral sobem em sequência;
+  - as linhas da ficha técnica surgem uma a uma, e os itens de cada linha entram em cascata (0,03 s);
+  - por último, o botão.
+- **Desktop: tela fixa** (`.fit-pin`, `position: sticky`). A história mede uma tela + 88% de tela para cada peça seguinte (`--fit-count`). A peça da vez sai da posição dentro dela:
+  - a primeira ficha dispara quando a história chega a 75% da tela;
+  - rolar de volta para cima esconde tudo de novo.
+  
+  Na troca, a ficha e a peça atuais saem inteiras antes de a próxima começar (a nova só entra aos 0,4 s), e a cor da página troca junto. É a mesma ideia de `toggleActions: "play none none reverse"`, aplicada a uma ficha por vez.
+- **Celular: gatilho a 75%.** Cada ficha, com a sua peça, dispara a `start: "top 75%"` e se esconde de novo ao rolar de volta (`onEnter` toca a timeline, `onLeaveBack` faz o `reverse`). Os títulos da seção, o carrossel e "Escolha o seu" usam `toggleActions: "play none none reverse"`.
+- **A cor de fundo da página inteira** é `.fit-backdrop`, uma camada fixa por peça, só opacidade. Fica logo depois do fundo do banner (`.hero-bg`, que se estende pela página dentro de `.page`): acima dele e abaixo de todo o conteúdo. A cor nova cobre a anterior, sem clarear no meio.
+- **Desempenho:** só `transform` e opacidade nas animações; a sombra da peça acompanha o tom de cada uma.
 - **Idiomas.** A visão geral é dividida já no idioma escolhido:
   - a fonte em PT fica em `data-text`;
   - o texto é traduzido com `translate()` do `i18n.js`;
@@ -80,8 +85,9 @@ Assim a política de segurança continua `script-src 'self'`. O módulo da seç�
   - `overview` (troca a descrição da loja só aqui).
 - **Visual:** `dist/fit-tour.css`.
 - **Movimento:** `dist/fit-tour-motion.js`.
-  - Ritmo da troca das peças: a função `render`.
-  - Pontos de início e fim de cada revelação: os `scrub(...)`.
+  - Ritmo da revelação de cada ficha: a função `reveal`.
+  - Troca de peça na tela fixa: `show`.
+  - Distância de rolagem por peça: o `88vh` em `.fit-tour.is-pinned .fit-story`, em `dist/fit-tour.css`.
 - **Cards coloridos da coleção:** `railTone` em `dist/catalog.js` e o bloco no fim de `dist/carousel.css`.
 - **Filtro da página Produtos:** `dist/catalog.js` e `productGrid(categoria, família)` em `dist/product-grid.js`.
 - **Depois de mudar dados ou textos:** `node tools/build-product-pages.cjs`. Ele grava a seção em `index.html` (entre `<!-- fit-tour -->` e `<!-- /fit-tour -->`) e gera `escolha.html` (com o head, o header e o footer de `produtos.html`, e no sitemap). `tests/product-landing.mjs` falha se ficar desatualizado.
@@ -99,26 +105,31 @@ São as mesmas camadas da demonstração do banner, no mesmo espaço, então se 
 
 Todas com fundo transparente, então o fundo da página muda de cor por trás sem recortes. As imagens não mudaram nem foram duplicadas. Se o macaco ou a lâmpada mudarem de imagem, a seção acompanha sozinha; só o enquadramento (`FIT.macacoscopio.frame` e `fade`) pode precisar de ajuste.
 
-## Verificação (2026-10-04, modo cinema)
+## Verificação (2026-10-04, tela fixa com gatilho)
 
 - `npm test`: 35 suítes verdes. `tests/fit-tour.mjs` também confere:
   - as bibliotecas guardadas e as licenças;
   - o carregamento sem bloquear a página;
   - as regras do Lenis;
-  - a posição contínua;
+  - nenhum `scrub`;
+  - os parâmetros da revelação;
+  - a tela fixa com uma ficha por vez;
+  - o gatilho a 75%;
   - o texto dividido no idioma certo;
   - os cards coloridos da coleção.
-- No Chrome headless, 27 verificações de interação:
-  - por peça: cor da página, peça no lugar e ficha montada;
-  - letras subindo da máscara; ficha anterior saindo; giro na troca;
-  - roda do mouse suave com o Lenis; trackpad para o lado no carrossel;
-  - cartão e pontos levando à ficha;
+- No Chrome headless, 24 verificações de interação:
+  - a ficha começa a se construir ao chegar a 75% e termina sozinha, sem mais rolagem;
+  - em cada peça, só a ficha dela na tela, inteira, com a peça e a cor certas;
+  - na troca, a atual sai antes de a próxima começar, e as peças não se sobrepõem;
+  - rolar de volta esconde;
+  - Lenis; cartão e pontos;
   - área do produto travando e destravando a página;
   - "Ver encaixado";
-  - inglês e troca para espanhol;
-  - celular, movimento reduzido e modo de reserva com as bibliotecas bloqueadas;
+  - inglês e espanhol;
+  - celular com gatilho a 75% e reverso;
+  - movimento reduzido e modo de reserva;
   - console limpo.
-- Telas conferidas: 1280×720, 1440×900 e 390×844.
+- Telas conferidas: 1280×720 (todas as fichas cabem na tela fixa), 1440×900 e 390×844.
 - Não testado: Safari/iOS e aparelho físico.
 
 ## Em aberto

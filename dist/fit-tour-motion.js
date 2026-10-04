@@ -1,19 +1,21 @@
 // Movimento de "O 3D nas suas consultas" (fit-tour.js monta o HTML, que já vem pronto em index.html).
 //
-// Modo cinema — GSAP + ScrollTrigger + SplitText + Lenis (dist/vendor, carregados só aqui, sem bloquear a página):
-// · Lenis suaviza a roda do mouse na página inteira (o toque continua nativo); janelas, gavetas e o carrossel rolam
-//   por conta própria, e ele para enquanto a área do produto está aberta;
-// · a rolagem vira uma posição contínua entre as peças (0 → 1 → 2 → 3). Dela saem, sem conflito entre animações:
-//   a cor de fundo da página inteira (uma camada fixa por peça, só opacidade), a peça fixa à direita (a que sai sobe e
-//   gira para um lado, a próxima chega de baixo girando do outro; só transform e opacidade) e a ficha ativa;
-// · a ficha se constrói com a rolagem, na velocidade dela (scrub): as letras do nome sobem de dentro de uma máscara por
-//   linha, as palavras da visão geral sobem e acendem em sequência, as linhas da ficha técnica entram em cascata e,
-//   ao sair, a ficha inteira sobe e esmaece. Cada linha ganha força no centro da tela e esmaece de leve ao passar dele;
-// · a visão geral é dividida já no idioma escolhido (i18n.js) e refeita quando a pessoa troca o idioma.
-// Com movimento reduzido: sem Lenis e sem deslocamentos; o fundo e a peça só trocam por opacidade.
+// Modo cinema — GSAP + ScrollTrigger + SplitText + Lenis (dist/vendor, carregados só aqui, sem bloquear a página).
+// A rolagem é só o GATILHO: quando uma ficha chega na tela, a revelação roda sozinha até o fim (cerca de 1,2 s,
+// power3.out), mesmo que a pessoa pare de rolar. Nada fica preso ao progresso da rolagem, então nada aparece pela metade.
+// · Desktop: a história vira uma tela fixa (.fit-pin). Rolar troca a peça da vez: a ficha atual sai inteira e só então
+//   a próxima se constrói; a peça fixa sai girando e a nova chega girando ao contrário; a cor da página troca junto.
+// · Celular: cada ficha (com a sua peça) dispara ao chegar a 75% da tela e volta a se esconder ao rolar de volta
+//   (o mesmo que toggleActions "play none none reverse").
+// · Revelação: as letras do nome sobem de dentro da máscara da linha, as palavras da visão geral sobem em sequência e
+//   os itens da ficha técnica entram em cascata (opacidade 0 → 1, y 30 → 0, intervalo de 0,03 s).
+// · Lenis suaviza a roda do mouse (o toque continua nativo); janelas, gavetas e o carrossel rolam por conta própria, e ele
+//   para enquanto a área do produto está aberta.
+// · A visão geral é dividida já no idioma escolhido (i18n.js) e refeita quando a pessoa troca o idioma.
+// Com movimento reduzido: sem Lenis e sem deslocamentos; tudo troca só por opacidade, rápido.
 //
 // Reserva — se as bibliotecas não carregarem: o reveal do CSS (animation-timeline: view()) e a peça ativa por
-// IntersectionObserver, como antes.
+// IntersectionObserver.
 import {translate} from './i18n.js';
 
 const tour = document.querySelector('[data-fit-tour]');
@@ -24,13 +26,14 @@ const LIBS = ['vendor/gsap.min.js', 'vendor/ScrollTrigger.min.js', 'vendor/Split
 const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 let lenis = null;
 
-// Leva até uma ficha (pontos da história e cartões do carrossel): com o Lenis, a mesma rolagem suave da página.
-// O topo da ficha para a 7% da tela (scroll-margin-top da .fit-step, que o Lenis e o scrollIntoView respeitam).
-function goToStep(step) {
+// Leva até uma ficha (pontos da história e cartões do carrossel). Sem tela fixa, o topo da ficha para a 7% da tela
+// (scroll-margin-top da .fit-step, que o Lenis e o scrollIntoView respeitam); com tela fixa, o modo cinema troca isto.
+const scrollToStep = step => {
   if (!step) return;
   if (lenis) lenis.scrollTo(step, {duration: 1.6, easing: easeInOut});
   else step.scrollIntoView({behavior, block: 'start'});
-}
+};
+let goToStep = scrollToStep;
 
 const loadScript = src => new Promise((resolve, reject) => {
   const script = document.createElement('script');
@@ -51,6 +54,7 @@ function cinema() {
   const heroBg = document.querySelector('.hero-bg');
   if (heroBg) heroBg.after(backdrop); else document.body.prepend(backdrop);
   backdrop.classList.add('is-on');
+  story.style.setProperty('--fit-count', steps.length);
 
   if (!calm && Lenis) {
     lenis = new Lenis({lerp: .1, allowNestedScroll: true, prevent: node => node.matches?.('dialog, [role="dialog"], .language-menu, [data-lenis-prevent]')});
@@ -67,86 +71,147 @@ function cinema() {
     }).observe(document.documentElement, {attributes: true, attributeFilter: ['class']});
   }
 
-  // posição contínua entre as peças → fundo, peça fixa e ficha ativa
-  const progress = steps.map(() => 0), ease = gsap.parseEase('power2.inOut');
-  let enter = 0, leave = 0, active = -1;
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const render = () => {
-    const p = progress.reduce((sum, value) => sum + ease(value), 0);
-    backdrop.style.opacity = (enter * (1 - leave)).toFixed(3);
-    layers.forEach((layer, i) => { if (i) layer.style.opacity = clamp(p - (i - 1), 0, 1).toFixed(3); });
-    slides.forEach((slide, i) => {
-      const d = clamp(i - p, -1, 1), a = Math.abs(d), opacity = clamp(1 - a * 1.75, 0, 1);
-      slide.style.opacity = opacity.toFixed(3);
-      slide.style.visibility = opacity > .002 ? 'visible' : 'hidden';
-      // a que sai sobe e gira para a esquerda; a próxima chega de baixo, da direita, girando ao contrário até assentar
-      slide.style.transform = calm ? 'none' : `translate3d(${(d * 7).toFixed(2)}%, ${(d * (d > 0 ? 26 : 20)).toFixed(2)}%, 0) rotate(${(d * (d > 0 ? 10 : 8)).toFixed(2)}deg) scale(${(1 - a * .14).toFixed(3)})`;
-    });
-    const index = clamp(Math.round(p), 0, steps.length - 1);
-    if (index === active) return;
-    active = index;
+  // as peças de texto de cada ficha (o SplitText refaz a divisão sozinho quando a largura ou a fonte mudam)
+  const parts = steps.map(step => {
+    const name = step.querySelector('.fit-name');
+    const title = SplitText.create(name, {type: 'chars,lines', mask: 'lines', tag: 'span', linesClass: 'fit-line', charsClass: 'fit-char', aria: 'auto', autoSplit: true});
+    const words = overview(step.querySelector('.fit-overview'), {ScrollTrigger, SplitText});
+    const rows = [...step.querySelectorAll('.fit-specs > div')];
+    return {step, title, words, copy: step.querySelector('.fit-step-copy'), family: step.querySelector('.fit-family'), badge: step.querySelector('.fit-soon'),
+      label: step.querySelector('.fit-label'), rows, specs: rows.flatMap(row => [row.querySelector('dt'), ...row.querySelectorAll('dd > span')]),
+      actions: step.querySelector('.fit-actions'), art: step.querySelector('.fit-step-art')};
+  });
+  const pieces = part => [part.copy, part.art, part.family, part.badge, part.label, part.actions, ...part.rows, ...part.specs, ...part.title.chars, ...part.words().words].filter(Boolean);
+
+  // A revelação de uma ficha: roda sozinha até o fim depois de disparada (cerca de 1,2 s).
+  const reveal = (part, {art = false} = {}) => {
+    const tl = gsap.timeline({defaults: {ease: 'power3.out'}});
+    tl.set(part.copy, {autoAlpha: 1, y: 0});
+    if (calm) {
+      tl.fromTo([part.copy, ...(art && part.art ? [part.art] : [])], {autoAlpha: 0}, {autoAlpha: 1, duration: .35, ease: 'none'});
+      return tl;
+    }
+    if (art && part.art) tl.fromTo(part.art, {autoAlpha: 0, y: 40, rotation: 4, scale: .94}, {autoAlpha: 1, y: 0, rotation: 0, scale: 1, duration: 1.1, ease: 'expo.out'}, 0);
+    tl.fromTo(part.family, {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, 0)
+      .fromTo(part.title.chars, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .8, stagger: .03}, .06);
+    if (part.badge) tl.fromTo(part.badge, {autoAlpha: 0, scale: .8}, {autoAlpha: 1, scale: 1, duration: .5}, .4);
+    tl.fromTo(part.words().words, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .65, stagger: {amount: .35}}, .18)
+      .fromTo(part.label, {autoAlpha: 0, y: 16}, {autoAlpha: 1, y: 0, duration: .5}, .34)
+      // cada linha da ficha técnica (com o seu traço) surge junto com o que tem dentro, uma depois da outra
+      .fromTo(part.rows, {autoAlpha: 0}, {autoAlpha: 1, duration: .3, stagger: .07, ease: 'none'}, .36)
+      .fromTo(part.specs, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .55, stagger: .03}, .38)
+      .fromTo(part.actions, {autoAlpha: 0, y: 24}, {autoAlpha: 1, y: 0, duration: .6}, .5);
+    return tl;
+  };
+
+  // cor da página, pontos e ficha ativa da peça da vez (a cor nova cobre a anterior, sem clarear no meio)
+  let painted = 0;
+  layers.forEach((layer, i) => { layer.style.zIndex = i ? 1 : 2; });
+  const paint = index => {
     steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
     slides.forEach((slide, i) => { slide.dataset.pos = i < index ? 'before' : i > index ? 'after' : 'active'; });
     dots.forEach((dot, i) => { if (i === index) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); });
     for (const name of ['--fit-bg-1', '--fit-bg-2', '--fit-bg-3', '--fit-accent', '--fit-ink']) story.style.setProperty(name, steps[index].style.getPropertyValue(name));
+    if (index === painted) return;
+    painted = index;
+    layers.forEach((layer, i) => { layer.style.zIndex = i === index ? 2 : 1; });
+    gsap.to(layers[index], {opacity: 1, duration: calm ? .4 : .9, ease: 'power2.out', overwrite: true,
+      onComplete: () => layers.forEach((layer, i) => { if (i !== index) gsap.set(layer, {opacity: 0}); })});
   };
-  const follow = (trigger, start, end, use) => ScrollTrigger.create({trigger, start, end, onUpdate: self => use(self.progress), onRefresh: self => use(self.progress)});
-  steps.forEach((step, i) => { if (i) follow(step, 'top 85%', 'top 35%', value => { progress[i] = value; render(); }); });
-  follow(story, 'top bottom', 'top 30%', value => { enter = value; render(); });
-  follow(story, 'bottom 85%', 'bottom 25%', value => { leave = value; render(); });
-  render();
+  // o fundo da página aparece quando a história chega na tela e sai quando ela vai embora
+  const fade = on => gsap.to(backdrop, {opacity: on ? 1 : 0, duration: on ? 1 : .8, ease: 'power2.out', overwrite: true});
+  ScrollTrigger.create({trigger: story, start: 'top 75%', end: 'bottom 40%', onToggle: self => fade(self.isActive)});
   dots.forEach((dot, i) => dot.addEventListener('click', event => { event.preventDefault(); goToStep(steps[i]); }));
 
-  if (calm) return;
-  const scrub = (trigger, start, end) => ({trigger, start, end, scrub: true});
-  // foco: a linha acende ao subir da borda de baixo, fica inteira no meio da tela e esmaece de leve ao passar do centro
-  const focusAt = p => { const f = 1 - p; return f > .82 ? gsap.utils.mapRange(.82, 1, 1, .15, f) : f < .3 ? gsap.utils.mapRange(0, .3, .32, 1, f) : 1; };
-  const focus = elements => [...elements].map(el => follow(el, 'top bottom', 'bottom top', p => { el.style.opacity = focusAt(p).toFixed(3); }));
-  const unfocus = self => { self.fitFocus?.forEach(trigger => trigger.kill()); self.fitFocus = null; };
-
-  for (const step of steps) {
-    const copy = step.querySelector('.fit-step-copy'), family = step.querySelector('.fit-family'), name = step.querySelector('.fit-name');
-    const badge = step.querySelector('.fit-soon'), para = step.querySelector('.fit-overview'), label = step.querySelector('.fit-label');
-    const rows = [...step.querySelectorAll('.fit-specs > div')], actions = step.querySelector('.fit-actions');
-    gsap.from(family, {y: 28, autoAlpha: 0, ease: 'none', scrollTrigger: scrub(family, 'top 97%', 'top 76%')});
-    focus(family.children);
-    // nome: cada letra sobe de dentro da máscara da linha, da esquerda para a direita
-    SplitText.create(name, {type: 'chars,lines', mask: 'lines', tag: 'span', linesClass: 'fit-line', charsClass: 'fit-char', aria: 'auto', autoSplit: true,
-      onSplit: self => { self.fitFocus = focus(self.masks); return gsap.from(self.chars, {yPercent: 118, ease: 'none', stagger: .05, scrollTrigger: scrub(name, 'top 97%', 'top 62%')}); },
-      onRevert: unfocus});
-    if (badge) gsap.from(badge, {autoAlpha: 0, scale: .7, ease: 'none', scrollTrigger: scrub(badge, 'top 92%', 'top 70%')});
-    overview(para, {gsap, ScrollTrigger, SplitText, scrub, focus, unfocus});
-    gsap.from(label, {y: 20, autoAlpha: 0, ease: 'none', scrollTrigger: scrub(label, 'top 96%', 'top 80%')});
-    // ficha técnica em cascata: uma linha, depois a outra
-    gsap.from(rows, {y: 36, autoAlpha: 0, ease: 'none', stagger: .24, scrollTrigger: scrub(rows[0], 'top 97%', 'top 60%')});
-    rows.forEach(row => focus(row.children));
-    gsap.from(actions, {y: 28, autoAlpha: 0, ease: 'none', scrollTrigger: scrub(actions, 'top 99%', 'top 86%')});
-    // ao sair, a ficha inteira sobe e esmaece enquanto a próxima se constrói
-    gsap.fromTo(copy, {y: 0, autoAlpha: 1}, {y: -72, autoAlpha: 0, ease: 'none', immediateRender: false, scrollTrigger: scrub(copy, 'bottom 32%', 'bottom 2%')});
-  }
-  // telas menores: cada ficha traz a sua peça, que chega girando de leve
-  gsap.matchMedia().add('(max-width: 979px)', () => {
-    for (const art of story.querySelectorAll('.fit-step-art')) gsap.from(art, {yPercent: 14, rotation: 6, scale: .9, autoAlpha: 0, ease: 'none', scrollTrigger: scrub(art, 'top 99%', 'top 58%')});
+  const mm = gsap.matchMedia();
+  // ── desktop: tela fixa, uma ficha por vez ──
+  mm.add('(min-width: 980px)', () => {
+    tour.classList.add('is-pinned');
+    gsap.set(parts.map(part => part.copy), {autoAlpha: 0});
+    gsap.set(slides, {autoAlpha: 0});
+    let shown = -1, running = null, inside = false;
+    const show = index => {
+      if (index === shown) return;
+      const dir = index > shown ? 1 : -1;
+      shown = index;
+      running?.kill();
+      const tl = gsap.timeline();
+      // primeiro saem, inteiras, a ficha e a peça que estiverem na tela (0,4 s); só depois a próxima chega e se constrói
+      const leaving = parts.filter((part, i) => i !== index && +gsap.getProperty(part.copy, 'opacity') > 0);
+      leaving.forEach(part => tl.to(part.copy, calm ? {autoAlpha: 0, duration: .2} : {autoAlpha: 0, y: -30, duration: .4, ease: 'power2.in'}, 0));
+      slides.forEach((slide, i) => {
+        if (i === index || +gsap.getProperty(slide, 'opacity') === 0) return;
+        tl.to(slide, calm ? {autoAlpha: 0, duration: .25} : {autoAlpha: 0, yPercent: -14 * dir, xPercent: -5 * dir, rotation: -7 * dir, scale: .9, duration: .4, ease: 'power2.in'}, 0);
+      });
+      if (index >= 0) {
+        const at = leaving.length ? (calm ? .2 : .4) : 0;
+        tl.fromTo(slides[index], calm ? {autoAlpha: 0} : {autoAlpha: 0, yPercent: 16 * dir, xPercent: 6 * dir, rotation: 9 * dir, scale: .9},
+          calm ? {autoAlpha: 1, duration: .35} : {autoAlpha: 1, yPercent: 0, xPercent: 0, rotation: 0, scale: 1, duration: 1.15, ease: 'expo.out'}, at);
+        tl.add(reveal(parts[index]), at);
+        paint(index);
+      }
+      running = tl;
+    };
+    // a peça da vez sai da posição dentro da tela fixa (a cada 88% de tela rolada, a próxima)
+    const segment = ScrollTrigger.create({trigger: story, start: 'top top', end: 'bottom bottom', onUpdate: self => { if (inside) show(Math.round(self.progress * (steps.length - 1))); }});
+    const current = () => Math.round(segment.progress * (steps.length - 1));
+    // a primeira ficha dispara quando a história chega a 75% da tela; rolar de volta para cima a esconde
+    ScrollTrigger.create({trigger: story, start: 'top 75%', end: 'bottom top',
+      onEnter: () => { inside = true; show(current()); }, onEnterBack: () => { inside = true; show(current()); },
+      onLeaveBack: () => { inside = false; show(-1); }, onLeave: () => { inside = false; }});
+    goToStep = step => {
+      const i = steps.indexOf(step), y = segment.start + i * (segment.end - segment.start) / Math.max(1, steps.length - 1);
+      if (lenis) lenis.scrollTo(y, {duration: 1.6, easing: easeInOut}); else scrollTo({top: y, behavior});
+    };
+    return () => {
+      running?.kill();
+      goToStep = scrollToStep;
+      tour.classList.remove('is-pinned');
+      const all = [...slides, ...parts.flatMap(pieces)];
+      gsap.killTweensOf(all);
+      gsap.set(all, {clearProps: 'opacity,visibility,transform'});
+    };
   });
-  for (const el of tour.querySelectorAll('.fit-tour-head, .fit-more-head, .fit-carousel, .fit-tour-end')) gsap.from(el, {y: 44, autoAlpha: 0, ease: 'none', scrollTrigger: scrub(el, 'top 98%', 'top 72%')});
+  // ── telas menores: cada ficha, com a sua peça, dispara ao chegar a 75% da tela ──
+  mm.add('(max-width: 979px)', () => {
+    const played = new Map();
+    parts.forEach((part, i) => {
+      gsap.set([part.copy, part.art].filter(Boolean), {autoAlpha: 0});
+      ScrollTrigger.create({trigger: part.step, start: 'top 75%',
+        onEnter: () => { played.get(i)?.kill(); played.set(i, reveal(part, {art: true})); },
+        onLeaveBack: () => played.get(i)?.reverse()});
+      ScrollTrigger.create({trigger: part.step, start: 'top 50%', end: 'bottom 50%', onToggle: self => { if (self.isActive) paint(i); }});
+    });
+    return () => {
+      played.forEach(tl => tl.kill());
+      const all = parts.flatMap(pieces);
+      gsap.killTweensOf(all);
+      gsap.set(all, {clearProps: 'opacity,visibility,transform'});
+    };
+  });
+
+  // títulos da seção, carrossel e "Escolha o seu": também disparam a 75% e rodam até o fim
+  for (const el of tour.querySelectorAll('.fit-tour-head, .fit-more-head, .fit-carousel, .fit-tour-end')) {
+    gsap.fromTo(el, calm ? {autoAlpha: 0} : {autoAlpha: 0, y: 40}, {autoAlpha: 1, y: 0, duration: calm ? .35 : 1, ease: 'power3.out',
+      scrollTrigger: {trigger: el, start: 'top 75%', toggleActions: 'play none none reverse'}});
+  }
   document.fonts?.ready.then(() => ScrollTrigger.refresh());
 }
 
-// Visão geral: dividida em palavras já traduzidas (o i18n.js não mexe nela: translate="no"); cada palavra sobe da
-// máscara da linha e acende em sequência. Trocar o idioma refaz a divisão com o texto novo.
-function overview(para, {gsap, ScrollTrigger, SplitText, scrub, focus, unfocus}) {
+// Visão geral: dividida em palavras já traduzidas (o i18n.js não mexe nela: translate="no"). Trocar o idioma refaz a
+// divisão com o texto novo.
+function overview(para, {ScrollTrigger, SplitText}) {
   const source = para.dataset.text;
   let split = null;
   const build = () => {
     split?.revert();
     para.setAttribute('translate', 'no');
     para.textContent = translate(source);
-    split = SplitText.create(para, {type: 'words,lines', mask: 'lines', tag: 'span', linesClass: 'fit-line', wordsClass: 'fit-word', aria: 'auto', autoSplit: true,
-      onSplit: self => { self.fitFocus = focus(self.masks); return gsap.from(self.words, {yPercent: 100, opacity: .15, ease: 'none', stagger: .035, scrollTrigger: scrub(para, 'top 94%', 'top 50%')}); },
-      onRevert: unfocus});
+    split = SplitText.create(para, {type: 'words,lines', mask: 'lines', tag: 'span', linesClass: 'fit-line', wordsClass: 'fit-word', aria: 'auto', autoSplit: true});
   };
   build();
   addEventListener('ju:language', () => { build(); ScrollTrigger.refresh(); });
+  return () => split;
 }
 
 // ── reserva sem bibliotecas ──────────────────────────────────────────────────────────────────────────────────────
@@ -266,7 +331,7 @@ if (tour) {
   carousel();
   Promise.all(LIBS.map(loadScript)).then(cinema).catch(error => {
     console.warn('O 3D nas suas consultas: modo de reserva', error?.message || error);
-    tour.classList.remove('is-gsap');
+    tour.classList.remove('is-gsap', 'is-pinned');
     reveal();
     story();
   });
