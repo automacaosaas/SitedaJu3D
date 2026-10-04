@@ -786,4 +786,30 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+FEITO PARA ENCAIXAR|MADE TO FIT|HECHO PARA ENCAJAR
+O 3D nas suas consultas|3D in your appointments|El 3D en tus consultas
+Cada peça é pensada para um equipamento da consulta.|Each piece is designed around an exam-room instrument.|Cada pieza está pensada para un equipo de la consulta.
+Encaixe para retinoscópio|Fits the retinoscope|Encaje para retinoscopio
+Encaixe para régua de esquiascopia|Fits the skiascopy rack|Encaje para regla de esquiascopia
+Encaixe para lâmpada de fenda|Fits the slit lamp|Encaje para lámpara de hendidura
+Uma borboleta para levar cor e imaginação à consulta.|A butterfly to bring color and imagination to every appointment.|Una mariposa para llevar color e imaginación a la consulta.
+Um dinossauro simpático para acompanhar cada olhar.|A friendly dinosaur for every glance.|Un dinosaurio simpático para acompañar cada mirada.
+Um convite para a imaginação decolar: as aberturas lembram janelas de avião.|An invitation to let imagination take flight: the openings resemble airplane windows.|Una invitación a que la imaginación despegue: las aberturas recuerdan ventanillas de avión.
+Um macaquinho para acompanhar o olhar dos pequenos.|A little monkey to keep the little ones company.|Un monito para acompañar la mirada de los pequeños.
+Espaço do retinoscópio livre|Open slot for the retinoscope|Espacio del retinoscopio libre
+Abertura para o retinoscópio|Opening for the retinoscope|Abertura para el retinoscopio
+Cores à sua escolha|Colors of your choice|Colores a tu elección
+16 aberturas com os graus ao lado|16 openings with the lens powers alongside|16 aberturas con las graduaciones al lado
+Metades presas por ímãs|Halves held by magnets|Mitades unidas con imanes
+Cores fixas|Fixed colors|Colores fijos
+Impresso em 3D|3D printed|Impreso en 3D
+Peças|Pieces|Piezas
+Escolha o seu|Choose yours|Elige el tuyo
+Escolha o seu · Ju, imprime pra mim?|Choose yours · Ju, imprime pra mim?|Elige el tuyo · Ju, imprime pra mim?
+O 3D NAS SUAS CONSULTAS|3D IN YOUR APPOINTMENTS|EL 3D EN TUS CONSULTAS
+Comece pelo equipamento da sua consulta.|Start with the instrument you use in your appointments.|Empieza por el equipo de tu consulta.
+Encaixe para|Made to fit the|Encaje para
+Ver as peças|See the pieces|Ver las piezas
+Ver todas as peças|See all pieces|Ver todas las piezas
+Outros encaixes|Other fits|Otros encajes
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

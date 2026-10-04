@@ -1,6 +1,6 @@
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {productGrid} from './product-grid.js';
-import {PRODUCTS, SOON, PRODUCT_CATEGORIES, color, defaults} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, color, defaults} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
@@ -119,13 +119,24 @@ class ProductCarousel {
 function mountCarousel(host, key = host.dataset.category) { const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); return; } new ProductCarousel(host, list); }
 for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
 // Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
-for (const host of document.querySelectorAll('[data-product-grid]')) { const html = productGrid(host.dataset.category); if (host.innerHTML.trim() !== html) host.innerHTML = html; }
+// Aberta por um banner da página Escolha o seu (produtos.html?encaixe=<família>): só as peças daquele encaixe, com um selo
+// para voltar a ver todas e o caminho para os outros encaixes. Trocar de categoria volta à página inteira.
+const fitFamily = (() => { try { const id = new URLSearchParams(location.search).get('encaixe'); return Object.hasOwn(FAMILIES, id) ? id : null; } catch { return null; } })();
+function familyBar(grid, id) {
+  grid.parentElement.querySelector('.catalog-family')?.remove();
+  if (!id) return;
+  const bar = document.createElement('div');
+  bar.className = 'catalog-family';
+  bar.innerHTML = `<p class="catalog-family-chip"><span>${FAMILIES[id].label}</span><a href="produtos.html" aria-label="Ver todas as peças"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></a></p><a class="catalog-family-other" href="escolha.html"><span>Outros encaixes</span>${icon('arrow')}</a>`;
+  grid.before(bar);
+}
+for (const host of document.querySelectorAll('[data-product-grid]')) { const html = productGrid(host.dataset.category, fitFamily); if (host.innerHTML.trim() !== html) host.innerHTML = html; familyBar(host, fitFamily); }
 for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
   const categories = Object.entries(PRODUCT_CATEGORIES);
   const initialTabs = [...tabs.querySelectorAll('[data-catalog-filter]')];
   if (initialTabs.length !== categories.length || initialTabs.some((tab, index) => tab.dataset.catalogFilter !== categories[index][0]))
     tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
-  tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel], [data-product-grid]'); host.dataset.category = button.dataset.catalogFilter; if (host.matches('[data-product-grid]')) host.innerHTML = productGrid(button.dataset.catalogFilter); else mountCarousel(host, button.dataset.catalogFilter); });
+  tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel], [data-product-grid]'); host.dataset.category = button.dataset.catalogFilter; if (host.matches('[data-product-grid]')) { host.innerHTML = productGrid(button.dataset.catalogFilter); familyBar(host, null); if (location.search) history.replaceState(history.state, '', location.pathname + location.hash); } else mountCarousel(host, button.dataset.catalogFilter); });
 }
 document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); const cart = writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); openMiniCart({itemId: addedItemId(cart, id, defaults(id)), original: true}); button.disabled = false; button.classList.remove('is-loading'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note, .product-grid-note'); if (notice) notice.textContent = error.message; } });
 

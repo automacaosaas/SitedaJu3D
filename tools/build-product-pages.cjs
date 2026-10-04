@@ -4,7 +4,8 @@
 // colors, production time, delivery and returns, and two actions, "Personalizar o meu" (the configurator in the product
 // window of the showcase) and "Adicionar nas cores originais" (straight to the mini-cart). Also writes sitemap.xml and
 // robots.txt. Built from the shop's own data (products.js, commerce-config.js), from produtos.html (head, header and
-// footer) and from the store's address in api/_lib/legal.js, so it never drifts from them.
+// footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the home section
+// "O 3D nas suas consultas" into index.html and the page Escolha o seu (escolha.html), both from dist/fit-tour.js.
 // Run: node tools/build-product-pages.cjs   (or --check to only report; tests/product-landing.mjs fails when stale)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,13 +17,13 @@ const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const nbsp = text => text.replace(/ /g, '&nbsp;');
 // Pages search engines may list (Sobre and Contato stay out while they are empty; account and checkout steps are private).
-const LISTED = ['', 'produtos.html', '{products}', 'termos.html', 'privacidade.html', 'trocas.html'];
+const LISTED = ['', 'produtos.html', 'escolha.html', '{products}', 'termos.html', 'privacidade.html', 'trocas.html'];
 const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html', '/conta.html', '/email-preview.html'];
 
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
-  const [products, commerce, icons, grid] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js')]);
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid};
+  const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('fit-tour.js')]);
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, fitTour: tour.fitTour, chooseBanners: tour.chooseBanners};
 }
 
 function page(id, data, base) {
@@ -72,6 +73,26 @@ function page(id, data, base) {
   return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="product-landing">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;
 }
 
+// Escolha o seu, aberta pelo fim de "O 3D nas suas consultas" (home): um banner por família de encaixe, cada um abrindo a
+// página Produtos só com as peças daquele equipamento (produtos.html?encaixe=<família>). Head, header e footer de produtos.html.
+function choosePage(data, base) {
+  const url = `${siteBase()}/escolha.html`, title = `Escolha o seu · ${SITE}`;
+  const description = 'Comece pelo equipamento da sua consulta: retinoscópio, régua de esquiascopia ou lâmpada de fenda. Peças impressas em 3D.';
+  const head = base.slice(base.indexOf('<head>\n') + 7, base.indexOf('  <!-- og -->'))
+    .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(description)}">`)
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(title)}</title>\n  <link rel="canonical" href="${esc(url)}">`)
+    .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="fit-tour.css">');
+  const preview = tags({url, title, description}).map(line => '  ' + line).join('\n') + '\n';
+  const header = /<header class="header">[^]*?<\/header>/.exec(base)[0];
+  const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(base)[0];
+  const back = /<a class="catalog-back showcase-return"[^]*?<\/a>/.exec(base)[0];
+  const main = `<main class="choose-main" id="conteudo">${back}
+      <header class="choose-head"><p class="eyebrow">O 3D NAS SUAS CONSULTAS</p><h1>Escolha o seu</h1><p>Comece pelo equipamento da sua consulta.</p></header>
+      <div class="choose-banners">${data.chooseBanners()}</div>
+    </main>`;
+  return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="choose-page">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;
+}
+
 const sitemap = ids => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${LISTED.flatMap(entry => entry === '{products}' ? ids.map(id => `${id}.html`) : [entry])
   .map(entry => `  <url><loc>${esc(`${siteBase()}/${entry}`)}</loc></url>`).join('\n')}\n</urlset>\n`;
 const robots = () => `User-agent: *\n${PRIVATE.map(p => `Disallow: ${p}`).join('\n')}\n\nSitemap: ${siteBase()}/sitemap.xml\n`;
@@ -81,7 +102,10 @@ async function build() {
   // produtos.html: the grid of products (audit B2), the same markup product-grid.js draws in the browser.
   const base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n')
     .replace(/(<div class="product-grid" data-product-grid data-category="([a-z]+)"[^>]*><!-- grid -->)[^]*?(<!-- \/grid -->)/, (all, open, key, close) => open + data.productGrid(key) + close);
-  return [{name: 'produtos.html', text: base}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
+  // index.html: the section "O 3D nas suas consultas" between its markers (fit-tour-motion.js only adds the motion).
+  const home = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8').replace(/\r\n/g, '\n')
+    .replace(/(<!-- fit-tour -->)[^]*?(<!-- \/fit-tour -->)/, (all, open, close) => open + data.fitTour() + close);
+  return [{name: 'index.html', text: home}, {name: 'produtos.html', text: base}, {name: 'escolha.html', text: choosePage(data, base)}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
 }
 
 if (require.main === module) {
@@ -91,7 +115,8 @@ if (require.main === module) {
       const file = path.join(DIST, name), current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : '';
       if (current === text) continue;
       stale.push(name);
-      if (!check) fs.writeFileSync(file, text);
+      // keeps the file's own line endings (index.html is CRLF in the working copy on Windows)
+      if (!check) fs.writeFileSync(file, /\r\n/.test(current ? fs.readFileSync(file, 'utf8') : '') ? text.replace(/\n/g, '\r\n') : text);
     }
     console.log(stale.length ? `${check ? 'desatualizada' : 'gerada'}: ${stale.join(', ')}` : 'páginas de produto, sitemap e robots em dia.');
     if (check && stale.length) process.exitCode = 1;
