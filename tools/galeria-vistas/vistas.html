@@ -3,7 +3,7 @@
 <title>Fotos da galeria</title>
 <!-- Aberta por gerar.cjs. modo=site: as fotos da galeria (dist/assets/vistas), padronizadas a partir das originais de design/vistas/
      (fontes={"<peça>-<vista>":"/design/vistas/…"}); sem original, a frente é a foto da vitrine e as outras saem do 3D (provisórias).
-     modo=kit: as referências do kit do ChatGPT, em PNG com fundo branco: a foto da vitrine e a pose de cada vista tirada do 3D. -->
+     modo=kit: as referências do kit do ChatGPT, em PNG com fundo branco: a foto da vitrine e a pose das outras vistas, tirada do 3D. -->
 <script type="importmap">{"imports":{"three":"/dist/vendor/three.module.min.js"}}</script>
 <div id="host" style="position:fixed;left:0;top:0;width:400px;height:400px"></div>
 <script type="module">
@@ -68,7 +68,8 @@ try{
     if(mode==='kit'){
       const renders=await camera.fotos(key,colors,1200,true);
       window.results[`${key}-1-vitrine.png`]=await asData(await encode(frame(await image(`/dist/assets/${p.catalogImage}`),1024,{white:true}),'image/png'));
-      for(const [i,v] of VIEWS.entries())window.results[`${key}-2-angulo-${i+1}-${v.id}.png`]=await asData(await encode(frame(renders[v.id],1024,{white:true}),'image/png'));
+      // a frente é a própria foto da vitrine; as outras vistas levam a pose tirada do 3D (só o ângulo, não o visual)
+      for(const [i,v] of VIEWS.entries())if(v.id!=='frente')window.results[`${key}-${i+1}-pose-${v.id}.png`]=await asData(await encode(frame(renders[v.id],1024,{white:true}),'image/png'));
       continue;
     }
     let renders=null;

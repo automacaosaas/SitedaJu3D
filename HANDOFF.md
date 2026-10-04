@@ -55,11 +55,12 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
-- **Página do produto, aba Foto (04/10/2026):** galeria de vistas (`dist/gallery.js`: frente, três quartos, lado, três quartos de
-  trás e costas), com miniaturas à esquerda no computador e arrastar de lado no celular. Nas cores da vitrine (as cores padrão de
-  `products.js`), imagens prontas em `dist/assets/vistas/`, geradas com o próprio visualizador 3D por `node tools/galeria-vistas/gerar.cjs`
-  (ao gerar de novo, suba `VIEWS_VERSION` em `gallery.js`); em outras cores, as mesmas vistas saem do modelo 3D no navegador
-  (`renderViews` em `dist/viewer.js`). Peça nova (unicórnio, girafa): primeiro o modelo 3D em `asset-models.js`, depois o gerador.
+- **Página do produto, aba Foto (04/10/2026):** galeria de fotos de produto (`dist/gallery.js`: frente, três quartos e costas), com
+  miniaturas à esquerda no computador e arrastar de lado no celular; o 3D continua na aba ao lado, e escolher uma cor leva a ele. Como o
+  Luiz pediu, são fotos, não o visual do 3D: a frente é a foto da vitrine e as outras vistas são geradas no ChatGPT a partir dela
+  (kit em `node tools/galeria-vistas/gerar.cjs --kit <pasta>`). As originais ficam em `design/vistas/<peça>-<vista>.png` e
+  `node tools/galeria-vistas/gerar.cjs` as padroniza em `dist/assets/vistas/` (sem original, sai uma provisória do 3D); depois, suba
+  `VIEWS_VERSION` em `gallery.js`. Peça nova (unicórnio, girafa): foto de vitrine e modelo 3D, depois o mesmo caminho.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
 
 ## Decisões já tomadas
