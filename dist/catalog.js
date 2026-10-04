@@ -26,8 +26,12 @@ const offsetFrom = (index, active, length) => {
   if (offset < -length / 2) offset += length;
   return offset;
 };
-// Cada card da coleção na cor da sua peça (as mesmas paradas do degradê do banner): a foto da peça sobre ela.
-const railTone = id => { const {theme} = showcase(id); return `--rail-stops:${theme.bannerStops};--rail-accent:${theme.accentColor};--rail-ink:${theme.textColor}`; };
+// As cores próprias de cada peça (as três paradas do degradê do banner, o destaque e o texto). Só o card do centro as
+// usa; os laterais ficam no tom da página (carousel.css), e a cor desliza quando o card passa a ser o do centro.
+const railTone = id => {
+  const {theme} = showcase(id), [one, two, three] = theme.bannerStops.match(/#[0-9a-f]{3,8}/gi);
+  return `--rail-own-1:${one};--rail-own-2:${two};--rail-own-3:${three};--rail-own-accent:${theme.accentColor};--rail-own-ink:${theme.textColor}`;
+};
 function colorsFor(id, product) { const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
 function soonCard({id, product}) {
   const categoryLabel = category(product.category).label, href = demoHref(id);

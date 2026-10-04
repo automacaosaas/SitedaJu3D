@@ -51,7 +51,7 @@ const tone = key => {
 };
 const link = key => piece(key).soon
   ? {href: `#produto/${key}/3d`, label: 'Ver em 3D', icon: 'cube'}
-  : {href: `#produto/${key}/personalizar`, label: 'Personalizar o meu', icon: 'palette'};
+  : {href: `#produto/${key}/personalizar`, label: 'Personalizar o meu', icon: 'drop'};
 
 // Ficha técnica: só o que a loja já afirma (products.js, o prazo de produção e o envio).
 function specs(key, family) {
@@ -79,8 +79,8 @@ function step({key, family, number}, i) {
     + `<h3 class="fit-reveal" id="fit-name-${key}"><span class="fit-name" translate="no">${esc(product.title)}</span>${product.soon ? '<span class="fit-soon">Em breve</span>' : ''}</h3>`
     + `<p class="fit-overview fit-reveal" data-text="${esc(overview)}">${esc(overview)}</p>`
     + `<p class="fit-label fit-reveal">FICHA TÉCNICA</p><dl class="fit-specs">${specs(key, family).replace(/<div>/g, '<div class="fit-reveal">')}</dl>`
-    + `<p class="fit-actions fit-reveal"><a class="fit-cta" href="${go.href}">${icon(go.icon)}<span>${go.label}</span><span class="sr-only"> ${esc(product.title)}</span></a>`
-    + `<a class="fit-link" href="#produto/${key}/encaixe">${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${esc(product.title)}</span></a></p>`
+    // a peça já aparece encaixada ao lado: a ficha termina só com a ação principal
+    + `<p class="fit-actions fit-reveal"><a class="fit-cta" href="${go.href}">${icon(go.icon)}<span>${go.label}</span><span class="sr-only"> ${esc(product.title)}</span></a></p>`
     + '</div></article>';
 }
 
@@ -111,10 +111,11 @@ export function fitTour() {
     + `<div class="fit-backdrop" aria-hidden="true">${items.map(({key}) => `<i style="${tone(key)}"></i>`).join('')}</div></div>`
     + '<section class="fit-more" aria-labelledby="fit-more-title">'
     + `<header class="fit-more-head fit-reveal"><h3 id="fit-more-title">Peças de ${esc(category.toLowerCase())}</h3><p>ENCONTRE A PEÇA DO SEU EQUIPAMENTO</p></header>`
-    + `<div class="fit-carousel"><button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">${chevron('m15 5-7 7 7 7')}</button>`
-    + `<ul class="fit-track" aria-label="Peças de ${esc(category.toLowerCase())}">${items.map(card).join('')}</ul>`
-    + `<button type="button" class="fit-arrow fit-next" aria-label="Próximo produto">${chevron('m9 5 7 7-7 7')}</button></div>`
-    + '<div class="fit-progress" aria-hidden="true"><i></i></div></section>'
+    // setas nas bordas do carrossel no desktop; no celular, compactas ao lado das bolinhas, abaixo do cartão do centro
+    + `<div class="fit-carousel"><ul class="fit-track" aria-label="Peças de ${esc(category.toLowerCase())}">${items.map(card).join('')}</ul>`
+    + `<div class="fit-nav"><button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">${chevron('m15 5-7 7 7 7')}</button>`
+    + `<div class="fit-pager" role="group" aria-label="Peças">${items.map(({key}, i) => `<button type="button" data-index="${i}" aria-label="${esc(piece(key).title)}"${i ? '' : ' aria-current="true"'}><i></i></button>`).join('')}</div>`
+    + `<button type="button" class="fit-arrow fit-next" aria-label="Próximo produto">${chevron('m9 5 7 7-7 7')}</button></div></div></section>`
     + `<p class="fit-tour-end fit-reveal"><a class="fit-choose" href="escolha.html"><span>Escolha o seu</span>${icon('arrow')}</a></p>`;
 }
 

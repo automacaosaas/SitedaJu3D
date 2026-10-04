@@ -5,6 +5,12 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
 - 2026-10-04: refeita no estilo da referência "Product Information" (ficha técnica com o produto flutuando e, embaixo, as outras peças da categoria).
 - 2026-10-04, segunda rodada: modo cinema (GSAP + ScrollTrigger + SplitText + Lenis) e os cards de "Nossa coleção" com as cores das peças.
 - 2026-10-04, terceira rodada: a rolagem passou a ser só o gatilho (nada preso ao progresso). No desktop, a história virou uma tela fixa, com uma ficha por vez: a atual sai inteira antes da próxima entrar, e nenhum título vaza embaixo.
+- 2026-10-04, quarta rodada:
+  - fichas só com "Personalizar o meu" (a peça já aparece encaixada);
+  - peças centralizadas no celular;
+  - carrossel do celular com o cartão da vez no centro, bolinhas e setas;
+  - "Nossa coleção" com os laterais no tom da página e só o do centro na cor da peça;
+  - botão, setas e "Ver encaixado" do banner refeitos.
 
 ## O que é
 
@@ -22,20 +28,30 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
   Nunca aparecem duas fichas ao mesmo tempo, nem o título da próxima cortado embaixo.
 - **Pontos na lateral** mostram onde a pessoa está e levam a cada peça.
 - **A ficha técnica** traz só o que a loja já afirma: encaixe (equipamento), partes com cores à sua escolha, produção (prazo da loja) e envio. O macaco mostra as cores fixas, "Feito em impressão 3D" e "Disponibilidade: em breve".
-- **As ações** de cada ficha:
-  - "Personalizar o meu" abre o ateliê; no macaco, "Ver em 3D" abre a prévia.
-  - "Ver encaixado" sobe até o banner e abre a demonstração.
+- **A ação** de cada ficha: "Personalizar o meu" abre o ateliê; no macaco, "Ver em 3D" abre a prévia. Não há "Ver encaixado" aqui, porque a peça já aparece encaixada ao lado. O botão segue o do banner: degradê sutil, sombra difusa e ícone de gota.
 - **No celular e no tablet** (sem tela fixa), cada ficha traz a sua peça logo acima. Ela se constrói sozinha ao chegar a 75% da tela e volta a se esconder se a pessoa rolar de volta. O fundo troca de cor do mesmo jeito.
 - **Peças de oftalmologia.** Um carrossel com as peças da categoria: a peça encaixada flutuando sobre uma nuvem da sua cor (sem borda), o nome, o subtítulo e o preço (ou "Em breve").
   - Tocar num cartão leva, rolando suave, à ficha técnica da peça lá em cima.
-  - No celular: deslizar com o dedo (rolagem nativa, encaixando no cartão).
-  - No desktop: arrastar com o mouse (com impulso), setas e teclas ← →.
-  - Uma barra mostra a posição.
+  - No celular: o cartão da vez fica no centro da tela, com uma ponta dos vizinhos dos dois lados. Desliza com o dedo, encaixando no centro. Embaixo ficam bolinhas (a do cartão da vez alongada; tocar leva a ele) e setas compactas.
+  - No desktop: arrastar com o mouse (com impulso), setas de vidro translúcido nas bordas e teclas ← →.
 - **"Escolha o seu"** leva para `escolha.html`: um banner por família, cada um abrindo a página Produtos só com as peças daquele encaixe (`produtos.html?encaixe=retinoscopio | regua | lampada`).
   - Na página Produtos, um selo mostra o encaixe.
   - O × do selo volta a mostrar todas as peças, e "Outros encaixes" volta para a Escolha o seu.
 
-**"Nossa coleção" (logo abaixo):** cada card ganhou o degradê da sua peça. Continuam iguais a foto (sem o encaixe) e o card do meio maior, por cima dos vizinhos. Categoria, detalhes e botões usam o tom da própria peça. Só na home; a página Produtos não muda.
+**"Nossa coleção" (logo abaixo):**
+- Só o card do centro ganha a cor exclusiva da sua peça (o degradê do banner). Os laterais ficam no tom da página, que segue o banner.
+- Ao trocar de card, as cores deslizam suavemente: são propriedades registradas (`@property --rail-*`), animadas junto com o movimento do card.
+- Continuam iguais a foto (sem o encaixe) e o card do meio maior, por cima dos vizinhos. Categoria, detalhes e botões usam o mesmo tom do card.
+- Só na home; a página Produtos não muda.
+
+**Banner (botão, setas e "Ver encaixado"):**
+- **"Personalizar o meu":**
+  - a cor da peça com um degradê de luz bem sutil e sombra difusa;
+  - cantos de 18 px (menos oval), letra mais espaçada e o ícone de gota;
+  - no hover, cresce 2% e ganha brilho.
+- **"Ver encaixado":** vira um link discreto com o ícone de olho, centralizado logo abaixo do botão.
+- **Setas:** vidro translúcido (fundo branco a 50% com desfoque) e chevron fino. No hover, o vidro clareia e o chevron anda 3 px para onde aponta.
+- **No celular:** o botão ocupa a linha inteira e as setas flutuam nas bordas da pilastra, longe dele. O deslizar com o dedo continua.
 
 ## Tecnologia (modo cinema)
 
@@ -117,7 +133,7 @@ Todas com fundo transparente, então o fundo da página muda de cor por trás se
   - o gatilho a 75%;
   - o texto dividido no idioma certo;
   - os cards coloridos da coleção.
-- No Chrome headless, 24 verificações de interação:
+- No Chrome headless, 33 verificações de interação (incluem as da quarta rodada: fichas sem "Ver encaixado", botão, link e setas do banner, cores da coleção com troca suave, peças centralizadas no celular, carrossel do celular com cartão central e bolinhas, setas do banner longe do botão). As demais:
   - a ficha começa a se construir ao chegar a 75% e termina sozinha, sem mais rolagem;
   - em cada peça, só a ficha dela na tela, inteira, com a peça e a cor certas;
   - na troca, a atual sai antes de a próxima começar, e as peças não se sobrepõem;

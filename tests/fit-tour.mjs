@@ -69,9 +69,9 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
     } else {
       assert.match(step, new RegExp(`<dt>Cores à sua escolha</dt><dd>${product.parts.map(p => `<span>${p.name}</span>`).join('')}</dd>`), 'as partes que a pessoa colore');
       assert.match(step, new RegExp(`<dt>Produção</dt><dd><span>${COMMERCE.productionLabel}</span></dd>`), 'o prazo vem da loja');
-      assert.match(step, new RegExp(`<a class="fit-cta" href="#produto/${key}/personalizar">`));
+      assert.match(step, new RegExp(`<a class="fit-cta" href="#produto/${key}/personalizar"><svg[^>]*><path d="M12 3\\.6C9\\.3 7`), 'com o ícone de gota, como o botão do banner');
     }
-    assert.match(step, new RegExp(`<a class="fit-link" href="#produto/${key}/encaixe">`), '"Ver encaixado" abre a demonstração no banner');
+    assert.doesNotMatch(step, /fit-link|Ver encaixado/, 'a peça já aparece encaixada ao lado: a ficha termina só com a ação principal');
     assert.equal((step.match(/class="[^"]*fit-reveal/g) || []).length, 9, 'família, nome, visão geral, rótulo, quatro linhas da ficha e ações aparecem com a rolagem');
   });
   const stage = /<div class="fit-stage" aria-hidden="true">[^]*?<\/div><\/div><\/div><nav/.exec(html)?.[0] || '';
@@ -94,8 +94,19 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
     if (product.soon) assert.match(card, /<span class="fit-card-soon">Em breve<\/span>/);
     else assert.match(card, new RegExp(`<span class="fit-card-price">${money(COMMERCE.prices[key]).replace('$', '\\$')}</span>`), 'o preço da loja');
   });
-  assert.match(html, /<button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">/);
+  assert.match(html, /<div class="fit-nav"><button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">/);
+  assert.deepEqual([...html.matchAll(/<button type="button" data-index="(\d)" aria-label="([^"]+)"/g)].map(m => m[2]), tourItems().map(({key}) => piece(key).title), 'uma bolinha por peça');
+  assert.doesNotMatch(html, /fit-progress/);
   assert.match(html, /<a class="fit-choose" href="escolha\.html"><span>Escolha o seu<\/span>/);
+  // celular: o cartão da vez no centro, bolinhas e setas compactas; desktop: setas de vidro nas bordas
+  const css = read('dist/fit-tour.css');
+  assert.match(css, /\.fit-track \{ margin: 0 -22px; padding-inline: calc\(\(100vw - min\(72vw, 300px\)\) \/ 2\); scroll-padding-inline: 0; \}\n  \.fit-card \{ flex-basis: min\(72vw, 300px\); scroll-snap-align: center; \}/);
+  assert.match(css, /\.fit-pager \{ display: none;/, 'bolinhas só nas telas menores');
+  assert.match(css, /\.fit-arrow \{ position: absolute;[^}]*background: rgba\(255, 255, 255, \.5\);[^}]*backdrop-filter: blur\(10px\) saturate\(1\.2\);/);
+  assert.match(css, /\.fit-next:hover svg \{ translate: 3px 0; \}/);
+  assert.match(read('dist/fit-tour-motion.js'), /dots\.forEach\(\(dot, i\) => \{ if \(i === active\) dot\.setAttribute\('aria-current', 'true'\);/, 'a bolinha acompanha o cartão do centro');
+  // a peça das fichas cabe na coluna e fica centralizada no celular
+  assert.match(css, /  \.fit-step-art \.fit-figure \{ width: min\(100%, 420px\); height: auto; \}/);
 }
 
 // ── a home: depois do banner, antes de "Nossa coleção", com o HTML pronto e o movimento ──
@@ -141,7 +152,6 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   // reveal pela rolagem no próprio CSS; o script só substitui onde não há suporte
   assert.match(css, /@supports \(animation-timeline: view\(\)\) \{\n  \.fit-reveal, \.fit-carousel, \.fit-step-art \{ animation: fit-rise linear both; animation-timeline: view\(\); animation-range: entry 0% cover 16%; will-change: opacity, transform; \}/);
   assert.match(css, /\.fit-card \{ animation: fit-card-in linear both; animation-timeline: view\(x\);/, 'cartões entram conforme deslizam');
-  assert.match(css, /\.fit-progress i \{ animation: fit-thumb linear both; animation-timeline: --fit-track; \}/, 'barra do carrossel pela linha do tempo da rolagem');
   assert.match(motion, /if \(supports\('animation-timeline: view\(\)'\) \|\| calm \|\| !\('IntersectionObserver' in window\)\) return;/);
   // a peça fixa e a faixa com as cores da peça ativa
   assert.match(css, /\.fit-stage-pin \{ position: sticky;/);
@@ -154,7 +164,7 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /track\.addEventListener\('click', swallow, \{capture: true, once: true\}\)/);
   assert.match(motion, /event\.key !== 'ArrowLeft' && event\.key !== 'ArrowRight'/);
   // movimento reduzido
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  :is\(\.fit-float, \.fit-ground, \.fit-reveal, \.fit-carousel, \.fit-step-art, \.fit-card, \.fit-progress i\) \{ animation: none !important; \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  :is\(\.fit-float, \.fit-ground, \.fit-reveal, \.fit-carousel, \.fit-step-art, \.fit-card\) \{ animation: none !important; \}/);
   assert.match(motion, /const behavior = calm \? 'auto' : 'smooth';/);
   assert.match(css, /\.fit-tour\[data-motion\] :is\(\.fit-figure:not\(\.is-near\), \.fit-slide:not\(\[data-pos="active"\]\) \.fit-figure\) :is\(\.fit-float, \.fit-ground\) \{ animation-play-state: paused; \}/, 'flutua só a peça ativa, perto da tela');
 }
@@ -204,13 +214,15 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /if \(calm\) \{\n      tl\.fromTo\(\[part\.copy/, 'com movimento reduzido, só opacidade');
 }
 
-// ── Nossa coleção: cada card na cor da sua peça, com a foto (sem encaixe) e o card do meio por cima ──
+// ── Nossa coleção: só o card do centro na cor exclusiva da sua peça; os laterais no tom da página; foto sem encaixe ──
 {
   const catalog = read('dist/catalog.js'), css = read('dist/carousel.css');
-  assert.match(catalog, /const railTone = id => \{ const \{theme\} = showcase\(id\); return `--rail-stops:\$\{theme\.bannerStops\};--rail-accent:\$\{theme\.accentColor\};--rail-ink:\$\{theme\.textColor\}`; \};/);
+  assert.match(catalog, /return `--rail-own-1:\$\{one\};--rail-own-2:\$\{two\};--rail-own-3:\$\{three\};--rail-own-accent:\$\{theme\.accentColor\};--rail-own-ink:\$\{theme\.textColor\}`;/);
   assert.equal((catalog.match(/tabindex="-1" style="\$\{railTone\(id\)\}">/g) || []).length, 2, 'peças e novidades');
-  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-stops"\] \{\n  --theme-accent: var\(--rail-accent\);/);
-  assert.match(css, /background: radial-gradient\(130% 78% at 50% 20%, var\(--rail-stops\)\);/);
+  for (const name of ['--rail-1', '--rail-2', '--rail-3', '--rail-a', '--rail-i']) assert.match(css, new RegExp(`@property ${name} \\{ syntax: '<color>'`), 'cores registradas: deslizam suavemente na troca');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  --rail-1: color-mix\(in srgb, var\(--theme-wash, #f4e4e7\) 22%, #fff\);[^}]*--rail-a: var\(--rose, #b64c68\); --rail-i: var\(--ink, #282326\);/, 'laterais no tom da página');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \{ --rail-1: var\(--rail-own-1\); --rail-2: var\(--rail-own-2\); --rail-3: var\(--rail-own-3\); --rail-a: var\(--rail-own-accent\); --rail-i: var\(--rail-own-ink\);/, 'o do centro na cor da peça');
+  assert.match(css, /--rail-1 \.6s ease, --rail-2 \.6s ease, --rail-3 \.6s ease, --rail-a \.6s ease, --rail-i \.6s ease;/);
 }
 
 console.log('PASS: famílias de encaixe, figura encaixada, história com ficha técnica e peça fixa, carrossel da categoria, posição na home, Escolha o seu, filtro da página Produtos e movimento acessível.');

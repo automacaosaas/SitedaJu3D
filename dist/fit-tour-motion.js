@@ -256,23 +256,35 @@ function near() {
 }
 
 // Carrossel das peças da categoria: deslizar com o dedo (rolagem nativa com encaixe), arrastar com o mouse (com
-// impulso), setas e teclas ← →. Tocar num cartão leva à ficha técnica da peça, lá em cima.
+// impulso), setas e teclas ← →. No celular o cartão da vez fica no centro, e as bolinhas mostram qual é e levam a cada
+// um. Tocar num cartão leva à ficha técnica da peça, lá em cima.
 function carousel() {
   const more = tour.querySelector('.fit-more');
   if (!more) return;
-  const track = more.querySelector('.fit-track'), prev = more.querySelector('.fit-prev'), next = more.querySelector('.fit-next'), bar = more.querySelector('.fit-progress');
-  const timeline = supports('animation-timeline: scroll()');
+  const track = more.querySelector('.fit-track'), prev = more.querySelector('.fit-prev'), next = more.querySelector('.fit-next');
+  const cards = [...track.children], dots = [...more.querySelectorAll('.fit-pager button')];
   const pitch = () => (track.firstElementChild?.getBoundingClientRect().width || 280) + (parseFloat(getComputedStyle(track).columnGap) || 16);
   const max = () => track.scrollWidth - track.clientWidth;
+  // o cartão mais perto do centro da faixa (as posições são dentro da faixa, que é position: relative)
+  const centre = () => {
+    const middle = track.scrollLeft + track.clientWidth / 2;
+    let best = 0, distance = Infinity;
+    cards.forEach((card, i) => { const d = Math.abs(card.offsetLeft + card.offsetWidth / 2 - middle); if (d < distance) { distance = d; best = i; } });
+    return best;
+  };
   let frame = 0;
   const update = () => {
     frame = 0;
-    const end = max();
+    const end = max(), active = centre();
     more.classList.toggle('is-static', end < 4);
     prev.disabled = track.scrollLeft < 4;
     next.disabled = track.scrollLeft > end - 4;
-    if (!timeline) bar.style.setProperty('--p', end > 0 ? (track.scrollLeft / end).toFixed(3) : '0');
+    dots.forEach((dot, i) => { if (i === active) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); });
   };
+  dots.forEach((dot, i) => dot.addEventListener('click', () => {
+    const card = cards[i];
+    track.scrollTo({left: Math.max(0, Math.min(max(), card.offsetLeft + card.offsetWidth / 2 - track.clientWidth / 2)), behavior});
+  }));
   const later = () => { frame ||= requestAnimationFrame(update); };
   track.addEventListener('scroll', later, {passive: true});
   addEventListener('resize', later, {passive: true});
