@@ -45,7 +45,7 @@
    As fotos reais têm o fundo delas (preto ou claro) e não são quadradas: em volta delas, a mesma cor (--gallery-bg, de gallery.js). Peça
    ainda sem fotos reais: só a foto da vitrine, no quadro claro, sem miniaturas nem setas. */
 #product-dialog[data-view=photo] .detail-visual { background: #fff; }
-#product-dialog .image-area { position: absolute; inset: 70px 24px 46px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
+#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
 .gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
 .gallery-rail button { flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 12px; background: var(--gallery-bg, var(--pd-stage)); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
@@ -188,8 +188,8 @@
   #product-dialog .detail-copy { grid-column: 1; grid-row: 3; padding: 20px 24px 18px; gap: 16px; }
   #product-dialog .modal-actions { grid-column: 1; grid-row: 4; padding: 14px 24px 18px; }
   /* a vista de lado a lado, arrastando; os pontinhos embaixo dizem em qual se está */
-  #product-dialog[data-view=photo] .detail-visual { background: var(--pd-stage); }
-  #product-dialog .image-area { inset: 58px 0 34px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
+  #product-dialog[data-view=photo] .detail-visual { background: var(--gallery-bg, var(--pd-stage)); }
+  #product-dialog .image-area { inset: 58px 0 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
   .gallery-rail, .gallery-arrows { display: none; }
   .gallery-main { border-radius: 0; background: var(--gallery-bg, transparent); }
   .gallery-slide { padding: 0 16px; }
@@ -212,7 +212,7 @@
   #product-dialog .pdp-heading .detail-subtitle { display: block; font-size: 13px; }
   #product-dialog .view-tabs { top: 12px; left: 12px; }
   #product-dialog .view-tabs button { min-height: 34px; padding: 0 12px; }
-  #product-dialog .image-area { inset: 52px 0 28px; }
+  #product-dialog .image-area { inset: 52px 0 8px; }
   #product-dialog #viewer-host { inset: 50px 4px 68px; }
   #product-dialog .viewer-tools { bottom: 30px; }
   #product-dialog .view-note { bottom: 8px; left: 10px; right: 10px; line-height: 1.2; }

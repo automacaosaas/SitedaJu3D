@@ -20,7 +20,10 @@ const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
 assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'macacoscopio']);
 for (const key of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) {
   assert(realPhotos(key), `${key} tem fotos reais`);
-  assert.match(galleryBg(key), /^#[0-9a-f]{6}$/, `${key}: cor do fundo das fotos`);
+  // fundo claro: as fotos de fundo preto saem recortadas (sobre o quadro claro da página); as de fundo claro levam a cor dele em volta
+  const cut = Object.values(fotos[key]).every(f => f.fundo === 'recortar');
+  assert(cut ? galleryBg(key) === '' : /^#[e-f][0-9a-f]([e-f][0-9a-f]){2}$/.test(galleryBg(key)), `${key}: fundo claro (${galleryBg(key) || 'recortado'})`);
+  if (cut) for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo preto (com transparência)`); }
   const ids = viewsOf(key).map(v => v.id);
   assert(ids[0] === 'frente' && ids.length >= 5 && ids.filter(id => fotos[key][id]?.recorte).length === ids.length, `${key}: frente primeiro, mais ângulos e detalhes de perto, todos com recorte`);
   assert(viewsOf(key).some(v => / de perto$/.test(v.name)), `${key}: detalhes de perto`);
@@ -44,10 +47,10 @@ for (const key of keys) for (const item of staticViews(key)) {
 }
 assert(total < 1500000, `as imagens somam menos de 1,5 MB (${total} B)`);
 
-// Controlador: a galeria troca com a peça, com a cor do fundo das fotos; a nota diz a vista e que é foto real; cor leva ao 3D.
-assert(controller.includes("import {staticViews,createGallery,realPhotos,galleryBg} from './gallery.js';"));
-assert(controller.includes("$('.image-area').style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));"));
-assert(controller.includes("${realPhotos(activeProduct)?'foto real':preview()?'cores da peça':'cores da vitrine'}"), 'a nota diz a vista e que é foto real');
+// Controlador: a galeria troca com a peça, com a cor do fundo das fotos; sem nota embaixo da foto; cor leva ao 3D.
+assert(controller.includes("import {staticViews,createGallery,galleryBg} from './gallery.js';"));
+assert(controller.includes("dialog.style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));"));
+assert(controller.includes("$('.view-note').textContent=next==='photo'?'':") && !controller.includes('foto real'), 'na aba Foto, sem nota embaixo da foto');
 assert(/if\(view!=='model'\)setView\('model'\)/.test(controller), 'escolher uma cor leva ao 3D');
 assert(!/renderViews|createObjectURL/.test(controller + gallery + viewer), 'nada de gerar imagem no navegador de quem compra');
 
@@ -55,7 +58,7 @@ assert(!/renderViews|createObjectURL/.test(controller + gallery + viewer), 'nada
 for (const part of ["track.addEventListener('scroll'", "{ArrowLeft:-1,ArrowRight:1}[e.key]", "e.key==='Home'||e.key==='End'", "rail.addEventListener('pointermove'", "e.pointerType==='mouse'", "prev.disabled=index===0;next.disabled=index===items.length-1;", "slide.setAttribute('aria-roledescription','vista')", "matchMedia('(prefers-reduced-motion: reduce)')", "root.toggleAttribute('data-single',list.length<2)"]) assert(gallery.includes(part), part);
 
 // CSS: miniaturas à esquerda no computador; no celular, a faixa inteira e pontinhos com 24 px de toque; o fundo das fotos em volta delas.
-assert(css.includes('#product-dialog .image-area { position: absolute; inset: 70px 24px 46px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
+assert(css.includes('#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
 assert(css.includes('.gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;'));
 assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-rail, \.gallery-arrows \{ display: none; \}[\s\S]*\.gallery-dots button \{ display: grid; place-items: center; width: 24px; height: 24px;/.test(css));
 assert(css.includes('background: var(--gallery-bg, var(--pd-stage))') && /#product-dialog \.gallery img \{[^}]*mix-blend-mode: normal;/.test(css), 'em volta das fotos, a cor do fundo delas');
@@ -71,6 +74,6 @@ assert(page.includes("await (await fetch('/design/vistas/fotos.json')).json()") 
 assert(!/Fotografo|ProductViewer|kit/.test(page + generator), 'a ferramenta não tira fotos do 3D');
 assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video/mp4'"));
 // Tradução: nota, rótulos e texto alternativo das fotos.
-assert(i18n.includes('(.+) · (foto real|cores da vitrine|cores da peça)') && i18n.includes('(Frente|Três quartos|Lado|Costas|Três quartos de trás|.+ de perto)'));
+assert(i18n.includes('(Frente|Três quartos|Lado|Costas|Três quartos de trás|.+ de perto)'));
 
 console.log(`PASS: photo gallery — real photos with close-ups (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), the photo background around them, showcase photo alone without real photos, cleaner phone screen with the extras in the (i) sheet.`);

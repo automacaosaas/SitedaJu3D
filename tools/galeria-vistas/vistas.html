@@ -26,6 +26,31 @@ function centerX(source,bg){const {w,h,px}=pixels(source),b=[1,3,5].map(i=>parse
 // o recorte [x, y, largura, altura], com o lado maior em `long` pixels; o que passar da fonte fica com a cor do fundo
 function cut(source,[x,y,w,h],long,bg){if(x==='auto')x=Math.round(centerX(source,bg)-w/2);const k=long/Math.max(w,h),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
   const g=c.getContext('2d');g.fillStyle=bg;g.fillRect(0,0,c.width,c.height);g.imageSmoothingQuality='high';g.drawImage(source,x,y,w,h,0,0,c.width,c.height);return c;}
+// "fundo": "recortar" — tira o fundo preto (a galeria tem fundo claro): é fundo o que é escuro e encosta na borda (a abertura entre as
+// pernas também, que é fundo de verdade), e tudo abaixo de "chao" (y da fonte onde a peça toca o chão; abaixo, só o reflexo). Na beirada
+// da peça, transparência pelo brilho, com a cor tirada da mistura com o preto. O recorte [x, y, …] diz onde o canvas está na fonte.
+function matte(canvas,[x,y,w,h],floor){
+  const W=canvas.width,H=canvas.height,k=W/w,g=canvas.getContext('2d',{willReadFrequently:true}),img=g.getImageData(0,0,W,H),px=img.data;
+  const orig=new Uint8ClampedArray(px),v=i=>Math.max(orig[i],orig[i+1],orig[i+2]),LOW=40,HIGH=72,bg=new Uint8Array(W*H),stack=[];
+  const floorRow=floor==null?H:Math.max(0,Math.round((floor-y)*k));
+  for(let r=floorRow;r<H;r++)for(let c=0;c<W;c++)bg[r*W+c]=1;
+  const seed=(c,r)=>{const n=r*W+c;if(!bg[n]&&v(n*4)<LOW){bg[n]=1;stack.push(n);}};
+  for(let c=0;c<W;c++){seed(c,0);seed(c,Math.min(H-1,floorRow-1));}for(let r=0;r<Math.min(H,floorRow);r++){seed(0,r);seed(W-1,r);}
+  while(stack.length){const n=stack.pop(),c=n%W,r=(n-c)/W;if(c>0)seed(c-1,r);if(c<W-1)seed(c+1,r);if(r>0)seed(c,r-1);if(r<floorRow-1)seed(c,r+1);}
+  // beirada: até B pixels do fundo (1,5 pixel da fonte; os detalhes de perto são a fonte ampliada, e a beirada dela também)
+  const B=Math.max(2,Math.ceil(1.5*k)),R=B+2,dist=new Uint8Array(W*H).fill(255),queue=[];
+  for(let n=0;n<W*H;n++)if(bg[n]){dist[n]=0;queue.push(n);}
+  for(let q=0;q<queue.length;q++){const n=queue[q],d=dist[n];if(d>=B)continue;const c=n%W,r=(n-c)/W;
+    for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&dist[m]>d+1){dist[m]=d+1;queue.push(m);}}
+  for(let n=0;n<W*H;n++){const i=n*4;if(bg[n]){px[i+3]=0;continue;}
+    if(dist[n]>B)continue;const c=n%W,r=(n-c)/W;
+    // transparência da beirada: o brilho do pixel contra o da peça logo ao lado (o mais claro a até R px, fora do fundo)
+    let ref=HIGH;for(let dr=-R;dr<=R;dr++)for(let dc=-R;dc<=R;dc++){const rr=r+dr,cc=c+dc;if(rr<0||rr>=H||cc<0||cc>=W||bg[rr*W+cc])continue;ref=Math.max(ref,v((rr*W+cc)*4));}
+    const a=Math.min(1,Math.max(0,(v(i)-8)/(ref-8)));if(a<=0){px[i+3]=0;continue;}
+    for(let j=0;j<3;j++)px[i+j]=Math.min(255,Math.round(orig[i+j]/a));px[i+3]=Math.round(a*255);}
+  g.putImageData(img,0,0);return canvas;}
+const shrink=(canvas,long)=>{const k=long/Math.max(canvas.width,canvas.height),c=document.createElement('canvas');c.width=Math.round(canvas.width*k);c.height=Math.round(canvas.height*k);
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(canvas,0,0,c.width,c.height);return c;};
 // a foto da vitrine (fundo transparente), recortada em volta da peça e centralizada num quadrado
 function showcase(source,size){const {w,h,px}=pixels(source);let x0=w,y0=h,x1=-1,y1=-1;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[(y*w+x)*4+3]>12){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
@@ -42,8 +67,9 @@ try{
       const spec=fotos[key]?.[v.id];let big,mini;
       if(spec){
         const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));
-        const source=cache.get(id),bg=background(source);big=cut(source,spec.recorte,1000,bg);mini=cut(source,spec.recorte,200,bg);
-        window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · fundo ${bg}`;
+        const source=cache.get(id),bg=background(source),rect=[...spec.recorte];if(rect[0]==='auto')rect[0]=Math.round(centerX(source,bg)-rect[2]/2);
+        big=cut(source,rect,1000,bg);if(spec.fundo==='recortar')matte(big,rect,spec.chao);mini=shrink(big,200);
+        window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · ${spec.fundo==='recortar'?'fundo recortado':`fundo ${bg}`}`;
       }else if(v.id==='frente'){const source=await image(`/dist/assets/${p.catalogImage}`);big=showcase(source,1000);mini=showcase(source,200);window.info[`${key}-${v.id}`]='foto da vitrine';}
       else throw new Error(`${key}-${v.id}: falta a foto em design/vistas/fotos.json`);
       window.results[`${key}-${v.id}.webp`]=await asData(await encode(big,.9));

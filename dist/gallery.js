@@ -4,8 +4,8 @@
 // Cada peça: a cor do fundo das fotos (bg, para o quadro em volta delas, que não são quadradas) e as vistas, na ordem (a primeira abre a
 // galeria). Peça ainda sem fotos reais: só a foto da vitrine.
 export const GALLERY={
-  borboletoscopio:{bg:'#000000',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
-  dinossauroscopio:{bg:'#000000',views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
+  borboletoscopio:{bg:'',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
+  dinossauroscopio:{bg:'',views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
   aviaoscopia:{bg:'#f7f7f7',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',numeros:'Aberturas de perto',asa:'Asa e motor de perto'}}
 };
 export const viewsOf=key=>Object.entries(GALLERY[key]?.views||{frente:'Frente'}).map(([id,name])=>({id,name}));

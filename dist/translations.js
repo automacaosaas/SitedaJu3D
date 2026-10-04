@@ -804,7 +804,4 @@ Crista de perto|Crest up close|Cresta de cerca
 Pés de perto|Feet up close|Pies de cerca
 Aberturas de perto|Openings up close|Aberturas de cerca
 Asa e motor de perto|Wing and engine up close|Ala y motor de cerca
-foto real|real photo|foto real
-cores da vitrine|showcase colors|colores de la vitrina
-cores da peça|the piece's colors|colores de la pieza
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

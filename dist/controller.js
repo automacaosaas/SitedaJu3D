@@ -2,7 +2,7 @@ import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection} from './pro
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
-import {staticViews,createGallery,realPhotos,galleryBg} from './gallery.js';
+import {staticViews,createGallery,galleryBg} from './gallery.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
@@ -11,8 +11,8 @@ const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),s
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
-const photoNote=()=>`${gallery.current?.name} · ${realPhotos(activeProduct)?'foto real':preview()?'cores da peça':'cores da vitrine'}`;
-const gallery=createGallery($('.image-area'),{onChange:()=>{if(view==='photo')$('.view-note').textContent=photoNote();}});
+// na aba Foto não há nota embaixo: as fotos falam por si (o nome de cada uma fica nas miniaturas e nos pontinhos, para leitores de tela)
+const gallery=createGallery($('.image-area'));
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
 export const PRESETS=[{id:'original',name:'Original'},{id:'pastel',name:'Pastel',colors:['pink','lilac','cream']},{id:'vibrante',name:'Vibrante',colors:['sky','orange','yellow']},{id:'surpresa',name:'Surpreenda-me'}];
 export function presetSelection(key,preset,random=Math.random){
@@ -35,7 +35,7 @@ function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
-  $('.image-area').style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
+  dialog.style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
   else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
@@ -65,7 +65,7 @@ async function setView(next){
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
   $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
-  $('.view-note').textContent=next==='photo'?photoNote():preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
+  $('.view-note').textContent=next==='photo'?'':preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
   dialog.dataset.view=next;
   if(next==='photo'){viewer?.hide();return;}
   $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
