@@ -206,3 +206,16 @@
   .scenery-ferns .scenery-left { left:-25%; bottom:-36px; }
   .scenery-ferns .scenery-right { right:-26%; bottom:-28px; }
 }
+
+/* Nossa coleção: cada card na cor da sua peça (catalog.js põe --rail-stops/--rail-accent/--rail-ink, as mesmas do
+   banner). Continua a foto da peça, sem o encaixe, e o card do meio maior, por cima dos vizinhos; o botão, a categoria
+   e os detalhes usam o tom da própria peça. */
+.home .product-rail-card[style*="--rail-stops"] {
+  --theme-accent: var(--rail-accent); --theme-accent-strong: color-mix(in srgb, var(--rail-accent) 78%, #000); --theme-glow: color-mix(in srgb, var(--rail-accent) 30%, transparent);
+  --line: color-mix(in srgb, var(--rail-ink) 13%, transparent); --muted: color-mix(in srgb, var(--rail-ink) 68%, transparent);
+  border-color: rgba(255, 255, 255, .55); color: var(--rail-ink); background: radial-gradient(130% 78% at 50% 20%, var(--rail-stops));
+  box-shadow: 0 22px 40px -30px color-mix(in srgb, var(--rail-accent) 55%, transparent);
+}
+.home .product-rail-card[style*="--rail-stops"].is-active { border-color: rgba(255, 255, 255, .7); box-shadow: 0 34px 56px -34px color-mix(in srgb, var(--rail-accent) 70%, transparent); }
+.home .product-rail-card[style*="--rail-stops"] .product-rail-art, .home .product-rail-card[style*="--rail-stops"].is-active .product-rail-art { background: transparent; }
+.home .product-rail-card[style*="--rail-stops"] .product-rail-art img { filter: drop-shadow(0 14px 14px color-mix(in srgb, var(--rail-ink) 18%, transparent)); }

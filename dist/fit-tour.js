@@ -71,23 +71,24 @@ function specs(key, family) {
 }
 
 function step({key, family, number}, i) {
-  const product = piece(key), go = link(key);
+  const product = piece(key), go = link(key), overview = FIT[key]?.overview || product.description;
   return `<article class="fit-step" id="consultas-${key}" data-item="${key}" data-index="${i}" style="${tone(key)}" aria-labelledby="fit-name-${key}">`
     + `<div class="fit-step-art" aria-hidden="true"><i class="fit-glow"></i>${fitFigure(key, {alt: false})}</div>`
     + '<div class="fit-step-copy">'
     + `<p class="fit-family fit-reveal"><span class="fit-index">${number}</span><span>${esc(FAMILIES[family].label)}</span></p>`
-    + `<h3 class="fit-reveal" id="fit-name-${key}">${esc(product.title)}${product.soon ? '<span class="fit-soon">Em breve</span>' : ''}</h3>`
-    + `<p class="fit-overview fit-reveal">${esc(FIT[key]?.overview || product.description)}</p>`
+    + `<h3 class="fit-reveal" id="fit-name-${key}"><span class="fit-name" translate="no">${esc(product.title)}</span>${product.soon ? '<span class="fit-soon">Em breve</span>' : ''}</h3>`
+    + `<p class="fit-overview fit-reveal" data-text="${esc(overview)}">${esc(overview)}</p>`
     + `<p class="fit-label fit-reveal">FICHA TÉCNICA</p><dl class="fit-specs">${specs(key, family).replace(/<div>/g, '<div class="fit-reveal">')}</dl>`
     + `<p class="fit-actions fit-reveal"><a class="fit-cta" href="${go.href}">${icon(go.icon)}<span>${go.label}</span><span class="sr-only"> ${esc(product.title)}</span></a>`
     + `<a class="fit-link" href="#produto/${key}/encaixe">${icon('play')}<span>Ver encaixado</span><span class="sr-only"> ${esc(product.title)}</span></a></p>`
     + '</div></article>';
 }
 
-// Carrossel da categoria: a peça encaixada, o nome e o preço (ou "Em breve"); cada cartão abre a personalização.
+// Carrossel da categoria: a peça encaixada flutuando sobre a cor dela, o nome e o preço (ou "Em breve"); cada cartão
+// leva de volta à ficha técnica da peça, lá em cima.
 function card({key}) {
-  const product = piece(key), price = COMMERCE.prices[key], go = link(key);
-  return `<li class="fit-card" style="${tone(key)}"><a class="fit-card-link" href="${go.href}" draggable="false">`
+  const product = piece(key), price = COMMERCE.prices[key];
+  return `<li class="fit-card" style="${tone(key)}"><a class="fit-card-link" href="#consultas-${key}" data-item="${key}" draggable="false">`
     + `<span class="fit-card-art"><i class="fit-wash" aria-hidden="true"></i>${fitFigure(key, {alt: false})}</span>`
     + `<span class="fit-card-name">${esc(product.title)}</span><span class="fit-card-sub">${esc(product.subtitle)}</span>`
     + (product.soon || !price ? '<span class="fit-card-soon">Em breve</span>' : `<span class="fit-card-price">${esc(money(price))}</span>`)
@@ -97,14 +98,16 @@ function card({key}) {
 // Conteúdo da seção da home (o <section data-fit-tour> fica em index.html).
 export function fitTour() {
   const items = tourItems(), category = PRODUCT_CATEGORIES[piece(items[0].key).category]?.label || '';
-  const slides = items.map(({key}, i) => `<div class="fit-slide" data-item="${key}" data-pos="${i ? 'after' : 'active'}">${fitFigure(key)}</div>`).join('');
+  const slides = items.map(({key}, i) => `<div class="fit-slide" data-item="${key}" data-pos="${i ? 'after' : 'active'}" style="${tone(key)}">${fitFigure(key)}</div>`).join('');
   const dots = items.map(({key}, i) => `<a href="#consultas-${key}" aria-label="${esc(piece(key).title)}"${i ? '' : ' aria-current="true"'}><i></i></a>`).join('');
   return '<header class="fit-tour-head fit-reveal"><p class="eyebrow">FEITO PARA ENCAIXAR</p><h2 id="fit-tour-title">O 3D nas suas consultas</h2>'
     + '<p>Cada peça é pensada para um equipamento da consulta.</p></header>'
     + `<div class="fit-story" style="${tone(items[0].key)}">`
     + `<div class="fit-steps">${items.map(step).join('')}</div>`
     + `<div class="fit-stage" aria-hidden="true"><div class="fit-stage-pin"><i class="fit-glow"></i><div class="fit-slides">${slides}</div></div></div>`
-    + `<nav class="fit-dots" aria-label="Peças">${dots}</nav></div>`
+    + `<nav class="fit-dots" aria-label="Peças">${dots}</nav>`
+    // fundo da página nas cores de cada peça (fit-tour-motion.js leva para o <body> e troca pela rolagem)
+    + `<div class="fit-backdrop" aria-hidden="true">${items.map(({key}) => `<i style="${tone(key)}"></i>`).join('')}</div></div>`
     + '<section class="fit-more" aria-labelledby="fit-more-title">'
     + `<header class="fit-more-head fit-reveal"><h3 id="fit-more-title">Peças de ${esc(category.toLowerCase())}</h3><p>ENCONTRE A PEÇA DO SEU EQUIPAMENTO</p></header>`
     + `<div class="fit-carousel"><button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">${chevron('m15 5-7 7 7 7')}</button>`

@@ -56,7 +56,9 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
     assert.match(step, new RegExp(`^ id="consultas-${key}" data-item="${key}" data-index="${i}" style="--fit-accent:${showcase(key).theme.accentColor};`));
     assert.match(step, /--fit-bg-1:#[0-9a-f]{6};--fit-bg-2:#[0-9a-f]{6};--fit-bg-3:#[0-9a-f]{6}"/, 'as três cores da faixa vêm do degradê da peça');
     assert.match(step, new RegExp(`<span class="fit-index">${number}</span><span>${FAMILIES[family].label}</span>`));
-    assert.match(step, new RegExp(`<p class="fit-overview fit-reveal">${(FIT[key]?.overview || product.description).replace(/[.?()]/g, '\\$&')}</p>`), 'a visão geral é o texto da loja');
+    const overview = (FIT[key]?.overview || product.description).replace(/[.?()]/g, '\\$&');
+    assert.match(step, new RegExp(`<p class="fit-overview fit-reveal" data-text="${overview}">${overview}</p>`), 'a visão geral é o texto da loja (data-text: a fonte para dividir em palavras no idioma escolhido)');
+    assert.match(step, new RegExp(`<h3 class="fit-reveal" id="fit-name-${key}"><span class="fit-name" translate="no">${product.title}</span>`), 'o nome fica separado para subir letra a letra');
     assert.match(step, /<p class="fit-label fit-reveal">FICHA TÉCNICA<\/p><dl class="fit-specs">/);
     assert.match(step, new RegExp(`<dt>Encaixe</dt><dd><span>${FAMILIES[family].tool}</span></dd>`));
     if (product.soon) {
@@ -73,8 +75,10 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
     assert.equal((step.match(/class="[^"]*fit-reveal/g) || []).length, 9, 'família, nome, visão geral, rótulo, quatro linhas da ficha e ações aparecem com a rolagem');
   });
   const stage = /<div class="fit-stage" aria-hidden="true">[^]*?<\/div><\/div><\/div><nav/.exec(html)?.[0] || '';
-  assert.deepEqual([...stage.matchAll(/<div class="fit-slide" data-item="([a-z]+)" data-pos="([a-z]+)">/g)].map(m => `${m[1]}:${m[2]}`), items.map(({key}, i) => `${key}:${i ? 'after' : 'active'}`), 'sem script, a primeira peça aparece');
+  assert.deepEqual([...stage.matchAll(/<div class="fit-slide" data-item="([a-z]+)" data-pos="([a-z]+)" style="--fit-accent:/g)].map(m => `${m[1]}:${m[2]}`), items.map(({key}, i) => `${key}:${i ? 'after' : 'active'}`), 'sem script, a primeira peça aparece');
   assert.deepEqual([...html.matchAll(/<a href="#consultas-([a-z]+)" aria-label="([^"]+)"/g)].map(m => m[1]), items.map(i => i.key), 'um ponto por peça');
+  const backdrop = /<div class="fit-backdrop" aria-hidden="true">([^]*?)<\/div>/.exec(html)?.[1] || '';
+  assert.equal((backdrop.match(/<i style="--fit-accent:/g) || []).length, items.length, 'uma camada de fundo da página por peça, nas cores dela');
 }
 
 // ── o carrossel da categoria e "Escolha o seu" ──
@@ -86,8 +90,9 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   cards.forEach((card, i) => {
     const {key} = tourItems()[i], product = piece(key);
     assert.match(card, new RegExp(`<span class="fit-card-name">${product.title}</span><span class="fit-card-sub">${product.subtitle}</span>`));
-    if (product.soon) assert.match(card, new RegExp(`href="#produto/${key}/3d"[^]*<span class="fit-card-soon">Em breve</span>`));
-    else assert.match(card, new RegExp(`href="#produto/${key}/personalizar"[^]*<span class="fit-card-price">${money(COMMERCE.prices[key]).replace('$', '\\$')}</span>`), 'o preço da loja');
+    assert.match(card, new RegExp(`<a class="fit-card-link" href="#consultas-${key}" data-item="${key}"`), 'o cartão leva à ficha técnica da peça, lá em cima');
+    if (product.soon) assert.match(card, /<span class="fit-card-soon">Em breve<\/span>/);
+    else assert.match(card, new RegExp(`<span class="fit-card-price">${money(COMMERCE.prices[key]).replace('$', '\\$')}</span>`), 'o preço da loja');
   });
   assert.match(html, /<button type="button" class="fit-arrow fit-prev" aria-label="Produto anterior">/);
   assert.match(html, /<a class="fit-choose" href="escolha\.html"><span>Escolha o seu<\/span>/);
@@ -152,6 +157,48 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  :is\(\.fit-float, \.fit-ground, \.fit-reveal, \.fit-carousel, \.fit-step-art, \.fit-card, \.fit-progress i\) \{ animation: none !important; \}/);
   assert.match(motion, /const behavior = calm \? 'auto' : 'smooth';/);
   assert.match(css, /\.fit-tour\[data-motion\] :is\(\.fit-figure:not\(\.is-near\), \.fit-slide:not\(\[data-pos="active"\]\) \.fit-figure\) :is\(\.fit-float, \.fit-ground\) \{ animation-play-state: paused; \}/, 'flutua só a peça ativa, perto da tela');
+}
+
+// ── modo cinema: GSAP + ScrollTrigger + SplitText + Lenis, guardados no próprio site e carregados só aqui ──
+{
+  const motion = read('dist/fit-tour-motion.js'), css = read('dist/fit-tour.css'), page = read('dist/index.html');
+  for (const [file, head] of [['gsap.min.js', /GSAP 3\.15\.0/], ['ScrollTrigger.min.js', /ScrollTrigger 3\.15\.0/], ['SplitText.min.js', /SplitText 3\.15\.0/], ['lenis.min.js', /1\.3\.26/]]) {
+    const source = read(`dist/vendor/${file}`);
+    assert.match(source.slice(0, 400), head, `${file}: versão guardada no site`);
+    assert.doesNotMatch(source, /sourceMappingURL/, `${file}: sem referência a arquivo .map que não existe`);
+  }
+  assert.match(read('dist/vendor/GSAP-LICENSE.txt'), /gsap\.com\/standard-license/);
+  assert.match(read('dist/vendor/LENIS-LICENSE.txt'), /MIT/);
+  assert.match(motion, /const LIBS = \['vendor\/gsap\.min\.js', 'vendor\/ScrollTrigger\.min\.js', 'vendor\/SplitText\.min\.js', 'vendor\/lenis\.min\.js'\];/);
+  assert.doesNotMatch(page, /vendor\/gsap|vendor\/lenis/, 'nada bloqueia o carregamento da página: o módulo da seção busca as bibliotecas depois');
+  assert.match(motion, /Promise\.all\(LIBS\.map\(loadScript\)\)\.then\(cinema\)\.catch\(/, 'se não carregarem, fica o modo de reserva');
+  // Lenis: só a roda do mouse, sem mexer em janelas e gavetas; para enquanto a área do produto trava a página
+  assert.match(motion, /if \(!calm && Lenis\) \{\n    lenis = new Lenis\(\{lerp: \.1, allowNestedScroll: true, prevent: node => node\.matches\?\.\('dialog, \[role="dialog"\], \.language-menu, \[data-lenis-prevent\]'\)\}\);/);
+  assert.match(motion, /lenis\.on\('scroll', ScrollTrigger\.update\);\n    gsap\.ticker\.add\(time => lenis\.raf\(time \* 1000\)\);/);
+  assert.match(motion, /if \(now\) lenis\.stop\(\); else lenis\.start\(\);/);
+  // uma posição contínua manda no fundo, na peça fixa e na ficha ativa (só transform e opacidade)
+  assert.match(motion, /const p = progress\.reduce\(\(sum, value\) => sum \+ ease\(value\), 0\);/);
+  assert.match(motion, /layers\.forEach\(\(layer, i\) => \{ if \(i\) layer\.style\.opacity = clamp\(p - \(i - 1\), 0, 1\)\.toFixed\(3\); \}\);/);
+  assert.match(motion, /slide\.style\.transform = calm \? 'none' : `translate3d\(/);
+  assert.match(css, /\.fit-backdrop \{ display: none; position: fixed; inset: 0; z-index: -1;/);
+  // texto: letras do nome saindo da máscara, palavras acendendo, ficha em cascata, foco no centro da tela
+  assert.match(motion, /SplitText\.create\(name, \{type: 'chars,lines', mask: 'lines', tag: 'span',[^}]*aria: 'auto', autoSplit: true,/);
+  assert.match(motion, /gsap\.from\(self\.chars, \{yPercent: 118, ease: 'none', stagger: \.05, scrollTrigger: scrub\(name,/);
+  assert.match(motion, /gsap\.from\(self\.words, \{yPercent: 100, opacity: \.15,/);
+  assert.match(motion, /gsap\.from\(rows, \{y: 36, autoAlpha: 0, ease: 'none', stagger: \.24,/);
+  assert.match(motion, /const scrub = \(trigger, start, end\) => \(\{trigger, start, end, scrub: true\}\);/, 'a revelação acompanha a velocidade da rolagem');
+  assert.match(motion, /para\.textContent = translate\(source\);/, 'a visão geral é dividida já no idioma escolhido');
+  assert.match(motion, /addEventListener\('ju:language', \(\) => \{ build\(\); ScrollTrigger\.refresh\(\); \}\);/, 'e refeita quando o idioma muda');
+  assert.match(motion, /if \(calm\) return;\n  const scrub/, 'com movimento reduzido, nada de texto animado');
+}
+
+// ── Nossa coleção: cada card na cor da sua peça, com a foto (sem encaixe) e o card do meio por cima ──
+{
+  const catalog = read('dist/catalog.js'), css = read('dist/carousel.css');
+  assert.match(catalog, /const railTone = id => \{ const \{theme\} = showcase\(id\); return `--rail-stops:\$\{theme\.bannerStops\};--rail-accent:\$\{theme\.accentColor\};--rail-ink:\$\{theme\.textColor\}`; \};/);
+  assert.equal((catalog.match(/tabindex="-1" style="\$\{railTone\(id\)\}">/g) || []).length, 2, 'peças e novidades');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-stops"\] \{\n  --theme-accent: var\(--rail-accent\);/);
+  assert.match(css, /background: radial-gradient\(130% 78% at 50% 20%, var\(--rail-stops\)\);/);
 }
 
 console.log('PASS: famílias de encaixe, figura encaixada, história com ficha técnica e peça fixa, carrossel da categoria, posição na home, Escolha o seu, filtro da página Produtos e movimento acessível.');

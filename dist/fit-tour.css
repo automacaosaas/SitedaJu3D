@@ -59,7 +59,7 @@
 .fit-shade { opacity: .5; filter: brightness(0) blur(1.1cqw); object-position: 0 1cqw;
   -webkit-mask: var(--tool-src) calc(100cqw * (1 - var(--tool-w)) / 2) calc(100cqw * var(--tool-top)) / calc(100cqw * var(--tool-w)) auto no-repeat;
   mask: var(--tool-src) calc(100cqw * (1 - var(--tool-w)) / 2) calc(100cqw * var(--tool-top)) / calc(100cqw * var(--tool-w)) auto no-repeat; }
-.fit-cover { filter: drop-shadow(0 2.2cqw 3cqw rgba(20, 30, 25, .16)); }
+.fit-cover { filter: drop-shadow(0 2.2cqw 3cqw color-mix(in srgb, var(--fit-ink, #14201a) 20%, transparent)); }
 .fit-ground { position: absolute; left: 50%; bottom: 4%; width: 46%; height: 5%; translate: -50% 0; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--fit-ink) 30%, transparent), transparent); opacity: .7; }
 .fit-wash { position: absolute; inset: 0; background: radial-gradient(118% 96% at 50% 40%, var(--fit-stops)); }
 .fit-wash::after { content: ''; position: absolute; left: 50%; top: 44%; width: 82%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .78), rgba(255, 255, 255, .32) 46%, rgba(255, 255, 255, 0)); }
@@ -104,6 +104,7 @@
 .fit-more-head h3 { margin: 0; font: 500 clamp(30px, 3.2vw, 44px)/1.08 'Playfair Display', serif; letter-spacing: -.7px; color: var(--theme-text, var(--ink)); }
 .fit-more-head p { margin: 12px 0 0; font-size: 12px; font-weight: 650; letter-spacing: .2em; color: var(--theme-muted, var(--muted)); }
 .fit-carousel { position: relative; }
+.fit-carousel .fit-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
 .fit-track { display: flex; gap: clamp(14px, 1.8vw, 24px); margin: 0; padding: 8px 2px 22px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: 2px; scroll-behavior: smooth;
   scrollbar-width: none; cursor: grab; scroll-timeline: --fit-track x; }
 .fit-track::-webkit-scrollbar { display: none; }
@@ -111,18 +112,19 @@
 .fit-track.is-dragging a { pointer-events: none; }
 .fit-card { flex: 0 0 clamp(240px, 29%, 340px); scroll-snap-align: start; }
 .fit-card-link { display: grid; justify-items: center; gap: 3px; color: inherit; text-align: center; text-decoration: none; -webkit-user-drag: none; user-select: none; }
-.fit-card-art { position: relative; isolation: isolate; display: grid; place-items: center; width: 100%; aspect-ratio: 1 / 1.12; margin-bottom: 14px; border-radius: 26px; overflow: hidden;
-  box-shadow: 0 24px 44px -34px color-mix(in srgb, var(--fit-accent) 80%, transparent); transition: transform .6s var(--ease-out), box-shadow .6s ease; }
-.fit-card-art .fit-wash { z-index: -1; }
+.fit-card-art { position: relative; isolation: isolate; display: grid; place-items: center; width: 100%; aspect-ratio: 1 / 1.12; margin-bottom: 6px; transition: transform .6s var(--ease-out); }
+/* sem borda: a cor da peça é uma nuvem que se dissolve no fundo do site; só a peça flutua acima do nome */
+.fit-card-art .fit-wash { inset: 2% -6% 0; z-index: -1; border-radius: 50%; -webkit-mask-image: radial-gradient(closest-side, #000 38%, rgba(0, 0, 0, .55) 66%, transparent 100%); mask-image: radial-gradient(closest-side, #000 38%, rgba(0, 0, 0, .55) 66%, transparent 100%); transition: transform .8s var(--ease-out); }
 .fit-card-art .fit-figure { height: 92%; transition: transform .8s var(--ease-out); }
 .fit-card-name { font-size: 13px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; color: var(--fit-ink); }
 .fit-card-sub { font-size: 13px; color: color-mix(in srgb, var(--fit-ink) 62%, transparent); }
 .fit-card-price { margin-top: 5px; font-size: 15px; font-weight: 650; color: var(--fit-ink); }
 .fit-card-soon { margin-top: 6px; padding: 6px 11px 5px; border-radius: 999px; background: color-mix(in srgb, var(--fit-accent) 10%, #fff); color: var(--fit-accent); font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
-.fit-card-link:hover .fit-card-art { transform: translateY(-4px); box-shadow: 0 30px 50px -34px color-mix(in srgb, var(--fit-accent) 90%, transparent); }
-.fit-card-link:hover .fit-figure { transform: scale(1.03); }
-.fit-card-link:focus-visible { outline: none; }
-.fit-card-link:focus-visible .fit-card-art { outline: 2px solid var(--fit-accent); outline-offset: 3px; }
+.fit-card-link:hover .fit-card-art { transform: translateY(-5px); }
+.fit-card-link:hover .fit-figure { transform: scale(1.04); }
+.fit-card-link:hover .fit-wash { transform: scale(1.06); }
+.fit-card-link { border-radius: 28px; }
+.fit-card-link:focus-visible { outline: 2px solid var(--fit-accent); outline-offset: 2px; }
 .fit-arrow { position: absolute; top: calc(50% - 60px); z-index: 2; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 1px solid color-mix(in srgb, var(--theme-text, var(--ink)) 10%, transparent); border-radius: 50%; cursor: pointer;
   background: rgba(255, 255, 255, .86); color: var(--theme-text, var(--ink)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 10px 24px -14px rgba(0, 0, 0, .35); transition: opacity .35s ease, transform .35s var(--ease-out); }
 .fit-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -167,6 +169,27 @@
 .fit-tour.is-ready .fit-specs > .fit-reveal:nth-child(4) { transition-delay: .39s; }
 .fit-tour.is-ready .fit-step-copy > .fit-actions { transition-delay: .46s; }
 
+/* ── Modo cinema (fit-tour-motion.js com GSAP + ScrollTrigger + SplitText + Lenis) ──
+   A página inteira troca de cor pela rolagem (.fit-backdrop, uma camada fixa por peça, só opacidade), sem a faixa em bloco;
+   a peça fixa sai girando e a próxima chega (transform e opacidade); a ficha se constrói letra a letra e palavra a palavra. */
+html.lenis, html.lenis body { height: auto; }
+/* dentro de .page, logo depois de .hero-bg: acima do fundo do banner (que desce pela página inteira) e abaixo do conteúdo */
+.fit-backdrop { display: none; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; }
+.fit-backdrop.is-on { display: block; }
+.fit-backdrop i { position: absolute; inset: 0; opacity: 0; background: radial-gradient(82% 78% at 72% 50%, var(--fit-bg-1) 0%, var(--fit-bg-2) 55%, var(--fit-bg-3) 100%); will-change: opacity; }
+.fit-backdrop i:first-child { opacity: 1; }
+.fit-tour.is-gsap .fit-story::before { display: none; }
+.fit-tour.is-gsap :is(.fit-reveal, .fit-carousel, .fit-step-art) { animation: none; }
+.fit-tour.is-gsap .fit-step:not(.is-active) .fit-step-copy { opacity: 1; }
+.fit-tour.is-gsap .fit-slide { transition: none; filter: none !important; will-change: transform, opacity; }
+.fit-tour.is-gsap .fit-slide[data-pos] { opacity: 0; transform: none; }
+.fit-tour.is-gsap .fit-step-copy { transition: none; will-change: transform, opacity; }
+/* máscaras do SplitText: cada linha esconde o que ainda vai subir; folga embaixo para os acentos e o ç */
+.fit-tour.is-gsap :is(.fit-line-mask, .fit-line) { display: block; position: relative; text-align: start; }
+.fit-tour.is-gsap .fit-line-mask { overflow: clip; padding-bottom: .12em; margin-bottom: -.12em; }
+.fit-tour.is-gsap :is(.fit-char, .fit-word) { display: inline-block; position: relative; will-change: transform, opacity; }
+.fit-tour.is-gsap .fit-step h3 .fit-name { display: block; }
+
 /* ── Telas menores: sem peça fixa; cada ficha traz a sua peça flutuando logo acima, e a faixa troca de cor do mesmo jeito ── */
 @media (max-width: 979px) {
   .fit-story { grid-template-columns: minmax(0, 1fr); padding: 6px clamp(18px, 5vw, 40px) 18px; }
@@ -184,6 +207,7 @@
   .fit-arrow { display: none; }
   .fit-track { margin: 0 -22px; padding-inline: 22px; scroll-padding-inline: 22px; }
   .fit-card { flex-basis: min(72vw, 300px); }
+  .fit-backdrop i { background: radial-gradient(130% 70% at 50% 34%, var(--fit-bg-1) 0%, var(--fit-bg-2) 58%, var(--fit-bg-3) 100%); }
 }
 @media (max-width: 600px) {
   .fit-tour { margin-top: 64px; }
