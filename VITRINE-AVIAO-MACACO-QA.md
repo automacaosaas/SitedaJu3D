@@ -73,26 +73,26 @@ e nos cards da coleção e da página Produtos. Abre a área do produto **só pa
 Foto | 3D, as cores fixas da peça e o aviso "Ainda não está à venda" no lugar do preço e da compra. `#produto/macacoscopio` continua só
 levando a vitrine até ele.
 
-**Modelo 3D (02/10/2026; acertos de 03/10):** `dist/assets/models/macacoscopio.glb` é o macaco do Rodin `rodin-v2_-0 (9).glb` (refeito
-em 02/10/2026; antes, o (7) de 01/10), no lugar do provisório da vitrine. Sem textura: cinco materiais com as cores fixas do macaco, iguais
-em qualquer versão do modelo: `fur` (marrom, também nos pés: as patinhas são relevo), `face` (bege: rosto, barriga e orelhas), `features`
-(preto: olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de cada olho).
-- A textura do Rodin diz onde fica cada cor; as posições de cada parte saem dela, então o script serve para outras versões do modelo.
-- A placa do rosto e a barriga são decididas pela forma (o sulco em volta de cada uma).
-- Olhos, orelhas, sobrancelhas, nariz e boca: o desenho vem da textura e o contorno é alisado e cortado na própria malha (o olho dentro de
-  um oval, com um brilho oval igual nos dois).
-- Por dentro do tubo tudo é marrom. Superfície lisa, sem as ondinhas de "camada de impressão" (os relevos de verdade ficam parados).
-- A cabeça é aberta em cima, como a peça impressa (a coluna da lâmpada passa por dentro): o (9) veio com uma cúpula, que o script tira com
-  um furo do raio de dentro da cabeça.
-- A banana fica no meio da barriga (o Rodin a pôs 3,5 cm para a esquerda): o relevo dela gira em volta do eixo do tubo; o lugar antigo
-  é refeito pelo espelho da barriga, que é simétrica (forma e cor), e o amarelo segue o relevo (sem os dentes e a linha marrom da textura).
-- Os ombros são fechados: atrás de cada braço o Rodin deixou uma fenda atravessando a parede (um vão escuro). Uma tampa com a forma da
-  parede entra encaixada nela, e a casca do corpo em volta é assentada na mesma superfície, medida em volta da fenda (sem degrau).
+**Modelo 3D (03/10/2026):** `dist/assets/models/macacoscopio.glb` é o macaco do Meshy `Meshy_AI__1003230505_model-edit.glb` (recebido em
+03/10/2026: o macaco inteiro, sem textura nem cor), no lugar do macaco do Rodin. Sem textura: cinco materiais com as cores fixas do macaco,
+as mesmas do Rodin: `fur` (marrom, também nos pés: as patinhas são relevo), `face` (bege: rosto, barriga e orelhas), `features` (preto:
+olhos, sobrancelhas, nariz e boca), `banana` e `highlight` (o brilho branco de cada olho).
+- As cores vêm do relevo do modelo visto de frente: cada parte é a área fechada pelo sulco em volta dela; o contorno é alisado e cortado
+  na própria malha, e os sulcos de dentro do rosto e da barriga ficam bege.
+- Patinhas refeitas (as do Meshy saíram tortas: dedos grudados e um caroço a mais no pé direito): almofada oval e quatro dedos em arco,
+  iguais nos dois pés, na superfície do corpo.
+- Por dentro liso: o oco tinha o avesso da placa da barriga, um bolso de ~2 cm. O raio do oco segue o desenho dele, que se repete em toda
+  a altura (ondula ±6 mm em volta), e uma forra lisa cobre o que sobrou.
+- Ombros sem o vão: em volta da raiz de cada braço o Meshy deixou um bolso de ~2,5 cm. Uma tampa com a forma da parede o fecha, e a casca
+  do corpo em volta é assentada na mesma superfície (sem degrau).
+- O furo de cima é redondo: a borda de dentro da cabeça vira uma superfície de revolução (o perfil médio dela). E a fresta embaixo da placa
+  da barriga, que atravessava a parede, é coberta por fora.
+- A banana ficou onde o Meshy a pôs: a ponta dela encosta na mão direita, então ela não vai para o meio da barriga como no modelo do Rodin.
 
-`tools/modelo-macaco/preparar_cores.py` (Blender) refaz o arquivo, igual byte a byte, a partir do GLB do Rodin, com 60% das faces;
-depois, `meshopt` como abaixo: 1.777 KB (`?v=rodin9-2`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos, das
-orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo, que a banana está no meio da barriga, que a parede atrás dos ombros
-é fechada e que a cabeça é aberta em cima.
+`tools/modelo-macaco/meshy/preparar_meshy.py` (Blender, com os módulos da mesma pasta) refaz o arquivo, igual byte a byte, a partir do GLB
+do Meshy; depois, `meshopt` como abaixo: 1.606 KB (`?v=meshy-1`). `tests/model-details.mjs` confere as cores em pontos do rosto, dos olhos,
+das orelhas, da barriga, da banana, dos pés, das costas e de dentro do tubo, as patinhas iguais, que os ombros não têm bolso, que por dentro
+da barriga é liso e que a cabeça é aberta em cima, com o furo redondo. `tools/modelo-macaco/preparar_cores.py` é o do macaco do Rodin.
 
 **Foto da vitrine e cards (02/10/2026):** `product-macacoscopio-cutout.webp` (banner, aba "Foto" e demonstração), `card-macacoscopio.webp`
 e `card-preview-macacoscopio.webp` vêm da foto enviada em 02/10/2026 (`design/originais/macacoscopio-foto.webp`, já com o fundo
@@ -126,5 +126,5 @@ carrinho, e a área do produto mostra as cores fixas com o preço e a compra.
 3. Em `dist/asset-models.js`, trocar o `?v=` do macaco por um valor novo (os navegadores não reaproveitam o arquivo antigo).
 4. `npm test`: `tests/asset-models.mjs` confere que o macaco carrega, não tem textura nem parte colorível, assenta na pilastra e
    cabe nela; `tests/model-framing.mjs`, que não corta em nenhuma rotação; `tests/assets.mjs`, a compressão e o limite de tamanho;
-   `tests/model-details.mjs`, as cores do modelo do Rodin (num modelo novo, trocar esses pontos).
+   `tests/model-details.mjs`, as cores e a forma do modelo do Meshy (num modelo novo, trocar esses pontos).
    Se preferir, suba o STL ou o 3MF em `design/modelos/macacoscopio/` (fora do site publicado) e peça a conversão.

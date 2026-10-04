@@ -31,7 +31,7 @@ node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1" saida.png monkeylam
 node runpage.cjs "w=1000&h=1550&exposure=1.06" saida.png slitlamp.html           # lâmpada sozinha (camadas: full, base, column, top)
 node runpage.cjs "w=600&h=2400" saida.png ruler.html                             # régua sozinha
 node runpage.cjs "" saida.png monkey.html                                        # macaco sozinho
-node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1&model=rodin" saida.png monkeylamp.html   # o mesmo, com o modelo 3D do site (Rodin)
+node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1&model=rodin" saida.png monkeylamp.html   # o mesmo, com o modelo 3D do site
 node art.cjs imagem.webp                                                          # h, bottom e foot de uma imagem de vitrine
 node runpage.cjs "" og.png og-patch.html                                          # prévia de link do avião: troca só o avião na arte
 node export-glb.cjs                                                               # prévia 3D do avião (dist/assets/models/aviaoscopia.glb), simplificada e comprimida
@@ -55,5 +55,5 @@ Arquivos do site gerados aqui: `product-aviaoscopia-cutout`, `aviaoscopia` (popu
 
 `node export-glb.cjs macaco-procedural.glb 0.0001 monkey-glb.html` gera o macaco de `monkey.js` em GLB, com as cores pintadas
 passadas para os vértices (cores fixas, nada colorível). Foi a prévia 3D do site até 02/10/2026; agora `dist/assets/models/macacoscopio.glb`
-é o modelo do Rodin (`tools/modelo-macaco/`, veja `VITRINE-AVIAO-MACACO-QA.md`), então não grave por cima dele.
+é o modelo do Meshy (`tools/modelo-macaco/meshy/`, veja `VITRINE-AVIAO-MACACO-QA.md`), então não grave por cima dele.
 `glb.js` é o gravador de GLB das duas exportações.

@@ -86,7 +86,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   configurar os 3x sem juros no Mercado Pago e conferir se o webhook aponta para a Hostinger; confirmar preços; passar e-mail e WhatsApp;
   passar o id da natureza do Bling.
 - **Macacoscópio à venda (02/10/2026):** faltam preço, peso embalado, NCM e as lâmpadas compatíveis (o que muda em
-  `VITRINE-AVIAO-MACACO-QA.md`). Hoje é novidade com "Ver em 3D", já com o modelo do Rodin em cores fixas.
+  `VITRINE-AVIAO-MACACO-QA.md`). Hoje é novidade com "Ver em 3D", já com o modelo do Meshy em cores fixas.
 - **Depende de conteúdo ou decisão (auditoria):** ficha técnica (C2), fotos reais e vídeo (C4), Sobre e Contato (G1; depois remover o
   `noindex` dessas páginas), depoimentos (G3), "Avise-me" nos Sensoriais (B4), regra de cor do tema (F4 e H2; sugestão: tema do
   produto na vitrine e no produto, rosa Ju no fluxo de compra e no institucional), analytics com aviso de consentimento (K1).
