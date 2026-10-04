@@ -5,7 +5,7 @@ ombros sem o vão em volta da raiz dos braços e o furo de cima redondo; e a fre
 As cores vêm do relevo do modelo visto de frente (o sulco em volta de cada parte).
 Uso: blender -b -P preparar_meshy.py -- <meshy.glb> <saida.glb>
 """
-import sys,os;D=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,D)
+import sys,os;D=os.path.dirname(os.path.abspath(__file__));sys.path.insert(0,D);sys.dont_write_bytecode=True     # sem __pycache__ na pasta
 for f in ('base.py','regioes.py','cut.py','cores.py','topo.py','patas.py','ombros.py','frestas.py','dentro.py'):
     exec(open(os.path.join(D,f),encoding='utf-8').read())
 a=sys.argv[sys.argv.index('--')+1:];src,dst=os.path.abspath(a[0]),os.path.abspath(a[1])
