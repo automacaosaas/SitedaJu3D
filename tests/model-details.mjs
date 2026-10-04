@@ -78,9 +78,14 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   }
   assert.equal(materialAt(0,.338),'body','Even gap between the two front teeth');
   assert.equal(materialAt(0,.738),'body','No crest color rectangle on the forehead');
-  // Complete crest in profile: every spike is painted from its root (top spike, back wedge, lower spike).
+  // Complete crest in profile: every spike is painted from its root (top spike, back wedge).
+  // Two spikes since 04/10/2026, like the new piece: the lower one, at the nape, touched the user's nose and was lowered into the
+  // crest strip that closes the back of the head (tools/modelo-dino/crista.cjs).
   for(const fromLeft of [false,true]){
-   for(const [h,d] of [[.83,-.08],[.68,-.23],[.60,-.30],[.45,-.36]])assert.equal(side(h,d,fromLeft).name,'details','Crest painted along the top and back of the head');
+   for(const [h,d] of [[.83,-.08],[.68,-.23],[.60,-.30]])assert.equal(side(h,d,fromLeft).name,'details','Crest painted along the top and back of the head');
+   ray.set(new T.Vector3(fromLeft?-2:2,.45,-.36),new T.Vector3(fromLeft?1:-1,0,0));
+   assert.equal(ray.intersectObject(scene,true).length,0,'No lower spike at the nape any more');
+   assert.equal(side(.45,-.28,fromLeft).name,'details','The crest strip still runs down the nape');
    assert.equal(side(.55,-.10,fromLeft).name,'body','The head itself keeps the body color');
   }
   let teeth=0;scene.traverse(o=>{if(o.material?.name==='teeth'){teeth++;assert.equal(o.material.color.getHexString(),'ffffff','Teeth stay white');}});
