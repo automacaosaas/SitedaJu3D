@@ -58,14 +58,35 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
   </aside>`;
 }
 
-// Depois do resumo: as outras peças da loja (as que ainda não estão no carrinho), cada uma levando à página dela.
+// Depois do resumo: até 3 das outras peças da loja (as que ainda não estão no carrinho), cada uma levando à página dela, e
+// no fim "Ver mais", para a página Produtos. No celular é uma fileira que desliza, com setas finas (wireRecArrows).
 function recommendations(cart) {
-  const inCart = new Set(cart.map(item => item.productId)), ids = Object.keys(PRODUCTS).filter(id => !inCart.has(id));
+  const inCart = new Set(cart.map(item => item.productId)), ids = Object.keys(PRODUCTS).filter(id => !inCart.has(id)).slice(0, 3);
   if (!ids.length) return '';
-  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><ul class="cart-rec-track">${ids.map(id => {
+  const more = `<li><a class="cart-rec cart-rec-more" href="produtos.html"><span class="cart-rec-more-mark" aria-hidden="true">${icon('arrow')}</span><strong>Ver mais</strong><small>Todas as peças</small></a></li>`;
+  const arrow = (step, label) => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-label="${label}" hidden>${icon('arrow')}</button>`;
+  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><div class="cart-rec-rail">${arrow(-1, 'Peças anteriores')}<ul class="cart-rec-track" data-rec-track>${ids.map(id => {
     const product = PRODUCTS[id], {theme} = showcase(id);
     return `<li><a class="cart-rec" href="${id}.html" style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></span><span class="cart-rec-copy"><span class="cart-rec-name">${esc(product.title)}</span><span class="cart-rec-sub">${esc(product.subtitle)}</span><strong class="cart-rec-price">${money(COMMERCE.prices[id])}</strong></span></a></li>`;
-  }).join('')}</ul></section>`;
+  }).join('')}${more}</ul>${arrow(1, 'Mais peças')}</div></section>`;
+}
+
+// As setas da fileira: avançam um card e somem quando não há mais para onde ir (no computador, sem rolagem, não aparecem).
+export function updateRecArrows(root) {
+  const track = root.querySelector('[data-rec-track]');
+  if (!track) return;
+  const max = track.scrollWidth - track.clientWidth - 2;
+  root.querySelectorAll('[data-rec-step]').forEach(button => { button.hidden = max <= 0 || (Number(button.dataset.recStep) < 0 ? track.scrollLeft <= 2 : track.scrollLeft >= max); });
+}
+export function wireRecArrows(root) {
+  root.addEventListener('click', event => {
+    const button = event.target.closest('[data-rec-step]'), track = root.querySelector('[data-rec-track]');
+    if (!button || !track) return;
+    const step = (track.querySelector('li')?.offsetWidth || 240) + 12;
+    track.scrollBy({left: Number(button.dataset.recStep) * step, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  });
+  root.addEventListener('scroll', event => { if (event.target.matches?.('[data-rec-track]')) updateRecArrows(root); }, true);
+  window.addEventListener('resize', () => updateRecArrows(root), {passive: true});
 }
 
 // No fim: o que a pessoa precisa saber para comprar tranquila (cada linha leva à política) e os meios de pagamento

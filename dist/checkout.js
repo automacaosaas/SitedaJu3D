@@ -7,14 +7,14 @@ import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paym
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
-import {freeShippingBar} from './free-shipping.js';
+import {freeShippingBar, barRatio, riseBar} from './free-shipping.js';
 import {installmentRows, installmentsTable} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 
 import {refreshHeader} from './site-shell.js';
-import {renderCart, cartSummary} from './cart-view.js';
+import {renderCart, cartSummary, wireRecArrows, updateRecArrows} from './cart-view.js';
 
 const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
@@ -298,8 +298,12 @@ function render(focus = true) {
   const steps = document.querySelector('.shop-steps');
   main.before(steps);
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+  // the free-shipping bar rises from where it was when a quantity goes up
+  const barBefore = stage === 'cart' ? barRatio(main) : null;
   main.innerHTML = stage === 'cart' ? renderCart(cart, cartOptions()) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
+  if (barBefore !== null) riseBar(main, barBefore);
+  if (stage === 'cart') updateRecArrows(main);
   if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
   ensureShipping();
   if (stage === 'delivery') setTimeout(autofillKnownCep, 0);
@@ -469,6 +473,7 @@ main.addEventListener('change', e => {
   const option = ship.options.find(o => o.service === e.target.value);
   if (option) { ship = {...ship, chosen: option}; paintShipping(); }
 });
+wireRecArrows(main);
 main.addEventListener('click', e => {
   if (!real || !e.target.closest('[data-action="retry-shipping"]')) return;
   const form = main.querySelector('#delivery-form'), cep = String(form?.elements.cep?.value ?? draft.cep ?? '').replace(/\D/g, '');

@@ -6,7 +6,7 @@ import {PRODUCTS, color, defaults} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, signature} from './cart-store.js';
 import {loadShippingConfig} from './shipping-client.js';
-import {freeShippingBar} from './free-shipping.js';
+import {freeShippingBar, riseBar} from './free-shipping.js';
 import {icon} from './icons.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
@@ -34,10 +34,13 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
     + `${freeShippingBar(freeShipping, amount.subtotal)}${kitList}</div>`
     + `<div class="mini-cart-actions"><a class="primary" href="checkout.html" data-mini-cart-go>Ver carrinho ${icon('arrow')}</a><button type="button" class="mini-cart-continue" data-mini-close>Continuar escolhendo</button></div>`;
 }
-let dialog = null, freeShipping = null, configAsked = null, shownId = null, shownOriginal = false;
+// riseFrom: the subtotal before the piece just added, so the free-shipping bar rises from there (kept until the bar shows,
+// which can be a moment later, when the shipping rule arrives from the server).
+let dialog = null, freeShipping = null, configAsked = null, shownId = null, shownOriginal = false, riseFrom = null;
 function paint() {
-  const body = dialog.querySelector('.mini-cart-body');
-  body.innerHTML = miniCartBody({cart: readCart(), itemId: shownId, original: shownOriginal, freeShipping});
+  const body = dialog.querySelector('.mini-cart-body'), cart = readCart();
+  body.innerHTML = miniCartBody({cart, itemId: shownId, original: shownOriginal, freeShipping});
+  if (riseFrom !== null && freeShipping?.fromCents && body.querySelector('.free-ship')) { riseBar(body, Math.min(1, Math.max(0, riseFrom) / freeShipping.fromCents)); riseFrom = null; }
 }
 function ensureDialog() {
   if (dialog) return dialog;
@@ -46,12 +49,14 @@ function ensureDialog() {
   dialog.setAttribute('aria-label', 'Seu carrinho');
   dialog.innerHTML = '<div class="mini-cart-body"></div><p class="sr-only" role="status" aria-live="polite"></p>';
   document.body.append(dialog);
+  dialog.addEventListener('close', () => { riseFrom = null; });
   dialog.addEventListener('click', event => {
     if (event.target === dialog || event.target.closest('[data-mini-close]')) { dialog.close(); return; }
     const kit = event.target.closest('[data-kit-add]');
     if (!kit) return;
     const id = kit.dataset.kitAdd;
     try {
+      riseFrom = totals(readCart(), 0).subtotal;
       const cart = writeCart(putItem(readCart(), id, defaults(id)));
       shownId = cart.find(i => signature(i.productId, i.selection) === signature(id, defaults(id)))?.id || null; shownOriginal = true;
       window.dispatchEvent(new Event('ju:cart'));
@@ -67,6 +72,8 @@ function ensureDialog() {
 export function openMiniCart({itemId = null, original = false} = {}) {
   ensureDialog();
   shownId = itemId; shownOriginal = original;
+  const cart = readCart(), item = cart.find(i => i.id === itemId);
+  riseFrom = item ? totals(cart, 0).subtotal - item.unitPrice : null;
   paint();
   if (!dialog.open) dialog.showModal();
   dialog.querySelector('[data-mini-cart-go]')?.focus();

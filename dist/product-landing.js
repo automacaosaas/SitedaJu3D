@@ -109,16 +109,28 @@ function setup(root, key) {
     }
     paint();
   }
-  // No celular, escolhendo as cores, a peça fica presa no alto (menor) enquanto a paleta está à vista, e a página rola até
-  // a paleta logo abaixo dela; passada a paleta, a peça volta a rolar com a página.
-  let pinWatch = null;
+  // No celular, escolhendo as cores: a peça fica presa no alto (menor), o header some (o foco é a peça) e a página rola até
+  // o botão e a paleta, logo abaixo dela. Passada a paleta, o fim dela vai empurrando a peça para cima junto com a rolagem,
+  // como se a soltasse aos poucos; aí o header pode voltar. Rolando de volta, a peça desce de novo do mesmo jeito.
+  const holder = root.querySelector('.pl-stage'), TOP = 8, GAP = 12;
+  let follow = null;
   function pin(on = true) {
-    pinWatch?.disconnect(); pinWatch = null; root.classList.remove('is-pinned');
+    if (follow) { window.removeEventListener('scroll', follow.schedule); window.removeEventListener('resize', follow.schedule); cancelAnimationFrame(follow.frame); follow = null; }
+    root.classList.remove('is-pinned'); document.documentElement.classList.remove('pl-focus'); holder.style.transform = '';
     if (!on || !phone.matches) return;
-    const card = panel.querySelector('.pl-custom-card'), cover = stage.getBoundingClientRect().height + 20;
-    pinWatch = new IntersectionObserver(([entry]) => root.classList.toggle('is-pinned', entry.isIntersecting), {rootMargin: `-${Math.round(cover)}px 0px 0px 0px`});
-    pinWatch.observe(card);
-    const top = card.getBoundingClientRect().top + scrollY - cover;
+    root.classList.add('is-pinned');
+    const card = panel.querySelector('.pl-custom-card');
+    const update = () => {
+      follow.frame = 0;
+      const height = holder.offsetHeight, push = Math.min(TOP + height + GAP - card.getBoundingClientRect().bottom, height + TOP + 40);
+      holder.style.transform = push > 0 ? `translate3d(0, ${-push}px, 0)` : '';
+      document.documentElement.classList.toggle('pl-focus', push < height);
+    };
+    follow = {frame: 0, schedule: () => { if (!follow.frame) follow.frame = requestAnimationFrame(update); }};
+    window.addEventListener('scroll', follow.schedule, {passive: true}); window.addEventListener('resize', follow.schedule, {passive: true});
+    update();
+    // o botão ativo (que fecha as cores) fica à vista logo abaixo da peça, com a paleta em seguida
+    const top = customize.getBoundingClientRect().top + scrollY - (TOP + holder.offsetHeight + GAP);
     if (top > scrollY) window.scrollTo({top, behavior: reduced.matches ? 'auto' : 'smooth'});
   }
   // A foto mostra só as cores originais: ao escolher uma cor, a peça passa para o 3D.
@@ -127,6 +139,8 @@ function setup(root, key) {
     paint(`${product.parts.find(p => p.id === part).name}: ${color(id).name}.`);
     if (view !== '3d') setView('3d');
   }
+  // ativo (cores abertas), o botão se pinta com as cores e mostra um × pequeno: clicar de novo fecha
+  customize.insertAdjacentHTML('beforeend', '<i class="pl-customize-x" aria-hidden="true"></i>');
   customize.setAttribute('aria-controls', 'pl-custom'); customize.setAttribute('aria-expanded', 'false'); customize.setAttribute('role', 'button');
   customize.addEventListener('click', event => { event.preventDefault(); openPanel(panel.hidden || !panel.classList.contains('is-open')); });
   customize.addEventListener('keydown', event => { if (event.key === ' ') { event.preventDefault(); customize.click(); } });

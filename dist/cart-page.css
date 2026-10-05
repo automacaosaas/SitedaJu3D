@@ -47,7 +47,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-order-summary h2 { scroll-margin-top: 24px; }
 .cart-selection-help { font-size: 12px; color: var(--rose); margin: 10px 0 0; }
 /* Depois do resumo (largura toda): "Você também pode gostar" e as informações da compra com os meios de pagamento. */
-.cart-more { display: grid; gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
+.cart-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
 .cart-recs h2, .cart-pay h2 { margin: 0 0 18px; font: 500 clamp(24px, 2.4vw, 30px)/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.6px; }
 .cart-rec-track { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .cart-rec { display: grid; height: 100%; border: 1px solid #b64c681b; border-radius: 16px; overflow: hidden; background: var(--panel); color: inherit; text-decoration: none; box-shadow: 0 6px 22px #65364908; transition: transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s ease; }
@@ -58,6 +58,22 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-rec-sub { font-size: 12px; color: var(--muted); }
 .cart-rec-price { margin-top: 6px; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .cart-rec:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+/* "Ver mais": o último card leva à página Produtos */
+.cart-rec-more { align-content: center; justify-items: center; gap: 6px; min-height: 240px; padding: 24px 16px; border-style: dashed; border-color: color-mix(in srgb, var(--rose) 30%, transparent); background: color-mix(in srgb, var(--rose) 5%, var(--panel)); text-align: center; }
+.cart-rec-more-mark { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 6px; border: 1.5px solid var(--rose); border-radius: 50%; color: var(--rose); transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), background-color .3s ease, color .3s ease; }
+.cart-rec-more-mark svg { width: 20px; height: 20px; }
+.cart-rec-more strong { font: 500 20px/1.2 'Playfair Display', Georgia, serif; }
+.cart-rec-more small { font-size: 12px; color: var(--muted); }
+/* setas finas sobre a fileira (só quando ela rola, no celular) */
+.cart-rec-rail { position: relative; }
+.cart-rec-arrow { position: absolute; top: 32%; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffd9; backdrop-filter: blur(8px); color: var(--ink); box-shadow: 0 6px 16px #6536491a; cursor: pointer; transition: transform .25s ease; }
+.cart-rec-arrow[hidden] { display: none; }
+.cart-rec-arrow svg { width: 16px; height: 16px; }
+.cart-rec-arrow.is-next { right: -6px; }
+.cart-rec-arrow.is-prev { left: -6px; }
+.cart-rec-arrow.is-prev svg { transform: rotate(180deg); }
+.cart-rec-arrow:active { transform: scale(.92); }
+.cart-rec-arrow:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
 /* Informações da compra: uma linha por assunto, com o ícone e um link para a política. */
 .cart-info { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
 .cart-info-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -149,6 +165,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-rec:hover { transform: translateY(-3px); box-shadow: 0 14px 30px #65364914; }
   .cart-rec:hover .cart-rec-art img { transform: scale(1.05); }
   .cart-info-list a:hover { text-decoration-color: currentColor; }
+  .cart-rec-more:hover .cart-rec-more-mark { transform: translateX(4px); background: var(--rose); color: #fff; }
 }
 /* The cart's CEP box: price the delivery before signing in (the same CEP goes on to the delivery step). */
 .cart-ship { margin: 4px 0 16px; }

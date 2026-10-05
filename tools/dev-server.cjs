@@ -114,7 +114,9 @@ async function main() {
   const {createFakeCorreios, EXAMPLE_CONFIG} = require('./fake-correios.cjs');
   const fakeCorreiosApi = fakeCorreios ? createFakeCorreios() : null;
   if (fakeCorreiosApi) Object.assign(env, fakeCorreiosApi.creds);
-  const shippingConfig = fakeCorreiosApi ? EXAMPLE_CONFIG : undefined;
+  // the example boxes, with the shop's own production time and free shipping, so the preview shows the same rule as the site
+  const shopShipping = require('../api/_lib/shipping-config');
+  const shippingConfig = fakeCorreiosApi ? {...EXAMPLE_CONFIG, production: shopShipping.production, freeShipping: shopShipping.freeShipping} : undefined;
   const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
   const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
   const routes = {

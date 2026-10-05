@@ -16,6 +16,27 @@ Feito a partir de `c73dcf4`. Os commits estão só no computador: a branch ainda
   - a peça agora sai por cima do card em "Nossa coleção";
   - o menu do perfil ganhou ícone;
   - o carrinho e a página do produto foram refeitos.
+- **2026-10-05 (pedidos do dono depois de testar no celular):**
+  - **Página do produto, escolhendo as cores no celular:**
+    - o header não aparece mais por cima da peça (era o bug de girar o modelo e subir a tela);
+    - a peça fica presa no alto e, passada a paleta, vai sendo empurrada para cima junto com a rolagem, até sair (`.pl-focus`, `pin()` em `product-landing.js`);
+    - ao abrir, a tela para com o botão ativo e a paleta logo abaixo da peça.
+  - **"Personalizar o meu" ativo:**
+    - a cor entra da esquerda como tinta (degradê das cores da loja correndo devagar sob uma trama de quadradinhos);
+    - letra branca e um × que avisa que outro clique fecha.
+  - **Cards da página Produtos e de "Nossa coleção":** só o relógio com "3 a 5 dias úteis" e sem "Preço ilustrativo" (os preços serão corrigidos depois).
+  - **"Nossa coleção":**
+    - os cards dos lados menores (80%) e recolhidos atrás do central, que ficou um pouco maior;
+    - a peça do centro salta mais alto, com um leve quique. No celular ela sobe menos, para não encostar no texto.
+  - **Botão do carrinho nos cards:** o carrinho dá uma volta, com um pulinho, e só depois de 0,6 s o mini-carrinho sobe.
+  - **Barra do frete grátis:**
+    - no mini-carrinho, sobe do valor de antes até o novo quando entra uma peça (inclusive por "Complete o kit"), com a caixa acendendo e um brilho correndo;
+    - no carrinho, o mesmo acontece ao aumentar a quantidade;
+    - o servidor local (`--fake-correios`) passou a usar a regra da loja (frete grátis a partir de R$ 500 no PAC e produção de 3 a 5 dias). Antes, a barra não aparecia no teste local.
+  - **Recomendações do carrinho:**
+    - até 3 peças e, no fim, o card "Ver mais" (página Produtos);
+    - no celular, setas finas sobre a fileira, que somem nas pontas.
+  - **Correção:** a fileira de recomendações alargava a página do carrinho no celular (`.cart-more` com `minmax(0, 1fr)`).
 
 ## O que ficou
 

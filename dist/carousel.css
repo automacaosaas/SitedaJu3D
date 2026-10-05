@@ -45,8 +45,8 @@
 /* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
   .home .product-carousel-stage { height: 526px; }
-  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 336px + var(--drag)), 22px) scale(.91); }
-  .home .product-rail-card.is-active { width: min(352px, 37vw); min-height: 440px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
+  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 292px + var(--drag)), 38px) scale(.8); }
+  .home .product-rail-card.is-active { width: min(372px, 38vw); min-height: 446px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
   .home .product-rail-art { height: 196px; }
   .home .product-rail-card.is-active .product-rail-art { height: 212px; }
   .home .product-rail-copy { padding: 14px 20px 16px; }
@@ -250,7 +250,20 @@
 /* A peça sai do card: a foto (fundo transparente) sobe por cima da borda de cima, maior; embaixo, a descrição como está. */
 .home .product-rail-card[style*="--rail-own-1"] { overflow: visible; }
 .home .product-rail-card[style*="--rail-own-1"] .product-rail-art { position: relative; z-index: 2; overflow: visible; }
-.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: translateY(-17%) scale(1.15); transform-origin: 50% 100%; }
-.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(calc(-17% - 5px)) scale(1.17); }
+/* Os vizinhos menores e recolhidos atrás do card do centro (podem se sobrepor); o do centro maior, com a peça saltando mais
+   alto. A peça cresce com um leve quique ao virar a da vez, e o card desliza com a mesma curva, mais longa. */
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: translateY(-6%) scale(.92); transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.34, 1.4, .64, 1), opacity .4s ease; }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { transform: translateY(-21%) scale(1.3); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(calc(-21% - 6px)) scale(1.33); }
+.home .product-rail-card[style*="--rail-own-1"] { transition-duration: 560ms, 360ms, 360ms, 560ms, .6s, .6s, .6s, .6s, .6s; transition-timing-function: cubic-bezier(.22, 1.12, .36, 1), ease, ease, var(--ease), ease, ease, ease, ease, ease; }
+@media (max-width: 900px) {
+  .home .product-rail-card:not(.is-active) { transform: translate(calc(-50% + var(--slot) * min(56vw, 260px) + var(--drag)), 34px) scale(.8); }
+  /* no celular o card do centro já ocupa quase a tela: a peça sobe menos, para não encostar no texto da coleção */
+  .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { transform: translateY(-14%) scale(1.18); }
+  .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img { transform: translateY(calc(-14% - 4px)) scale(1.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transition: none; }
+}
 /* espaço acima dos cards para a peça que sai por cima deles não encostar no texto da coleção */
-.home .product-carousel-stage { margin-top: clamp(52px, 15vw, 64px); }
+.home .product-carousel-stage { margin-top: clamp(64px, 18vw, 84px); }

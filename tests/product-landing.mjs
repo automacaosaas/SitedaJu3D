@@ -81,6 +81,14 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(code, /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting;/, 'the spin stops off screen');
   assert.match(css, /\.pl-add\.is-added \.pl-check path \{ animation: pl-draw/, 'the check draws itself');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  // 2026-10-05: on the phone, while choosing colors, the header stays away (focus on the piece) and the end of the palette
+  // pushes the piece up with the scroll; the active "Personalizar o meu" paints itself and shows the × that closes
+  assert.match(code, /document\.documentElement\.classList\.toggle\('pl-focus', push < height\);/);
+  assert.match(code, /holder\.style\.transform = push > 0 \? `translate3d\(0, \$\{-push\}px, 0\)` : '';/);
+  assert.match(css, /html\.pl-focus \.header\.site-header\.is-floating, html\.pl-focus \.header\.site-header\.is-floating\.is-revealed \{ translate: 0 -110%;/);
+  assert.match(css, /\.pl-customize\[aria-expanded="true"\]::before \{ clip-path: inset\(0 0 0 0\); animation: pl-flow/);
+  assert.match(css, /\.pl-customize::before \{ content: ''; /);
+  assert.match(code, /<i class="pl-customize-x" aria-hidden="true"><\/i>/);
   for (const text of ['Ver a peça', 'Girar em 360°', 'Arraste para girar', 'Preparando sua prévia 3D…', 'A prévia 3D não abriu neste navegador; a foto mostra as cores originais.', 'Escolha a cor de cada parte', 'Partes da peça', 'Restaurar cores', 'Suas cores', 'Adicionar com estas cores', 'Adicionado', 'Cores originais restauradas para este produto.', 'Desistência em até 7 dias']) {
     assert(code.includes(text) || read(`dist/${Object.keys(PRODUCTS)[0]}.html`).includes(text), `${text}: used`);
     assert.notEqual(translate(text, 'en'), text, `${text}: EN`); assert.notEqual(translate(text, 'es'), text, `${text}: ES`);

@@ -11,6 +11,7 @@ const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const {PRODUCTS, SOON, defaults, color} = await site('products.js');
 const {COMMERCE, money, pixPrice} = await site('commerce-config.js');
+const {icon} = await site('icons.js');
 const html = string => string.replace(/ /g, '&nbsp;');
 
 // ── B1, B2, B5: the Produtos grid (pre-rendered) = the default combination, price, Pix and production time ──
@@ -45,7 +46,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
     assert(card.includes(`<strong>${money(COMMERCE.prices[id])}</strong>`), `${id}: price`);
     assert(card.includes(`${money(pixPrice(COMMERCE.prices[id]))} no Pix`), `${id}: Pix price`);
     assert(card.includes(`<h2><a href="${id}.html">${PRODUCTS[id].title}</a></h2>`), `${id}: the name links to the product's own page`);
-    assert(card.includes(`Feito sob encomenda · ${COMMERCE.productionLabel}`), `${id}: production time on the card (audit B5)`);
+    assert(card.includes(`${icon('clock')}<span><span class="sr-only">Produção em </span>${COMMERCE.productionLabel}</span>`), `${id}: the clock and the production time on the card (audit B5; 2026-10-05: no "Feito sob encomenda")`);
+    assert.doesNotMatch(card, /Preço ilustrativo/, `${id}: no "Preço ilustrativo" (2026-10-05)`);
     assert(card.includes(`href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`), `${id}: customize`);
     assert(card.includes(`data-add-product="${id}"`), `${id}: quick add (mini-cart)`);
   }
@@ -65,11 +67,19 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(page, /cart-back/, 'no floating back button over the title');
   assert.match(page, /<a class="collection-link cart-continue" href="produtos\.html" data-action="return">← Continuar escolhendo<\/a>/, '"Continuar escolhendo" goes back to where the person was');
   assert.equal((page.match(/data-action="remove"/g) || []).length, 2, 'the trash can stays on each piece');
+  // 2026-10-05: the cart turns on the card before the mini-cart rises; the free-shipping bar rises when a piece goes in
+  assert.match(read('dist/catalog.js'), /await new Promise\(done => setTimeout\(done, reduceMotion\(\) \? 0 : 600\)\); openMiniCart\(/);
+  assert.match(read('dist/catalog.css'), /\.product-cart\.is-loading \.icon \{ animation: cart-spin \.6s/);
+  assert.match(read('dist/mini-cart.js'), /riseFrom = totals\(readCart\(\), 0\)\.subtotal;/, '"Complete o kit" remembers where the bar was');
+  assert.match(read('dist/checkout.js'), /if \(barBefore !== null\) riseBar\(main, barBefore\);/, 'the cart page too, when a quantity goes up');
+  for (const file of ['mini-cart.css', 'commerce.css']) assert.match(read('dist/' + file), /\.free-ship\.is-rising \{ animation: free-ship-glow/);
+  assert.match(read('tools/dev-server.cjs'), /freeShipping: shopShipping\.freeShipping/, 'the local preview shows the shop\'s free shipping rule');
   // after the summary (no "Compra segura" box in it any more): the other pieces, the purchase info with links to the
   // policies, and the payment methods Mercado Pago takes in the shop (Termos: Pix, credit and debit card)
   assert.doesNotMatch(page, /cart-reassurance|accepted-methods|Compra segura/);
   assert(page.indexOf('</aside>') < page.indexOf('<div class="cart-more">'), 'the extras come after the order summary');
   assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html'], 'recommends only what is not in the cart');
+  assert.match(page, /<a class="cart-rec cart-rec-more" href="produtos\.html">[^]*<strong>Ver mais<\/strong>[^]*<\/ul><button type="button" class="cart-rec-arrow is-next" data-rec-step="1" aria-label="Mais peças" hidden>/, 'the last card is "Ver mais" (Produtos), with the thin arrows of the rail');
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
     [['termos.html#producao', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['termos.html#producao', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
   assert.match(page, /começa depois da confirmação do pagamento\./);

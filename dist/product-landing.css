@@ -53,7 +53,24 @@
 .pl-customize { border: 1.5px solid var(--pl-accent); background: #ffffffb3; color: var(--pl-accent); }
 .pl-actions .icon { width: 20px; height: 20px; flex-shrink: 0; }
 .pl-add:active, .pl-customize:active { transform: scale(.98); }
-.pl-customize[aria-expanded="true"] { background: color-mix(in srgb, var(--pl-accent) 10%, #fff); }
+/* "Personalizar o meu" ativo: a cor entra da esquerda para a direita, como se o botão fosse pintado, e fica correndo
+   devagar sob uma trama fina de quadradinhos; o × diz que um clique fecha as cores. */
+.pl-customize { position: relative; isolation: isolate; overflow: hidden; transition: transform .3s var(--pl-ease), box-shadow .3s var(--pl-ease), background-color .3s ease, color .35s ease, border-color .35s ease; }
+.pl-customize > * { position: relative; z-index: 1; }
+.pl-customize::before { content: ''; position: absolute; inset: -2px; z-index: 0; background:
+    linear-gradient(90deg, #ffffff26 1px, transparent 1px) 0 0 / 7px 7px,
+    linear-gradient(#ffffff26 1px, transparent 1px) 0 0 / 7px 7px,
+    linear-gradient(100deg, #5b4fc4, #8b5cc6, #c95b8f, #db7a3c, #2f9a83, #2c84c4, #5b4fc4, #8b5cc6, #c95b8f, #db7a3c, #2f9a83, #2c84c4, #5b4fc4) 0 0 / 200% 100%;
+  clip-path: inset(0 100% 0 0); transition: clip-path .75s cubic-bezier(.65, 0, .35, 1); }
+.pl-customize[aria-expanded="true"] { border-color: transparent; color: #fff; text-shadow: 0 1px 2px #0000002e; box-shadow: 0 10px 26px #5b4fc440; }
+.pl-customize[aria-expanded="true"]::before { clip-path: inset(0 0 0 0); animation: pl-flow 9s linear infinite; }
+@keyframes pl-flow { to { background-position: 0 0, 0 0, 100% 0; } }
+.pl-customize-x { width: 0; height: 12px; margin-inline-start: -10px; opacity: 0; transform: rotate(-90deg); transition: width .3s var(--pl-ease), margin .3s var(--pl-ease), opacity .3s ease, transform .4s var(--pl-spring); }
+.pl-customize-x::before, .pl-customize-x::after { content: ''; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; border-radius: 2px; background: currentColor; transform: translate(-50%, -50%) rotate(45deg); }
+.pl-customize-x::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.pl-customize[aria-expanded="true"] .pl-customize-x { width: 12px; margin-inline-start: 0; opacity: .9; transform: none; transition-delay: .35s; }
+/* escolhendo as cores no celular, o header não aparece por cima da peça */
+html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header.is-floating.is-revealed { translate: 0 -110%; pointer-events: none; }
 /* the check that draws itself when the piece goes to the cart */
 .pl-check { order: -1; width: 0; height: 22px; flex-shrink: 0; opacity: 0; transition: width .25s var(--pl-ease), opacity .2s ease; }
 .pl-check path { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 22; stroke-dashoffset: 22; }
@@ -114,7 +131,7 @@
 @media (hover: hover) {
   .pl-chip:hover { border-color: color-mix(in srgb, var(--pl-accent) 45%, transparent); transform: translateY(-1px); }
   .pl-add:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 14px 30px color-mix(in srgb, var(--pl-accent) 36%, transparent); }
-  .pl-customize:hover { background: color-mix(in srgb, var(--pl-accent) 7%, #fff); transform: translateY(-1px); }
+  .pl-customize:hover { background-color: color-mix(in srgb, var(--pl-accent) 7%, #fff); transform: translateY(-1px); }
   .pl-customize:hover svg { animation: pl-tilt .6s var(--pl-spring); }
   .pl-swatch:hover { transform: scale(1.1); }
   .pl-views button[aria-pressed="false"]:hover { background: #ffffffd9; }
@@ -127,7 +144,8 @@
   .pl-art { border-radius: 22px; }
   .pl-actions { flex-direction: column; }
   /* choosing colors on the phone: the piece stays in view, smaller, above the palette */
-  .pl.is-pinned .pl-stage { position: sticky; top: 8px; z-index: 6; }
+  .pl.is-pinned .pl-stage { position: sticky; top: 8px; z-index: 6; will-change: transform; }
+  .pl-price strong { font-size: 28px; }
   .pl.is-customizing .pl-art { aspect-ratio: auto; height: min(40svh, 320px); }
   .pl.is-pinned .pl-art { box-shadow: 0 10px 26px #2a1c221f; }
   .pl-drag { bottom: 12px; }
@@ -136,4 +154,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .pl *, .pl *::before, .pl *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; transition-delay: 0s !important; }
+  .pl-customize[aria-expanded="true"]::before { animation: none; }
 }
