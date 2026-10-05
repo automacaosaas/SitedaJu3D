@@ -1,8 +1,10 @@
 'use strict';
 // One page per product (audits C1 and J2): borboletoscopio.html, dinossauroscopio.html, aviaoscopia.html. A real address
-// search engines can index and a link that shows the piece when shared: photo, price and Pix price, description, original
-// colors, production time, delivery and returns, and two actions, "Personalizar o meu" (the configurator in the product
-// window of the showcase) and "Adicionar nas cores originais" (straight to the mini-cart). Also writes sitemap.xml and
+// search engines can index and a link that shows the piece when shared. Top to bottom: the piece (photo, and with
+// product-landing.js the 3D model that turns), the category as a badge, name, price with the Pix price, the original colors
+// as chips, the two actions ("Adicionar nas cores originais" first; "Personalizar o meu" opens the colors right on the
+// page, or the configurator of the showcase without JavaScript), production / delivery / returns as accordions, and the
+// description. Also writes sitemap.xml and
 // robots.txt. Built from the shop's own data (products.js, commerce-config.js), from produtos.html (head, header and
 // footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the page
 // Escolha o seu (escolha.html) from dist/escolha.js.
@@ -34,7 +36,9 @@ function page(id, data, base) {
   const head = lines.slice(lines.indexOf('<head>\n') + 7, lines.indexOf('  <!-- og -->'))
     .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(`${product.title}: ${product.subtitle.toLowerCase()} impressa em 3D, nas cores que você escolher. ${product.description}`)}">`)
     .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(product.title)} · ${esc(product.subtitle)} | Ju, imprime pra mim?</title>\n  <link rel="canonical" href="${esc(url)}">`)
-    .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="product-landing.css">');
+    .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="product-landing.css">')
+    // the 3D model needs three.js by name (the same import map as the home; its hash is in the security policy)
+    .replace('<script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script>', () => '<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>\n  <script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script><script type="module" src="product-landing.js"></script>');
   // Link preview with the piece's own picture and price, and the product data search engines read.
   const preview = tags({url, type: 'product', title: `${product.title} · ${product.subtitle} | ${SITE}`, description: product.description,
     image: {path: `assets/og-${id}.jpg`, width: 1200, height: 630, alt: `${product.title}, ${product.subtitle.toLowerCase()}, nas cores originais`},
@@ -47,33 +51,39 @@ function page(id, data, base) {
   }).map(line => '  ' + line).join('\n') + '\n';
   const header = /<header class="header">[^]*?<\/header>/.exec(lines)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(lines)[0];
-  const colors = product.parts.map(part => { const c = color(chosen[part.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${esc(part.name)}: <strong>${esc(c.name)}</strong></span></li>`; }).join('');
+  // each original color is a chip; with product-landing.js a click opens the color picker on that part
+  const colors = product.parts.map(part => { const c = color(chosen[part.id]); return `<li><button type="button" class="pl-chip" data-pl-part="${part.id}" aria-controls="pl-custom"><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${esc(part.name)}: <strong>${esc(c.name)}</strong></span></button></li>`; }).join('');
   const style = `--pl-accent:${theme.accentColor};--pl-ink:${theme.textColor};--pl-muted:${theme.mutedColor};--pl-stops:${theme.bannerStops}`;
+  const fact = (name, title, note, text) => `<details class="pl-acc"><summary>${icon(name)}<span><strong>${title}</strong><small>${note}</small></span><i class="pl-acc-mark" aria-hidden="true"></i></summary><div class="pl-acc-body"><p>${text}</p></div></details>`;
   const main = `<main class="pl-main" id="conteudo">
       <nav class="pl-crumbs" aria-label="Você está em"><a href="produtos.html">Produtos</a><span aria-hidden="true">/</span><span aria-current="page">${esc(product.title)}</span></nav>
-      <article class="pl" style="${style}">
-        <div class="pl-art"><img src="assets/${esc(product.catalogImage || product.image)}" alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"></div>
+      <article class="pl" style="${style}" data-pl="${id}">
+        <div class="pl-stage">
+          <div class="pl-art" data-pl-stage data-view="photo"><img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}" alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"><div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p></div>
+          <div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden><button type="button" data-pl-view="photo" aria-pressed="true">Foto</button><button type="button" data-pl-view="3d" aria-pressed="false">${icon('cube')}<span>Girar em 360°</span></button></div>
+        </div>
         <div class="pl-info">
-          <p class="pl-category">${esc(category)}</p>
+          <p class="pl-badge">${esc(category)}</p>
           <h1>${esc(product.title)}</h1>
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>
           <p class="pl-installments">ou 3x sem juros no cartão · valores ilustrativos nesta prévia</p>
-          <p class="pl-desc">${esc(product.description)}</p>
-          <div class="pl-colors"><h2>Cores originais</h2><ul>${colors}</ul>${product.fixed ? `<p class="pl-fixed">${esc(product.fixed)}</p>` : ''}</div>
-          <div class="pl-actions"><a class="primary pl-customize" href="index.html#produto/${id}/personalizar">${icon('palette')}<span>Personalizar o meu</span></a><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button></div>
-          <ul class="pl-facts">
-            <li>${icon('clock')}<span><strong>Feito sob encomenda</strong>Produção em ${esc(COMMERCE.productionLabel)}</span></li>
-            <li>${icon('truck')}<span><strong>Envio para todo o Brasil</strong>Frete calculado pelo CEP</span></li>
-            <li>${icon('returns')}<span><strong>Trocas e Devoluções</strong><a href="trocas.html">Ver a política</a></span></li>
-          </ul>
+          <div class="pl-colors"><h2 data-pl-colors-title>Cores originais</h2><ul>${colors}</ul>${product.fixed ? `<p class="pl-fixed">${esc(product.fixed)}</p>` : ''}</div>
+          <div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
+          <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>
+          <div class="pl-facts">
+            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, 'Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.')}
+            ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.')}
+            ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
+          </div>
+          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${esc(product.description)}</p></section>
         </div>
       </article>
     </main>`;
   return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="product-landing">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;
 }
 
-// Escolha o seu, aberta pelo fim de "O 3D nas suas consultas" (home): um banner por família de encaixe, cada um abrindo a
+// Escolha o seu: um banner por família de encaixe, cada um abrindo a
 // página Produtos só com as peças daquele equipamento (produtos.html?encaixe=<família>). Head, header e footer de produtos.html.
 function choosePage(data, base) {
   const url = `${siteBase()}/escolha.html`, title = `Escolha o seu · ${SITE}`;

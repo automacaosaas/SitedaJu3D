@@ -834,4 +834,14 @@ Trocas e devoluções.|Exchanges and returns.|Cambios y devoluciones.
 Você pode desistir em até 7 dias depois de receber.|You can cancel within 7 days of receiving it.|Puedes desistir hasta 7 días después de recibirlo.
 Métodos de pagamento aceitos|Accepted payment methods|Métodos de pago aceptados
 Pagamento processado pelo Mercado Pago|Payment processed by Mercado Pago|Pago procesado por Mercado Pago
+Ver a peça|See the piece|Ver la pieza
+Girar em 360°|Turn 360°|Girar en 360°
+Arraste para girar|Drag to rotate|Arrastra para girar
+A prévia 3D não abriu neste navegador; a foto mostra as cores originais.|The 3D preview did not open in this browser; the photo shows the original colors.|La vista previa 3D no se abrió en este navegador; la foto muestra los colores originales.
+Escolha a cor de cada parte|Choose the color of each part|Elige el color de cada parte
+Partes da peça|Parts of the piece|Partes de la pieza
+Adicionar com estas cores|Add in these colors|Añadir con estos colores
+Desistência em até 7 dias|Cancel within 7 days|Desistimiento hasta 7 días
+Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in the chosen colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en los colores elegidos. La producción empieza después de confirmarse el pago.
+Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
