@@ -26,7 +26,7 @@ const lookupFrom = table => async cep => table[String(cep).replace(/\D/g, '')] |
 
 function order(over = {}) {
   return {
-    id: crypto.randomUUID(), reference: 'JU-' + crypto.randomBytes(5).toString('hex').toUpperCase(), customerId: null, source: 'test', status: 'concluido', method: 'card', lang: 'pt-BR',
+    id: crypto.randomUUID(), reference: 'JU-' + crypto.randomBytes(5).toString('hex').toUpperCase(), customerId: null, source: 'test', status: 'confirmado', method: 'card', lang: 'pt-BR',
     subtotalCents: 12900 * 2 + 15900, shippingCents: 1800, totalCents: 12900 * 2 + 15900 + 1800,
     buyer: {name: 'Ana Souza Lima', email: 'ana@example.com', company: null}, buyerDocEnc: encrypt(ENV, '52998224725'), phoneEnc: encrypt(ENV, '31999991234'),
     shipTo: {recipient: 'Ana Souza Lima', cep: '30140071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: 'Sala 4'},
@@ -199,7 +199,7 @@ async function call(handler, {method = 'POST', body = {}, cookie = '', url = '/'
 
   // Without a network the CEP lookup fails: the note is saved as an error and the retry button issues it once fixed.
   const fetchImpl = async url => { if (String(url).includes('viacep')) return {ok: true, json: async () => ({cep: '01001-000', localidade: 'São Paulo', uf: 'SP', ibge: '3550308'})}; throw new Error('unexpected ' + url); };
-  const confirmed = await call(orderStatus.create({env, store, fetchImpl}), {body: {id: paid.id, status: 'concluido'}, cookie: admin});
+  const confirmed = await call(orderStatus.create({env, store, fetchImpl}), {body: {id: paid.id, status: 'confirmado'}, cookie: admin});
   assert.equal(confirmed.statusCode, 200); assert.equal(confirmed.json().order.invoice.status, 'autorizada', 'confirming the order issues the note');
   assert.equal(confirmed.json().order.invoice.environment, 'homologacao');
   const listed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json();

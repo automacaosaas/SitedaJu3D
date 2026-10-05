@@ -84,6 +84,13 @@ async function contract(store, label) {
   const paid = await store.orders.findByReference(reference);
   assert.equal(paid.status, 'pendente');
   assert.equal(new Date(paid.paidAt).getTime(), paidAt.getTime());
+  assert.deepEqual([paid.trackingCode, paid.shippedAt], [null, null], `${label}: no tracking code before it is posted`);
+  const shippedAt = new Date(Date.UTC(2026, 9, 6, 15, 30));
+  assert.equal(await store.orders.transition(orderId, ['pendente'], {status: 'confirmado'}), true);
+  assert.equal(await store.orders.transition(orderId, ['confirmado'], {status: 'enviado', trackingCode: 'AA123456789BR', shippedAt}), true);
+  const posted = await store.orders.findById(orderId);
+  assert.deepEqual([posted.status, posted.trackingCode, new Date(posted.shippedAt).getTime()], ['enviado', 'AA123456789BR', shippedAt.getTime()], `${label}: the tracking code and the day it was posted (010_envio.sql)`);
+  assert.equal(await store.orders.transition(orderId, ['enviado'], {status: 'pendente', trackingCode: null, shippedAt: null}), true);
   await store.orders.addEvent(orderId, 'paid', 'aprovado', 'mercadopago');
   assert.deepEqual((await store.orders.events(orderId)).map(e => [e.kind, e.actor]), [['paid', 'mercadopago']]);
   assert.deepEqual((await store.orders.listByCustomer(id)).map(o => o.id), [orderId]);

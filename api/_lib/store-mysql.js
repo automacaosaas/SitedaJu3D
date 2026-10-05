@@ -18,7 +18,7 @@ const ORDER_COLUMNS = {
   id: 'id', reference: 'reference', customerId: 'customer_id', source: 'source', status: 'status', paymentState: 'payment_state', method: 'method',
   installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
   buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', shippingInfo: 'shipping_info', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
-  decidedAt: 'decided_at', declineReason: 'decline_reason', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
+  decidedAt: 'decided_at', declineReason: 'decline_reason', trackingCode: 'tracking_code', shippedAt: 'shipped_at', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
   ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
 // What the panel's list (orders.adminView) reads of an order: the rest stays in the table.

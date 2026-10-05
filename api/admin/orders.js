@@ -1,7 +1,7 @@
 'use strict';
-// GET /api/admin/orders — paid orders for Ju's panel (pendente, concluido, recusado), newest first, a page at a time,
-// with what is needed to produce and ship, and the NF-e of each (status, number, links). The CPF only masked. Orders
-// still waiting for payment or cancelled are not shown.
+// GET /api/admin/orders — paid orders for Ju's panel (pendente, confirmado, enviado, concluido, recusado), newest first,
+// a page at a time, with what is needed to produce and ship, and the NF-e of each (status, number, links). The CPF only
+// masked. Orders still waiting for payment or cancelled are not shown.
 //   ?limit=100 (1 to 200)  ?cursor=<nextCursor of the previous page>  → {orders, nextCursor (null on the last page), …}
 // Nothing outside is awaited: notes the service is still processing are asked again after the answer (a few at a time
 // in parallel), so the panel shows them as saved and the next opening shows what came back. With Bling, the first page

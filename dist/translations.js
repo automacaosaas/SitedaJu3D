@@ -786,6 +786,63 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+Canais de atendimento|Ways to reach us|Canales de atención
+Mensagem|Message|Mensaje
+Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…).|Tell us how we can help. If it is about an order, include its number (JU-…).|Cuéntanos cómo podemos ayudarte. Si es sobre un pedido, indica el número (JU-…).
+Ficou com alguma dúvida sobre um produto, seu pedido ou deseja algo personalizado? Fale com a gente.|Have a question about a product or your order, or would you like something custom-made? Talk to us.|¿Tienes alguna duda sobre un producto o tu pedido, o quieres algo personalizado? Habla con nosotros.
+Resposta rápida e atendimento direto.|Quick replies and direct support.|Respuesta rápida y atención directa.
+Falar agora no WhatsApp →|Chat on WhatsApp now →|Hablar ahora por WhatsApp →
+O número do WhatsApp entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our WhatsApp number is coming soon. Meanwhile, send us a message using the form below.|El número de WhatsApp llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
+Envie sua dúvida ou arquivo.|Send your question or file.|Envía tu duda o archivo.
+Acompanhe os bastidores e novidades da Ju.|Follow Ju's behind-the-scenes and news.|Sigue los bastidores y las novedades de Ju.
+Precisa de ajuda?|Need help?|¿Necesitas ayuda?
+Os assuntos que mais aparecem por aqui:|The topics we hear about most:|Los temas más frecuentes por aquí:
+Dúvida sobre produto|Question about a product|Duda sobre un producto
+Meu pedido / Rastreio|My order / Tracking|Mi pedido / Seguimiento
+Personalização de peças|Customizing pieces|Personalización de piezas
+Prazos de produção e entrega|Production and delivery times|Plazos de producción y entrega
+Horário de atendimento|Support hours|Horario de atención
+Segunda a sexta, das 9h às 18h|Monday to Friday, 9 a.m. to 6 p.m.|Lunes a viernes, de 9 a 18 h
+Envie uma mensagem|Send a message|Envía un mensaje
+Assunto|Subject|Asunto
+Escolha um assunto|Choose a subject|Elige un asunto
+Status do meu pedido|My order status|Estado de mi pedido
+Orçamento / Personalizado|Quote / Custom order|Presupuesto / Personalizado
+Outro assunto|Something else|Otro asunto
+Não preencha este campo|Leave this field empty|No completes este campo
+Enviar mensagem|Send message|Enviar mensaje
+Usamos seus dados só para responder à sua mensagem.|We only use your details to reply to your message.|Solo usamos tus datos para responder a tu mensaje.
+Mensagem enviada com sucesso!|Message sent!|¡Mensaje enviado!
+Responderemos em breve.|We will reply soon.|Te responderemos pronto.
+Enviar outra mensagem|Send another message|Enviar otro mensaje
+DÚVIDAS|QUESTIONS|DUDAS
+Perguntas frequentes|Frequently asked questions|Preguntas frecuentes
+As respostas para as dúvidas mais comuns.|Answers to the most common questions.|Las respuestas a las dudas más comunes.
+Qual é o prazo de produção e envio das peças?|How long do production and shipping take?|¿Cuál es el plazo de producción y envío de las piezas?
+Cada peça é impressa sob encomenda, nas cores que você escolheu: a produção leva de 3 a 5 dias úteis. Depois, ela segue pelos Correios (PAC ou SEDEX), e o prazo de entrega aparece no carrinho e na finalização da compra assim que você informa o CEP.|Every piece is printed to order in the colors you chose: production takes 3 to 5 business days. Then it ships with Correios (PAC or SEDEX), and the delivery time shows in the cart and at checkout as soon as you enter your CEP.|Cada pieza se imprime por encargo, en los colores que elegiste: la producción tarda de 3 a 5 días hábiles. Después se envía por Correios (PAC o SEDEX), y el plazo de entrega aparece en el carrito y al finalizar la compra en cuanto informas tu CEP.
+Posso encomendar um modelo personalizado que não está no site?|Can I order a custom design that is not on the site?|¿Puedo encargar un modelo personalizado que no está en el sitio?
+Sim! Adoramos criar projetos especiais. Conte a sua ideia pelo formulário desta página ou pelo WhatsApp e preparamos um orçamento. Se já tiver um arquivo 3D ou uma referência, avise na mensagem que combinamos como enviar.|Yes! We love creating special projects. Tell us your idea using the form on this page or on WhatsApp and we will prepare a quote. If you already have a 3D file or a reference, mention it in your message and we will arrange how to send it.|¡Sí! Nos encanta crear proyectos especiales. Cuéntanos tu idea con el formulario de esta página o por WhatsApp y preparamos un presupuesto. Si ya tienes un archivo 3D o una referencia, avísanos en el mensaje y acordamos cómo enviarlo.
+Como acompanho o status do meu pedido?|How do I track my order?|¿Cómo sigo el estado de mi pedido?
+Na sua conta, em Meus pedidos, você vê a situação de cada compra. Você também recebe um e-mail quando o pagamento é aprovado e outro quando o pedido é confirmado. Quando a peça for postada, enviamos o código de rastreio dos Correios.|In your account, under My orders, you can see the status of each purchase. You also get an email when the payment is approved and another when the order is confirmed. When the piece ships, we send you the Correios tracking code.|En tu cuenta, en Mis pedidos, ves el estado de cada compra. También recibes un correo cuando se aprueba el pago y otro cuando se confirma el pedido. Cuando la pieza se envíe, te mandamos el código de seguimiento de Correios.
+Ver meus pedidos →|See my orders →|Ver mis pedidos →
+Quais são os cuidados com as peças impressas em 3D?|How should I care for 3D-printed pieces?|¿Qué cuidados necesitan las piezas impresas en 3D?
+Evite deixar as peças no calor forte ou no sol direto por muito tempo, como dentro de um carro estacionado, para preservar o acabamento e o formato. Para limpar, use um pano macio e seco.|Avoid leaving the pieces in strong heat or direct sunlight for long periods, such as inside a parked car, to preserve their finish and shape. To clean them, use a soft, dry cloth.|Evita dejar las piezas con calor fuerte o al sol directo por mucho tiempo, como dentro de un auto estacionado, para conservar el acabado y la forma. Para limpiarlas, usa un paño suave y seco.
+Quais são as formas de pagamento?|Which payment methods do you accept?|¿Cuáles son las formas de pago?
+Pix, com 5% de desconto nas peças, ou cartão de crédito em até 12x, sendo até 3x sem juros. O pagamento é feito pelo Mercado Pago, com segurança.|Pix, with 5% off the pieces, or credit card in up to 12 installments, up to 3 of them interest-free. Payment is processed securely by Mercado Pago.|Pix, con 5% de descuento en las piezas, o tarjeta de crédito en hasta 12 cuotas, hasta 3 sin intereses. El pago lo procesa Mercado Pago, con seguridad.
+O frete é grátis?|Is shipping free?|¿El envío es gratis?
+Nas compras a partir de R$ 500,00 em peças, o envio por PAC é grátis. Abaixo disso, o frete é calculado pelo CEP, e você escolhe entre PAC e SEDEX.|On orders of R$ 500,00 or more in pieces, PAC shipping is free. Below that, shipping is calculated from your CEP and you choose between PAC and SEDEX.|En compras desde R$ 500,00 en piezas, el envío por PAC es gratis. Por debajo de eso, el envío se calcula por el CEP y eliges entre PAC y SEDEX.
+Posso trocar ou devolver uma peça?|Can I exchange or return a piece?|¿Puedo cambiar o devolver una pieza?
+Sim. Você pode desistir da compra em até 7 dias corridos depois de receber a peça. Se ela chegar com defeito ou diferente do pedido, produzimos uma peça nova, com o frete por nossa conta.|Yes. You can cancel your purchase within 7 calendar days of receiving the piece. If it arrives defective or different from your order, we make a new one and cover the shipping.|Sí. Puedes desistir de la compra hasta 7 días corridos después de recibir la pieza. Si llega con defecto o distinta del pedido, producimos una pieza nueva y el envío corre por nuestra cuenta.
+Ler a política de Trocas e Devoluções →|Read the Exchanges and Returns policy →|Leer la política de Cambios y Devoluciones →
+Olá, Ju! Vim pelo site e tenho uma dúvida.|Hi, Ju! I found you through the website and I have a question.|¡Hola, Ju! Vengo del sitio y tengo una duda.
+Digite seu nome.|Please enter your name.|Escribe tu nombre.
+Digite um e-mail válido.|Please enter a valid email.|Escribe un correo válido.
+Escolha um assunto.|Please choose a subject.|Elige un asunto.
+Escreva sua mensagem, com pelo menos 10 caracteres.|Write your message, with at least 10 characters.|Escribe tu mensaje, con al menos 10 caracteres.
+Enviando…|Sending…|Enviando…
+Muitas mensagens seguidas. Tente de novo daqui a pouco.|Too many messages in a row. Please try again in a little while.|Demasiados mensajes seguidos. Inténtalo de nuevo en un rato.
+Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para contato@juimprimepramim.com.br.|We could not send it right now. Try again in a few minutes or write to contato@juimprimepramim.com.br.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a contato@juimprimepramim.com.br.
+Não foi possível enviar agora. Confira a sua conexão e tente de novo.|We could not send it right now. Check your connection and try again.|No se pudo enviar ahora. Revisa tu conexión e inténtalo de nuevo.
 Vistas da peça|Views of the piece|Vistas de la pieza
 Escolher a vista|Choose a view|Elegir la vista
 Vista anterior|Previous view|Vista anterior
@@ -798,4 +855,8 @@ Costas|Back|Parte trasera
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
+Pedido confirmado · preparando o envio|Order confirmed · preparing shipment|Pedido confirmado · preparando el envío
+Pedido enviado|Order shipped|Pedido enviado
+Código de rastreio|Tracking code|Código de seguimiento
+Rastrear nos Correios ↗|Track with Correios ↗|Rastrear en Correios ↗
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

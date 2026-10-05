@@ -11,7 +11,7 @@ const {nfeSettings, EXAMPLE} = require('./fiscal');
 const {buildInvoice} = require('./nfe');
 const {lookupCep} = require('./cep');
 const {providerFor} = require('./nfe-providers');
-const {createOrders} = require('./orders');
+const {createOrders, INVOICED} = require('./orders');
 const {config, mailReady, sendMail} = require('./mail');
 const {renderInvoiceEmail} = require('./order-email');
 
@@ -64,7 +64,7 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
     // Issues (or re-issues after an error) the note of a confirmed order. Never throws for a refusal: the reason is saved.
     async issue(order, {actor = 'painel'} = {}) {
       if (settings.mode === 'off') return null;
-      if (order.status !== 'concluido') throw fail('invalid_request', {field: 'status'});
+      if (!INVOICED.includes(order.status)) throw fail('invalid_request', {field: 'status'});
       const {invoice: found} = await store.invoices.create({id: crypto.randomUUID(), orderId: order.id, provider: settings.provider, environment: settings.environment, reference: order.reference, status: 'processando'});
       if (found.status === 'autorizada') return found;
       const invoice = await store.invoices.update(found.id, {attempts: (found.attempts || 0) + 1});

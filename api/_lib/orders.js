@@ -3,7 +3,9 @@
 // webhook and by the status checks the checkout makes while a Pix waits. Whichever arrives first moves the order; the
 // others find nothing left to do (atomic transitions), so an order is marked paid once and its e-mails go out once.
 //
-// Statuses: aguardando_pagamento → pendente (paid, Ju produces it) → concluido | recusado (Ju decides; can reopen).
+// Statuses: aguardando_pagamento → pendente (paid, waiting for Ju) → confirmado (Ju confirmed it: the NF-e is issued and the
+// order is "pronto para envio") → enviado (posted at the Correios, with the tracking code) → concluido (the buyer gets the
+// tracking e-mail) | recusado (before it is posted). Ju can step back (FROM below).
 // Declining also refunds the buyer through Mercado Pago (refund); a refunded order can no longer be reopened.
 // A refused card or an expired Pix ends as cancelado. The order keeps a snapshot of buyer and delivery, so it survives
 // the account being deleted (fiscal record).
@@ -14,9 +16,19 @@ const {config, mailReady, sendMail} = require('./mail');
 const {renderOwnerEmail, renderCustomerEmail, renderDecisionEmail} = require('./order-email');
 const mp = require('./mercadopago');
 
-const PAID = ['pendente', 'concluido', 'recusado'];
-const ADMIN_STATUSES = ['pendente', 'concluido', 'recusado'];
-const DECIDED = ['concluido', 'recusado'];   // Ju's decisions that the buyer hears about by e-mail
+const PAID = ['pendente', 'confirmado', 'enviado', 'concluido', 'recusado'];
+const ADMIN_STATUSES = PAID;
+// Where an order may come from, for each status Ju moves it to (the panel only offers these; the server refuses the rest).
+const FROM = Object.freeze({
+  pendente: ['confirmado', 'recusado'],             // back from "Pronto para envio", or a declined order reopened
+  confirmado: ['pendente', 'enviado'],              // "Confirmar", or back from "Enviados" (the tracking code comes off)
+  enviado: ['confirmado', 'enviado', 'concluido'],  // with the tracking code, a corrected code, or a concluded order reopened
+  concluido: ['enviado'],                           // only once the tracking code is in
+  recusado: ['pendente', 'confirmado']              // never after it is posted
+});
+const DECIDED = ['confirmado', 'concluido', 'recusado'];   // the steps the buyer hears about by e-mail
+const INVOICED = ['confirmado', 'enviado', 'concluido'];   // the NF-e is issued when Ju confirms
+const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;                // a Correios object code: AA123456789BR
 const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
@@ -94,7 +106,8 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       invoice: invoice(order),
       customer: {name: order.shipTo?.recipient || order.buyer?.name || '', email: order.buyer?.email || '', phone: decrypt(order.phoneEnc)},
       address: {cep: order.shipTo?.cep || '', street: order.shipTo?.street || '', number: order.shipTo?.number || '', district: order.shipTo?.district || '', city: order.shipTo?.city || '', state: order.shipTo?.state || '', complement: order.shipTo?.complement || ''},
-      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : order.method === 'debit' ? 'debit_card' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status)
+      method: {id: order.method === 'pix' ? 'pix' : order.method || '', type: order.method === 'pix' ? 'bank_transfer' : order.method === 'debit' ? 'debit_card' : 'credit_card', installments: order.installments || 1}, paid: PAID.includes(order.status),
+      trackingCode: order.trackingCode || null
     };
   }
 
@@ -133,6 +146,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       reference: order.reference, status: order.status, paymentState: order.paymentState, method: order.method,
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, discountCents: discountOf(order), totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
+      trackingCode: ['enviado', 'concluido'].includes(order.status) ? order.trackingCode || null : null,
       items: order.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitCents, selection: i.selection}))
     };
   }
@@ -149,30 +163,44 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       shipping: order.shippingInfo ? {service: order.shippingInfo.service, label: order.shippingInfo.label, days: order.shippingInfo.days, deliveryDays: order.shippingInfo.deliveryDays, chargedCents: order.shippingCents, costCents: order.shippingInfo.costCents, volumes: order.shippingInfo.volumes} : null,
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       decidedAt: order.decidedAt ? new Date(order.decidedAt).toISOString() : null, declineReason: order.declineReason || '',
+      trackingCode: order.trackingCode || null, shippedAt: order.shippedAt ? new Date(order.shippedAt).toISOString() : null,
       refund: {state: order.refundState || null, at: order.refundedAt ? new Date(order.refundedAt).toISOString() : null, error: order.refundError || null}
     };
   }
 
-  // Ju moves paid orders between pendente, concluido and recusado (reopening is allowed); unpaid ones are not hers to move.
-  async function setStatus(id, status, {reason = '', actor}) {
+  // Ju moves a paid order one step along FROM (unpaid ones are not hers to move). "enviado" takes the Correios tracking
+  // code (spaces and lower case are fine); a corrected code keeps the day it was first posted. Going back to "confirmado"
+  // or "pendente" takes the code off. The WHERE of the transition holds the status read here, so two clicks at once move
+  // the order once.
+  async function setStatus(id, status, {reason = '', trackingCode = '', actor}) {
     if (!ADMIN_STATUSES.includes(status)) throw fail('invalid_request', {field: 'status'});
     const current = await store.orders.findById(id);
-    if (current && status !== 'recusado' && MONEY_BACK.includes(current.refundState)) throw fail('refunded');   // the money is on its way back
+    if (!current || !PAID.includes(current.status)) throw fail('not_found');
+    if (status !== 'recusado' && MONEY_BACK.includes(current.refundState)) throw fail('refunded');   // the money is on its way back
+    if (!FROM[status].includes(current.status)) throw fail('invalid_transition');
     const clean = String(reason || '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').trim().slice(0, 300);
-    const moved = await store.orders.transition(id, ADMIN_STATUSES, {status, decidedAt: status === 'pendente' ? null : date(), declineReason: status === 'recusado' ? clean : null});
-    if (!moved) throw fail('not_found');
-    await store.orders.addEvent(id, `status:${status}`, clean || null, actor);
+    const patch = {status, decidedAt: status === 'pendente' ? null : date(), declineReason: status === 'recusado' ? clean : null};
+    let code = null;
+    if (status === 'enviado' && current.status !== 'concluido') {
+      code = String(trackingCode || '').replace(/\s+/g, '').toUpperCase();
+      if (!TRACKING.test(code)) throw fail('invalid_request', {field: 'trackingCode'});
+      Object.assign(patch, {trackingCode: code, shippedAt: current.status === 'enviado' && current.shippedAt ? current.shippedAt : date()});
+    }
+    if (['pendente', 'confirmado', 'recusado'].includes(status)) Object.assign(patch, {trackingCode: null, shippedAt: null});
+    const moved = await store.orders.transition(id, [current.status], patch);
+    if (!moved) throw fail('invalid_transition');
+    await store.orders.addEvent(id, `status:${status}`, code || clean || null, actor);
     return store.orders.findById(id);
   }
 
-  // Tells the buyer what Ju decided in the panel: confirmed (concluido) or declined (recusado). Reopening sends nothing,
-  // and the decline reason never leaves the panel. One e-mail per decision: the key carries the decision time, so a retry
+  // Tells the buyer each step Ju takes in the panel: confirmed (confirmado), posted with the tracking code (concluido, with a
+  // button to "Meus pedidos") or declined (recusado). Going back sends nothing, and the decline reason never leaves the panel. One e-mail per decision: the key carries the decision time, so a retry
   // cannot double it, while a new decision after reopening is a new e-mail. The status is already saved either way.
   async function notifyDecision(order, {fetchImpl = globalThis.fetch, outbox, test = order.source !== 'live'} = {}) {
     if (!DECIDED.includes(order.status)) return false;
     const mail = config(env), data = summary(order);
     if (!mailReady(mail) || !data.customer.email) return false;
-    const message = renderDecisionEmail({summary: data, status: order.status, refund: order.refundState, lang: order.lang, test, assetUrl: mail.assetUrl});
+    const message = renderDecisionEmail({summary: data, status: order.status, refund: order.refundState, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta.html#pedidos`});
     const decided = order.decidedAt ? new Date(order.decidedAt).getTime() : 0;
     try {
       await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${order.status}-${order.id}-${decided}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind: order.status, reference: order.reference}))});
@@ -226,4 +254,4 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   return {open, applyPayment, notifyPaid, notifyPaidLater, notifyDecision, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
-module.exports = {createOrders, PAID, ADMIN_STATUSES};
+module.exports = {createOrders, PAID, ADMIN_STATUSES, FROM, INVOICED, TRACKING};
