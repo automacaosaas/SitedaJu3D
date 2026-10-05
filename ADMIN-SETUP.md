@@ -22,6 +22,33 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
   **custo da etiqueta**, para conferir na hora de gerar a etiqueta no Correios Empresa.
 - Pedidos aguardando pagamento ou cancelados não aparecem, e a equipe não consegue mudar o status deles.
 
+## Fluxo de caixa
+
+No topo do painel há duas partes: **Pedidos** e **Fluxo de caixa** (o endereço `admin.html#caixa` abre direto nela). É o
+dinheiro que de fato entrou e saiu da loja, no dia em que aconteceu, sem termos de contabilidade.
+
+- **Visão geral:** quatro números (**Saldo atual**, **Entrou este mês**, **Saiu este mês**, **Resultado do mês**), o gráfico de
+  entradas (verde) e saídas (vermelho) **por dia** ou **por mês** (tocar num mês abre os dias dele) e as **contas para pagar**
+  atrasadas ou dos próximos 10 dias, com o saldo que sobra depois delas.
+- **Movimentações:** a lista do mês, com busca (procura em todos os meses) e filtro Todas / Entradas / Saídas. Os botões
+  **+ Adicionar entrada** e **+ Adicionar despesa** abrem um formulário curto: descrição, valor, categoria e data.
+  Categorias de despesa: Materiais, Frete, Equipamentos, Marketing, Outros. De entrada: Venda, Outros. A lixeira apaga só o que
+  foi lançado à mão.
+- **Contas a pagar:** conta, vencimento, valor e status. Um clique no status marca como **Pago** (a conta entra em Movimentações
+  como saída do dia) ou volta para **Pendente**. Atrasadas aparecem em vermelho.
+
+**O que entra sozinho:** todo pedido pago vira **Entrada · Venda** no dia do pagamento (horário de Brasília), pelo valor que o
+cliente pagou, frete incluído. Pedido recusado com o dinheiro devolvido vira **Saída · Estorno** no dia do estorno. Nada disso
+precisa ser digitado, e nenhum dado do cliente aparece aqui (só o número do pedido e as peças).
+
+**Saldo atual:** soma tudo até hoje. Na primeira vez, toque em **Informar o saldo de hoje** e diga quanto a loja tem (conta e
+caixa). A diferença entra como **Ajuste de saldo**, que mexe só no saldo e não conta como entrada nem saída do mês. Use o mesmo
+botão (**Ajustar saldo**) quando o valor do painel não bater com o banco.
+
+O que o painel ainda não desconta sozinho: a tarifa do Mercado Pago e o custo das etiquetas dos Correios (lance como despesa,
+por exemplo a fatura mensal dos Correios em **Frete**). Os dados ficam no banco (tabelas `cash_entries` e `bills`, migração
+`009_caixa.sql`, criadas sozinhas ao iniciar o site) e cada mudança vai para o registro de auditoria do painel.
+
 ## Como entrar: senha e código do celular
 
 1. E-mail e senha.

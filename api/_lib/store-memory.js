@@ -3,7 +3,7 @@
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
 function createMemoryStore() {
   const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
-  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map();
+  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map(), cashEntries = new Map(), bills = new Map();
   let eventSerial = 0, auditSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
@@ -97,6 +97,19 @@ function createMemoryStore() {
         return copy(row);
       },
       async remove(name) { integrations.delete(name); }
+    },
+    // Fluxo de caixa (db/migrations/009_caixa.sql): entries Ju adds by hand and the bills to pay. Days are "YYYY-MM-DD".
+    cashEntries: {
+      async create(data) { const row = {createdBy: null, createdAt: new Date(), ...data}; cashEntries.set(row.id, row); return copy(row); },
+      async list(limit = 5000) { return copy([...cashEntries.values()].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt - a.createdAt).slice(0, limit)); },
+      // The removed row, or null when there was none.
+      async remove(id) { const row = cashEntries.get(id); if (!row) return null; cashEntries.delete(id); return copy(row); }
+    },
+    bills: {
+      async create(data) { const row = {paidOn: null, createdBy: null, createdAt: new Date(), ...data}; bills.set(row.id, row); return copy(row); },
+      async list(limit = 5000) { return copy([...bills.values()].sort((a, b) => a.dueOn.localeCompare(b.dueOn) || a.createdAt - b.createdAt).slice(0, limit)); },
+      async setPaid(id, paidOn) { const row = bills.get(id); if (!row) return null; row.paidOn = paidOn; return copy(row); },
+      async remove(id) { const row = bills.get(id); if (!row) return null; bills.delete(id); return copy(row); }
     },
     adminSessions: {
       async create(session) { adminSessions.set(key(session.tokenHash), {mfaAt: null, attempts: 0, revokedAt: null, createdAt: new Date(), ...session}); },

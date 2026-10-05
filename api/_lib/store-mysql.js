@@ -53,6 +53,13 @@ function toIntegration(row) {
   for (const [field, column] of Object.entries(INTEGRATION_COLUMNS)) integration[field] = row[column] ?? null;
   return integration;
 }
+// Fluxo de caixa (db/migrations/009_caixa.sql). DATE columns come back as a Date at midnight UTC (pool timezone 'Z'):
+// back to the "YYYY-MM-DD" they were saved as.
+const toDay = value => value instanceof Date ? value.toISOString().slice(0, 10) : value === null || value === undefined ? null : String(value).slice(0, 10);
+const CASH_COLUMNS = {id: 'id', kind: 'kind', category: 'category', description: 'description', amountCents: 'amount_cents', occurredOn: 'occurred_on', createdBy: 'created_by', createdAt: 'created_at'};
+const toCashEntry = row => row && {id: row.id, kind: row.kind, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredOn: toDay(row.occurred_on), createdBy: row.created_by ?? null, createdAt: row.created_at};
+const BILL_COLUMNS = {id: 'id', description: 'description', amountCents: 'amount_cents', dueOn: 'due_on', paidOn: 'paid_on', createdBy: 'created_by', createdAt: 'created_at'};
+const toBill = row => row && {id: row.id, description: row.description, amountCents: Number(row.amount_cents), dueOn: toDay(row.due_on), paidOn: toDay(row.paid_on), createdBy: row.created_by ?? null, createdAt: row.created_at};
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
@@ -185,6 +192,38 @@ function createMysqlStore(pool) {
         return this.get(name);
       },
       remove: name => run('DELETE FROM integrations WHERE name = ?', [name])
+    },
+    cashEntries: {
+      async create(data) {
+        const fields = Object.keys(data).filter(f => CASH_COLUMNS[f] && f !== 'createdAt');
+        await run(`INSERT INTO cash_entries (${fields.map(f => CASH_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f] ?? null));
+        return toCashEntry(await one('SELECT * FROM cash_entries WHERE id = ?', [data.id]));
+      },
+      async list(limit = 5000) { return (await all(`SELECT * FROM cash_entries ORDER BY occurred_on DESC, created_at DESC LIMIT ${Math.min(Number(limit) || 5000, 20000)}`, [])).map(toCashEntry); },
+      async remove(id) {
+        const row = toCashEntry(await one('SELECT * FROM cash_entries WHERE id = ?', [id]));
+        if (!row) return null;
+        await run('DELETE FROM cash_entries WHERE id = ?', [id]);
+        return row;
+      }
+    },
+    bills: {
+      async create(data) {
+        const fields = Object.keys(data).filter(f => BILL_COLUMNS[f] && f !== 'createdAt');
+        await run(`INSERT INTO bills (${fields.map(f => BILL_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f] ?? null));
+        return toBill(await one('SELECT * FROM bills WHERE id = ?', [data.id]));
+      },
+      async list(limit = 5000) { return (await all(`SELECT * FROM bills ORDER BY due_on, created_at LIMIT ${Math.min(Number(limit) || 5000, 20000)}`, [])).map(toBill); },
+      async setPaid(id, paidOn) {
+        await run('UPDATE bills SET paid_on = ? WHERE id = ?', [paidOn, id]);
+        return toBill(await one('SELECT * FROM bills WHERE id = ?', [id]));
+      },
+      async remove(id) {
+        const row = toBill(await one('SELECT * FROM bills WHERE id = ?', [id]));
+        if (!row) return null;
+        await run('DELETE FROM bills WHERE id = ?', [id]);
+        return row;
+      }
     },
     adminSessions: {
       create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),

@@ -158,6 +158,24 @@ async function contract(store, label) {
   await store.integrations.remove(integration);
   assert.equal(await store.integrations.get(integration), null);
 
+  // Fluxo de caixa (009_caixa.sql): entries typed by hand and bills. Days come back as the same "YYYY-MM-DD", whatever
+  // the time zone of the server; remove answers the row once, then null.
+  const entryId = crypto.randomUUID();
+  const entry = await store.cashEntries.create({id: entryId, kind: 'saida', category: 'materiais', description: 'Filamento (contrato)', amountCents: 31000, occurredOn: '2026-10-03', createdBy: 'ju@site.test'});
+  assert.deepEqual([entry.occurredOn, entry.amountCents, entry.kind, entry.category], ['2026-10-03', 31000, 'saida', 'materiais'], `${label}: a cash entry round-trips`);
+  assert((await store.cashEntries.list()).some(e => e.id === entryId && e.occurredOn === '2026-10-03'));
+  assert.equal((await store.cashEntries.remove(entryId)).description, 'Filamento (contrato)', `${label}: remove answers the row`);
+  assert.equal(await store.cashEntries.remove(entryId), null, `${label}: and only once`);
+  const billId = crypto.randomUUID();
+  const bill = await store.bills.create({id: billId, description: 'Fornecedor (contrato)', amountCents: 12000, dueOn: '2026-10-15', createdBy: 'ju@site.test'});
+  assert.deepEqual([bill.dueOn, bill.paidOn, bill.amountCents], ['2026-10-15', null, 12000], `${label}: a bill starts pending`);
+  assert.equal((await store.bills.setPaid(billId, '2026-10-04')).paidOn, '2026-10-04', `${label}: paid on a day`);
+  assert.equal((await store.bills.setPaid(billId, null)).paidOn, null, `${label}: back to pending`);
+  assert.equal(await store.bills.setPaid(crypto.randomUUID(), '2026-10-04'), null);
+  assert((await store.bills.list()).some(b => b.id === billId && b.dueOn === '2026-10-15'));
+  assert.equal((await store.bills.remove(billId)).id, billId);
+  assert.equal(await store.bills.remove(billId), null);
+
   // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
   const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();
   await store.customers.create({id: purger, email: purgerEmail, emailVerifiedAt: new Date(), displayName: 'P'});
