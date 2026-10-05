@@ -30,7 +30,8 @@ const ERRORS = {
   invalid_request: 'Escolha de 1 a 10 peças.',
   shipping_unavailable: 'Os Correios não responderam agora. Tente de novo em alguns minutos.'
 };
-const daysText = days => days ? `${days} dias úteis` : 'os Correios não informaram';
+// The Correios give a range ("9 a 12 dias úteis"); a single time when that is all they give.
+const daysText = o => !o.deliveryDays ? 'os Correios não informaram' : o.deliveryDaysMin && o.deliveryDaysMin < o.deliveryDays ? `${o.deliveryDaysMin} a ${o.deliveryDays} dias úteis` : `${o.deliveryDays} dias úteis`;
 
 function formView() {
   const option = code => `<option value="${code}"${form.country === code ? ' selected' : ''}>${esc(nameOf(code))}</option>`;
@@ -49,7 +50,7 @@ function formView() {
 function resultView() {
   if (!quote) return '';
   const box = quote.volumes.map(v => `${v.count > 1 ? `${v.count} caixas de ` : ''}${v.length} × ${v.width} × ${v.height} cm, ${v.weightG} g`).join(' + ');
-  const rows = quote.options.map(o => `<tr><th scope="row">${esc(o.label)}<small>código ${esc(o.code)}</small></th><td>${esc(money(o.priceCents))}</td><td>${esc(daysText(o.deliveryDays))}</td>
+  const rows = quote.options.map(o => `<tr><th scope="row">${esc(o.label)}<small>código ${esc(o.code)}</small></th><td>${esc(money(o.priceCents))}</td><td>${esc(daysText(o))}</td>
       <td><strong>${esc(money(quote.piecesCents + o.priceCents))}</strong> <button type="button" class="intl-copy" data-intl-copy="${esc(((quote.piecesCents + o.priceCents) / 100).toFixed(2).replace('.', ','))}" aria-label="Copiar o total com ${esc(o.label)}">Copiar</button></td></tr>`).join('');
   const refused = quote.refused.length ? `<div class="intl-refused"><h3>Não cotado</h3><ul>${quote.refused.map(r => `<li><strong>${esc(r.label)}</strong> (código ${esc(r.code)}): ${esc(r.reason === 'rejected' ? (r.messages.join(' · ') || 'recusado pelos Correios') : 'os Correios não responderam agora')}</li>`).join('')}</ul>
       <p>Recusado pelos Correios quer dizer que este serviço não está no contrato ou não atende esse país. Para incluir um serviço, fale com o gerente do contrato nos Correios.</p></div>` : '';

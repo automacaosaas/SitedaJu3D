@@ -8,7 +8,8 @@
 const CODES = {'03298': {name: 'PAC', base: 1850, perZone: 430, perKg: 340, days: 3, perZoneDays: 2}, '03220': {name: 'SEDEX', base: 2650, perZone: 870, perKg: 590, days: 1, perZoneDays: 1}};
 // Abroad (GET /preco/v1/internacional/{code}, GET /prazo/v2/internacional/exportacao/{code}): Exporta Fácil Standard and
 // Expresso answer; Econômico (45209) answers 403 like a service missing from the contract, and North Korea (KP) is not served.
-// Americas are cheaper than the rest: made-up numbers, only to exercise the panel.
+// Americas are cheaper than the rest: made-up numbers, only to exercise the panel. The time answers in the real format
+// (the contract's answer of 05/10/2026): a range, prazoMinimo to prazoMaximo working days, with the dates.
 const INTERNATIONAL = {'45128': {name: 'Exporta Fácil Standard', base: 9800, perKg: 6200, days: 12}, '45110': {name: 'Exporta Fácil Expresso', base: 18900, perKg: 9800, days: 6}};
 const AMERICAS = new Set(['AR', 'BO', 'CA', 'CL', 'CO', 'EC', 'MX', 'PE', 'PY', 'US', 'UY', 'VE']);
 
@@ -86,7 +87,9 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     if (!bearer || !tokens.has(bearer[1])) return refused(403, 'Token inválido ou expirado');
     const service = INTERNATIONAL[code5]; if (!service) return refused(403, 'Serviço não contratado');
     if (params.get('sgPaisOrigem') !== 'BR' || !/^\d{2}-\d{2}-\d{4}$/.test(params.get('dtPostagem') || '')) return refused(400, 'PRZ-020: parâmetros inválidos');
-    return reply(200, {coProduto: code5, prazoEntrega: service.days + (AMERICAS.has(params.get('sgPaisDestino')) ? 0 : 4)});
+    const destination = params.get('sgPaisDestino'), max = service.days + (AMERICAS.has(destination) ? 0 : 4), min = max - 3;
+    const [d, m, y] = params.get('dtPostagem').split('-').map(Number), at = days => new Date(Date.UTC(y, m - 1, d + Math.round(days * 7 / 5))).toISOString().slice(0, 10);
+    return reply(200, {coProduto: code5, dataMaxEntrega: at(max), dataMinEntrega: at(min), prazoMaximo: max, prazoMinimo: min, sgPaisDestino: destination, sgPaisOrigem: 'BR'});
   }
 
   async function fetchImpl(url, init = {}) {

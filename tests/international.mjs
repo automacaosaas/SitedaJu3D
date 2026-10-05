@@ -29,6 +29,14 @@ const lines = [{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaosc
   assert.equal(quote.country, 'MX');
   assert.deepEqual(quote.options.map(o => o.code), ['45128', '45110'], 'Standard and Expresso, cheapest first');
   assert(quote.options.every(o => o.priceCents > 0 && Number.isInteger(o.deliveryDays)));
+  // The Correios give a range of working days (05/10/2026, the real contract to Mexico): the longest is what is promised.
+  assert.deepEqual(quote.options.map(o => [o.deliveryDaysMin, o.deliveryDays]), [[9, 12], [3, 6]], 'Standard 9 to 12, Expresso 3 to 6 (simulated)');
+  {
+    const real = {coProduto: '45110', dataMaxEntrega: '2026-10-21', dataMinEntrega: '2026-10-16', prazoMaximo: 12, prazoMinimo: 9, sgPaisDestino: 'MX', sgPaisOrigem: 'BR'};
+    const asReal = createShipping({env, fetchImpl: (url, init) => String(url).includes('/prazo/') ? Promise.resolve({ok: true, status: 200, json: async () => real}) : fake.fetchImpl(url, init)});
+    const answered = await asReal.quoteInternational({lines, country: 'MX'});
+    assert(answered.options.every(o => o.deliveryDaysMin === 9 && o.deliveryDays === 12), 'the answer the real contract gave: 9 to 12 working days');
+  }
   assert.deepEqual(quote.refused, [{service: 'economico', label: 'Exporta Fácil Econômico', code: '45209', reason: 'rejected', messages: ['Serviço não contratado']}], 'a service outside the contract is listed with the Correios\' words');
   assert.deepEqual(quote.volumes, [{length: 22, width: 20, height: 7, weightG: 129 * 2 + 250, count: 1}], 'the same shared box as in Brazil');
   const price = fake.calls.find(c => c.path === '/preco/v1/internacional/45128').params;

@@ -106,7 +106,7 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     return days;
   }
   // International (export): contract price of one volume to a country (cents), and the delivery time when the Correios
-  // give one (days, or null: the price stands without it).
+  // give one ({min, max} working days, or null: the price stands without it).
   async function priceInternational({code, country, box, declaredCents = 0}) {
     const params = {cepOrigem: config.originCep, sgPaisDestino: country, ...boxParams(box), nuContrato: config.contract, nuDR: config.dr};
     if (declaredCents > 0) params.vlDeclarado = (declaredCents / 100).toFixed(2).replace('.', ',');
@@ -119,11 +119,15 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     const day = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric'}).format(date).replace(/\//g, '-');
     const data = await get(`/prazo/v2/internacional/exportacao/${encodeURIComponent(code)}`, {sgPaisOrigem: 'BR', sgPaisDestino: country, dtPostagem: day});
     const answer = Array.isArray(data) ? data[0] : data;
-    const days = Number(answer?.prazoEntrega ?? answer?.prazo ?? answer?.nuPrazo ?? answer?.prazoExportacao);
-    if (Number.isInteger(days) && days > 0) return days;
+    // The answer is a range of working days, as the real contract gave it (05/10/2026, to Mexico):
+    //   {coProduto, prazoMinimo: 9, prazoMaximo: 12, dataMinEntrega: "2026-10-16", dataMaxEntrega: "2026-10-21", sgPaisDestino, sgPaisOrigem}
+    // A single time (prazoEntrega and the like) counts as both ends.
+    const whole = value => { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : null; };
+    const single = whole(answer?.prazoEntrega ?? answer?.prazo ?? answer?.nuPrazo ?? answer?.prazoExportacao);
+    const max = whole(answer?.prazoMaximo) ?? single, min = whole(answer?.prazoMinimo) ?? max;
+    if (max) return {min: Math.min(min, max), max};
     // The Correios manual does not show this answer: when it brings no time the site knows, the answer goes to the
-    // server log (no credentials nor customer data in it), so the right field can be read there. 05/10/2026: the real
-    // contract answered no known time for 45128, 45110 and 45209 to Mexico.
+    // server log (no credentials nor customer data in it), so a new format shows up there.
     console.error(`correios: prazo internacional ${code} para ${country} sem prazo reconhecido — resposta: ${JSON.stringify(data ?? null).slice(0, 600)}`);
     return null;
   }

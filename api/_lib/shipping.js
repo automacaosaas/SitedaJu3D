@@ -116,7 +116,8 @@ function createShipping({env = process.env, fetchImpl = globalThis.fetch, now = 
   }
 
   // Abroad (the panel's "Envio internacional"): the Exporta Fácil services of the contract to one country (ISO 3166 alpha-2),
-  // for the same boxes. Each option: {service, label, code, priceCents, deliveryDays (null when the Correios give no time)};
+  // for the same boxes. Each option: {service, label, code, priceCents, deliveryDays and deliveryDaysMin (the Correios'
+  // range in working days; null when they give no time)};
   // a service the contract or the country does not take goes to `refused`, with the Correios' own words: the panel shows them,
   // which is how the shop learns what its contract covers. Not cached: Ju asks for one country at a time.
   async function quoteInternational({lines, country}) {
@@ -136,7 +137,8 @@ function createShipping({env = process.env, fetchImpl = globalThis.fetch, now = 
           })
         ]);
         const carrierCents = volumes.reduce((sum, v, i) => sum + v.count * prices[i], 0) + config.labelFeeCents * count;
-        return {option: {service: service.id, label: service.label, code: service.code, priceCents: carrierCents, deliveryDays: days, volumes: count}};
+        // deliveryDays: the longest time the Correios give (what can be promised); deliveryDaysMin: the shortest.
+        return {option: {service: service.id, label: service.label, code: service.code, priceCents: carrierCents, deliveryDays: days?.max ?? null, deliveryDaysMin: days?.min ?? null, volumes: count}};
       } catch (error) {
         console.error(`shipping: ${service.label} (${service.code}) to ${iso} — ${error.code || error.message}${error.status ? ` (${error.status})` : ''} ${(error.messages || []).join(' | ')}`);
         return {refused: {service: service.id, label: service.label, code: service.code, reason: error.code === 'correios_rejected' ? 'rejected' : 'unavailable', messages: error.messages || []}};
