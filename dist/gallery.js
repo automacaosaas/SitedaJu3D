@@ -1,17 +1,19 @@
 // Galeria de fotos da aba Foto, no jeito das lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto escolhida
 // grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. São fotos reais da peça (pedido de 04/10/2026: nem o 3D
 // nem imagens geradas), recortadas por tools/galeria-vistas das fontes de design/vistas/; o 3D continua na aba ao lado.
-// Cada peça: as vistas, na ordem (a primeira abre a galeria), e as de perto (zoom), que enchem o quadro como nas lojas. Peça ainda sem
-// fotos reais: só a foto da vitrine.
+// O padrão de toda peça com fotos reais: 4 fotos, todas no mesmo formato (4:5) e com a peça do mesmo tamanho — frente, três quartos,
+// costas e um detalhe de perto (que enche o quadro, como o zoom das lojas). Cada peça só diz qual é o detalhe dela. Peça ainda sem fotos
+// reais (hoje, o macaco): só a foto da vitrine.
+export const STANDARD=[['frente','Frente'],['tres-quartos','Três quartos'],['costas','Costas'],['detalhe','Detalhe de perto']];
 export const GALLERY={
-  borboletoscopio:{zoom:['rosto','asa'],views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
-  dinossauroscopio:{zoom:['rosto','crista','pes'],views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
-  aviaoscopia:{zoom:['numeros','asa'],views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',numeros:'Aberturas de perto',asa:'Asa e motor de perto'}}
+  borboletoscopio:{detalhe:'Rostinho de perto'},
+  dinossauroscopio:{detalhe:'Rosto de perto'},
+  aviaoscopia:{detalhe:'Cabine de perto'}
 };
-export const viewsOf=key=>Object.entries(GALLERY[key]?.views||{frente:'Frente'}).map(([id,name])=>({id,name,zoom:!!GALLERY[key]?.zoom.includes(id)}));
+export const viewsOf=key=>GALLERY[key]?STANDARD.map(([id,name])=>({id,name:id==='detalhe'?GALLERY[key].detalhe:name,zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const realPhotos=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='5';
+export const VIEWS_VERSION='6';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){
@@ -44,8 +46,8 @@ export function createGallery(root,{onChange}={}){
   // items: [{name, src, thumb, alt}]. Outra peça: refaz as imagens e volta para a primeira vista.
   function set(list){
     if(list.length!==items.length){
-      track.replaceChildren(...list.map((item,i)=>{const slide=document.createElement('div');slide.className='gallery-slide';slide.setAttribute('role','group');slide.setAttribute('aria-roledescription','vista');const img=document.createElement('img');img.width=img.height=1000;img.decoding='async';img.draggable=false;if(i)img.loading='lazy';slide.append(img);return slide;}));
-      rail.replaceChildren(...list.map(()=>{const b=document.createElement('button');b.type='button';const img=document.createElement('img');img.width=img.height=200;img.alt='';img.decoding='async';img.draggable=false;b.append(img);return b;}));
+      track.replaceChildren(...list.map((item,i)=>{const slide=document.createElement('div');slide.className='gallery-slide';slide.setAttribute('role','group');slide.setAttribute('aria-roledescription','vista');const img=document.createElement('img');img.width=960;img.height=1200;img.decoding='async';img.draggable=false;if(i)img.loading='lazy';slide.append(img);return slide;}));
+      rail.replaceChildren(...list.map(()=>{const b=document.createElement('button');b.type='button';const img=document.createElement('img');img.width=160;img.height=200;img.alt='';img.decoding='async';img.draggable=false;b.append(img);return b;}));
       dots.replaceChildren(...list.map(()=>{const b=document.createElement('button');b.type='button';b.append(document.createElement('i'));return b;}));
     }
     list.forEach((item,i)=>{

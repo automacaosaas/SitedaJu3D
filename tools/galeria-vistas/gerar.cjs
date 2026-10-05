@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Fotos da galeria da aba Foto (dist/assets/vistas/<peça>-<vista>.webp, lado maior 1000 px, e -mini.webp, 200 px): as fotos reais de
+// Fotos da galeria da aba Foto (dist/assets/vistas/<peça>-<vista>.webp, 960 x 1200, e -mini.webp, 160 x 200): as fotos reais de
 // cada peça, recortadas das fontes de design/vistas/ (fotos e vídeos) como manda design/vistas/fotos.json; as vistas e a ordem de cada
-// peça estão em dist/gallery.js (GALLERY). Peça ainda sem fotos reais: só a foto da vitrine.
+// peça seguem o padrão de dist/gallery.js (STANDARD). Peça ainda sem fotos reais: só a foto da vitrine.
 //   node tools/galeria-vistas/gerar.cjs                  → todas as peças
 //   node tools/galeria-vistas/gerar.cjs aviaoscopia      → só uma (ou várias, separadas por vírgula)
 // Tudo no Chrome sem janela. Depois de trocar fotos, suba VIEWS_VERSION em dist/gallery.js.

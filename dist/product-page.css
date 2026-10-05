@@ -42,20 +42,20 @@
   background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
 /* Galeria de fotos (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto
    escolhida grande; no celular, a foto ocupa a largura toda e muda arrastando de lado. As fotos vêm recortadas, com uma sombra leve no
-   chão, e ficam direto no fundo da página (sem um quadro em volta); as de perto (.is-zoom) enchem a área toda, como um zoom. Peça ainda
-   sem fotos reais: só a foto da vitrine, sem miniaturas nem setas. */
-#product-dialog[data-view=photo] .detail-visual { background: #fff; }
+   chão, e ficam direto no fundo da área (o mesmo das duas abas, sem um quadro em volta); as de perto (.is-zoom) enchem a área toda, como
+   um zoom. Todas no mesmo formato, 4:5, e as miniaturas também. Peça ainda sem fotos reais: só a foto da vitrine, sem miniaturas nem
+   setas. */
 #product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
 .gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
-.gallery-rail button { flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
+.gallery-rail button { flex: none; width: 64px; height: 80px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
 .gallery-rail button:hover, .gallery-rail button[aria-current=true] { opacity: 1; }
 .gallery-rail button[aria-current=true] { box-shadow: inset 0 0 0 2px var(--pd-text); }
 .gallery-rail button:focus-visible, .gallery-arrows button:focus-visible, .gallery-dots button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none; -webkit-user-drag: none; user-select: none; }
 .gallery-main { position: relative; min-width: 0; min-height: 0; border-radius: 22px; background: transparent; overflow: hidden; }
 .gallery-slide.is-zoom { padding: 0; }
-#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; }
+#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }
 .gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .gallery-track::-webkit-scrollbar { display: none; }
 .gallery-track:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -3px; border-radius: 22px; }
@@ -218,14 +218,15 @@
 @media (max-width: 600px) {
   #product-dialog { inset: 0; width: 100vw; height: 100dvh; margin: 0; border-radius: 0; box-shadow: none; }
   /* a foto ganha a altura que as informações deixaram (elas ficam no (i)) */
-  #product-dialog[open] { grid-template-rows: auto clamp(260px, 50dvh, 500px) minmax(0, 1fr) auto; animation-name: pd-up; animation-duration: .45s; }
+  #product-dialog[open] { grid-template-rows: auto clamp(260px, 52dvh, 520px) minmax(0, 1fr) auto; animation-name: pd-up; animation-duration: .45s; }
   .pdp-head { padding: max(10px, env(safe-area-inset-top)) 12px 10px; gap: 8px; }
   #product-dialog .pdp-heading .eyebrow { letter-spacing: .18em; }
   #product-dialog .pdp-heading h2 { font-size: 23px; }
   #product-dialog .pdp-heading .detail-subtitle { display: block; font-size: 13px; }
   #product-dialog .view-tabs { top: 12px; left: 12px; }
   #product-dialog .view-tabs button { min-height: 34px; padding: 0 12px; }
-  #product-dialog .image-area { inset: 52px 0 8px; }
+  /* a foto sobe até o topo da área: a peça já tem a margem dela no quadro e passa por baixo do Foto | 3D sem encostar */
+  #product-dialog .image-area { inset: 8px 0 8px; }
   #product-dialog #viewer-host { inset: 50px 0 30px; }
   #product-dialog .viewer-tools { left: 8px; }
   #product-dialog .view-note { bottom: 8px; left: 10px; right: 10px; line-height: 1.2; }
