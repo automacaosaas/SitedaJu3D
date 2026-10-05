@@ -1,9 +1,10 @@
-import {PRODUCTS, color} from './products.js';
+import {PRODUCTS, color, showcase} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {totals, pixDiscount} from './cart-store.js';
 import {icon} from './icons.js';
 import {freeShippingBar} from './free-shipping.js';
 import {formatDays, shippingMessage} from './shipping-client.js';
+import {PAYMENT_MARKS, MERCADO_PAGO_MARK} from './payment-marks.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const editButton = (item, circular = false) => `<button type="button" class="${circular ? 'cart-customize' : 'cart-edit-link'}" data-action="edit" data-id="${esc(item.id)}" aria-label="Editar personalização de ${esc(item.title)}">${circular ? icon('pencil') : 'Editar cores'}</button>`;
@@ -54,17 +55,38 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
       <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
     </div>
     ${!chosen.length ? '<p class="cart-selection-help">Selecione uma peça para continuar.</p>' : ''}
-    <div class="cart-reassurance"><div>${icon('lock')}<p><strong>Compra segura</strong><span>Seus dados protegidos</span></p></div><div>${icon('truck')}<p><strong>Produção sob demanda</strong><span>${esc(productionLabel || COMMERCE.productionLabel)}</span></p></div></div>
-    <div class="accepted-methods" aria-label="Meios de pagamento${COMMERCE.mode === 'demo' ? ' em demonstração' : ''}"><span>${icon('pix')} Pix</span><span>${icon('card')} Cartão</span></div>
   </aside>`;
 }
+
+// Depois do resumo: as outras peças da loja (as que ainda não estão no carrinho), cada uma levando à página dela.
+function recommendations(cart) {
+  const inCart = new Set(cart.map(item => item.productId)), ids = Object.keys(PRODUCTS).filter(id => !inCart.has(id));
+  if (!ids.length) return '';
+  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><ul class="cart-rec-track">${ids.map(id => {
+    const product = PRODUCTS[id], {theme} = showcase(id);
+    return `<li><a class="cart-rec" href="${id}.html" style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></span><span class="cart-rec-copy"><span class="cart-rec-name">${esc(product.title)}</span><span class="cart-rec-sub">${esc(product.subtitle)}</span><strong class="cart-rec-price">${money(COMMERCE.prices[id])}</strong></span></a></li>`;
+  }).join('')}</ul></section>`;
+}
+
+// No fim: o que a pessoa precisa saber para comprar tranquila (cada linha leva à política) e os meios de pagamento
+// aceitos pelo Mercado Pago, só o que os Termos dizem.
+function purchaseInfo() {
+  const row = (name, href, title, text) => `<li>${icon(name)}<a href="${href}"><strong>${title}</strong> <span>${text}</span></a></li>`;
+  return `<section class="cart-info" aria-label="Informações da compra"><ul class="cart-info-list">${[
+    row('truck', 'termos.html#producao', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
+    row('card', 'termos.html#precos', 'Formas de pagamento.', 'Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.'),
+    row('clock', 'termos.html#producao', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
+    row('returns', 'trocas.html', 'Trocas e devoluções.', 'Você pode desistir em até 7 dias depois de receber.')].join('')}</ul>
+    <div class="cart-pay"><h2>Métodos de pagamento aceitos</h2><ul class="pay-marks">${PAYMENT_MARKS}</ul><p class="cart-pay-by">${MERCADO_PAGO_MARK}<span>Pagamento processado pelo Mercado Pago</span></p></div></section>`;
+}
+const extras = cart => `<div class="cart-more">${recommendations(cart)}${purchaseInfo()}</div>`;
 
 // Every piece in the cart is bought: with one to three pieces, checkboxes only add noise (audit E2).
 export function renderCart(cart, options = {}) {
   const chosen = cart;
   const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
-  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>`;
+  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart)}`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
     <div class="cart-products">${cart.map(item => itemCard(item)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
-    </section>${cartSummary(chosen, options)}</div>`;
+    </section>${cartSummary(chosen, options)}</div>${extras(cart)}`;
 }

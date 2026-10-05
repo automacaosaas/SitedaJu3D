@@ -821,4 +821,17 @@ Impressão 3D|3D printing|Impresión 3D
 Disponibilidade|Availability|Disponibilidad
 Peças de oftalmologia|Ophthalmology pieces|Piezas de oftalmología
 ENCONTRE A PEÇA DO SEU EQUIPAMENTO|FIND THE PIECE FOR YOUR INSTRUMENT|ENCUENTRA LA PIEZA DE TU EQUIPO
+Você também pode gostar|You may also like|También te puede gustar
+Comece por uma destas|Start with one of these|Empieza por una de estas
+Informações da compra|Purchase information|Información de la compra
+Entrega e frete.|Delivery and shipping.|Entrega y envío.
+Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.|We ship with Correios all over Brazil; shipping cost and time come from your CEP (postal code).|Enviamos por Correios a todo Brasil; el envío y el plazo salen del CEP (código postal).
+Formas de pagamento.|Payment options.|Formas de pago.
+Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.|Pix with 5% off, or credit and debit card, through Mercado Pago.|Pix con 5% de descuento o tarjeta de crédito y débito, por Mercado Pago.
+Feito sob encomenda.|Made to order.|Hecho por encargo.
+A produção leva 3 a 5 dias úteis e começa depois da confirmação do pagamento.|Production takes 3 to 5 business days and starts once payment is confirmed.|La producción tarda de 3 a 5 días hábiles y empieza después de confirmarse el pago.
+Trocas e devoluções.|Exchanges and returns.|Cambios y devoluciones.
+Você pode desistir em até 7 dias depois de receber.|You can cancel within 7 days of receiving it.|Puedes desistir hasta 7 días después de recibirlo.
+Métodos de pagamento aceitos|Accepted payment methods|Métodos de pago aceptados
+Pagamento processado pelo Mercado Pago|Payment processed by Mercado Pago|Pago procesado por Mercado Pago
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

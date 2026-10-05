@@ -65,6 +65,19 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(page, /cart-back/, 'no floating back button over the title');
   assert.match(page, /<a class="collection-link cart-continue" href="produtos\.html" data-action="return">← Continuar escolhendo<\/a>/, '"Continuar escolhendo" goes back to where the person was');
   assert.equal((page.match(/data-action="remove"/g) || []).length, 2, 'the trash can stays on each piece');
+  // after the summary (no "Compra segura" box in it any more): the other pieces, the purchase info with links to the
+  // policies, and the payment methods Mercado Pago takes in the shop (Termos: Pix, credit and debit card)
+  assert.doesNotMatch(page, /cart-reassurance|accepted-methods|Compra segura/);
+  assert(page.indexOf('</aside>') < page.indexOf('<div class="cart-more">'), 'the extras come after the order summary');
+  assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html'], 'recommends only what is not in the cart');
+  assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
+    [['termos.html#producao', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['termos.html#producao', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
+  assert.match(page, /começa depois da confirmação do pagamento\./);
+  assert.deepEqual([...page.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Mastercard', 'American Express', 'Elo', 'Hipercard']);
+  assert.match(page, /Pagamento processado pelo Mercado Pago/);
+  const empty = renderCart([], {});
+  assert.match(empty, /<h2 id="cart-recs-title">Comece por uma destas<\/h2>/);
+  assert.equal((empty.match(/class="cart-rec"/g) || []).length, Object.keys(PRODUCTS).length, 'the empty cart suggests every piece');
   const checkout = read('dist/checkout.js');
   assert.match(checkout, /const purchaseItems = \(\) => cart;/);
   assert.doesNotMatch(checkout, /selectedItems|select-all|remove-selected/);
