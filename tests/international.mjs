@@ -47,8 +47,19 @@ const lines = [{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaosc
 
   // no delivery time from the Correios: the price still stands
   const noTime = createShipping({env, fetchImpl: (url, init) => String(url).includes('/prazo/') ? Promise.resolve({ok: false, status: 500, json: async () => ({})}) : fake.fetchImpl(url, init)});
-  const priced = await noTime.quoteInternational({lines, country: 'US'});
+  const logged = [], original = console.error;
+  console.error = (...parts) => logged.push(parts.join(' '));
+  let priced, unknown;
+  try {
+    priced = await noTime.quoteInternational({lines, country: 'US'});
+    // An answer in a format the site does not know (05/10/2026: the real contract gave no known time): the answer is logged.
+    const odd = createShipping({env, fetchImpl: (url, init) => String(url).includes('/prazo/') ? Promise.resolve({ok: true, status: 200, json: async () => ({coProduto: '45128', diasUteis: '9 a 14'})}) : fake.fetchImpl(url, init)});
+    unknown = await odd.quoteInternational({lines, country: 'MX'});
+  } finally { console.error = original; }
   assert(priced.options.length === 2 && priced.options.every(o => o.deliveryDays === null && o.priceCents > 0));
+  assert(logged.some(line => /prazo de Exporta Fácil .* para US — correios_unavailable \(500\)/.test(line)), 'why the time is missing goes to the log');
+  assert(unknown.options.every(o => o.deliveryDays === null && o.priceCents > 0));
+  assert(logged.some(line => line.includes('sem prazo reconhecido') && line.includes('"diasUteis":"9 a 14"')), 'an answer without a known time is logged as it came');
   await assert.rejects(createShipping({env: {}, fetchImpl: fake.fetchImpl}).quoteInternational({lines, country: 'MX'}), {code: 'shipping_off'}, 'no Correios credentials');
 }
 

@@ -129,7 +129,11 @@ function createShipping({env = process.env, fetchImpl = globalThis.fetch, now = 
       try {
         const [prices, days] = await Promise.all([
           Promise.all(volumes.map(v => correios.priceInternational({code: service.code, country: iso, box: v.box}))),
-          correios.deadlineInternational({code: service.code, country: iso}).catch(() => null)
+          // No time is no reason to lose the price; the reason goes to the server log (the Correios' words, never credentials).
+          correios.deadlineInternational({code: service.code, country: iso}).catch(error => {
+            console.error(`shipping: prazo de ${service.label} (${service.code}) para ${iso} — ${error.code || error.message}${error.status ? ` (${error.status})` : ''} ${(error.messages || []).join(' | ')}`);
+            return null;
+          })
         ]);
         const carrierCents = volumes.reduce((sum, v, i) => sum + v.count * prices[i], 0) + config.labelFeeCents * count;
         return {option: {service: service.id, label: service.label, code: service.code, priceCents: carrierCents, deliveryDays: days, volumes: count}};

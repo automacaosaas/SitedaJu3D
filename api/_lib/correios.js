@@ -120,7 +120,12 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     const data = await get(`/prazo/v2/internacional/exportacao/${encodeURIComponent(code)}`, {sgPaisOrigem: 'BR', sgPaisDestino: country, dtPostagem: day});
     const answer = Array.isArray(data) ? data[0] : data;
     const days = Number(answer?.prazoEntrega ?? answer?.prazo ?? answer?.nuPrazo ?? answer?.prazoExportacao);
-    return Number.isInteger(days) && days > 0 ? days : null;
+    if (Number.isInteger(days) && days > 0) return days;
+    // The Correios manual does not show this answer: when it brings no time the site knows, the answer goes to the
+    // server log (no credentials nor customer data in it), so the right field can be read there. 05/10/2026: the real
+    // contract answered no known time for 45128, 45110 and 45209 to Mexico.
+    console.error(`correios: prazo internacional ${code} para ${country} sem prazo reconhecido — resposta: ${JSON.stringify(data ?? null).slice(0, 600)}`);
+    return null;
   }
   return {settings: config, price, deadline, priceInternational, deadlineInternational};
 }
