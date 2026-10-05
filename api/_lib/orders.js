@@ -22,6 +22,8 @@ const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extr
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
 // The Pix discount is not a column: the order keeps the list subtotal and the total charged, so it is what is missing.
 const discountOf = order => Math.max(0, (order.subtotalCents || 0) + (order.shippingCents || 0) - (order.totalCents || 0));
+// Whether what Mercado Pago says would leave a waiting order exactly as it is (no write needed).
+const sameBase = (order, base) => ['mpOrderId', 'paymentState', 'method', 'installments'].every(f => (order[f] ?? null) === (base[f] ?? null));
 const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
 
 function createOrders({store, env = process.env, now = () => Date.now()}) {
@@ -63,12 +65,16 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       }
       return {order: await store.orders.findById(order.id), newlyPaid: false};
     }
-    let newlyPaid = false;
-    if (payment.state === 'approved') newlyPaid = await store.orders.transition(order.id, ['aguardando_pagamento', 'cancelado'], {...base, status: 'pendente', paidAt: date()});
-    else if (payment.state === 'refused' || payment.state === 'expired') await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
-    else await store.orders.transition(order.id, ['aguardando_pagamento'], base);
+    // The checkout asks every few seconds while a Pix waits: when Mercado Pago says nothing new, or the order is already
+    // past the status a transition starts from, nothing is written and the order is not read back. Statuses only move
+    // forward from these, so skipping on the copy we hold never loses a transition (the WHERE would refuse it anyway).
+    let newlyPaid = false, moved = false;
+    if (payment.state === 'approved') { if (!PAID.includes(order.status)) moved = newlyPaid = await store.orders.transition(order.id, ['aguardando_pagamento', 'cancelado'], {...base, status: 'pendente', paidAt: date()}); }
+    else if (order.status !== 'aguardando_pagamento') { /* paid, cancelled or decided: a late pending/refused answer changes nothing */ }
+    else if (payment.state === 'refused' || payment.state === 'expired') moved = await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
+    else if (!sameBase(order, base)) moved = await store.orders.transition(order.id, ['aguardando_pagamento'], base);
     if (newlyPaid || payment.state !== order.paymentState) await store.orders.addEvent(order.id, newlyPaid ? 'paid' : 'payment', payment.state, actor);
-    return {order: await store.orders.findById(order.id), newlyPaid};
+    return {order: moved ? await store.orders.findById(order.id) : order, newlyPaid};
   }
 
   // What the notification e-mails need (api/_lib/order-email.js), built from our own record.
@@ -109,6 +115,16 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       catch (error) { console.error(`orders: receipt to the buyer failed for ${order.reference} —`, error.status || '', error.message); }
     }
     return sent;
+  }
+
+  // notifyPaid for a request that answers the buyer (checkout and status check): the answer does not wait for Resend.
+  // The returned promise never rejects, so nothing is left unhandled; whatever fails is logged and, with the mark still
+  // empty, retried by the next status check or webhook (the idempotency key keeps two sends in flight from doubling).
+  function notifyPaidLater(order, options) {
+    return notifyPaid(order, options).catch(error => {
+      console.error(`orders: paid e-mails for ${order.reference} could not be sent —`, error.status || '', error.code || '', error.message);
+      return {owner: false, customer: false};
+    });
   }
 
   // "Meus pedidos": what the buyer sees of their own orders. No payment ids, no internal notes.
@@ -207,7 +223,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     return store.orders.findById(order.id);
   }
 
-  return {open, applyPayment, notifyPaid, notifyDecision, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
+  return {open, applyPayment, notifyPaid, notifyPaidLater, notifyDecision, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
 module.exports = {createOrders, PAID, ADMIN_STATUSES};
