@@ -45,35 +45,46 @@ declineDialog.addEventListener('click', event => {
   }
 });
 
-// The same step before concluir: confirming e-mails the buyer and issues the NF-e, which "Reabrir" does not cancel.
-const completeDialog = document.createElement('dialog');
-completeDialog.className = 'admin-confirm';
-completeDialog.setAttribute('aria-labelledby', 'complete-title');
-completeDialog.innerHTML = `<form method="dialog">
-  <p class="admin-confirm-icon" aria-hidden="true">📦</p>
-  <h2 id="complete-title">Concluir este pedido?</h2>
+// A real confirmation before the two steps that e-mail the buyer: "Confirmar" (it issues the NF-e, which going back to
+// Pendentes does not cancel) and "Concluir" (the e-mail with the tracking code and the button to "Meus pedidos").
+const stepDialog = document.createElement('dialog');
+stepDialog.className = 'admin-confirm';
+stepDialog.setAttribute('aria-labelledby', 'step-title');
+stepDialog.innerHTML = `<form method="dialog">
+  <p class="admin-confirm-icon" aria-hidden="true"></p>
+  <h2 id="step-title"></h2>
   <p class="admin-confirm-ref"></p>
-  <p class="admin-confirm-warn" data-invoice-warn hidden></p>
-  <p class="admin-confirm-warn">O pedido vai para a aba Concluídos e o cliente recebe um e-mail avisando que o pedido foi confirmado.</p>
-  <div class="admin-confirm-actions"><button type="button" data-action="cancel-complete">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-complete">Sim, concluir</button></div>
+  <p class="admin-confirm-warn" data-step-warn hidden></p>
+  <p class="admin-confirm-warn" data-step-mail></p>
+  <div class="admin-confirm-actions"><button type="button" data-action="cancel-step">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-step"></button></div>
 </form>`;
-document.body.append(completeDialog);
-function openCompleteDialog(order) {
-  const issues = invoicingMode !== 'off' && !order.invoice, where = invoicingProvider === 'bling' ? 'no Bling' : 'no emissor';
-  completeDialog.dataset.orderId = order.id;
-  completeDialog.querySelector('.admin-confirm-ref').textContent = `${order.reference} · ${money(order.totalCents)}`;
-  const warn = completeDialog.querySelector('[data-invoice-warn]');
-  warn.hidden = !issues;
-  warn.innerHTML = issues ? `<strong>A nota fiscal é emitida na hora.</strong> "Reabrir" volta o pedido para Pendentes, mas não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '';
-  completeDialog.querySelector('[data-action="confirm-complete"]').textContent = issues ? 'Sim, concluir e emitir a nota' : 'Sim, concluir';
-  completeDialog.showModal();
-  completeDialog.querySelector('[data-action="cancel-complete"]').focus();
+document.body.append(stepDialog);
+function openStepDialog(order, step) {
+  const issues = step === 'confirmado' && invoicingMode !== 'off' && !order.invoice, where = invoicingProvider === 'bling' ? 'no Bling' : 'no emissor';
+  const copy = step === 'confirmado'
+    ? {icon: '📦', title: 'Confirmar este pedido?', button: issues ? 'Sim, confirmar e emitir a nota' : 'Sim, confirmar',
+      warn: issues ? `<strong>A nota fiscal é emitida na hora</strong> e vai para o cliente por e-mail (PDF e XML). "Voltar para Pendentes" não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '',
+      mail: 'O pedido vai para Pronto para envio e o cliente recebe o e-mail de pedido confirmado.'}
+    : {icon: '🚚', title: 'Concluir este pedido?', button: 'Sim, concluir e avisar o cliente',
+      warn: `Código de rastreio: <strong translate="no">${esc(order.trackingCode || '')}</strong>`,
+      mail: 'O cliente recebe um e-mail com o código de rastreio e um botão que abre Meus pedidos no site. O pedido vai para Concluídos.'};
+  Object.assign(stepDialog.dataset, {orderId: order.id, step});
+  stepDialog.querySelector('.admin-confirm-icon').textContent = copy.icon;
+  stepDialog.querySelector('#step-title').textContent = copy.title;
+  stepDialog.querySelector('.admin-confirm-ref').textContent = `${order.reference} · ${money(order.totalCents)}`;
+  const warn = stepDialog.querySelector('[data-step-warn]');
+  warn.hidden = !copy.warn; warn.innerHTML = copy.warn;
+  stepDialog.querySelector('[data-step-mail]').textContent = copy.mail;
+  stepDialog.querySelector('[data-action="confirm-step"]').textContent = copy.button;
+  stepDialog.showModal();
+  stepDialog.querySelector('[data-action="cancel-step"]').focus();
 }
-completeDialog.addEventListener('click', event => {
-  if (event.target.closest('[data-action="cancel-complete"]')) completeDialog.close();
-  if (event.target.closest('[data-action="confirm-complete"]')) {
-    completeDialog.close();
-    move(completeDialog.dataset.orderId, 'concluido', '', 'Pedido marcado como concluído.');
+stepDialog.addEventListener('click', event => {
+  if (event.target.closest('[data-action="cancel-step"]')) stepDialog.close();
+  if (event.target.closest('[data-action="confirm-step"]')) {
+    const {orderId, step} = stepDialog.dataset;
+    stepDialog.close();
+    move(orderId, step, '', step === 'confirmado' ? 'Pedido confirmado: ele foi para Pronto para envio.' : 'Pedido concluído.');
   }
 });
 
@@ -87,7 +98,10 @@ const now = new Date();
 let calendar = {year: now.getFullYear(), month: now.getMonth()}, selectedDay = dayKey(now);
 
 const SOURCE_LABEL = {test: 'Teste Mercado Pago', live: 'Pedido real'};
-const STATUS_LABEL = {pendente: 'Pendentes', concluido: 'Concluídos', recusado: 'Recusados'};
+const STATUS_LABEL = {pendente: 'Pendentes', confirmado: 'Pronto para envio', enviado: 'Enviados', concluido: 'Concluídos', recusado: 'Recusados'};
+const INVOICED = ['confirmado', 'enviado', 'concluido'];
+const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;
+const formatDay = iso => iso ? new Date(iso).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const MESSAGES = {
@@ -120,12 +134,12 @@ function invoiceLine(o) {
   return `${esc(o.buyer?.name || '—')}<br>${cpfLine(o)}`;
 }
 
-// NF-e of the order: issued when Ju confirms it ("concluído"). Shows the number and links, a note still being issued, or
+// NF-e of the order: issued when Ju confirms it ("Confirmar pedido"). Shows the number and links, a note still being issued, or
 // what went wrong with a retry button. A declined order that already has a note needs it cancelled at the service.
 let invoicingMode = 'off';
 function nfeLine(o) {
   const nfe = o.invoice;
-  if (!nfe) return invoicingMode !== 'off' && o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você marcar como concluído.</p>' : '';
+  if (!nfe) return invoicingMode !== 'off' && o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você confirmar o pedido.</p>' : '';
   const test = nfe.environment !== 'producao' ? ' <span class="admin-tag source-test">homologação</span>' : '';
   if (nfe.status === 'autorizada') {
     const links = [nfe.pdfUrl && `<a href="${esc(nfe.pdfUrl)}" target="_blank" rel="noopener">PDF</a>`, nfe.xmlUrl && `<a href="${esc(nfe.xmlUrl)}" target="_blank" rel="noopener">XML</a>`].filter(Boolean).join(' · ');
@@ -134,7 +148,7 @@ function nfeLine(o) {
     return `<p class="admin-invoice ${notice ? 'is-error' : 'is-ok'}">Nota fiscal nº ${esc(nfe.number)}${nfe.series ? ` · série ${esc(nfe.series)}` : ''}${test}${links ? ` · ${links}` : ''}${notice}${warn}</p>`;
   }
   if (nfe.status === 'processando') return `<p class="admin-invoice is-waiting">Nota fiscal: emitindo…${test} Clique em Atualizar em alguns instantes.</p>`;
-  return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${o.status === 'concluido' ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
+  return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${INVOICED.includes(o.status) ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
 }
 
 // "Nota fiscal · Bling": the store's connection to the NF-e service (only with NFE_PROVIDER=bling). Connecting sends
@@ -155,7 +169,7 @@ function naturesList(b) {
   const used = {nonTaxpayer: 'cliente sem IE', taxpayer: 'cliente com IE'}, ids = b.natureIds || {};
   const items = b.natures.map(n => { const kind = Object.keys(ids).find(k => ids[k] === n.id); return `<li><code translate="no">${esc(n.id)}</code> ${esc(n.description)}${kind ? ` <span class="admin-tag source-live">usada nas notas · ${used[kind] || kind}</span>` : ''}${n.active ? '' : ' <span class="admin-tag">inativa</span>'}</li>`; }).join('');
   const missing = Object.keys(used).filter(k => !ids[k]), unknown = Object.values(ids).filter(id => !b.natures.some(n => n.id === id));
-  const note = missing.length === Object.keys(used).length ? 'Nenhuma natureza escolhida no site ainda: as notas só saem depois disso.' : missing.length ? `Falta escolher no site a natureza para ${missing.map(k => used[k]).join(' e ')}: essas notas só saem depois disso.` : unknown.length ? `A natureza ${unknown.join(', ')} usada pelo site não está no Bling: confira antes de concluir pedidos.` : '';
+  const note = missing.length === Object.keys(used).length ? 'Nenhuma natureza escolhida no site ainda: as notas só saem depois disso.' : missing.length ? `Falta escolher no site a natureza para ${missing.map(k => used[k]).join(' e ')}: essas notas só saem depois disso.` : unknown.length ? `A natureza ${unknown.join(', ')} usada pelo site não está no Bling: confira antes de confirmar pedidos.` : '';
   return `<p class="panel-sub">Naturezas de operação cadastradas no Bling (o código da natureza de venda vai nos dados fiscais do site):</p><ul class="admin-natures">${items}</ul>${note ? `<p class="admin-bling-note">${note}</p>` : ''}`;
 }
 function blingView() {
@@ -165,7 +179,7 @@ function blingView() {
   let body;
   if (b.error) body = '<p>Não foi possível consultar a conexão com o Bling agora. Clique em Atualizar.</p>';
   else if (!b.configured) body = `<p>Falta configurar o aplicativo do Bling: variáveis <code>BLING_CLIENT_ID</code> e <code>BLING_CLIENT_SECRET</code> na Hostinger.</p>${redirect}`;
-  else if (!b.connected) body = `<p>${b.expired ? '<strong>A conexão com o Bling expirou.</strong> ' : ''}Conecte a conta do Bling para as notas fiscais saírem sozinhas quando você concluir um pedido.</p><div class="admin-bling-actions"><button type="button" class="btn-bling" data-action="bling-connect">Conectar ao Bling</button></div>${redirect}`;
+  else if (!b.connected) body = `<p>${b.expired ? '<strong>A conexão com o Bling expirou.</strong> ' : ''}Conecte a conta do Bling para as notas fiscais saírem sozinhas quando você confirmar um pedido.</p><div class="admin-bling-actions"><button type="button" class="btn-bling" data-action="bling-connect">Conectar ao Bling</button></div>${redirect}`;
   else body = `<p>Conectado${b.connectedBy ? ` por ${esc(b.connectedBy)}` : ''} em ${esc(formatWhen(b.connectedAt))}. A conexão se renova sozinha${b.refreshExpiresAt ? ` (vale até ${esc(formatWhen(b.refreshExpiresAt))}, e abrir o painel renova)` : ''}.</p>
     ${b.pausedReason ? `<p class="admin-invoice is-error"><strong>Emissão pausada:</strong> ${esc(b.pausedReason)} <button type="button" class="admin-reveal" data-action="bling-resume">Liberar a emissão</button></p>` : ''}
     ${naturesList(b)}
@@ -193,9 +207,19 @@ function orderCard(o) {
   // Declined orders show where the automatic refund stands; once the money is going back, the order cannot be reopened.
   const refund = o.refund?.state || null, moneyBack = refund === 'refunded' || refund === 'requested';
   const refundLine = o.status === 'recusado' || refund ? refundNote(o) : '';
-  const actions = o.status === 'pendente'
-    ? `${refundLine}<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="complete" data-id="${esc(o.id)}"${moneyBack ? ' disabled' : ''}>Marcar como concluído</button><button type="button" class="btn-decline" data-action="decline" data-id="${esc(o.id)}">Recusar pedido</button></div>`
-    : `${refundLine}<div class="admin-order-actions"><span class="admin-decision-note">${o.status === 'concluido' ? 'Concluído' : 'Recusado'} em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : `<button type="button" class="btn-reopen" data-action="reopen" data-id="${esc(o.id)}">Reabrir</button>`}</div>`;
+  // What Ju can do at each step: Pendentes → Confirmar (or Recusar); Pronto para envio → the tracking code (or back, or
+  // Recusar); Enviados → Concluir (or fix the code, or back); Concluídos and Recusados → Reabrir.
+  const id = esc(o.id), code = o.trackingCode ? `<code translate="no">${esc(o.trackingCode)}</code>` : '';
+  const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456789BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button></form>`;
+  const back = (to, label) => `<button type="button" class="btn-reopen" data-action="move" data-to="${to}" data-id="${id}">${label}</button>`;
+  const steps = {
+    pendente: () => `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="confirm" data-id="${id}"${moneyBack ? ' disabled' : ''}>Confirmar pedido</button><button type="button" class="btn-decline" data-action="decline" data-id="${id}">Recusar pedido</button></div>`,
+    confirmado: () => `<div class="admin-ship"><p class="admin-ship-hint">Postou nos Correios? Digite o código de rastreio: o pedido vai para Enviados.</p>${trackingForm('', 'Salvar rastreio')}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
+    enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p><div class="admin-order-actions"><button type="button" class="btn-complete" data-action="conclude" data-id="${id}">Concluir pedido</button></div><details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary">${back('confirmado', 'Voltar para Pronto para envio')}</div></div>`,
+    concluido: () => `<div class="admin-order-actions"><span class="admin-decision-note">Concluído em ${esc(formatWhen(o.decidedAt))}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,
+    recusado: () => `<div class="admin-order-actions"><span class="admin-decision-note">Recusado em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : back('pendente', 'Reabrir')}</div>`
+  };
+  const actions = refundLine + (steps[o.status] || steps.recusado)();
   return `<article class="admin-order status-${esc(o.status)}" data-order="${esc(o.id)}">
     ${payBadge}
     <div class="admin-order-head">
@@ -220,7 +244,7 @@ function ordersView(list) {
   const counts = Object.fromEntries(STATUSES.map(s => [s, list.filter(o => o.status === s).length]));
   const tabsHtml = STATUSES.map(s => `<button type="button" data-tab="${s}" aria-pressed="${tab === s}">${STATUS_LABEL[s]}<span>${counts[s]}</span></button>`).join('');
   const shown = listByStatus(list, tab);
-  const empty = {pendente: 'Nenhum pedido pendente por aqui. Assim que um pedido for pago, ele aparece nesta lista.', concluido: 'Nenhum pedido concluído ainda.', recusado: 'Nenhum pedido recusado.'}[tab];
+  const empty = {pendente: 'Nenhum pedido pendente por aqui. Assim que um pedido for pago, ele aparece nesta lista.', confirmado: 'Nenhum pedido pronto para envio. Os pedidos confirmados ficam aqui até você digitar o código de rastreio.', enviado: 'Nenhum pedido enviado esperando para ser concluído.', concluido: 'Nenhum pedido concluído ainda.', recusado: 'Nenhum pedido recusado.'}[tab];
   const body = shown.length ? `<div class="admin-orders">${shown.map(orderCard).join('')}</div>` : `<p class="admin-empty">${empty}</p>`;
   return `<div class="admin-tabs">${tabsHtml}</div>${body}`;
 }
@@ -271,6 +295,8 @@ function ordersDashboard() {
   return `<div class="admin-dash-head"><div><h1 id="admin-title" tabindex="-1">Pedidos</h1><p>Pedidos pagos, direto do banco de dados. Organize a produção e o envio.</p></div><button type="button" class="btn-reopen" data-action="refresh">Atualizar</button></div>
     <div class="admin-kpis">
       <div class="admin-kpi is-pendente"><span>Pendentes</span><strong>${s.pendentes}</strong></div>
+      <div class="admin-kpi is-confirmado"><span>Pronto para envio</span><strong>${s.confirmados}</strong></div>
+      <div class="admin-kpi is-enviado"><span>Enviados</span><strong>${s.enviados}</strong></div>
       <div class="admin-kpi is-concluido"><span>Concluídos</span><strong>${s.concluidos}</strong></div>
       <div class="admin-kpi is-recusado"><span>Recusados</span><strong>${s.recusados}</strong></div>
       <div class="admin-kpi"><span>Faturamento no mês</span><strong>${esc(money(s.monthRevenue))}</strong></div>
@@ -360,18 +386,25 @@ async function openDashboard() {
   screen = 'dashboard';
 }
 
-async function move(id, status, reason, done) {
+// quiet: a step that e-mails nobody (going back, or the tracking code going in).
+async function move(id, status, reason, done, {trackingCode, quiet = false} = {}) {
   await run('Salvando…', async () => {
     try {
-      const result = await changeStatus(id, status, reason);
+      const result = await changeStatus(id, status, reason, {trackingCode});
       orders = replaceOrder(orders, result.order);
-      // Declining refunds the buyer and confirming issues the NF-e; both e-mail them. Say how it all went (reopening sends nothing).
+      // Declining refunds the buyer, confirming issues the NF-e, concluding sends the tracking code; each e-mails them.
       const refundText = status !== 'recusado' ? '' : result.refund === 'refunded' ? ' Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? ' Estorno em andamento no Mercado Pago.' : ' O estorno automático não deu certo: veja o aviso no pedido.';
       const nfe = result.order.invoice;
-      const nfeNote = status === 'concluido' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' ? ' A nota fiscal está sendo emitida.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
-      announce(status === 'pendente' ? done : `${done}${refundText} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}${nfeNote}`);
+      const nfeNote = status === 'confirmado' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' ? ' A nota fiscal está sendo emitida.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
+      announce(quiet ? done : `${done}${refundText} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}${nfeNote}`);
     }
-    catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } if (error.code === 'refunded') throw new Error('Este pedido já teve o valor estornado e não pode mais ser reaberto.'); throw new Error('Não foi possível salvar agora. Tente novamente.'); }
+    catch (error) {
+      if (error.code === 'unauthorized') { signedOut(); return; }
+      if (error.code === 'refunded') throw new Error('Este pedido já teve o valor estornado e não pode mais ser reaberto.');
+      if (error.code === 'invalid_transition') { await openDashboard().catch(() => {}); throw new Error('Este pedido já tinha mudado de etapa. A lista foi atualizada.'); }
+      if (error.code === 'invalid_request' && status === 'enviado') throw new Error('Código de rastreio inválido: são 2 letras, 9 números e 2 letras, como AA123456789BR.');
+      throw new Error('Não foi possível salvar agora. Tente novamente.');
+    }
   });
 }
 
@@ -379,6 +412,14 @@ content.addEventListener('submit', event => {
   event.preventDefault();
   if (busy || !event.target.reportValidity()) return;
   const data = Object.fromEntries(new FormData(event.target));
+  // The tracking code of an order (Pronto para envio, or a correction in Enviados).
+  if (event.target.classList.contains('admin-tracking')) {
+    const input = event.target.elements.trackingCode, code = String(data.trackingCode || '').replace(/\s+/g, '').toUpperCase();
+    if (!TRACKING.test(code)) { input.setCustomValidity('São 2 letras, 9 números e 2 letras, como AA123456789BR.'); input.reportValidity(); input.addEventListener('input', () => input.setCustomValidity(''), {once: true}); return; }
+    const order = orders.find(o => o.id === event.target.dataset.id);
+    if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Rastreio salvo: o pedido foi para Enviados.', {trackingCode: code, quiet: true});
+    return;
+  }
   if (event.target.id === 'admin-login-form') run('Conferindo seu acesso…', async () => {
     const result = await login(data.email, data.password);
     if (!result.ok) throw new Error(messageFor(result.error));
@@ -421,8 +462,12 @@ content.addEventListener('click', event => {
   const action = event.target.closest('[data-action]');
   if (!action) return;
   const id = action.dataset.id;
-  if (action.dataset.action === 'complete') { const order = orders.find(o => o.id === id); if (order) openCompleteDialog(order); }
-  if (action.dataset.action === 'reopen') move(id, 'pendente', '', 'Pedido reaberto como pendente.');
+  if (action.dataset.action === 'confirm' || action.dataset.action === 'conclude') { const order = orders.find(o => o.id === id); if (order) openStepDialog(order, action.dataset.action === 'confirm' ? 'confirmado' : 'concluido'); }
+  if (action.dataset.action === 'move') {
+    const to = action.dataset.to, done = {pendente: 'O pedido voltou para Pendentes.', confirmado: 'O pedido voltou para Pronto para envio.', enviado: 'O pedido foi reaberto em Enviados.'}[to];
+    if (to === 'confirmado' && !confirm('Voltar este pedido para Pronto para envio? O código de rastreio sai do pedido.')) return;
+    if (done) move(id, to, '', done, {quiet: true});
+  }
   if (action.dataset.action === 'refund-retry') run('Conferindo o estorno…', async () => {
     try { const result = await retryRefund(id); orders = replaceOrder(orders, result.order); announce(result.refund === 'refunded' ? 'Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? 'O estorno ainda está em andamento no Mercado Pago.' : 'O estorno ainda não deu certo. Estorne pelo painel do Mercado Pago.'); }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível conferir o estorno agora. Tente novamente.'); }
@@ -476,7 +521,7 @@ if (blingReturn) { section = 'pedidos'; history.replaceState(null, '', location.
 async function finishBling() {
   const back = blingReturn; blingReturn = null; blingNote = '';
   if (!back.code) { blingNote = back.error === 'access_denied' ? 'A conexão foi cancelada no Bling.' : 'O Bling não autorizou a conexão.'; return; }
-  try { bling = await blingAction('connect', {code: back.code, state: back.state}); blingNote = 'Bling conectado. As notas fiscais saem sozinhas quando você concluir um pedido.'; announce(blingNote); await busyDialog.success('Bling conectado!'); }
+  try { bling = await blingAction('connect', {code: back.code, state: back.state}); blingNote = 'Bling conectado. As notas fiscais saem sozinhas quando você confirmar um pedido.'; announce(blingNote); await busyDialog.success('Bling conectado!'); }
   catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } blingNote = blingMessage(error.code); }
 }
 

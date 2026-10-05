@@ -327,3 +327,30 @@ dialog.cash-dialog .admin-error{margin:0}
   .cash-table tfoot tr{display:block;background:#fffafa;border-top:1px solid var(--line)}
   .cash-table tfoot td{display:flex;flex-wrap:wrap;gap:4px 16px;padding:0;background:none;border:0}
 }
+
+/* The shipping steps: Pronto para envio (blue) and Enviados (violet), between Pendentes (yellow) and Concluídos (green). */
+.admin-page { --b-solid:#2f6aa8; --b-solid-hover:#285a90; --b-bg:#e3eefa; --b-fg:#24578e; --v-solid:#6a4cae; --v-bg:#eee8f8; --v-fg:#56399a; }
+.admin-tabs button[data-tab=confirmado][aria-pressed=true]{background:var(--b-solid);border-color:var(--b-solid);color:#fff}
+.admin-tabs button[data-tab=enviado][aria-pressed=true]{background:var(--v-solid);border-color:var(--v-solid);color:#fff}
+.admin-kpi.is-confirmado strong{color:var(--b-fg)}.admin-kpi.is-enviado strong{color:var(--v-fg)}
+.admin-pay-badge.status-confirmado{background:var(--b-solid);color:#fff}
+.admin-pay-badge.status-enviado{background:var(--v-solid);color:#fff}
+.status-dot.confirmado{background:var(--b-solid)}.status-dot.enviado{background:var(--v-solid)}
+.admin-ship{display:grid;gap:12px}
+.admin-ship-hint{margin:0;font-size:13.5px;color:var(--b-fg);background:var(--b-bg);border-radius:12px;padding:10px 12px;line-height:1.5}
+.admin-tracking{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.admin-tracking label{display:grid;gap:6px}
+.admin-tracking label span{font-size:12px;font-weight:600;color:var(--muted)}
+.admin-tracking input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;font:inherit;font-size:16px;letter-spacing:1.5px;text-transform:uppercase;font-variant-numeric:tabular-nums;color:var(--ink)}
+.admin-tracking input::placeholder{letter-spacing:1px;text-transform:none;color:#b7aab1}
+.admin-tracking input:focus-visible{outline:2px solid var(--b-solid);outline-offset:1px}
+.btn-ship{border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:700;color:#fff;background:var(--b-solid);cursor:pointer;white-space:nowrap}
+.btn-ship:hover{background:var(--b-solid-hover)}
+.admin-secondary{display:flex;flex-wrap:wrap;gap:8px}
+.btn-reopen.is-danger{color:var(--r-fg);border-color:#f0c4cd}.btn-reopen.is-danger:hover{background:var(--r-bg)}
+.admin-tracking-line{margin:0;font-size:14px;color:var(--v-fg);background:var(--v-bg);border-radius:12px;padding:10px 12px}
+.admin-tracking-line code,.admin-decision-note code{font-family:inherit;font-weight:700;letter-spacing:1px}
+.admin-fix{font-size:13px}
+.admin-fix summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
+.admin-fix[open] summary{margin-bottom:10px}
+@media(max-width:640px){.admin-tracking{grid-template-columns:1fr}.btn-ship{width:100%}}

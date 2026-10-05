@@ -855,4 +855,8 @@ Costas|Back|Parte trasera
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
+Pedido confirmado · preparando o envio|Order confirmed · preparing shipment|Pedido confirmado · preparando el envío
+Pedido enviado|Order shipped|Pedido enviado
+Código de rastreio|Tracking code|Código de seguimiento
+Rastrear nos Correios ↗|Track with Correios ↗|Rastrear en Correios ↗
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

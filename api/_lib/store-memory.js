@@ -43,7 +43,7 @@ function createMemoryStore() {
       async create(order) {
         const existing = [...orders.values()].find(o => o.reference === order.reference);
         if (existing) return {order: copy(existing), created: false};
-        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, shippingInfo: null, refundState: null, refundId: null, refundedAt: null, refundError: null, ownerNotifiedAt: null, customerNotifiedAt: null, termsVersion: null, termsAcceptedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
+        const row = {paymentState: null, method: null, installments: null, mpOrderId: null, paidAt: null, decidedAt: null, declineReason: null, trackingCode: null, shippedAt: null, shippingInfo: null, refundState: null, refundId: null, refundedAt: null, refundError: null, ownerNotifiedAt: null, customerNotifiedAt: null, termsVersion: null, termsAcceptedAt: null, notes: '', lang: 'pt-BR', createdAt: new Date(), ...order};
         orders.set(row.id, row);
         return {order: copy(row), created: true};
       },

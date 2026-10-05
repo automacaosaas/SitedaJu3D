@@ -8,8 +8,15 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 - **Pedidos pendentes** (tela inicial): todo pedido pago, de teste ou real, entra aqui sozinho, o mais antigo primeiro.
 - Em cada pedido: peças e cores, quem recebe, WhatsApp, endereço de entrega, observações e os dados da **nota fiscal**
   (nome e CPF mascarado, ou razão social, CNPJ e inscrição estadual).
-- **Marcar como concluído** ou **Recusar pedido** (motivo opcional, visto só pela equipe). Concluídos e recusados ficam em
-  abas separadas, com **Reabrir** para desfazer um engano. Concluir ou recusar manda um e-mail ao cliente (o motivo nunca vai).
+- **O caminho de um pedido**, uma aba para cada etapa:
+  1. **Pendentes:** pago, esperando a Ju. **Confirmar pedido** (pede confirmação) ou **Recusar pedido**.
+  2. **Pronto para envio:** ao confirmar, a nota fiscal sai na hora pelo Bling e o cliente recebe o e-mail de pedido confirmado
+     e o da nota (PDF e XML). Quando a Ju postar nos Correios, digita o **código de rastreio** (AA123456789BR) no pedido.
+  3. **Enviados:** o pedido com o rastreio. Dá para corrigir o código. **Concluir pedido** (pede confirmação) manda ao cliente o
+     e-mail "Pedido enviado" com o código e um botão que abre **Meus pedidos** no site, onde o código também aparece.
+  4. **Concluídos** e **Recusados** (motivo opcional, visto só pela equipe; o motivo nunca vai no e-mail).
+  Cada etapa pode voltar uma (Reabrir, Voltar para Pendentes, Voltar para Pronto para envio), sem e-mail ao cliente; voltar
+  não cancela a nota já emitida. Não dá para pular etapas nem recusar um pedido já postado.
 - **Estorno automático ao recusar:** o servidor pede ao Mercado Pago o reembolso total do pedido (cartão ou Pix,
   `POST /v1/orders/{id}/refund`). O pedido mostra **Valor estornado**, **Estorno em andamento** (botão *Conferir estorno*) ou
   **Estorno não feito** com o motivo (botão *Tentar estorno de novo*; se continuar, estorne pelo painel do Mercado Pago).
