@@ -41,7 +41,9 @@ export class ProductViewer{
     if(!this.model)return;
     // Phones (audit D4): frame the piece itself, not the wide pedestal, so it reads larger; the pedestal may run off the sides.
     const phone=this.width>0&&this.width<=480;
-    const bounds=new T.Box3().setFromObject(this.model.group);if(!phone)bounds.union(new T.Box3().setFromObject(this.pedestal));
+    // On phones the pedestal height still counts (its base is not cut off at the bottom); only its width may run off the sides.
+    const bounds=new T.Box3().setFromObject(this.model.group),stand=new T.Box3().setFromObject(this.pedestal);
+    if(phone)bounds.min.y=Math.min(bounds.min.y,stand.min.y);else bounds.union(stand);
     const center=bounds.getCenter(new T.Vector3());
     const vertical=T.MathUtils.degToRad(this.camera.fov/2),horizontal=Math.atan(Math.tan(vertical)*this.camera.aspect);
     const direction=this.camera.position.clone().sub(this.controls.target).normalize();

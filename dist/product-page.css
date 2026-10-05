@@ -66,12 +66,15 @@
 .gallery-dots { display: none; }
 #product-dialog .gallery[data-single] { grid-template-columns: minmax(0, 1fr); }
 .gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }
-#product-dialog #viewer-host { inset: 60px 12px 92px; }
+/* o 3D usa quase toda a área (os botões ficam numa coluna à esquerda, por cima) */
+#product-dialog #viewer-host { inset: 60px 12px 40px; }
 #product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 3px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffd9; box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
 #product-dialog .view-tabs button { min-height: 36px; min-width: 52px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--pd-muted); transition: background .2s, color .2s; }
 #product-dialog .view-tabs button[aria-pressed=true] { background: var(--pd-accent); color: #fff; box-shadow: 0 3px 10px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
-#product-dialog .viewer-tools { bottom: 44px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffe6; box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
+/* botões do 3D (girar, aproximar, afastar, início) em pé, no canto esquerdo */
+#product-dialog .viewer-tools { top: 50%; bottom: auto; left: 14px; transform: translateY(-50%); flex-direction: column; align-items: stretch; border-radius: 24px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffe6; box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
 #product-dialog .viewer-tools button { min-height: 40px; min-width: 40px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--pd-text); }
+#product-dialog .viewer-tools > span { width: 22px; height: 1px; margin: 2px auto; }
 #product-dialog .viewer-tools button:hover, #product-dialog .viewer-tools button[aria-pressed=true] { background: var(--pd-tint); color: var(--pd-accent); }
 #product-dialog .view-note { bottom: 16px; font-size: 12px; color: var(--pd-muted); }
 #product-dialog .viewer-message { color: var(--pd-muted); }
@@ -188,7 +191,9 @@
   #product-dialog .detail-copy { grid-column: 1; grid-row: 3; padding: 20px 24px 18px; gap: 16px; }
   #product-dialog .modal-actions { grid-column: 1; grid-row: 4; padding: 14px 24px 18px; }
   /* a vista de lado a lado, arrastando; os pontinhos embaixo dizem em qual se está */
-  #product-dialog[data-view=photo] .detail-visual { background: var(--gallery-bg, var(--pd-stage)); }
+  /* a área da peça continua a cor do topo e vai clareando até o branco do ateliê, sem troca brusca de cor (nas duas abas) */
+  .pdp-head { border-bottom: 0; }
+  #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, #fff) 60%, #fff 100%); }
   #product-dialog .image-area { inset: 58px 0 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
   .gallery-rail, .gallery-arrows { display: none; }
   .gallery-main { border-radius: 0; background: var(--gallery-bg, transparent); }
@@ -197,8 +202,8 @@
   .gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
   .gallery-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--pd-text) 28%, transparent); transition: width .25s var(--pd-ease), background .25s; }
   .gallery-dots [aria-current=true] i { width: 18px; background: var(--pd-text); }
-  #product-dialog #viewer-host { inset: 56px 8px 74px; }
-  #product-dialog .viewer-tools { bottom: 34px; }
+  #product-dialog #viewer-host { inset: 56px 0 34px; }
+  #product-dialog .viewer-tools { left: 10px; }
   #product-dialog .view-note { bottom: 10px; }
   #product-dialog .pdp-preview { display: none; }
 }
@@ -213,8 +218,8 @@
   #product-dialog .view-tabs { top: 12px; left: 12px; }
   #product-dialog .view-tabs button { min-height: 34px; padding: 0 12px; }
   #product-dialog .image-area { inset: 52px 0 8px; }
-  #product-dialog #viewer-host { inset: 50px 4px 68px; }
-  #product-dialog .viewer-tools { bottom: 30px; }
+  #product-dialog #viewer-host { inset: 50px 0 30px; }
+  #product-dialog .viewer-tools { left: 8px; }
   #product-dialog .view-note { bottom: 8px; left: 10px; right: 10px; line-height: 1.2; }
   #product-dialog .detail-copy { padding: 16px 16px 14px; gap: 14px; }
   .pdp-colors { gap: 12px; }
