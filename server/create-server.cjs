@@ -66,18 +66,29 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     return stat.isFile() ? {file, stat} : null;
   }
 
+  // Compressed bodies are built off the main thread (async zlib) so a large model never stalls other requests, and
+  // requests for the same file while it is being compressed share one job instead of each starting their own.
+  const pending = new Map();
   function compress(file, stat, encoding) {
     const key = `${file}|${stat.mtimeMs}|${encoding}`;
-    if (compressed.has(key)) return compressed.get(key);
-    const raw = fs.readFileSync(file);
-    const body = encoding === 'br'
-      ? zlib.brotliCompressSync(raw, {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: 6, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length}})
-      : zlib.gzipSync(raw, {level: 6});
-    if (compressedBytes + body.length <= COMPRESSED_CACHE_LIMIT) { compressed.set(key, body); compressedBytes += body.length; }
-    return body;
+    if (compressed.has(key)) return Promise.resolve(compressed.get(key));
+    if (pending.has(key)) return pending.get(key);
+    const job = fs.promises.readFile(file)
+      .then(raw => new Promise((resolve, reject) => {
+        const done = (error, body) => error ? reject(error) : resolve(body);
+        if (encoding === 'br') zlib.brotliCompress(raw, {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: 6, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length}}, done);
+        else zlib.gzip(raw, {level: 6}, done);
+      }))
+      .then(body => {
+        if (compressedBytes + body.length <= COMPRESSED_CACHE_LIMIT) { compressed.set(key, body); compressedBytes += body.length; }
+        return body;
+      })
+      .finally(() => pending.delete(key));
+    pending.set(key, job);
+    return job;
   }
 
-  function serveStatic(req, res, pathname) {
+  async function serveStatic(req, res, pathname) {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
     const found = resolveFile(pathname);
     if (!found) {
@@ -98,7 +109,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     const encoding = COMPRESSIBLE.has(ext) && stat.size > 1024 ? (/\bbr\b/.test(accepts) ? 'br' : /\bgzip\b/.test(accepts) ? 'gzip' : null) : null;
     if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');
     if (encoding) {
-      const body = compress(file, stat, encoding);
+      const body = await compress(file, stat, encoding);
       res.setHeader('Content-Encoding', encoding);
       res.setHeader('Content-Length', body.length);
       return res.end(req.method === 'HEAD' ? undefined : body);
@@ -119,7 +130,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
         if (!handler) { res.statusCode = 404; res.setHeader('Content-Type', 'application/json; charset=utf-8'); return res.end('{"error":"not_found"}'); }
         return await handler(req, res);
       }
-      return serveStatic(req, res, pathname);
+      return await serveStatic(req, res, pathname);
     } catch (error) {
       log.error(`${req.method} ${pathname}:`, error);
       if (!res.headersSent) { res.statusCode = 500; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end('{"error":"internal_error"}'); }
