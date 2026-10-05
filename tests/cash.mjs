@@ -115,13 +115,26 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
 
   // Bills: added, paid (money out today), back to pending.
   const bill = (await post({action: 'add-bill', description: 'Fornecedor PLA', amountCents: 31000, dueDate: '2026-10-15'})).json().cash.bills[0];
-  assert.deepEqual(bill, {id: bill.id, description: 'Fornecedor PLA', amountCents: 31000, dueDate: '2026-10-15', paidDate: null});
+  assert.deepEqual(bill, {id: bill.id, description: 'Fornecedor PLA', amountCents: 31000, dueDate: '2026-10-15', paidDate: null, locked: false});
   const paid = (await post({action: 'set-bill-paid', id: bill.id, paid: true})).json().cash;
   assert.equal(paid.bills[0].paidDate, '2026-10-04');
   assert(paid.movements.some(m => m.id === `conta-${bill.id}` && m.type === 'saida' && m.date === '2026-10-04' && m.category === 'conta' && !m.removable), 'a paid bill becomes money out of the day');
   assert.equal(paid.balanceCents, 14700 - 31000 - 31000);
   assert(!(await post({action: 'set-bill-paid', id: bill.id, paid: false})).json().cash.movements.some(m => m.id === `conta-${bill.id}`), 'back to pending, out of the cash');
   assert.equal((await post({action: 'set-bill-paid', id: crypto.randomUUID(), paid: true})).statusCode, 404);
+
+  // The padlock: a locked bill keeps its status and cannot be removed, until it is unlocked.
+  const locked = (await post({action: 'lock-bill', id: bill.id, locked: true})).json().cash.bills[0];
+  assert.deepEqual([locked.locked, locked.paidDate], [true, null]);
+  const refused = await post({action: 'set-bill-paid', id: bill.id, paid: true});
+  assert.deepEqual([refused.statusCode, refused.json().error], [409, 'locked'], 'a locked status does not change');
+  assert.equal((await post({action: 'remove-bill', id: bill.id})).statusCode, 409, 'nor is the bill removed');
+  assert.equal((await get()).json().cash.bills[0].paidDate, null);
+  assert.equal((await post({action: 'lock-bill', id: crypto.randomUUID(), locked: true})).statusCode, 404);
+  assert.equal((await post({action: 'lock-bill', id: bill.id, locked: false})).json().cash.bills[0].locked, false, 'unlocked');
+  const auditBefore = (await store.adminAudit.list(1000)).length;
+  assert.equal((await post({action: 'set-bill-paid', id: bill.id, paid: false})).statusCode, 200);
+  assert.equal((await store.adminAudit.list(1000)).length, auditBefore, 'choosing the status it already has changes nothing');
 
   // The balance Ju types: the difference is one adjustment of today, never money in or out of the month.
   await post({action: 'remove-entry', id: (await get()).json().cash.movements.find(m => m.date === '2029-10-04').id});
@@ -140,7 +153,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal((await post({action: 'remove-bill', id: bill.id})).statusCode, 404);
 
   const audit = await store.adminAudit.list(100), actions = audit.map(a => a.action);
-  for (const action of ['cash_entry_add', 'cash_entry_remove', 'bill_add', 'bill_paid', 'bill_unpaid', 'bill_remove', 'cash_adjust']) assert(actions.includes(action), `audit: ${action}`);
+  for (const action of ['cash_entry_add', 'cash_entry_remove', 'bill_add', 'bill_paid', 'bill_unpaid', 'bill_lock', 'bill_unlock', 'bill_remove', 'cash_adjust']) assert(actions.includes(action), `audit: ${action}`);
   assert(audit.find(a => a.action === 'bill_add').detail.includes('Fornecedor PLA'), 'the audit says what changed');
 
   // Browser client: the action always wins over the payload; a lapsed session is "unauthorized".
@@ -199,7 +212,19 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const panel = read('dist/admin.js');
   assert.match(panel, /\[\['pedidos', 'Pedidos'\], \['caixa', 'Fluxo de caixa'\]\]/, 'two parts: Pedidos and Fluxo de caixa');
   assert.match(panel, /let section = location\.hash === '#caixa' \? 'caixa' : 'pedidos';/, '#caixa keeps the part on reload');
-  assert.match(read('dist/admin-cash.js'), /\[\['geral', 'Visão geral'\], \['movimentacoes', 'Movimentações'\], \['contas', 'Contas a pagar'\]\]/, 'three tabs');
+  const cash = read('dist/admin-cash.js');
+  assert.match(cash, /\[\['geral', 'Visão geral'\], \['movimentacoes', 'Movimentações'\], \['contas', 'Contas a pagar'\]\]/, 'three tabs');
+  // Movimentações: 10 lines, then "Ver mais" adds 10; the totals are of the whole month.
+  assert.match(cash, /const PAGE = 10;/);
+  assert.match(cash, /shown = rows\.slice\(0, list\.limit\), rest = rows\.length - shown\.length;/);
+  assert.match(cash, /case 'more': list\.limit \+= PAGE;/);
+  assert.match(cash, /data-cash="more">Ver mais/);
+  // Contas a pagar: the status only through the dropdown, a padlock beside it, and no click-to-change anywhere.
+  assert.doesNotMatch(cash, /bill-toggle/, 'no click on a status changes it');
+  assert.match(cash, /<select data-cash-bill-status data-id="\$\{id\}" aria-label="Status da conta \$\{name\}"\$\{b\.locked \? ' disabled' : ''\}>/, 'the dropdown, disabled while locked');
+  assert.match(cash, /data-cash="bill-lock"[^>]*aria-pressed="\$\{b\.locked\}"/, 'the padlock says whether it is locked');
+  assert.match(cash, /title="\$\{b\.locked \? 'Destranque o status para excluir' : 'Excluir'\}"\$\{b\.locked \? ' disabled' : ''\}/, 'no removing a locked bill');
+  assert.match(read('dist/icons.js'), /unlock: '/);
 }
 
 console.log('PASS: cash — orders become money in on the day they were paid (Brasília) and refunds money out; entries, paid bills and balance adjustments; the endpoint only for a signed-in admin, validated and audited; month totals, chart series, search, bills and the value field.');

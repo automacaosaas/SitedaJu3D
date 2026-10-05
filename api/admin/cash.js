@@ -4,8 +4,9 @@
 //   POST {action: 'add-entry', kind: 'entrada' | 'saida', description, amountCents, category, date}
 //   POST {action: 'remove-entry', id}                     (only entries added by hand; sales come from the orders)
 //   POST {action: 'add-bill', description, amountCents, dueDate}
-//   POST {action: 'set-bill-paid', id, paid: true | false} (paid today, or back to pending)
-//   POST {action: 'remove-bill', id}
+//   POST {action: 'set-bill-paid', id, paid: true | false} (paid today, or back to pending; 409 locked while locked)
+//   POST {action: 'lock-bill', id, locked: true | false}   (the padlock: a locked bill keeps its status)
+//   POST {action: 'remove-bill', id}                      (409 locked while locked)
 //   POST {action: 'adjust-balance', balanceCents}          (what is in the account today; the difference is an adjustment)
 // Every POST answers the whole view again, so the panel is up to date after each change, and goes to the audit log.
 const {adminEndpoint} = require('../_lib/admin-http');

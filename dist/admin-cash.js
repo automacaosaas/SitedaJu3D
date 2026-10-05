@@ -20,10 +20,12 @@ export function initCash(options) { deps = options; }
 let cash = null, loadError = '', notice = '', tab = 'geral', periodsSet = false;
 const now = new Date();
 let chart = {mode: 'dia', year: now.getFullYear(), month: now.getMonth()};
-const list = {year: now.getFullYear(), month: now.getMonth(), type: 'todas', query: ''};
+// Movimentações shows 10 lines at a time; "Ver mais" adds 10. Changing the month, the filter or the search starts over.
+const PAGE = 10;
+const list = {year: now.getFullYear(), month: now.getMonth(), type: 'todas', query: '', limit: PAGE};
 
 export const hasCash = () => Boolean(cash);
-export function resetCash() { cash = null; loadError = ''; notice = ''; tab = 'geral'; list.query = ''; list.type = 'todas'; periodsSet = false; }
+export function resetCash() { cash = null; loadError = ''; notice = ''; tab = 'geral'; list.query = ''; list.type = 'todas'; list.limit = PAGE; periodsSet = false; }
 // The chart and the list open on the shop's current month (Brasília), once.
 function setPeriods() {
   if (periodsSet || !cash) return;
@@ -42,6 +44,7 @@ function change(message, action, payload, done, after) {
     catch (error) {
       if (error.code === 'unauthorized') { deps.signedOut(); return; }
       if (error.code === 'not_found') { cash = await loadCash().catch(() => cash); throw new Error('Esse item já não existia. A lista foi atualizada.'); }
+      if (error.code === 'locked') { cash = await loadCash().catch(() => cash); throw new Error('Essa conta está trancada. Destranque o cadeado para mudar o status ou excluir.'); }
       throw new Error(error.code === 'invalid_request' ? 'Algum campo não foi aceito. Confira e tente de novo.' : 'Não foi possível salvar agora. Tente novamente.');
     }
   });
@@ -88,10 +91,11 @@ function upcomingView() {
   const bills = upcomingBills(cash.bills, cash.today);
   if (!bills.length) return '';
   const due = bills.reduce((sum, b) => sum + b.amountCents, 0);
-  const items = bills.map(b => `<li><span class="cash-upcoming-name"><strong>${esc(b.description)}</strong><small${b.status === 'pendente' ? '' : ' class="is-late"'}>${esc(dueText(b))}</small></span><span class="cash-upcoming-value">${esc(money(b.amountCents))}</span><button type="button" class="cash-status is-${b.status === 'pendente' ? 'pending' : 'late'}" data-cash="bill-toggle" data-id="${esc(b.id)}" aria-label="Marcar ${esc(b.description)} como paga">Marcar como paga</button></li>`).join('');
+  const items = bills.map(b => `<li><span class="cash-upcoming-name"><strong>${esc(b.description)}</strong><small${b.status === 'pendente' ? '' : ' class="is-late"'}>${esc(dueText(b))}</small></span><span class="cash-upcoming-value">${esc(money(b.amountCents))}</span></li>`).join('');
   return `<section class="admin-panel cash-upcoming" aria-labelledby="cash-upcoming-title"><h2 id="cash-upcoming-title">Contas para pagar</h2><p class="panel-sub">As atrasadas e as que vencem nos próximos 10 dias.</p>
     <ul class="cash-upcoming-list">${items}</ul>
-    <p class="cash-forecast">Depois de pagar essas contas, o saldo fica em <strong class="${cash.balanceCents - due < 0 ? 'is-out' : ''}">${esc(money(cash.balanceCents - due))}</strong>.</p></section>`;
+    <p class="cash-forecast">Depois de pagar essas contas, o saldo fica em <strong class="${cash.balanceCents - due < 0 ? 'is-out' : ''}">${esc(money(cash.balanceCents - due))}</strong>.</p>
+    <button type="button" class="cash-link" data-cash-tab="contas">Abrir Contas a pagar</button></section>`;
 }
 
 // ── Movimentações ───────────────────────────────────────────────────────
@@ -106,11 +110,17 @@ function movementsTable() {
   const rows = filterMovements(cash.movements, {month: monthKey(list.year, list.month), type: list.type, query: list.query});
   const where = searching ? `para “${list.query.trim()}”` : `em ${MONTHS[list.month]} de ${list.year}`;
   if (!rows.length) return `<p class="admin-empty">${searching ? 'Nada encontrado' : 'Nenhuma movimentação'} ${esc(where)}.</p>`;
-  const t = listTotals(rows);
-  return `<p class="cash-count">${rows.length} ${rows.length === 1 ? 'movimentação' : 'movimentações'} ${esc(where)}${searching ? ', em todos os meses' : ''}</p>
+  const t = listTotals(rows), shown = rows.slice(0, list.limit), rest = rows.length - shown.length;
+  return `<p class="cash-count">${rows.length} ${rows.length === 1 ? 'movimentação' : 'movimentações'} ${esc(where)}${searching ? ', em todos os meses' : ''}${rest ? ` · mostrando ${shown.length}` : ''}</p>
     <table class="cash-table"><thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col">Tipo</th><th scope="col" class="num">Valor</th><th scope="col"><span class="sr-only">Excluir</span></th></tr></thead>
-    <tbody>${rows.map(m => movementRow(m, searching)).join('')}</tbody>
-    <tfoot><tr><td colspan="6"><span class="is-in">Entradas <strong>${esc(money(t.inCents))}</strong></span><span class="is-out">Saídas <strong>${esc(money(t.outCents))}</strong></span><span>Resultado <strong>${esc(signed(t.inCents - t.outCents))}</strong></span></td></tr></tfoot></table>`;
+    <tbody>${shown.map(m => movementRow(m, searching)).join('')}</tbody>
+    <tfoot><tr><td colspan="6"><span class="cash-total-label">${searching ? 'Total encontrado' : 'Total do mês'}</span><span class="is-in">Entradas <strong>${esc(money(t.inCents))}</strong></span><span class="is-out">Saídas <strong>${esc(money(t.outCents))}</strong></span><span>Resultado <strong>${esc(signed(t.inCents - t.outCents))}</strong></span></td></tr></tfoot></table>
+    ${rest ? `<button type="button" class="cash-more" data-cash="more">Ver mais <span>(${rest === 1 ? 'falta 1' : `faltam ${rest}`})</span></button>` : ''}`;
+}
+// Only the list is drawn again (search, "Ver mais"), so the page does not jump and the field keeps the focus.
+function refreshList() {
+  document.getElementById('cash-list').innerHTML = movementsTable();
+  document.querySelector('.cash-list-period')?.toggleAttribute('hidden', Boolean(list.query.trim()));
 }
 function movementsView() {
   const searching = Boolean(list.query.trim());
@@ -125,12 +135,16 @@ function movementsView() {
 }
 
 // ── Contas a pagar ──────────────────────────────────────────────────────
+// Status: chosen in the dropdown (the arrow), never by a click on it. The padlock locks it: a locked bill keeps its status
+// and cannot be removed until someone unlocks it (the server refuses too).
 function billRow(b) {
-  const paid = Boolean(b.paidDate), state = paid ? 'paid' : b.status === 'pendente' ? 'pending' : 'late';
+  const paid = Boolean(b.paidDate), state = paid ? 'paid' : b.status === 'pendente' ? 'pending' : 'late', name = esc(b.description), id = esc(b.id);
   const note = paid ? `<small>paga em ${esc(shortDate(b.paidDate))}</small>` : b.status === 'atrasada' ? '<small class="is-late">atrasada</small>' : b.status === 'hoje' ? '<small class="is-late">vence hoje</small>' : '';
-  return `<tr class="${paid ? 'is-paid' : ''}"><td class="c-desc"><strong>${esc(b.description)}</strong></td><td class="c-date">${esc(shortDate(b.dueDate, true))}${note}</td><td class="num">${esc(money(b.amountCents))}</td>
-    <td class="c-type"><button type="button" class="cash-status is-${state}" data-cash="bill-toggle" data-id="${esc(b.id)}" aria-label="${esc(b.description)}: ${paid ? 'paga. Voltar para pendente' : 'pendente. Marcar como paga'}" title="${paid ? 'Clique para voltar para pendente' : 'Clique para marcar como paga'}">${paid ? `${icon('check')}Pago` : 'Pendente'}</button></td>
-    <td class="c-act"><button type="button" class="cash-remove" data-cash="remove-bill" data-id="${esc(b.id)}" aria-label="Excluir a conta ${esc(b.description)}" title="Excluir">${icon('trash')}</button></td></tr>`;
+  const status = `<span class="cash-select is-${state}${b.locked ? ' is-locked' : ''}"><select data-cash-bill-status data-id="${id}" aria-label="Status da conta ${name}"${b.locked ? ' disabled' : ''}><option value="pendente"${paid ? '' : ' selected'}>Pendente</option><option value="pago"${paid ? ' selected' : ''}>Pago</option></select></span>`;
+  const lock = `<button type="button" class="cash-lock${b.locked ? ' is-locked' : ''}" data-cash="bill-lock" data-id="${id}" aria-pressed="${b.locked}" aria-label="${b.locked ? 'Destrancar' : 'Trancar'} o status da conta ${name}" title="${b.locked ? 'Status trancado. Clique para destrancar.' : 'Trancar o status'}">${icon(b.locked ? 'lock' : 'unlock')}</button>`;
+  return `<tr class="${paid ? 'is-paid' : ''}${b.locked ? ' is-locked' : ''}"><td class="c-desc"><strong>${name}</strong></td><td class="c-date">${esc(shortDate(b.dueDate, true))}${note}</td><td class="num">${esc(money(b.amountCents))}</td>
+    <td class="c-type"><span class="cash-status-control">${status}${lock}</span></td>
+    <td class="c-act"><button type="button" class="cash-remove" data-cash="remove-bill" data-id="${id}" aria-label="Excluir a conta ${name}" title="${b.locked ? 'Destranque o status para excluir' : 'Excluir'}"${b.locked ? ' disabled' : ''}>${icon('trash')}</button></td></tr>`;
 }
 function billsTabView() {
   const bills = billsView(cash.bills, cash.today), open = bills.filter(b => !b.paidDate), late = open.filter(b => b.status === 'atrasada').length;
@@ -141,7 +155,7 @@ function billsTabView() {
     ? `<table class="cash-table cash-bills"><thead><tr><th scope="col">Conta</th><th scope="col">Vencimento</th><th scope="col" class="num">Valor</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Excluir</span></th></tr></thead><tbody>${bills.map(billRow).join('')}</tbody></table>`
     : '<p class="admin-empty">Nenhuma conta cadastrada. Use “Adicionar conta” para lembrar dos pagamentos da loja: fornecedor, aluguel, internet…</p>';
   return `<div class="cash-actions"><button type="button" class="cash-add is-out" data-cash="new-bill">+ Adicionar conta</button></div>${summary}${table}
-    <p class="panel-sub cash-hint">Um clique no status marca a conta como paga (ou volta para pendente). Paga, ela entra em Movimentações como saída do dia.</p>`;
+    <p class="panel-sub cash-hint">Escolha o status na setinha. O cadeado tranca o status: trancada, a conta não muda nem pode ser excluída até alguém destrancar. Paga, ela entra em Movimentações como saída do dia.</p>`;
 }
 
 // ── the part as a whole ─────────────────────────────────────────────────
@@ -195,7 +209,7 @@ dialog.addEventListener('submit', event => {
   if (mode === 'adjust') change('Salvando o saldo…', 'adjust-balance', {balanceCents: amount}, 'Saldo atualizado.');
   else if (mode === 'bill') change('Salvando a conta…', 'add-bill', {description: data.description, amountCents: amount, dueDate: data.date}, 'Conta adicionada.');
   // The list jumps to the month of the new entry, so it is always in sight.
-  else change('Salvando…', 'add-entry', {kind: mode, description: data.description, amountCents: amount, category: data.category, date: data.date}, mode === 'entrada' ? 'Entrada adicionada.' : 'Despesa adicionada.', () => { Object.assign(list, {year: Number(data.date.slice(0, 4)), month: Number(data.date.slice(5, 7)) - 1, query: ''}); });
+  else change('Salvando…', 'add-entry', {kind: mode, description: data.description, amountCents: amount, category: data.category, date: data.date}, mode === 'entrada' ? 'Entrada adicionada.' : 'Despesa adicionada.', () => { Object.assign(list, {year: Number(data.date.slice(0, 4)), month: Number(data.date.slice(5, 7)) - 1, query: '', limit: PAGE}); });
 });
 
 // ── events handed over by admin.js ──────────────────────────────────────
@@ -203,7 +217,7 @@ const step = (period, delta) => { let {year, month} = period; month += delta; if
 export function handleCashClick(event) {
   const target = event.target, find = selector => target.closest(selector);
   let el;
-  if ((el = find('[data-cash-tab]'))) { tab = el.dataset.cashTab; deps.render(false); return true; }
+  if ((el = find('[data-cash-tab]'))) { tab = el.dataset.cashTab; list.limit = PAGE; deps.render(false); return true; }
   if ((el = find('[data-cash-mode]'))) { chart.mode = el.dataset.cashMode; deps.render(false); return true; }
   if ((el = find('[data-cash-chart]'))) {
     const delta = el.dataset.cashChart === 'next' ? 1 : -1;
@@ -212,8 +226,8 @@ export function handleCashClick(event) {
   }
   // By month, a month opens its days; by day, a tap only shows the values (tooltip on focus).
   if ((el = find('[data-cash-point]'))) { if (chart.mode === 'mes') { const [year, month] = el.dataset.cashPoint.split('-').map(Number); chart = {mode: 'dia', year, month: month - 1}; deps.render(false); } return true; }
-  if ((el = find('[data-cash-list]'))) { Object.assign(list, step(list, el.dataset.cashList === 'next' ? 1 : -1)); deps.render(false); return true; }
-  if ((el = find('[data-cash-type]'))) { list.type = el.dataset.cashType; deps.render(false); return true; }
+  if ((el = find('[data-cash-list]'))) { Object.assign(list, step(list, el.dataset.cashList === 'next' ? 1 : -1), {limit: PAGE}); deps.render(false); return true; }
+  if ((el = find('[data-cash-type]'))) { Object.assign(list, {type: el.dataset.cashType, limit: PAGE}); deps.render(false); return true; }
   if (!(el = find('[data-cash]'))) return false;
   const id = el.dataset.id;
   const movement = cash?.movements.find(m => m.id === id), bill = cash?.bills.find(b => b.id === id);
@@ -226,17 +240,24 @@ export function handleCashClick(event) {
     case 'new-bill': openForm('bill'); break;
     case 'adjust': openForm('adjust'); break;
     case 'remove-entry': if (movement && confirm(`Excluir “${movement.description}” (${money(movement.amountCents)}) das movimentações?`)) change('Excluindo…', 'remove-entry', {id}, 'Movimentação excluída.'); break;
-    case 'bill-toggle': if (bill) change('Salvando…', 'set-bill-paid', {id, paid: !bill.paidDate}, bill.paidDate ? `“${bill.description}” voltou para pendente.` : `“${bill.description}” marcada como paga. A saída entrou em Movimentações.`); break;
-    case 'remove-bill': if (bill && confirm(`Excluir a conta “${bill.description}”?${bill.paidDate ? ' A saída dela também sai das movimentações.' : ''}`)) change('Excluindo…', 'remove-bill', {id}, 'Conta excluída.'); break;
+    case 'more': list.limit += PAGE; refreshList(); document.querySelector('#cash-list .cash-more')?.focus(); break;
+    case 'bill-lock': if (bill) change('Salvando…', 'lock-bill', {id, locked: !bill.locked}, bill.locked ? `Status de “${bill.description}” destrancado.` : `Status de “${bill.description}” trancado.`); break;
+    case 'remove-bill': if (bill && !bill.locked && confirm(`Excluir a conta “${bill.description}”?${bill.paidDate ? ' A saída dela também sai das movimentações.' : ''}`)) change('Excluindo…', 'remove-bill', {id}, 'Conta excluída.'); break;
   }
   return true;
 }
-// Search as you type: only the list is drawn again, so the field keeps the focus.
+// The status of a bill picked in its dropdown, and the search as you type.
 export function handleCashInput(event) {
-  if (event.target.id !== 'cash-search' || !cash) return;
-  list.query = event.target.value;
-  document.getElementById('cash-list').innerHTML = movementsTable();
-  document.querySelector('.cash-list-period')?.toggleAttribute('hidden', Boolean(list.query.trim()));
+  if (!cash) return;
+  const select = event.target.closest?.('[data-cash-bill-status]');
+  if (select) {
+    const bill = cash.bills.find(b => b.id === select.dataset.id), paid = select.value === 'pago';
+    if (bill && Boolean(bill.paidDate) !== paid) change('Salvando…', 'set-bill-paid', {id: bill.id, paid}, paid ? `“${bill.description}” marcada como paga. A saída entrou em Movimentações.` : `“${bill.description}” voltou para pendente.`);
+    return;
+  }
+  if (event.target.id !== 'cash-search') return;
+  Object.assign(list, {query: event.target.value, limit: PAGE});
+  refreshList();
 }
 // Chart values on hover, on keyboard focus and on a tap.
 export function bindCash(root) {

@@ -106,9 +106,11 @@ function createMemoryStore() {
       async remove(id) { const row = cashEntries.get(id); if (!row) return null; cashEntries.delete(id); return copy(row); }
     },
     bills: {
-      async create(data) { const row = {paidOn: null, createdBy: null, createdAt: new Date(), ...data}; bills.set(row.id, row); return copy(row); },
+      async create(data) { const row = {paidOn: null, lockedAt: null, createdBy: null, createdAt: new Date(), ...data}; bills.set(row.id, row); return copy(row); },
+      async findById(id) { return copy(bills.get(id) || null); },
       async list(limit = 5000) { return copy([...bills.values()].sort((a, b) => a.dueOn.localeCompare(b.dueOn) || a.createdAt - b.createdAt).slice(0, limit)); },
       async setPaid(id, paidOn) { const row = bills.get(id); if (!row) return null; row.paidOn = paidOn; return copy(row); },
+      async setLocked(id, lockedAt) { const row = bills.get(id); if (!row) return null; row.lockedAt = lockedAt; return copy(row); },
       async remove(id) { const row = bills.get(id); if (!row) return null; bills.delete(id); return copy(row); }
     },
     adminSessions: {

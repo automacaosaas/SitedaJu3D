@@ -171,6 +171,11 @@ async function contract(store, label) {
   assert.deepEqual([bill.dueOn, bill.paidOn, bill.amountCents], ['2026-10-15', null, 12000], `${label}: a bill starts pending`);
   assert.equal((await store.bills.setPaid(billId, '2026-10-04')).paidOn, '2026-10-04', `${label}: paid on a day`);
   assert.equal((await store.bills.setPaid(billId, null)).paidOn, null, `${label}: back to pending`);
+  assert.equal(bill.lockedAt, null, `${label}: a bill starts unlocked`);
+  assert.ok((await store.bills.setLocked(billId, new Date())).lockedAt, `${label}: the padlock`);
+  assert.ok((await store.bills.findById(billId)).lockedAt);
+  assert.equal((await store.bills.setLocked(billId, null)).lockedAt, null);
+  assert.equal(await store.bills.findById(crypto.randomUUID()), null);
   assert.equal(await store.bills.setPaid(crypto.randomUUID(), '2026-10-04'), null);
   assert((await store.bills.list()).some(b => b.id === billId && b.dueOn === '2026-10-15'));
   assert.equal((await store.bills.remove(billId)).id, billId);

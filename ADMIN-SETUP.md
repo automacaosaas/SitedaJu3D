@@ -29,13 +29,15 @@ dinheiro que de fato entrou e saiu da loja, no dia em que aconteceu, sem termos 
 
 - **Visão geral:** quatro números (**Saldo atual**, **Entrou este mês**, **Saiu este mês**, **Resultado do mês**), o gráfico de
   entradas (verde) e saídas (vermelho) **por dia** ou **por mês** (tocar num mês abre os dias dele) e as **contas para pagar**
-  atrasadas ou dos próximos 10 dias, com o saldo que sobra depois delas.
-- **Movimentações:** a lista do mês, com busca (procura em todos os meses) e filtro Todas / Entradas / Saídas. Os botões
+  atrasadas ou dos próximos 10 dias, com o saldo que sobra depois delas (o status delas muda só em Contas a pagar).
+- **Movimentações:** a lista do mês, 10 linhas por vez (**Ver mais** mostra as próximas 10), com busca (procura em todos os
+  meses) e filtro Todas / Entradas / Saídas. Os totais embaixo são do mês inteiro (ou da busca). Os botões
   **+ Adicionar entrada** e **+ Adicionar despesa** abrem um formulário curto: descrição, valor, categoria e data.
   Categorias de despesa: Materiais, Frete, Equipamentos, Marketing, Outros. De entrada: Venda, Outros. A lixeira apaga só o que
   foi lançado à mão.
-- **Contas a pagar:** conta, vencimento, valor e status. Um clique no status marca como **Pago** (a conta entra em Movimentações
-  como saída do dia) ou volta para **Pendente**. Atrasadas aparecem em vermelho.
+- **Contas a pagar:** conta, vencimento, valor e status. O status muda só pela **setinha** (Pendente ou Pago); clicar nele não
+  muda nada. Paga, a conta entra em Movimentações como saída do dia. O **cadeado** ao lado tranca o status: trancada, a conta
+  não muda de status nem pode ser excluída até alguém destrancar (o servidor também recusa). Atrasadas aparecem em vermelho.
 
 **O que entra sozinho:** todo pedido pago vira **Entrada · Venda** no dia do pagamento (horário de Brasília), pelo valor que o
 cliente pagou, frete incluído. Pedido recusado com o dinheiro devolvido vira **Saída · Estorno** no dia do estorno. Nada disso
