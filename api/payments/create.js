@@ -39,7 +39,7 @@ function readCustomer(body) {
   return {customer: {name, email, phone}, address, notes: clean(body.notes, 500)};
 }
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox, lookup = lookupCep, shippingConfig} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox, waitUntil = () => {}, lookup = lookupCep, shippingConfig} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'POST') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'POST'});
     const settings = mp.settings(env), site = config(env);
@@ -119,7 +119,7 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
       }
       const normalized = mp.normalizeOrder(answer);
       const {order: updated} = await orders.applyPayment(order, normalized, {actor: 'checkout'});
-      if (orders.PAID.includes(updated.status)) await orders.notifyPaid(updated, {fetchImpl, outbox, test: settings.mode === 'test'});
+      if (orders.PAID.includes(updated.status)) waitUntil(orders.notifyPaidLater(updated, {fetchImpl, outbox, test: settings.mode === 'test'}));
       return json(res, 201, {ok: true, mode: settings.mode, ...normalized});
     } catch (error) {
       console.error('payments/create: Mercado Pago answered', error.status || '', error.code || '', error.message);
