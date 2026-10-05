@@ -4,6 +4,10 @@
 //   GET  /preco/v1/nacional/{service}         cepOrigem, cepDestino, psObjeto (g), tpObjeto=2 (package), comprimento, largura,
 //                                             altura (cm), nuContrato, nuDR → {pcFinal: "23,45", …}
 //   GET  /prazo/v1/nacional/{service}         cepOrigem, cepDestino → {prazoEntrega: 4, …}
+//   GET  /preco/v1/internacional/{service}    the same box and contract, sgPaisDestino (ISO 3166 alpha-2) instead of cepDestino,
+//                                             vlDeclarado optional → {pcFinal, …}  (Exporta Fácil: 45128 Standard, 45110 Expresso,
+//                                             45209 Econômico; only the services in the contract answer)
+//   GET  /prazo/v2/internacional/exportacao/{service}   sgPaisOrigem=BR, sgPaisDestino, dtPostagem (DD-MM-AAAA) → the time
 // Errors carry a `code`: correios_auth (credentials or token refused), correios_unavailable (network, 5xx, 429, timeout)
 // and correios_rejected (the request itself was refused — a CEP or service the contract cannot ship; the caller drops that
 // option). Messages from the Correios are kept only for the server log, never sent to the browser.
@@ -101,7 +105,24 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     if (!Number.isInteger(days) || days < 0) throw fail('correios_rejected', {messages: ['no delivery time in the answer']});
     return days;
   }
-  return {settings: config, price, deadline};
+  // International (export): contract price of one volume to a country (cents), and the delivery time when the Correios
+  // give one (days, or null: the price stands without it).
+  async function priceInternational({code, country, box, declaredCents = 0}) {
+    const params = {cepOrigem: config.originCep, sgPaisDestino: country, ...boxParams(box), nuContrato: config.contract, nuDR: config.dr};
+    if (declaredCents > 0) params.vlDeclarado = (declaredCents / 100).toFixed(2).replace('.', ',');
+    const data = await get(`/preco/v1/internacional/${encodeURIComponent(code)}`, params);
+    const cents = parseMoney(data?.pcFinal);
+    if (!(cents > 0)) throw fail('correios_rejected', {messages: messagesOf(data).length ? messagesOf(data) : ['no price in the answer']});
+    return cents;
+  }
+  async function deadlineInternational({code, country, date = new Date(now())}) {
+    const day = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric'}).format(date).replace(/\//g, '-');
+    const data = await get(`/prazo/v2/internacional/exportacao/${encodeURIComponent(code)}`, {sgPaisOrigem: 'BR', sgPaisDestino: country, dtPostagem: day});
+    const answer = Array.isArray(data) ? data[0] : data;
+    const days = Number(answer?.prazoEntrega ?? answer?.prazo ?? answer?.nuPrazo ?? answer?.prazoExportacao);
+    return Number.isInteger(days) && days > 0 ? days : null;
+  }
+  return {settings: config, price, deadline, priceInternational, deadlineInternational};
 }
 
 module.exports = {createCorreios, settings, parseMoney, boxParams, MIN_BOX, BASE};

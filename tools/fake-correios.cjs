@@ -6,6 +6,11 @@
 //   Services it knows: 03298 (PAC) and 03220 (SEDEX). Any other code answers 403, like a service missing from the contract.
 //   CEP 00000000 is refused as invalid; CEPs starting with 99999 are "not served". Distance = gap between first digits.
 const CODES = {'03298': {name: 'PAC', base: 1850, perZone: 430, perKg: 340, days: 3, perZoneDays: 2}, '03220': {name: 'SEDEX', base: 2650, perZone: 870, perKg: 590, days: 1, perZoneDays: 1}};
+// Abroad (GET /preco/v1/internacional/{code}, GET /prazo/v2/internacional/exportacao/{code}): Exporta Fácil Standard and
+// Expresso answer; Econômico (45209) answers 403 like a service missing from the contract, and North Korea (KP) is not served.
+// Americas are cheaper than the rest: made-up numbers, only to exercise the panel.
+const INTERNATIONAL = {'45128': {name: 'Exporta Fácil Standard', base: 9800, perKg: 6200, days: 12}, '45110': {name: 'Exporta Fácil Expresso', base: 18900, perKg: 9800, days: 6}};
+const AMERICAS = new Set(['AR', 'BO', 'CA', 'CL', 'CO', 'EC', 'MX', 'PE', 'PY', 'US', 'UY', 'VE']);
 
 // Example shop data for tests and `tools/dev-server.cjs --fake-correios` (NOT the real boxes: those come from the shop).
 const EXAMPLE_CONFIG = Object.freeze({
@@ -63,11 +68,35 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     return reply(200, {coProduto: code5, prazoEntrega: days, dataMaxima: new Date(Date.now() + days * 86400000).toISOString(), entregaDomiciliar: 'S', entregaSabado: 'N', entregaDomingo: 'N'});
   }
 
+  function internationalPrice(code5, params, init) {
+    const bearer = /^Bearer (.+)$/.exec(init.headers?.Authorization || '');
+    if (!bearer || !tokens.has(bearer[1])) return refused(403, 'Token inválido ou expirado');
+    const service = INTERNATIONAL[code5]; if (!service) return refused(403, 'Serviço não contratado');
+    const country = params.get('sgPaisDestino') || '';
+    if (!/^[A-Z]{2}$/.test(country) || country === 'BR') return refused(400, 'PRC-210: país de destino inválido.');
+    if (country === 'KP') return refused(400, 'PRC-215: país de destino não atendido para este serviço.');
+    if (!params.get('nuContrato') || !params.get('nuDR')) return refused(400, 'PRC-010: informe o contrato e a DR');
+    const grams = Number(params.get('psObjeto')), [l, w, h] = ['comprimento', 'largura', 'altura'].map(k => Number(params.get(k)));
+    if (params.get('tpObjeto') !== '2' || !(grams >= 1) || !(l >= 16 && w >= 11 && h >= 2) || l < w) return refused(400, 'PRC-140: objeto fora das medidas aceitas.');
+    const cents = Math.round((service.base + Math.ceil(grams / 500) * service.perKg / 2) * (AMERICAS.has(country) ? 1 : 1.35));
+    return reply(200, {coProduto: code5, pcBase: money(cents - 100), pcFinal: money(cents), psCobrado: String(grams)});
+  }
+  function internationalDeadline(code5, params, init) {
+    const bearer = /^Bearer (.+)$/.exec(init.headers?.Authorization || '');
+    if (!bearer || !tokens.has(bearer[1])) return refused(403, 'Token inválido ou expirado');
+    const service = INTERNATIONAL[code5]; if (!service) return refused(403, 'Serviço não contratado');
+    if (params.get('sgPaisOrigem') !== 'BR' || !/^\d{2}-\d{2}-\d{4}$/.test(params.get('dtPostagem') || '')) return refused(400, 'PRZ-020: parâmetros inválidos');
+    return reply(200, {coProduto: code5, prazoEntrega: service.days + (AMERICAS.has(params.get('sgPaisDestino')) ? 0 : 4)});
+  }
+
   async function fetchImpl(url, init = {}) {
     const parsed = new URL(String(url));
     calls.push({method: init.method || 'GET', path: parsed.pathname, params: Object.fromEntries(parsed.searchParams)});
     if (down) return refused(503, 'Serviço indisponível');
     if (parsed.pathname === '/token/v1/autentica/cartaopostagem' && init.method === 'POST') return authenticate(init);
+    const abroad = parsed.pathname.match(/^\/preco\/v1\/internacional\/(\d{5})$/), abroadTime = parsed.pathname.match(/^\/prazo\/v2\/internacional\/exportacao\/(\d{5})$/);
+    if (abroad && (!init.method || init.method === 'GET')) return internationalPrice(abroad[1], parsed.searchParams, init);
+    if (abroadTime && (!init.method || init.method === 'GET')) return internationalDeadline(abroadTime[1], parsed.searchParams, init);
     const found = parsed.pathname.match(/^\/(preco|prazo)\/v1\/nacional\/(\d{5})$/);
     if (found && (!init.method || init.method === 'GET')) return found[1] === 'preco' ? price(found[2], parsed.searchParams, init) : deadline(found[2], parsed.searchParams, init);
     return refused(404, 'Rota não encontrada');

@@ -73,6 +73,13 @@ export async function cashAction(action, payload = {}, options) {
   throw cashError(answer);
 }
 
+// Envio internacional: the Exporta Fácil options of the contract for a country and the pieces (api/admin/international-quote.js).
+export async function internationalQuote(country, items, options) {
+  const answer = await request('/api/admin/international-quote', {method: 'POST', body: {country, items}, timeout: 30000, ...options});
+  if (answer.status === 200 && Array.isArray(answer.data?.options)) return answer.data;
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
 // The buyer's full CPF for issuing the invoice by hand (audited on the server).
 export async function revealDocument(id, options) {
   const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});

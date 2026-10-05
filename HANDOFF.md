@@ -73,6 +73,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   convivem: as duas já rodaram e **não devem ser renomeadas**. A próxima migração nova é a **011**.
 - **Lista do painel no MySQL:** `ADMIN_ORDER_SELECT` (`api/_lib/store-mysql.js`) escolhe as colunas que `orders.adminView` lê. Campo
   novo no painel entra nessa lista também; `tests/store-contract.mjs` confere isso, mesmo sem banco.
+- **Envio internacional (05/10/2026, branch `envio/internacional`):** parte nova do painel (`dist/admin-international.js`,
+  `api/admin/international-quote.js`). Cota o Exporta Fácil com o contrato dos Correios para um país e mostra os dados de alfândega e o
+  passo a passo. Os serviços que o contrato não tem aparecem com a mensagem dos Correios. Detalhes em `FRETE-SETUP.md`, seção
+  "Envio internacional". O checkout continua só para o Brasil.
 - **Preço e Pix:** `dist/commerce-config.js` (loja) e `api/_lib/catalog.js` (servidor) precisam dar o mesmo resultado
   (`tests/pix.mjs` e `tests/payments.mjs` conferem). O servidor decide o desconto pela forma de pagamento realmente usada.
 - **Pagamento:** `api/payments/`, `api/_lib/mercadopago.js`, `dist/checkout.js`, `dist/live-payment.js` (`MERCADOPAGO-SETUP.md`).

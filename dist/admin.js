@@ -6,6 +6,7 @@ import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
 import {icon} from './icons.js';
 import {initCash, cashView, handleCashClick, handleCashInput, bindCash, loadCashData, hasCash, resetCash} from './admin-cash.js';
+import {initIntl, intlView, handleIntlClick, handleIntlInput, resetIntl} from './admin-international.js';
 
 const content = document.querySelector('#admin-content'), tools = document.querySelector('#admin-tools'), live = document.querySelector('#admin-live');
 const busyDialog = createBusyDialog();
@@ -91,9 +92,11 @@ stepDialog.addEventListener('click', event => {
 // screen: loading | login | code | dashboard | offline
 let screen = 'loading', session = null, busy = false, feedback = '', setup = null, orders = [];
 let tab = 'pendente';
-// Two parts of the panel: Pedidos and Fluxo de caixa (admin-cash.js). "#caixa" in the address keeps the second on reload.
-let section = location.hash === '#caixa' ? 'caixa' : 'pedidos';
+// Parts of the panel: Pedidos, Fluxo de caixa (admin-cash.js) and Envio internacional (admin-international.js). "#caixa" and
+// "#internacional" in the address keep them on reload.
+let section = location.hash === '#caixa' ? 'caixa' : location.hash === '#internacional' ? 'internacional' : 'pedidos';
 initCash({run: (message, operation) => run(message, operation), announce, signedOut: () => signedOut(), render: focus => render(focus)});
+initIntl({run: (message, operation) => run(message, operation), announce, signedOut: () => signedOut(), render: focus => render(focus)});
 const now = new Date();
 let calendar = {year: now.getFullYear(), month: now.getMonth()}, selectedDay = dayKey(now);
 
@@ -286,9 +289,9 @@ function calendarView(list) {
 
 // The switch between the two parts, and the message of an action that did not work (shown once).
 function dashboardView() {
-  const nav = `<nav class="admin-sections" aria-label="Partes do painel">${[['pedidos', 'Pedidos'], ['caixa', 'Fluxo de caixa']].map(([id, label]) => `<button type="button" data-section="${id}"${section === id ? ' aria-current="page"' : ''}>${label}</button>`).join('')}</nav>`;
+  const nav = `<nav class="admin-sections" aria-label="Partes do painel">${[['pedidos', 'Pedidos'], ['caixa', 'Fluxo de caixa'], ['internacional', 'Envio internacional']].map(([id, label]) => `<button type="button" data-section="${id}"${section === id ? ' aria-current="page"' : ''}>${label}</button>`).join('')}</nav>`;
   const error = feedback ? `<p class="admin-error admin-dash-error" role="alert">${esc(feedback)}</p>` : '';
-  return nav + error + (section === 'caixa' ? cashView() : ordersDashboard());
+  return nav + error + (section === 'caixa' ? cashView() : section === 'internacional' ? intlView() : ordersDashboard());
 }
 function ordersDashboard() {
   const s = summary(orders);
@@ -376,7 +379,7 @@ async function run(message, operation) {
 }
 
 // Signed out (session ended elsewhere, or expired): back to the password, saying why.
-function signedOut() { session = null; orders = []; setup = null; revealed.clear(); resetCash(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
+function signedOut() { session = null; orders = []; setup = null; revealed.clear(); resetCash(); resetIntl(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
 
 async function openDashboard() {
   const loaded = await loadOrders();
@@ -440,7 +443,7 @@ content.addEventListener('submit', event => {
 function openSection(id) {
   if (busy || id === section) return;
   section = id;
-  history.replaceState(null, '', id === 'caixa' ? '#caixa' : location.pathname);
+  history.replaceState(null, '', id === 'caixa' || id === 'internacional' ? `#${id}` : location.pathname);
   if (id === 'caixa' && !hasCash()) run('Abrindo o fluxo de caixa…', async () => { try { await loadCashData(); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw error; } });
   else render();
 }
@@ -449,6 +452,7 @@ content.addEventListener('click', event => {
   const sectionBtn = event.target.closest('[data-section]');
   if (sectionBtn) { openSection(sectionBtn.dataset.section); return; }
   if (section === 'caixa' && screen === 'dashboard' && handleCashClick(event)) return;
+  if (section === 'internacional' && screen === 'dashboard' && handleIntlClick(event)) return;
 
   const tabBtn = event.target.closest('[data-tab]');
   if (tabBtn) { tab = tabBtn.dataset.tab; render(false); return; }
@@ -504,12 +508,13 @@ content.addEventListener('click', event => {
 // The logout button lives in the topbar (#admin-tools), outside #admin-content, so it needs its own listener.
 tools.addEventListener('click', async event => {
   if (!event.target.closest('#admin-logout')) return;
-  await logout(); session = null; orders = []; revealed.clear(); resetCash(); screen = 'login'; render();
+  await logout(); session = null; orders = []; revealed.clear(); resetCash(); resetIntl(); screen = 'login'; render();
 });
 
 content.addEventListener('input', event => {
   if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
   if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
+  if (section === 'internacional' && screen === 'dashboard') handleIntlInput(event);
 });
 
 // Back from Bling's authorization page (/admin.html?code=…&state=…): the code comes off the address at once and goes
