@@ -40,20 +40,22 @@
 /* ── A peça ───────────────────────────────────────────────────────────────────── */
 #product-dialog .detail-visual { grid-column: 1; grid-row: 2 / 4; position: relative; min-height: 0; height: auto; display: block; overflow: hidden; border-radius: 0;
   background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
-/* Galeria de vistas (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a vista
-   escolhida grande, num quadro claro com um toque da cor da peça; no celular, a vista ocupa a largura toda e muda arrastando de lado.
-   As fotos reais têm o fundo delas (preto ou claro) e não são quadradas: em volta delas, a mesma cor (--gallery-bg, de gallery.js). Peça
-   ainda sem fotos reais: só a foto da vitrine, no quadro claro, sem miniaturas nem setas. */
+/* Galeria de fotos (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto
+   escolhida grande; no celular, a foto ocupa a largura toda e muda arrastando de lado. As fotos vêm recortadas, com uma sombra leve no
+   chão, e ficam direto no fundo da página (sem um quadro em volta); as de perto (.is-zoom) enchem a área toda, como um zoom. Peça ainda
+   sem fotos reais: só a foto da vitrine, sem miniaturas nem setas. */
 #product-dialog[data-view=photo] .detail-visual { background: #fff; }
 #product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
 .gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
-.gallery-rail button { flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 12px; background: var(--gallery-bg, var(--pd-stage)); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
+.gallery-rail button { flex: none; width: 64px; height: 64px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
 .gallery-rail button:hover, .gallery-rail button[aria-current=true] { opacity: 1; }
 .gallery-rail button[aria-current=true] { box-shadow: inset 0 0 0 2px var(--pd-text); }
 .gallery-rail button:focus-visible, .gallery-arrows button:focus-visible, .gallery-dots button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
-#product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-user-drag: none; user-select: none; }
-.gallery-main { position: relative; min-width: 0; min-height: 0; border-radius: 22px; background: var(--gallery-bg, var(--pd-stage)); overflow: hidden; }
+#product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none; -webkit-user-drag: none; user-select: none; }
+.gallery-main { position: relative; min-width: 0; min-height: 0; border-radius: 22px; background: transparent; overflow: hidden; }
+.gallery-slide.is-zoom { padding: 0; }
+#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; }
 .gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .gallery-track::-webkit-scrollbar { display: none; }
 .gallery-track:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -3px; border-radius: 22px; }
@@ -93,7 +95,13 @@
 #product-dialog #part-tabs button:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); }
 #product-dialog #part-tabs button[aria-pressed=true] { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 55%, #fff); color: var(--pd-text); font-weight: 650; box-shadow: inset 0 0 0 1px var(--pd-accent); }
 #product-dialog .part-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; flex: none; transition: background .25s; }
-#product-dialog #palette { position: relative; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
+/* as cores e, ao lado delas, o Surpreenda-me, sempre à vista */
+.pdp-palette-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#product-dialog #palette { position: relative; flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
+.pdp-surprise { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; color: var(--pd-text); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color .2s, transform .2s var(--pd-ease); }
+.pdp-surprise span { color: var(--pd-accent); }
+.pdp-surprise:hover { border-color: var(--pd-accent); transform: translateY(-1px); }
+.pdp-surprise:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; flex: none; }
 #product-dialog .swatch i { width: 32px; height: 32px; transition: transform .2s var(--pd-ease), box-shadow .2s; }
 #product-dialog .swatch:hover { background: transparent; }
@@ -196,7 +204,7 @@
   #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, #fff) 60%, #fff 100%); }
   #product-dialog .image-area { inset: 58px 0 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
   .gallery-rail, .gallery-arrows { display: none; }
-  .gallery-main { border-radius: 0; background: var(--gallery-bg, transparent); }
+  .gallery-main { border-radius: 0; }
   .gallery-slide { padding: 0 16px; }
   .gallery-dots { display: flex; justify-content: center; }
   .gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
@@ -228,7 +236,7 @@
   #product-dialog #part-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
   #product-dialog #part-tabs::-webkit-scrollbar { display: none; }
   /* as cores numa fileira que rola de lado, com o fim esmaecido sugerindo que há mais */
-  #product-dialog #palette { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: -4px -16px; padding: 4px 12px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+  #product-dialog #palette { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: -4px 0 -4px -16px; padding: 4px 4px 4px 12px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   #product-dialog #palette::-webkit-scrollbar { display: none; }
   #product-dialog .swatch { scroll-snap-align: start; }
   /* menos coisa na tela do celular: só as partes, as cores e a compra. Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, que abre o

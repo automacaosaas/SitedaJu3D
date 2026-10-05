@@ -1,18 +1,17 @@
 // Galeria de fotos da aba Foto, no jeito das lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto escolhida
 // grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. São fotos reais da peça (pedido de 04/10/2026: nem o 3D
 // nem imagens geradas), recortadas por tools/galeria-vistas das fontes de design/vistas/; o 3D continua na aba ao lado.
-// Cada peça: a cor do fundo das fotos (bg, para o quadro em volta delas, que não são quadradas) e as vistas, na ordem (a primeira abre a
-// galeria). Peça ainda sem fotos reais: só a foto da vitrine.
+// Cada peça: as vistas, na ordem (a primeira abre a galeria), e as de perto (zoom), que enchem o quadro como nas lojas. Peça ainda sem
+// fotos reais: só a foto da vitrine.
 export const GALLERY={
-  borboletoscopio:{bg:'',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
-  dinossauroscopio:{bg:'',views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
-  aviaoscopia:{bg:'',views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',numeros:'Aberturas de perto',asa:'Asa e motor de perto'}}
+  borboletoscopio:{zoom:['rosto','asa'],views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',rosto:'Rostinho de perto',asa:'Asa de perto'}},
+  dinossauroscopio:{zoom:['rosto','crista','pes'],views:{frente:'Frente','tres-quartos':'Três quartos',lado:'Lado',tras:'Três quartos de trás',costas:'Costas',rosto:'Rosto de perto',crista:'Crista de perto',pes:'Pés de perto'}},
+  aviaoscopia:{zoom:['numeros','asa'],views:{frente:'Frente','tres-quartos':'Três quartos',costas:'Costas',numeros:'Aberturas de perto',asa:'Asa e motor de perto'}}
 };
-export const viewsOf=key=>Object.entries(GALLERY[key]?.views||{frente:'Frente'}).map(([id,name])=>({id,name}));
+export const viewsOf=key=>Object.entries(GALLERY[key]?.views||{frente:'Frente'}).map(([id,name])=>({id,name,zoom:!!GALLERY[key]?.zoom.includes(id)}));
 export const realPhotos=key=>!!GALLERY[key];
-export const galleryBg=key=>GALLERY[key]?.bg||'';
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='4';
+export const VIEWS_VERSION='5';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){
@@ -51,6 +50,7 @@ export function createGallery(root,{onChange}={}){
     }
     list.forEach((item,i)=>{
       const img=track.children[i].firstElementChild;img.src=item.src;img.alt=item.alt;
+      track.children[i].classList.toggle('is-zoom',!!item.zoom);rail.children[i].classList.toggle('is-zoom',!!item.zoom);
       track.children[i].setAttribute('aria-label',`${item.name}, ${i+1} de ${list.length}`);
       rail.children[i].firstElementChild.src=item.thumb;rail.children[i].setAttribute('aria-label',item.name);dots.children[i].setAttribute('aria-label',`${item.name}, ${i+1} de ${list.length}`);
     });

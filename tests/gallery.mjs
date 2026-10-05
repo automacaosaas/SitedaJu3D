@@ -5,7 +5,7 @@ import {readFile, stat} from 'node:fs/promises';
 // Fotos reais da peça (04/10/2026: nem o 3D nem imagens geradas), com detalhes de perto; peça sem fotos reais: só a foto da vitrine.
 const read = file => readFile(new URL(`../${file}`, import.meta.url), 'utf8');
 const [html, controller, gallery, viewer, css, generator, page, i18n, fotosJson] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json'].map(read));
-const {GALLERY, VIEWS_VERSION, viewsOf, realPhotos, galleryBg, staticViews} = await import('../dist/gallery.js');
+const {GALLERY, VIEWS_VERSION, viewsOf, realPhotos, staticViews} = await import('../dist/gallery.js');
 const {PRODUCTS, SOON} = await import('../dist/products.js');
 const fotos = JSON.parse(fotosJson);
 const dialog = html.match(/<dialog id="product-dialog"[\s\S]*?<\/dialog>/)[0];
@@ -20,10 +20,10 @@ const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
 assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'macacoscopio']);
 for (const key of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) {
   assert(realPhotos(key), `${key} tem fotos reais`);
-  // fundo claro: as fotos de fundo preto saem recortadas (sobre o quadro claro da página); as de fundo claro levam a cor dele em volta
-  const cut = Object.values(fotos[key]).every(f => f.fundo === 'recortar');
-  assert(cut ? galleryBg(key) === '' : /^#[e-f][0-9a-f]([e-f][0-9a-f]){2}$/.test(galleryBg(key)), `${key}: fundo claro (${galleryBg(key) || 'recortado'})`);
-  if (cut) for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo preto (com transparência)`); }
+  // fundo claro: todas as fotos saem recortadas do fundo delas (preto ou claro) e ficam direto no fundo da página, com transparência
+  assert(Object.values(fotos[key]).every(f => f.fundo === 'recortar'), `${key}: fotos recortadas`);
+  assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), Object.keys(fotos[key]).filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
+  for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo preto (com transparência)`); }
   const ids = viewsOf(key).map(v => v.id);
   assert(ids[0] === 'frente' && ids.length >= 5 && ids.filter(id => fotos[key][id]?.recorte).length === ids.length, `${key}: frente primeiro, mais ângulos e detalhes de perto, todos com recorte`);
   assert(viewsOf(key).some(v => / de perto$/.test(v.name)), `${key}: detalhes de perto`);
@@ -48,8 +48,8 @@ for (const key of keys) for (const item of staticViews(key)) {
 assert(total < 1500000, `as imagens somam menos de 1,5 MB (${total} B)`);
 
 // Controlador: a galeria troca com a peça, com a cor do fundo das fotos; sem nota embaixo da foto; cor leva ao 3D.
-assert(controller.includes("import {staticViews,createGallery,galleryBg} from './gallery.js';"));
-assert(controller.includes("dialog.style.setProperty('--gallery-bg',galleryBg(key)||null);gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));"));
+assert(controller.includes("import {staticViews,createGallery} from './gallery.js';"));
+assert(controller.includes("gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));"));
 assert(controller.includes("$('.view-note').textContent=next==='photo'?'':") && !controller.includes('foto real'), 'na aba Foto, sem nota embaixo da foto');
 assert(/if\(view!=='model'\)setView\('model'\)/.test(controller), 'escolher uma cor leva ao 3D');
 assert(!/renderViews|createObjectURL/.test(controller + gallery + viewer), 'nada de gerar imagem no navegador de quem compra');
@@ -61,7 +61,9 @@ for (const part of ["track.addEventListener('scroll'", "{ArrowLeft:-1,ArrowRight
 assert(css.includes('#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
 assert(css.includes('.gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;'));
 assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-rail, \.gallery-arrows \{ display: none; \}[\s\S]*\.gallery-dots button \{ display: grid; place-items: center; width: 24px; height: 24px;/.test(css));
-assert(css.includes('background: var(--gallery-bg, var(--pd-stage))') && /#product-dialog \.gallery img \{[^}]*mix-blend-mode: normal;/.test(css), 'em volta das fotos, a cor do fundo delas');
+assert(/.gallery-main {[^}]*background: transparent;/.test(css) && css.includes('#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; }') && /#product-dialog .gallery img {[^}]*mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none;/.test(css), 'sem quadro em volta das fotos; as de perto enchem a área');
+// Surpreenda-me ao lado das cores, sempre à vista (fora de Combinações).
+assert(dialog.includes('<div class="pdp-palette-row"><div id="palette" role="radiogroup" aria-label="Cor da parte"></div><button type="button" class="pdp-surprise" id="surprise">') && controller.includes("PRESETS.filter(preset=>preset.id!=='surpresa')") && controller.includes("$('#surprise').addEventListener('click'"), 'Surpreenda-me ao lado das cores');
 assert(css.includes('.gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }'));
 assert(!/\.image-area img \{[^}]*mask-image: radial-gradient/.test(css), 'sem a máscara da foto antiga');
 // Celular menos carregado: a dica da parte, as combinações e Detalhes/Cores/Entrega/Trocas saem da tela; ficam no (i) do topo.
@@ -76,4 +78,4 @@ assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video
 // Tradução: nota, rótulos e texto alternativo das fotos.
 assert(i18n.includes('(Frente|Três quartos|Lado|Costas|Três quartos de trás|.+ de perto)'));
 
-console.log(`PASS: photo gallery — real photos with close-ups (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), the photo background around them, showcase photo alone without real photos, cleaner phone screen with the extras in the (i) sheet.`);
+console.log(`PASS: photo gallery — real photos with close-ups (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out on the page background, close-ups filling the frame, showcase photo alone without real photos, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);
