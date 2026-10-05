@@ -179,14 +179,23 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
 
   // ── Banner limpo: preço, ação principal "Personalizar o meu" e, com demonstração, "Ver encaixado" ──────
   assert.ok(js.includes('href="#produto/${key}/personalizar" data-role="palette"'), 'a ação principal abre o configurador do produto ativo');
-  assert.ok(js.includes("${icon('palette')}<span>Personalizar o meu</span>"), 'ícone de paleta à esquerda, verbo claro');
+  assert.ok(js.includes("${icon('palette')}<span>Personalizar o meu</span>"), 'ícone de paleta de cores à esquerda, verbo claro');
+  assert.ok(/\.palette-button:hover svg \{ animation: palette-tilt \.6s/.test(css) && /\.palette-button:hover \{ transform: scale\(1\.03\);/.test(css), 'no hover o botão sobe 3% e a paleta balança');
+  assert.ok(/\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \.product-rail-art img \{ transform: scale\(1\); \}/.test(css) && /\.home \.product-rail-card\[style\*="--rail-own-1"\] \.product-rail-art img \{ transform: scale\(\.9\);/.test(css) && !/translateY\(-21%\)/.test(css), 'em "Nossa coleção" a peça fica dentro do card; a do centro cresce um pouco (2026-10-05)');
+  assert.ok(/\.home \.product-rail-card \{ width: min\(300px, 30vw\); min-height: 400px; transform: translate\(calc\(-50% \+ var\(--slot\) \* 292px \+ var\(--drag\)\), 38px\) scale\(\.8\); \}/.test(css) && /\.home \.product-rail-card:not\(\.is-active\) \{ transform: translate\(calc\(-50% \+ var\(--slot\) \* min\(56vw, 260px\)/.test(css), 'cards dos lados menores e recolhidos atrás do central (desktop e celular)');
+  assert.ok(/\.palette-button:active \{ transform: scale\(\.98\);/.test(css), 'no clique o botão afunda');
+  assert.ok(/\.palette-button \{[^}]*box-shadow: [^;]*0 10px 25px var\(--glow\)/.test(css), 'sombra viva no tom do botão');
+  assert.ok(js.includes("data-demo-open>${icon('eye')}<span>Ver encaixado</span>"), '"Ver encaixado" com o olho (ver a peça montada)');
+  assert.ok(/\.palette \{ display: flex; flex-direction: column; align-items: center;/.test(css), 'o link fica centralizado logo abaixo do botão');
+  assert.ok(/\.hero-arrow \{[^}]*background: rgba\(255, 255, 255, \.5\); -webkit-backdrop-filter: blur\(10px\)/.test(css) && /\.hero-next:hover svg \{ translate: 3px 0; \}/.test(css), 'setas de vidro translúcido; no hover o chevron anda para onde aponta');
   assert.ok(!/data-go-card|goToCard|is-pulsing|chevron-nudge|cta-pulse|palette-dots/.test(js + css), 'sem a ida ao card, a seta pulsante nem as bolinhas');
   assert.ok(!/hero-cue|data-hero-cue|cue-ring|cue-bounce/.test(html + js + css), 'sem a seta separada');
   assert.ok(js.includes('${demo ? `<button class="hero-demo-button" type="button" data-demo-open>'), '"Ver encaixado" só nas peças com demonstração');
   assert.ok(/data-demo-open\]'\) && !locked && demo\.has\(active\)\) demo\.open\(active\)/.test(js), 'e abre a demonstração do produto ativo');
   assert.ok(js.includes('<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>'), 'preço com o selo do Pix');
   assert.ok(/\.palette-button \{[^}]*min-height: 52px;[^}]*background: var\(--accent\)/.test(css), 'botão na cor do tema, com área de toque generosa');
-  assert.ok(/\.palette-button \{ width: 100%;/.test(css), 'no celular o botão ocupa a largura entre as setas');
+  assert.ok(/\.palette-button \{ width: 100%;/.test(css), 'no celular o botão ocupa a linha inteira');
+  assert.ok(/\.hero-arrow \{ position: static; translate: none; grid-row: 2; align-self: center;/.test(css), 'no celular as setas flutuam nas bordas da pilastra, longe do botão');
   assert.ok(/\.hero-palette \{[^}]*margin-top: clamp\(20px, 6vw, 34px\)/.test(css), 'no celular o botão fica abaixo da pilastra');
   assert.ok(css.includes('.palette-button:active { transform: none; }'), 'movimento reduzido: sem animação de toque');
   assert.ok(/\.home \.catalog-home \.product-customize, \.home \.catalog-home \.product-cart \{[^}]*background: var\(--theme-accent, var\(--rose\)\)/.test(css), 'Personalize o seu e carrinho do card seguem a cor do banner');
@@ -203,7 +212,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(/\.home \.product-rail-card\.is-active \{[^}]*border-color: var\(--theme-soft[^}]*var\(--theme-glow/.test(css) && /\.home \.product-rail-card\.is-active \.product-rail-art \{ background: linear-gradient\(to bottom, var\(--theme-wash/.test(css), 'o topo do card central se conecta ao degradê do tema');
   assert.ok(js.includes("'--theme-soft'") && js.includes("'--theme-wash'"), 'as duas cores novas são calculadas a cada quadro');
   const desktopCards = css.match(/@media \(min-width: 901px\) \{\r?\n  \.home \.product-carousel-stage \{ height: (\d+)px; \}[\s\S]*?\r?\n\}/);
-  assert.ok(desktopCards && Number(desktopCards[1]) <= 540 && /\.home \.product-rail-card\.is-active \{ width: min\(352px/.test(desktopCards[0]), 'no desktop os cards ficam menores (só na home)');
+  assert.ok(desktopCards && Number(desktopCards[1]) <= 540 && /\.home \.product-rail-card\.is-active \{ width: min\(372px/.test(desktopCards[0]), 'no desktop os cards cabem na tela (só na home); o do centro um pouco maior desde 2026-10-05');
   assert.ok([...desktopCards[0].matchAll(/font-size: (\d+)px/g)].every(match => Number(match[1]) >= 26) && !/product-rail-(bottom|actions|active-details)[^{]*\{[^}]*font-size/.test(desktopCards[0]), 'o texto das informações não encolhe (só o título cai de 28 para 26 px)');
   for (const key of Object.keys(PRODUCTS)) {
     const {theme} = showcase(key), [, mid] = stops(theme.bannerStops), wash = mixColor(mid, '#ffffff', .3);

@@ -11,6 +11,18 @@ export const brickLocale = lang => LOCALES[lang] || LOCALES['pt-BR'];
 // id the documented way (security.js + X-meli-session-id on the server) instead of loosening the policy.
 export const SDK_OPTIONS = lang => ({locale: brickLocale(lang), advancedFraudPrevention: false});
 
+// The account's payment methods, for the cart's marks (GET /api/payments/methods); null while unknown.
+export async function loadPaymentMethods({fetchImpl = globalThis.fetch, timeout = 4000} = {}) {
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetchImpl('/api/payments/methods', {signal: controller.signal});
+    if (!response.ok) return null;
+    const {methods} = await response.json();
+    return Array.isArray(methods) && methods.length ? methods.filter(m => m && typeof m.id === 'string' && ['bank_transfer', 'credit_card', 'debit_card'].includes(m.type)) : null;
+  } catch { return null; }
+  finally { clearTimeout(timer); }
+}
+
 export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout = 2500} = {}) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
   try {

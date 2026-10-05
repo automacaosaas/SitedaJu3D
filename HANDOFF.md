@@ -9,7 +9,30 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
-- **Branch de partida: `juncao/pr2-auditoria`.** É a mesma versão que está no site de teste
+- **Atualização de 05/10/2026: branch `vitrine/3d-nas-consultas` (enviada ao GitHub).** Ela já tem a `main` até `6c6bb1a`
+  (galeria de vistas, macaco novo, fluxo de caixa, desempenho, página Fale com a Ju com perguntas frequentes e o pedido em
+  etapas no painel) e a paginação da lista de pedidos (`claude/project-thread-3y8z4a`, `9d1bc0f`). Acrescenta o que o dono
+  pediu entre 03 e 05/10. 39 suítes passam. Detalhes e verificação em `CONSULTAS-3D-QA.md`.
+  - **Home:**
+    - saiu a seção "O 3D nas suas consultas" (fichas técnicas, GSAP/Lenis);
+    - "Personalizar o meu" com a paleta;
+    - "Nossa coleção" com os cards dos lados menores e o do centro maior, a peça saindo por cima do card;
+    - ícone no "Entrar ou cadastrar";
+    - o carrinho dos cards gira antes de o mini-carrinho subir.
+  - **Página de cada peça (`borboletoscopio.html` etc., `product-landing.js`):**
+    - 3D que gira, e as cores da peça em bolinhas no canto da imagem;
+    - "Personalizar o meu" abre as cores na própria página; no celular, a peça fica presa no alto, o header some e um carrinho flutuante adiciona a peça;
+    - acordeões de produção, envio e trocas;
+    - "Sobre a peça" com as cores e a observação.
+  - **Carrinho:**
+    - recomendações (até 3 peças e "Ver mais");
+    - informações da compra;
+    - selos dos meios de pagamento vindos da conta do Mercado Pago (`GET /api/payments/methods`, veja `MERCADOPAGO-SETUP.md`);
+    - a barra do frete grátis sobe quando entra uma peça.
+  - **Mini-carrinho:** "Complete o kit" com até 3 peças da mesma categoria, que não somem, com o número no botão; ao fechar, ele desliza.
+  - **Tarefa D feita a pedido do dono:** saíram "Preço ilustrativo" (cards), "valores ilustrativos nesta prévia" (página da peça) e a nota da coleção. Os preços ainda serão corrigidos.
+  - **Servidor local:** com `--fake-correios`, usa a regra de frete grátis e o prazo da loja. O simulador do Mercado Pago responde `/v1/payment_methods`.
+- **Branch de partida (até 01/10): `juncao/pr2-auditoria`.** É a mesma versão que está no site de teste
   (https://wheat-llama-936569.hostingersite.com, na Hostinger) no commit `ae011d4`. Este arquivo foi acrescentado depois.
 - A Hostinger **não** está ligada ao GitHub: o Pedro sobe um `.zip` na mão. No lançamento, o site de produção nasce ligado ao GitHub.
 - A `main` (`4edf5bc`) está atrasada de propósito. O dono abre um PR para trazer tudo para ela.
@@ -46,6 +69,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 - `dist/`: site estático (HTML, módulos JS, CSS). `api/`: funções servidas por `server/create-server.cjs`. `db/migrations/`: MySQL
   (aplicadas ao iniciar). `tools/`: servidor local, "fakes" e geradores. `tests/`: suítes (`npm test`, ou `node tests/x.mjs`).
+- **Migrações:** cada uma é gravada pelo nome do arquivo em `schema_migrations`. Por isso `010_pedidos_lista.sql` e `010_envio.sql`
+  convivem: as duas já rodaram e **não devem ser renomeadas**. A próxima migração nova é a **011**.
+- **Lista do painel no MySQL:** `ADMIN_ORDER_SELECT` (`api/_lib/store-mysql.js`) escolhe as colunas que `orders.adminView` lê. Campo
+  novo no painel entra nessa lista também; `tests/store-contract.mjs` confere isso, mesmo sem banco.
 - **Preço e Pix:** `dist/commerce-config.js` (loja) e `api/_lib/catalog.js` (servidor) precisam dar o mesmo resultado
   (`tests/pix.mjs` e `tests/payments.mjs` conferem). O servidor decide o desconto pela forma de pagamento realmente usada.
 - **Pagamento:** `api/payments/`, `api/_lib/mercadopago.js`, `dist/checkout.js`, `dist/live-payment.js` (`MERCADOPAGO-SETUP.md`).
@@ -74,7 +101,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Prazo de produção:** 3 a 5 dias úteis.
 - **Cartão:** texto "3x sem juros"; a loja configura isso no Mercado Pago depois (hoje a tabela de parcelas ainda mostra juros em 2x e 3x).
 - **Frete:** Correios com contrato próprio, PAC marcado por padrão (SEDEX também); PAC grátis a partir de R$ 500.
-- **Preços** R$ 129 / 139 / 159: ainda "ilustrativos" (aguardando confirmação).
+- **Preços** R$ 129 / 139 / 159: aguardando confirmação; desde 05/10, sem o aviso de "ilustrativo" no site (pedido do dono).
 - **Nota fiscal:** Bling, em toda venda (pessoa física e jurídica), emitida quando a Ju marca "concluído" no painel. Empresa ME no
   Simples Nacional, MG. A conta do Bling deve estar em homologação no primeiro teste (o site pausa se detectar produção).
 - Sem faixa de cookies e sem analytics por enquanto (analytics conflita com a Política de Privacidade atual).
@@ -89,7 +116,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   homologação: próximo número (11, série 1), CFOP de cada caso, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
 - **C. Atendimento.** Quando o Pedro passar e-mail e WhatsApp: `api/_lib/legal.js` (e-mail e telefone) e `dist/commerce-config.js`
   (`whatsapp`), depois `node tools/sync-legal.cjs`. Com o número, o "Fale com a Ju" aparece sozinho no menu do celular.
-- **D. Preços.** Quando forem confirmados, tirar "Preço ilustrativo" e "valores ilustrativos nesta prévia".
+- **D. Preços.** Os selos "ilustrativos" já saíram (05/10, pedido do dono). Falta só trocar os valores quando forem confirmados
+  (`dist/commerce-config.js` e `api/_lib/catalog.js`, que precisam bater).
 
 ## Pendências por responsável
 

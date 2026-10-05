@@ -786,6 +786,69 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+FEITO PARA ENCAIXAR|MADE TO FIT|HECHO PARA ENCAJAR
+O 3D nas suas consultas|3D in your appointments|El 3D en tus consultas
+Cada peça é pensada para um equipamento da consulta.|Each piece is designed around an exam-room instrument.|Cada pieza está pensada para un equipo de la consulta.
+Encaixe para retinoscópio|Fits the retinoscope|Encaje para retinoscopio
+Encaixe para régua de esquiascopia|Fits the skiascopy rack|Encaje para regla de esquiascopia
+Encaixe para lâmpada de fenda|Fits the slit lamp|Encaje para lámpara de hendidura
+Uma borboleta para levar cor e imaginação à consulta.|A butterfly to bring color and imagination to every appointment.|Una mariposa para llevar color e imaginación a la consulta.
+Um dinossauro simpático para acompanhar cada olhar.|A friendly dinosaur for every glance.|Un dinosaurio simpático para acompañar cada mirada.
+Um convite para a imaginação decolar: as aberturas lembram janelas de avião.|An invitation to let imagination take flight: the openings resemble airplane windows.|Una invitación a que la imaginación despegue: las aberturas recuerdan ventanillas de avión.
+Um macaquinho para acompanhar o olhar dos pequenos.|A little monkey to keep the little ones company.|Un monito para acompañar la mirada de los pequeños.
+Espaço do retinoscópio livre|Open slot for the retinoscope|Espacio del retinoscopio libre
+Abertura para o retinoscópio|Opening for the retinoscope|Abertura para el retinoscopio
+Cores à sua escolha|Colors of your choice|Colores a tu elección
+16 aberturas com os graus ao lado|16 openings with the lens powers alongside|16 aberturas con las graduaciones al lado
+Metades presas por ímãs|Halves held by magnets|Mitades unidas con imanes
+Cores fixas|Fixed colors|Colores fijos
+Impresso em 3D|3D printed|Impreso en 3D
+Peças|Pieces|Piezas
+Escolha o seu|Choose yours|Elige el tuyo
+Escolha o seu · Ju, imprime pra mim?|Choose yours · Ju, imprime pra mim?|Elige el tuyo · Ju, imprime pra mim?
+O 3D NAS SUAS CONSULTAS|3D IN YOUR APPOINTMENTS|EL 3D EN TUS CONSULTAS
+Comece pelo equipamento da sua consulta.|Start with the instrument you use in your appointments.|Empieza por el equipo de tu consulta.
+Encaixe para|Made to fit the|Encaje para
+Ver as peças|See the pieces|Ver las piezas
+Ver todas as peças|See all pieces|Ver todas las piezas
+Outros encaixes|Other fits|Otros encajes
+FICHA TÉCNICA|SPECIFICATIONS|FICHA TÉCNICA
+Encaixe|Fits|Encaje
+Produção|Production|Producción
+Para todo o Brasil|All over Brazil|A todo Brasil
+Feito em|Made with|Hecho con
+Impressão 3D|3D printing|Impresión 3D
+Disponibilidade|Availability|Disponibilidad
+Peças de oftalmologia|Ophthalmology pieces|Piezas de oftalmología
+ENCONTRE A PEÇA DO SEU EQUIPAMENTO|FIND THE PIECE FOR YOUR INSTRUMENT|ENCUENTRA LA PIEZA DE TU EQUIPO
+Você também pode gostar|You may also like|También te puede gustar
+Comece por uma destas|Start with one of these|Empieza por una de estas
+Informações da compra|Purchase information|Información de la compra
+Entrega e frete.|Delivery and shipping.|Entrega y envío.
+Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.|We ship with Correios all over Brazil; shipping cost and time come from your CEP (postal code).|Enviamos por Correios a todo Brasil; el envío y el plazo salen del CEP (código postal).
+Formas de pagamento.|Payment options.|Formas de pago.
+Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.|Pix with 5% off, or credit and debit card, through Mercado Pago.|Pix con 5% de descuento o tarjeta de crédito y débito, por Mercado Pago.
+Feito sob encomenda.|Made to order.|Hecho por encargo.
+A produção leva 3 a 5 dias úteis e começa depois da confirmação do pagamento.|Production takes 3 to 5 business days and starts once payment is confirmed.|La producción tarda de 3 a 5 días hábiles y empieza después de confirmarse el pago.
+Trocas e devoluções.|Exchanges and returns.|Cambios y devoluciones.
+Você pode desistir em até 7 dias depois de receber.|You can cancel within 7 days of receiving it.|Puedes desistir hasta 7 días después de recibirlo.
+Métodos de pagamento aceitos|Accepted payment methods|Métodos de pago aceptados
+Pagamento processado pelo Mercado Pago|Payment processed by Mercado Pago|Pago procesado por Mercado Pago
+Ver a peça|See the piece|Ver la pieza
+Girar em 360°|Turn 360°|Girar en 360°
+Arraste para girar|Drag to rotate|Arrastra para girar
+A prévia 3D não abriu neste navegador; a foto mostra as cores originais.|The 3D preview did not open in this browser; the photo shows the original colors.|La vista previa 3D no se abrió en este navegador; la foto muestra los colores originales.
+Escolha a cor de cada parte|Choose the color of each part|Elige el color de cada parte
+Partes da peça|Parts of the piece|Partes de la pieza
+Adicionar com estas cores|Add in these colors|Añadir con estos colores
+Desistência em até 7 dias|Cancel within 7 days|Desistimiento hasta 7 días
+Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in the chosen colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en los colores elegidos. La producción empieza después de confirmarse el pago.
+Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
+Ver mais|See more|Ver más
+Todas as peças|All pieces|Todas las piezas
+Peças anteriores|Previous pieces|Piezas anteriores
+Mais peças|More pieces|Más piezas
+Produção em|Production in|Producción en
 Canais de atendimento|Ways to reach us|Canales de atención
 Mensagem|Message|Mensaje
 Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…).|Tell us how we can help. If it is about an order, include its number (JU-…).|Cuéntanos cómo podemos ayudarte. Si es sobre un pedido, indica el número (JU-…).
@@ -855,6 +918,12 @@ Costas|Back|Parte trasera
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
+ou 3x sem juros no cartão|or 3 interest-free card installments|o 3 cuotas sin interés con tarjeta
+Cores originais:|Original colors:|Colores originales:
+Observação:|Note:|Observación:
+Crédito|Credit|Crédito
+Débito|Debit|Débito
+Cartão de débito virtual Caixa|Caixa virtual debit card|Tarjeta de débito virtual Caixa
 Pedido confirmado · preparando o envio|Order confirmed · preparing shipment|Pedido confirmado · preparando el envío
 Pedido enviado|Order shipped|Pedido enviado
 Código de rastreio|Tracking code|Código de seguimiento

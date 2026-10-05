@@ -45,8 +45,8 @@
 /* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
   .home .product-carousel-stage { height: 526px; }
-  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 336px + var(--drag)), 22px) scale(.91); }
-  .home .product-rail-card.is-active { width: min(352px, 37vw); min-height: 440px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
+  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 292px + var(--drag)), 38px) scale(.8); }
+  .home .product-rail-card.is-active { width: min(372px, 38vw); min-height: 446px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
   .home .product-rail-art { height: 196px; }
   .home .product-rail-card.is-active .product-rail-art { height: 212px; }
   .home .product-rail-copy { padding: 14px 20px 16px; }
@@ -94,17 +94,24 @@
 .copy-price { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: clamp(12px, calc(var(--u) * 0.012), 20px) 0 0; color: var(--text); }
 .copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', sans-serif; font-variant-numeric: tabular-nums; }
 .copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', sans-serif; letter-spacing: .02em; }
-.palette { display: flex; flex-wrap: wrap; align-items: center; gap: clamp(10px, calc(var(--u) * 0.011), 18px); width: max-content; max-width: 100%; }
+/* O botão e, logo abaixo e centralizado, o link "Ver encaixado". */
+.palette { display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; max-width: 100%; }
 .copy[inert], .palette[inert] { pointer-events: none; }
-/* Ação principal no padrão dos marketplaces: cor sólida, verbo claro, ícone à esquerda e área de toque generosa. */
-.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.6em 0 1.3em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; text-decoration: none; cursor: pointer; box-shadow: 0 10px 24px -8px var(--glow); transition: background .2s, transform .2s, box-shadow .2s; }
-.palette-button svg { width: 1.3em; height: 1.3em; flex: none; }
+/* Ação principal, o elemento mais chamativo da vitrine: a cor da peça com um degradê vertical quase imperceptível (mais
+   clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), cantos de 18 px, letra bem espaçada e
+   a paleta de cores. No hover sobe em direção a quem olha (3% maior, sombra mais espalhada) e a paleta balança de leve;
+   no clique, afunda. */
+.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.75em 0 1.45em; border: 0; border-radius: 18px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: all .3s cubic-bezier(.25, .8, .25, 1); }
+.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
 .palette-button, .hero-demo-button { white-space: nowrap; }
-.palette-button:active { transform: scale(.98); }
+.palette-button:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
+@keyframes palette-tilt { 0% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 50% { transform: rotate(8deg); } 72% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-/* Secundária: discreta, só nas peças com demonstração. */
-.hero-demo-button { display: inline-flex; align-items: center; gap: .55em; min-height: 48px; padding: 0 1.2em 0 .9em; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .72); color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0105), 16px) / 1 'DM Sans', sans-serif; cursor: pointer; transition: background .2s, border-color .2s; }
-.hero-demo-button svg { width: 1.35em; height: 1.35em; flex: none; }
+/* Secundária, só nas peças com demonstração: um link discreto com o olho (ver a peça montada), centralizado abaixo do botão. */
+.hero-demo-button { display: inline-flex; align-items: center; gap: .5em; min-height: 44px; padding: 0 .9em; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0102), 15px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer; transition: color .3s ease; }
+.hero-demo-button svg { width: 1.3em; height: 1.3em; flex: none; stroke-width: 1.6; transition: transform .3s ease; }
+.hero-demo-button > span:first-of-type { padding-bottom: 2px; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .35s ease; }
 /* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
 .palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
 /* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
@@ -133,19 +140,30 @@
 .piece img.is-loaded { opacity: 1; }
 .slot:focus-visible { outline: 2px solid var(--rose); outline-offset: 6px; }
 
+/* Setas: vidro translúcido nas bordas do banner e chevron fino. No hover o vidro clareia e o chevron anda 3 px para onde aponta. */
 .hero-arrow {
-  position: absolute; top: 50%; z-index: 6; translate: 0 -50%; display: grid; place-items: center; width: clamp(44px, 4.1vw, 68px); height: clamp(44px, 4.1vw, 68px); padding: 0;
-  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); transition: background .2s, scale .2s;
+  position: absolute; top: 50%; z-index: 6; translate: 0 -50%; display: grid; place-items: center; width: clamp(46px, 3.8vw, 60px); height: clamp(46px, 3.8vw, 60px); padding: 0; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .6); border-radius: 50%; background: rgba(255, 255, 255, .5); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2); color: var(--theme-text, #1f2a33);
+  box-shadow: 0 8px 24px -12px rgba(30, 50, 60, .28); transition: background-color .3s ease, box-shadow .3s ease, scale .3s ease;
 }
-.hero-arrow svg { width: 34%; height: 34%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.hero-prev { left: clamp(14px, 2.4vw, 44px); }
-.hero-next { right: clamp(14px, 2.4vw, 44px); }
-.hero-arrow:active { scale: .95; }
+.hero-arrow svg { width: 32%; height: 32%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8; transition: translate .3s ease, opacity .3s ease; }
+.hero-prev { left: clamp(10px, 2vw, 36px); }
+.hero-next { right: clamp(10px, 2vw, 36px); }
+.hero-arrow:active { scale: .94; }
+.hero-arrow:focus-visible { outline: 2px solid var(--theme-accent, #1f2a33); outline-offset: 3px; }
 @media (hover: hover) {
-  .hero-arrow:hover { background: #fff; scale: 1.05; }
+  .hero-arrow:hover { background: rgba(255, 255, 255, .85); box-shadow: 0 12px 28px -12px rgba(30, 50, 60, .34); }
+  .hero-arrow:hover svg { opacity: 1; }
+  .hero-prev:hover svg { translate: -3px 0; }
+  .hero-next:hover svg { translate: 3px 0; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
-  .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px -8px var(--glow); }
-  .hero-demo-button:hover { background: #fff; border-color: var(--accent); }
+  .palette-button:hover { transform: scale(1.03); filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 18px 40px var(--glow), 0 6px 14px -6px rgba(20, 30, 40, .22); }
+  /* a paleta ganha vida: um balanço rápido, com um quique no fim */
+  .palette-button:hover svg { animation: palette-tilt .6s cubic-bezier(.34, 1.56, .64, 1); }
+  .palette-button:hover:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
+  .hero-demo-button:hover { color: var(--strong); }
+  .hero-demo-button:hover > span:first-of-type { background-size: 100% 1px; }
+  .hero-demo-button:hover svg { transform: scale(1.08); }
   .slot[data-front=true]:hover .piece img { transform: translateY(-8px) scale(1.012) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
   .slot[data-front=true]:hover .piece-shadow { transform: scale(.94); opacity: .8; }
 }
@@ -165,30 +183,28 @@
   .hero-copy { align-self: start; }
   .hero-stage { grid-column: 1 / -1; grid-row: 2; margin-top: clamp(14px, 3vw, 26px); }
   .copy-price { justify-content: center; }
-  .hero-palette { grid-column: 2; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
-  .palette { width: min(100%, 340px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 8px; }
+  /* o botão ocupa a linha inteira, com o link logo abaixo; as setas saem do lado dele e flutuam nas bordas da pilastra */
+  .hero-palette { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
+  .palette { width: min(100%, 340px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; }
   .palette-button { width: 100%; padding: 0 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
-  .hero-demo-button { align-self: center; min-height: 44px; border-color: transparent; background: transparent; }
-  .hero-arrow { position: static; translate: none; grid-row: 3; align-self: start; width: 48px; height: 48px; margin-top: calc(clamp(20px, 6vw, 34px) + 2px); }
-  .hero-prev { grid-column: 1; margin-left: clamp(12px, 3vw, 24px); }
-  .hero-next { grid-column: 3; margin-right: clamp(12px, 3vw, 24px); }
+  .hero-demo-button { align-self: center; }
+  .hero-arrow { position: static; translate: none; grid-row: 2; align-self: center; z-index: 6; width: 44px; height: 44px; margin: 0; }
+  .hero-prev { grid-column: 1; justify-self: start; }
+  .hero-next { grid-column: 3; justify-self: end; }
 }
 @media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
 /* Celulares estreitos (até ~380 px): o rótulo cabe numa linha, sem perder a área de toque. */
 @media (max-width: 380px) {
   .palette-button { gap: .45em; padding: 0 .85em; font-size: 14.5px; }
-  .hero-prev { margin-left: 4px; }
-  .hero-next { margin-right: 4px; }
 }
 @media (max-width: 340px) {
   .palette-button { font-size: 13.5px; padding: 0 .7em; }
-  .hero-arrow { width: 44px; height: 44px; }
-  .hero-prev { margin-left: 0; }
-  .hero-next { margin-right: 0; }
+  .hero-arrow { width: 40px; height: 40px; }
 }
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
-  .piece img, .piece-shadow, .hero-arrow, .palette-button, .hero-demo-button { transition: none; }
+  .piece img, .piece-shadow, .hero-arrow, .hero-arrow svg, .palette-button, .hero-demo-button, .hero-demo-button svg { transition: none; }
+  .palette-button:hover svg { animation: none; }
   .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
@@ -205,4 +221,42 @@
   .hero-scenery .scenery-right { width:57vw; right:-25%; bottom:-50px; }
   .scenery-ferns .scenery-left { left:-25%; bottom:-36px; }
   .scenery-ferns .scenery-right { right:-26%; bottom:-28px; }
+}
+
+/* Nossa coleção: só o card do centro ganha as cores da sua peça (catalog.js põe --rail-own-*, as mesmas do banner); os
+   laterais ficam no tom da página (--theme-wash, --rose e --ink, que seguem o banner). As cores são propriedades
+   registradas, então deslizam suavemente quando um card vira o do centro, junto com o movimento dele. Continua a foto da
+   peça, sem o encaixe, e o card do meio maior, por cima dos vizinhos; botão, categoria e detalhes usam o mesmo tom. */
+@property --rail-1 { syntax: '<color>'; inherits: true; initial-value: #fffaf9; }
+@property --rail-2 { syntax: '<color>'; inherits: true; initial-value: #fbf1f2; }
+@property --rail-3 { syntax: '<color>'; inherits: true; initial-value: #f4e4e7; }
+@property --rail-a { syntax: '<color>'; inherits: true; initial-value: #b64c68; }
+@property --rail-i { syntax: '<color>'; inherits: true; initial-value: #282326; }
+.home .product-rail-card[style*="--rail-own-1"] {
+  --rail-1: color-mix(in srgb, var(--theme-wash, #f4e4e7) 22%, #fff); --rail-2: color-mix(in srgb, var(--theme-wash, #f4e4e7) 62%, #fff); --rail-3: var(--theme-wash, #f4e4e7);
+  --rail-a: var(--rose, #b64c68); --rail-i: var(--ink, #282326);
+  --theme-accent: var(--rail-a); --theme-accent-strong: color-mix(in srgb, var(--rail-a) 78%, #000); --theme-glow: color-mix(in srgb, var(--rail-a) 30%, transparent);
+  --line: color-mix(in srgb, var(--rail-i) 13%, transparent); --muted: color-mix(in srgb, var(--rail-i) 68%, transparent);
+  border-color: rgba(255, 255, 255, .6); color: var(--rail-i); background: radial-gradient(130% 78% at 50% 20%, var(--rail-1) 0%, var(--rail-2) 52%, var(--rail-3) 100%);
+  box-shadow: 0 22px 40px -30px color-mix(in srgb, var(--rail-a) 50%, transparent);
+  transition: transform 420ms var(--ease), opacity 360ms ease, filter 360ms ease, box-shadow 420ms var(--ease), --rail-1 .6s ease, --rail-2 .6s ease, --rail-3 .6s ease, --rail-a .6s ease, --rail-i .6s ease;
+}
+.home .product-rail-card[style*="--rail-own-1"].is-active { --rail-1: var(--rail-own-1); --rail-2: var(--rail-own-2); --rail-3: var(--rail-own-3); --rail-a: var(--rail-own-accent); --rail-i: var(--rail-own-ink); border-color: rgba(255, 255, 255, .75); box-shadow: 0 34px 56px -34px color-mix(in srgb, var(--rail-a) 70%, transparent); }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art { background: transparent; }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { filter: drop-shadow(0 14px 14px color-mix(in srgb, var(--rail-i) 18%, transparent)); }
+@media (prefers-reduced-motion: reduce) {
+  .home .product-rail-card[style*="--rail-own-1"] { transition: none; }
+}
+/* A peça fica dentro do card (2026-10-05: sair por cima poluía a tela). */
+/* Os vizinhos menores e recolhidos atrás do card do centro (podem se sobrepor); o do centro maior. A peça fica dentro do card
+   e, ao virar a da vez, cresce um pouco com um leve quique; o card desliza com a mesma curva, mais longa. */
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: scale(.9); transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.34, 1.3, .64, 1), opacity .4s ease; }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { transform: scale(1); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(-4px) scale(1.02); }
+.home .product-rail-card[style*="--rail-own-1"] { transition-duration: 560ms, 360ms, 360ms, 560ms, .6s, .6s, .6s, .6s, .6s; transition-timing-function: cubic-bezier(.22, 1.12, .36, 1), ease, ease, var(--ease), ease, ease, ease, ease, ease; }
+@media (max-width: 900px) {
+  .home .product-rail-card:not(.is-active) { transform: translate(calc(-50% + var(--slot) * min(56vw, 260px) + var(--drag)), 34px) scale(.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transition: none; }
 }

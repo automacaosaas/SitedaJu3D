@@ -95,7 +95,7 @@ export function refreshHeader() {
 }
 for (const host of document.querySelectorAll('[data-shop-nav]')) {
   setupSiteHeader(host);
-  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>Entrar ou cadastrar</a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
+  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>${icon('profile')} <span>Entrar ou cadastrar</span></a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
   const picker = mountLanguagePicker(host, host.querySelector('[data-cart-link]'));
   const menuToggle = host.closest('.site-header')?.querySelector('.menu-toggle');
   if (picker && menuToggle) {
@@ -110,7 +110,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
   trigger.addEventListener('click', () => {
     const session = getSession();
     host.querySelector('.profile-greeting').textContent = session ? `Olá, ${session.name.split(' ')[0]}.` : 'Um cantinho só seu.';
-    host.querySelector('[data-account-link]').textContent = session ? 'Minha conta' : 'Entrar ou cadastrar';
+    host.querySelector('[data-account-link] span').textContent = session ? 'Minha conta' : 'Entrar ou cadastrar';
     host.querySelector('[data-signout]').hidden = !session;
     menu.hidden = !menu.hidden; trigger.setAttribute('aria-expanded', String(!menu.hidden));
   });
@@ -136,3 +136,15 @@ window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
 window.dispatchEvent(new Event('ju:header-ready'));
+
+// "Voltar à vitrine" leans a few pixels toward the cursor (journey.css reads --mx/--my); mouse only, never with reduced motion.
+if (matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  for (const link of document.querySelectorAll('.showcase-return')) {
+    link.addEventListener('pointermove', event => {
+      const box = link.getBoundingClientRect();
+      link.style.setProperty('--mx', `${(((event.clientX - box.left) / box.width - .5) * 8).toFixed(1)}px`);
+      link.style.setProperty('--my', `${(((event.clientY - box.top) / box.height - .5) * 5).toFixed(1)}px`);
+    });
+    link.addEventListener('pointerleave', () => { link.style.removeProperty('--mx'); link.style.removeProperty('--my'); });
+  }
+}

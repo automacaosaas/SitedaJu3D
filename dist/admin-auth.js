@@ -27,10 +27,19 @@ export async function currentSession(options) {
 }
 export async function logout(options) { try { await request('/api/admin/logout', {method: 'POST', ...options}); } catch {} }
 
+// The totals, the chart and the calendar need every paid order: the server answers a page at a time (each answer small
+// and quick) and the pages are joined here. MAX_PAGES stops a server that would keep answering a next page.
+const ORDERS_PAGE = 200, MAX_PAGES = 100;
 export async function loadOrders(options) {
-  const {status, data} = await request('/api/admin/orders', options);
-  if (status === 200 && Array.isArray(data?.orders)) return {orders: data.orders, invoicing: data.invoicing || 'off', provider: data.invoicingProvider || null};
-  throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
+  const orders = [];
+  let first = null, cursor = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const {status, data} = await request(`/api/admin/orders?limit=${ORDERS_PAGE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, options);
+    if (status !== 200 || !Array.isArray(data?.orders)) throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
+    first ||= data; orders.push(...data.orders); cursor = data.nextCursor || null;
+    if (!cursor) break;
+  }
+  return {orders, invoicing: first.invoicing || 'off', provider: first.invoicingProvider || null};
 }
 // "Conferir estorno" / "Tentar estorno de novo" on a declined order.
 export async function retryRefund(id, options) {

@@ -19,6 +19,14 @@ export const PRODUCTS = {
 export const SOON = {
   macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
 };
+// Famílias de encaixe: o equipamento que cada peça veste. Ordenam a seção "O 3D nas suas consultas" da home, os banners
+// da página Escolha o seu (escolha.html) e o filtro da página Produtos (produtos.html?encaixe=<família>). Peça nova entra
+// na lista da família quando chegar (PRODUCTS ou SOON); família sem nenhuma peça conhecida não aparece.
+export const FAMILIES = Object.freeze({
+  retinoscopio: Object.freeze({label:'Encaixe para retinoscópio', tool:'Retinoscópio', items:Object.freeze(['borboletoscopio','dinossauroscopio'])}),
+  regua: Object.freeze({label:'Encaixe para régua de esquiascopia', tool:'Régua de esquiascopia', items:Object.freeze(['aviaoscopia'])}),
+  lampada: Object.freeze({label:'Encaixe para lâmpada de fenda', tool:'Lâmpada de fenda', items:Object.freeze(['macacoscopio'])})
+});
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
 // (h: altura visível · bottom: folga abaixo do produto · foot: largura da base), para assentar
