@@ -156,10 +156,13 @@ o endereço **`/api/fila/rodar`**, para uma tarefa agendada chamar: ele acorda o
 
 - **Ligar:** criar a variável `CRON_SECRET` na Hostinger, com 24 caracteres ou mais, aleatórios e secretos. Sem ela, o
   endereço não existe.
-- **Agendar:** no hPanel, em Avançado → Cron Jobs, criar uma tarefa **a cada 5 minutos** com o comando
-  `curl -fsS -m 120 -H "Authorization: Bearer <CRON_SECRET>" https://<site>/api/fila/rodar`.
-  Se o hPanel não aceitar comandos personalizados, um agendador externo (por exemplo, cron-job.org) faz o mesmo com o
-  mesmo cabeçalho.
+- **Agendar:** o hPanel **não tem Cron Jobs para app Node.js** (conferido em 05/10/2026: em Avançado só há "Acesso
+  SSH" e "Registro de atividades"). Por isso, usar o **cron-job.org** (gratuito), com uma tarefa **a cada 5 minutos**:
+  - URL: `https://<site>/api/fila/rodar`;
+  - na aba Advanced, o cabeçalho `Authorization` com o valor `Bearer <CRON_SECRET>`.
+
+  O histórico da tarefa deve mostrar 200 e `{"ok":true,…}`. Um 401 quer dizer segredo diferente nos dois lugares; um
+  404, que a variável ainda não entrou (falta salvar com reimplantação).
 - **Segurança:** sem o segredo certo, a resposta é 401. Há limite de chamadas por endereço, e a resposta traz só
   números, nunca dados de pedidos.
 
@@ -168,8 +171,11 @@ o endereço **`/api/fila/rodar`**, para uma tarefa agendada chamar: ele acorda o
 - `queue.lastRound`: quando a fila rodou pela última vez.
 
 Abra o `/api/health`, deixe o site sem visitas por uns 30 minutos e abra de novo. Se o `uptime` voltar a um número
-pequeno, a Hostinger desliga o app, e a tarefa agendada é necessária. Se continuar crescendo, ela é só uma garantia a
-mais.
+pequeno, a Hostinger desliga o app, e a tarefa agendada é necessária.
+
+**Resultado no site de teste (05/10/2026): a Hostinger desliga, sim.** O app reiniciou às 20:06 depois de uns 10 minutos
+sem visitas. O log mostra só as linhas de início, sem erro e sem reimplantação. **A tarefa agendada é obrigatória antes
+do lançamento**; sem ela, uma nota na fila espera a próxima visita ao site. Nada se perde, mas atrasa.
 
 ## 6. Avisos para a Ju
 
