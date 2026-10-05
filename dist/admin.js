@@ -63,7 +63,7 @@ function openStepDialog(order, step) {
   const issues = step === 'confirmado' && invoicingMode !== 'off' && !order.invoice, where = invoicingProvider === 'bling' ? 'no Bling' : 'no emissor';
   const copy = step === 'confirmado'
     ? {icon: '📦', title: 'Confirmar este pedido?', button: issues ? 'Sim, confirmar e emitir a nota' : 'Sim, confirmar',
-      warn: issues ? `<strong>A nota fiscal é emitida na hora</strong> e vai para o cliente por e-mail (PDF e XML). "Voltar para Pendentes" não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '',
+      warn: issues ? `<strong>A nota fiscal é emitida na hora</strong> e vai para o cliente por e-mail (PDF e XML); se o emissor estiver fora do ar, ela fica na fila e sai sozinha depois. "Voltar para Pendentes" não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '',
       mail: 'O pedido vai para Pronto para envio e o cliente recebe o e-mail de pedido confirmado.'}
     : {icon: '🚚', title: 'Concluir este pedido?', button: 'Sim, concluir e avisar o cliente',
       warn: `Código de rastreio: <strong translate="no">${esc(order.trackingCode || '')}</strong>`,
@@ -148,7 +148,35 @@ function nfeLine(o) {
     return `<p class="admin-invoice ${notice ? 'is-error' : 'is-ok'}">Nota fiscal nº ${esc(nfe.number)}${nfe.series ? ` · série ${esc(nfe.series)}` : ''}${test}${links ? ` · ${links}` : ''}${notice}${warn}</p>`;
   }
   if (nfe.status === 'processando') return `<p class="admin-invoice is-waiting">Nota fiscal: emitindo…${test} Clique em Atualizar em alguns instantes.</p>`;
+  // Waiting in the queue (BLING-RESILIENCIA.md): saved, goes by itself. Never an error: the order is fine. An order taken
+  // back to Pendentes (or declined) took its note out of the queue; no reason yet: the first attempt is still going.
+  if (nfe.status === 'fila' && !INVOICED.includes(o.status)) return o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você confirmar o pedido.</p>' : '<p class="admin-invoice is-waiting">Nota fiscal não emitida.</p>';
+  if (nfe.status === 'fila' && !nfe.message) return `<p class="admin-invoice is-waiting">Nota fiscal: enviando ao emissor…${test} Clique em Atualizar em alguns instantes.</p>`;
+  if (nfe.status === 'fila') return `<p class="admin-invoice is-queued"><strong>Nota fiscal na fila:</strong> ${esc(nfe.message)} ${queueWhen(nfe)} <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar agora</button></p>`;
   return `<p class="admin-invoice is-error"><strong>Nota fiscal com problema:</strong> ${esc(nfe.message || 'erro no emissor')}${INVOICED.includes(o.status) ? ` <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Tentar de novo</button>` : ''}</p>`;
+}
+// When a note in the queue goes: by itself at the next attempt, or once Ju connects or lifts the pause.
+const formatHour = iso => new Date(iso).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+function queueWhen(nfe) {
+  if (/Conecte|não está conectado/.test(nfe.message || '')) return 'Ela sai sozinha assim que o Bling for conectado de novo (Nota fiscal · Bling, no fim da página).';
+  if (/Emissão pausada/.test(nfe.message || '')) return 'Ela sai sozinha assim que a emissão for liberada.';
+  const next = nfe.nextAttemptAt && new Date(nfe.nextAttemptAt) > new Date() ? ` (próxima tentativa às ${formatHour(nfe.nextAttemptAt)})` : '';
+  return `O site tenta de novo sozinho${next}; não precisa fazer nada.`;
+}
+
+// The notice at the top of Pedidos when the Bling integration needs attention (GET /api/admin/orders → integration).
+let integration = null;
+function integrationBanner() {
+  const s = integration;
+  if (!s || s.state === 'ok' && !s.waiting) return '';
+  const notes = n => n === 1 ? '1 nota fiscal' : `${n} notas fiscais`;
+  const queue = s.waiting ? ` ${notes(s.waiting)} na fila.` : '';
+  if (s.state === 'instavel') return `<div class="admin-integration is-warn" role="status"><strong>Integração com o Bling em modo de espera devido a instabilidade externa.</strong> Seus pedidos continuam salvos com segurança.${queue} As notas saem sozinhas assim que o Bling voltar${s.retryAt ? ` (próxima tentativa às ${esc(formatHour(s.retryAt))})` : ''}. Confirmar pedidos continua funcionando normalmente.</div>`;
+  if (s.state === 'expirado') return `<div class="admin-integration is-error" role="status"><strong>A conexão com o Bling expirou.</strong> Seus pedidos continuam salvos.${queue} Para as notas saírem, conecte de novo em <a href="#admin-bling-title">Nota fiscal · Bling</a>, no fim da página.</div>`;
+  if (s.state === 'pausado') return `<div class="admin-integration is-error" role="status"><strong>Emissão de notas pausada:</strong> ${esc(s.pausedReason || '')}${queue} Veja em <a href="#admin-bling-title">Nota fiscal · Bling</a>.</div>`;
+  if (s.state === 'desconectado' && s.waiting) return `<div class="admin-integration is-error" role="status"><strong>O Bling não está conectado.</strong>${queue} Conecte em <a href="#admin-bling-title">Nota fiscal · Bling</a>, no fim da página, e elas saem sozinhas.</div>`;
+  if (s.waiting) return `<div class="admin-integration is-info" role="status">${notes(s.waiting)} na fila, saindo sozinha${s.waiting === 1 ? '' : 's'}${s.nextAttemptAt ? ` (próxima tentativa às ${esc(formatHour(s.nextAttemptAt))})` : ''}.</div>`;
+  return '';
 }
 
 // "Nota fiscal · Bling": the store's connection to the NF-e service (only with NFE_PROVIDER=bling). Connecting sends
@@ -181,10 +209,18 @@ function blingView() {
   else if (!b.configured) body = `<p>Falta configurar o aplicativo do Bling: variáveis <code>BLING_CLIENT_ID</code> e <code>BLING_CLIENT_SECRET</code> na Hostinger.</p>${redirect}`;
   else if (!b.connected) body = `<p>${b.expired ? '<strong>A conexão com o Bling expirou.</strong> ' : ''}Conecte a conta do Bling para as notas fiscais saírem sozinhas quando você confirmar um pedido.</p><div class="admin-bling-actions"><button type="button" class="btn-bling" data-action="bling-connect">Conectar ao Bling</button></div>${redirect}`;
   else body = `<p>Conectado${b.connectedBy ? ` por ${esc(b.connectedBy)}` : ''} em ${esc(formatWhen(b.connectedAt))}. A conexão se renova sozinha${b.refreshExpiresAt ? ` (vale até ${esc(formatWhen(b.refreshExpiresAt))}, e abrir o painel renova)` : ''}.</p>
+    ${b.unstable ? `<p class="admin-invoice is-queued"><strong>O Bling está instável${b.failingSince ? ` desde ${esc(formatWhen(b.failingSince))}` : ''}.</strong> O site parou de chamar o Bling por alguns minutos para não insistir à toa${b.retryAt ? ` e testa de novo às ${esc(formatHour(b.retryAt))}` : ''}. As notas esperam na fila e saem sozinhas.</p>` : ''}
     ${b.pausedReason ? `<p class="admin-invoice is-error"><strong>Emissão pausada:</strong> ${esc(b.pausedReason)} <button type="button" class="admin-reveal" data-action="bling-resume">Liberar a emissão</button></p>` : ''}
     ${naturesList(b)}
     <div class="admin-bling-actions"><button type="button" class="btn-reopen" data-action="bling-disconnect">Desconectar o Bling</button></div>`;
-  return `<section class="admin-panel admin-bling" aria-labelledby="admin-bling-title"><h2 id="admin-bling-title">Nota fiscal · Bling</h2>${note}${body}</section>`;
+  return `<section class="admin-panel admin-bling" aria-labelledby="admin-bling-title"><h2 id="admin-bling-title" tabindex="-1">Nota fiscal · Bling</h2>${note}${body}${problemsList(b)}</section>`;
+}
+// The last problems with Bling (integration log): what happened and when, newest first.
+const PROBLEM_KIND = {falha: 'Falha', limite: 'Limite de chamadas', disjuntor: 'Pausa automática', recuperado: 'Voltou', conexao: 'Conexão', pausa: 'Emissão pausada', incerta: 'Criação incerta', achada: 'Nota encontrada', alerta: 'Aviso por e-mail'};
+function problemsList(b) {
+  if (b.error || !b.problems?.length) return '';
+  const items = b.problems.map(p => `<li class="is-${esc(p.kind)}"><time datetime="${esc(p.at)}">${esc(formatWhen(p.at))}</time> <strong>${esc(PROBLEM_KIND[p.kind] || p.kind)}</strong>${p.reference ? ` · <span translate="no">${esc(p.reference)}</span>` : ''} — ${esc(p.message)}</li>`).join('');
+  return `<details class="admin-bling-log"><summary>Últimos acontecimentos com o Bling</summary><ul>${items}</ul></details>`;
 }
 
 const REFUND_ERRORS = {payments_off: 'os pagamentos estão desligados neste ambiente', mode_mismatch: 'o pedido é de outro ambiente (teste × real)', no_mp_order: 'o pedido não tem código do Mercado Pago', refund_rejected: 'o Mercado Pago recusou o estorno', network: 'sem resposta do Mercado Pago'};
@@ -214,7 +250,10 @@ function orderCard(o) {
   const back = (to, label) => `<button type="button" class="btn-reopen" data-action="move" data-to="${to}" data-id="${id}">${label}</button>`;
   const steps = {
     pendente: () => `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="confirm" data-id="${id}"${moneyBack ? ' disabled' : ''}>Confirmar pedido</button><button type="button" class="btn-decline" data-action="decline" data-id="${id}">Recusar pedido</button></div>`,
-    confirmado: () => `<div class="admin-ship"><p class="admin-ship-hint">Postou nos Correios? Digite o código de rastreio: o pedido vai para Enviados.</p>${trackingForm('', 'Salvar rastreio')}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
+    // The piece never leaves without its note: with NF-e on, the tracking code waits for the note to be authorized.
+    confirmado: () => `<div class="admin-ship">${invoicingMode !== 'off' && o.invoice?.status !== 'autorizada'
+      ? `<p class="admin-ship-locked" role="note"><strong>🔒 Envio bloqueado até a nota fiscal ser autorizada.</strong> A peça não pode sair sem a nota. ${o.invoice?.status === 'erro' ? 'Resolva o problema da nota acima e clique em Tentar de novo.' : 'A nota sai sozinha; depois clique em Atualizar para liberar o rastreio.'}</p>`
+      : `<p class="admin-ship-hint">Postou nos Correios? Digite o código de rastreio: o pedido vai para Enviados.</p>${trackingForm('', 'Salvar rastreio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
     enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p><div class="admin-order-actions"><button type="button" class="btn-complete" data-action="conclude" data-id="${id}">Concluir pedido</button></div><details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary">${back('confirmado', 'Voltar para Pronto para envio')}</div></div>`,
     concluido: () => `<div class="admin-order-actions"><span class="admin-decision-note">Concluído em ${esc(formatWhen(o.decidedAt))}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,
     recusado: () => `<div class="admin-order-actions"><span class="admin-decision-note">Recusado em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : back('pendente', 'Reabrir')}</div>`
@@ -293,6 +332,7 @@ function dashboardView() {
 function ordersDashboard() {
   const s = summary(orders);
   return `<div class="admin-dash-head"><div><h1 id="admin-title" tabindex="-1">Pedidos</h1><p>Pedidos pagos, direto do banco de dados. Organize a produção e o envio.</p></div><button type="button" class="btn-reopen" data-action="refresh">Atualizar</button></div>
+    ${integrationBanner()}
     <div class="admin-kpis">
       <div class="admin-kpi is-pendente"><span>Pendentes</span><strong>${s.pendentes}</strong></div>
       <div class="admin-kpi is-confirmado"><span>Pronto para envio</span><strong>${s.confirmados}</strong></div>
@@ -303,7 +343,7 @@ function ordersDashboard() {
     </div>
     ${ordersView(orders)}
     <div class="admin-panels">${chartView(orders)}${calendarView(orders)}</div>
-    ${blingView()}`;
+    <div id="admin-bling-slot">${blingView()}</div>`;
 }
 
 function loginView() {
@@ -380,10 +420,17 @@ function signedOut() { session = null; orders = []; setup = null; revealed.clear
 
 async function openDashboard() {
   const loaded = await loadOrders();
-  orders = loaded.orders; invoicingMode = loaded.invoicing; invoicingProvider = loaded.provider;
-  bling = invoicingProvider === 'bling' ? await loadBling().catch(error => { if (error.code === 'unauthorized') throw error; return {error: true}; }) : null;
+  orders = loaded.orders; invoicingMode = loaded.invoicing; invoicingProvider = loaded.provider; integration = loaded.integration;
   if (section === 'caixa') await loadCashData();
   screen = 'dashboard';
+  // The Bling card comes in after the orders: the panel never waits for it. Only its own slot is drawn again, so a
+  // tracking code being typed or a focused button stays as it is.
+  if (invoicingProvider === 'bling') {
+    loadBling().then(card => { bling = card; }, error => {
+      if (error.code === 'unauthorized') { signedOut(); render(); return; }
+      bling = {error: true};
+    }).finally(() => { const slot = document.getElementById('admin-bling-slot'); if (slot && screen === 'dashboard') slot.innerHTML = blingView(); });
+  } else bling = null;
 }
 
 // quiet: a step that e-mails nobody (going back, or the tracking code going in).
@@ -395,7 +442,7 @@ async function move(id, status, reason, done, {trackingCode, quiet = false} = {}
       // Declining refunds the buyer, confirming issues the NF-e, concluding sends the tracking code; each e-mails them.
       const refundText = status !== 'recusado' ? '' : result.refund === 'refunded' ? ' Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? ' Estorno em andamento no Mercado Pago.' : ' O estorno automático não deu certo: veja o aviso no pedido.';
       const nfe = result.order.invoice;
-      const nfeNote = status === 'confirmado' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' ? ' A nota fiscal está sendo emitida.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
+      const nfeNote = status === 'confirmado' && nfe ? (nfe.status === 'autorizada' ? ` Nota fiscal nº ${nfe.number} emitida.` : nfe.status === 'processando' || (nfe.status === 'fila' && !nfe.message) ? ' A nota fiscal está sendo emitida.' : nfe.status === 'fila' ? ' A nota fiscal entrou na fila: o emissor não respondeu agora, e ela sai sozinha depois.' : ' A nota fiscal teve um problema: veja no pedido.') : '';
       announce(quiet ? done : `${done}${refundText} ${result.mailed ? 'O cliente recebeu um e-mail.' : 'O e-mail ao cliente não saiu (envio de e-mails desligado neste ambiente).'}${nfeNote}`);
     }
     catch (error) {
@@ -403,6 +450,7 @@ async function move(id, status, reason, done, {trackingCode, quiet = false} = {}
       if (error.code === 'refunded') throw new Error('Este pedido já teve o valor estornado e não pode mais ser reaberto.');
       if (error.code === 'invalid_transition') { await openDashboard().catch(() => {}); throw new Error('Este pedido já tinha mudado de etapa. A lista foi atualizada.'); }
       if (error.code === 'invalid_request' && status === 'enviado') throw new Error('Código de rastreio inválido: são 2 letras, 9 números e 2 letras, como AA123456789BR.');
+      if (error.code === 'invoice_pending') { await openDashboard().catch(() => {}); throw new Error('A nota fiscal deste pedido ainda não foi autorizada: a peça não pode sair sem a nota. O envio é liberado assim que ela sair.'); }
       throw new Error('Não foi possível salvar agora. Tente novamente.');
     }
   });
@@ -475,7 +523,7 @@ content.addEventListener('click', event => {
   if (action.dataset.action === 'decline') { const order = orders.find(o => o.id === id); if (order) openDeclineDialog(order); }
   if (action.dataset.action === 'refresh') run('Atualizando os pedidos…', async () => { try { await openDashboard(); announce('Pedidos atualizados.'); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível atualizar agora.'); } });
   if (action.dataset.action === 'retry-invoice') run('Emitindo a nota fiscal…', async () => {
-    try { const order = await retryInvoice(id); orders = replaceOrder(orders, order); announce(order.invoice?.status === 'autorizada' ? `Nota fiscal nº ${order.invoice.number} emitida.` : 'A nota fiscal ainda tem um problema: veja no pedido.'); }
+    try { const order = await retryInvoice(id); orders = replaceOrder(orders, order); announce(order.invoice?.status === 'autorizada' ? `Nota fiscal nº ${order.invoice.number} emitida.` : order.invoice?.status === 'processando' || (order.invoice?.status === 'fila' && !order.invoice.message) ? 'A nota fiscal está sendo emitida.' : order.invoice?.status === 'fila' ? 'O emissor ainda não respondeu: a nota continua na fila e sai sozinha depois.' : 'A nota fiscal ainda tem um problema: veja no pedido.'); }
     catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw new Error('Não foi possível emitir a nota agora. Tente novamente.'); }
   });
   if (action.dataset.action === 'reveal-cpf') run('Buscando o CPF…', async () => {

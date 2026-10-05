@@ -141,7 +141,11 @@ function start({env = process.env, log = console} = {}) {
   const pool = require('../api/_lib/db').getPool(env);
   const ready = pool ? require('../api/_lib/migrate').migrate(pool, {log}).catch(error => log.error('db: migração falhou —', error.code || '', error.message)) : Promise.resolve();
   ready.then(() => running.listen(port, () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · contas: ${pool ? 'MySQL' : isProduction(env) ? 'desligadas (sem banco)' : 'memória (teste)'} · ${env.SITE_URL || 'sem SITE_URL'}`)));
-  const stop = () => running.close(() => process.exit(0));
+  // The NF-e queue (api/_lib/invoice-queue.js): a round a minute in the background, once the tables exist. Off when
+  // NF-e issuing is off; a failure to start never stops the site.
+  let stopQueue = () => {};
+  ready.then(() => { try { stopQueue = require('../api/_lib/invoice-queue').startWorker({env, log}); } catch (error) { log.error('fila de notas: não ligou —', error.message); } });
+  const stop = () => { stopQueue(); running.close(() => process.exit(0)); };
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);
   return running;

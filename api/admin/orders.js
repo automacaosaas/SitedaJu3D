@@ -3,17 +3,20 @@
 // a page at a time, with what is needed to produce and ship, and the NF-e of each (status, number, links). The CPF only
 // masked. Orders still waiting for payment or cancelled are not shown.
 //   ?limit=100 (1 to 200)  ?cursor=<nextCursor of the previous page>  → {orders, nextCursor (null on the last page), …}
+// With Bling, the first page also says how the integration is (`integration`: ok, instavel, expirado, desconectado,
+// pausado…, and how many notes wait in the queue), for the panel's notice.
 // Nothing outside is awaited: notes the service is still processing are asked again after the answer (a few at a time
-// in parallel), so the panel shows them as saved and the next opening shows what came back. With Bling, the first page
-// also renews the connection once a week, after the answer too, so it never lapses in a quiet month.
+// in parallel), so the panel shows them as saved and the next opening shows what came back. After the answer the NF-e
+// queue also takes a round (api/_lib/invoice-queue.js): notes waiting go, and with Bling the connection is renewed once
+// a week, so it never lapses in a quiet month.
 const {adminEndpoint} = require('../_lib/admin-http');
 const {createOrders, PAID} = require('../_lib/orders');
 const {createInvoicing} = require('../_lib/invoicing');
-const {createBling} = require('../_lib/bling');
+const {createInvoiceQueue, panelStatus} = require('../_lib/invoice-queue');
 const {mapLimit} = require('../_lib/concurrency');
 
-// How many notes are checked with the service at the same time. Bling allows about 3 requests a second per account; a
-// refusal (429) only leaves that note as "processando" until the panel is opened again.
+// How many notes are checked with the service at the same time. The Bling client keeps Bling's pace (3 requests a
+// second); a note it cannot check now stays "processando" and the queue asks again later.
 const REFRESH_CONCURRENCY = 3;
 const PAGE = 100, MAX_PAGE = 200;
 const ID = /^[0-9a-zA-Z-]{1,36}$/;
@@ -36,14 +39,14 @@ function pageOf(url) {
 
 // After the answer; never rejects, so nothing is left unhandled. Each note is checked against its full order (the
 // e-mail with the authorized note needs the buyer), which the page itself does not carry.
-async function refreshLater({store, invoicing, processing, bling}) {
+async function refreshLater({store, invoicing, processing, queue}) {
   try {
     await mapLimit(processing, REFRESH_CONCURRENCY, async invoice => {
       const order = await store.orders.findById(invoice.orderId);
       if (order) await invoicing.refresh(invoice, order);
     });
   } catch (error) { console.error('admin orders: could not check the notes still processing —', error.message); }
-  if (bling) await bling.keepAlive().catch(error => console.error('admin orders: Bling keep-alive failed —', error.message));
+  if (queue) await queue.kick();
 }
 
 module.exports = adminEndpoint({methods: ['GET'], async handle({req, store, env, now, fetchImpl, outbox, waitUntil}) {
@@ -54,11 +57,16 @@ module.exports = adminEndpoint({methods: ['GET'], async handle({req, store, env,
   const list = rows.slice(0, limit), more = rows.length > limit;
   const invoices = new Map((await store.invoices.listByOrders(list.map(o => o.id))).map(i => [i.orderId, i]));
   const processing = [...invoices.values()].filter(i => i.status === 'processando');
-  const bling = !before && invoicing.settings.provider === 'bling' ? createBling({store, env, now, fetchImpl}) : null;
-  if (processing.length || bling) waitUntil(refreshLater({store, invoicing, processing, bling}));
+  const bling = !before && invoicing.settings.provider === 'bling';
+  const waiting = [...invoices.values()].some(i => i.status === 'fila');
+  // A notice, never a reason for the panel not to open (say, the queue's columns missing after a migration failed).
+  const integration = bling ? await panelStatus({store, env, now}).catch(error => { console.error('admin orders: Bling status unavailable —', error.code || '', error.message); return null; }) : null;
+  // Last thing before answering: the work after the answer starts here.
+  if (processing.length || waiting || bling) waitUntil(refreshLater({store, invoicing, processing, queue: waiting || bling ? createInvoiceQueue({store, env, now, fetchImpl, outbox}) : null}));
   return {body: {
     orders: list.map(order => ({...orders.adminView(order), invoice: invoicing.view(invoices.get(order.id))})),
     nextCursor: more ? encodeCursor(list[list.length - 1]) : null,
-    invoicing: invoicing.settings.mode, invoicingProvider: invoicing.settings.mode === 'off' ? null : invoicing.settings.provider
+    invoicing: invoicing.settings.mode, invoicingProvider: invoicing.settings.mode === 'off' ? null : invoicing.settings.provider,
+    ...(integration ? {integration} : {})
   }};
 }});

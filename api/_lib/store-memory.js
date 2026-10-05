@@ -1,10 +1,12 @@
 'use strict';
 // In-memory store with the same interface as store-mysql.js. Used by tests and, outside production, when no database is
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
+const QUEUED = ['fila', 'processando', 'autorizada'];   // the NF-e queue: to send, to check, or the buyer's e-mail to send again
+
 function createMemoryStore() {
   const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
-  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map(), cashEntries = new Map(), bills = new Map();
-  let eventSerial = 0, auditSerial = 0;
+  const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map(), cashEntries = new Map(), bills = new Map(), integrationLog = [];
+  let eventSerial = 0, auditSerial = 0, logSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
 
@@ -88,25 +90,55 @@ function createMemoryStore() {
       async create(data) {
         const existing = [...invoices.values()].find(i => i.orderId === data.orderId);
         if (existing) return {invoice: copy(existing), created: false};
-        const row = {providerId: null, number: null, series: null, accessKey: null, pdfUrl: null, xmlUrl: null, message: null, attempts: 0, authorizedAt: null, customerNotifiedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data};
+        const row = {providerId: null, number: null, series: null, accessKey: null, pdfUrl: null, xmlUrl: null, message: null, attempts: 0, nextAttemptAt: null, retries: 0, lockedUntil: null, authorizedAt: null, customerNotifiedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data};
         invoices.set(row.id, row);
         return {invoice: copy(row), created: true};
       },
       async findById(id) { return copy(invoices.get(id) || null); },
       async findByOrder(orderId) { return copy([...invoices.values()].find(i => i.orderId === orderId) || null); },
       async update(id, patch) { const row = invoices.get(id); if (!row) return null; Object.assign(row, patch, {updatedAt: new Date()}); return copy(row); },
-      async listByOrders(orderIds) { const ids = new Set(orderIds); return copy([...invoices.values()].filter(i => ids.has(i.orderId))); }
+      async listByOrders(orderIds) { const ids = new Set(orderIds); return copy([...invoices.values()].filter(i => ids.has(i.orderId))); },
+      // The queue (db/migrations/011_bling_fila.sql): notes whose next step is due and that no attempt holds, oldest first.
+      async due({now, limit = 20, statuses = QUEUED}) {
+        const at = value => value ? new Date(value).getTime() : 0, t = at(now);
+        return copy([...invoices.values()].filter(i => statuses.includes(i.status) && i.nextAttemptAt && at(i.nextAttemptAt) <= t && at(i.lockedUntil) < t)
+          .sort((a, b) => at(a.nextAttemptAt) - at(b.nextAttemptAt)).slice(0, limit));
+      },
+      // Holds a note for one attempt until `until`; false when another attempt holds it.
+      async lease(id, {until, now}) {
+        const row = invoices.get(id);
+        if (!row || (row.lockedUntil && new Date(row.lockedUntil).getTime() >= new Date(now).getTime())) return false;
+        row.lockedUntil = new Date(until);
+        return true;
+      },
+      // Lets the note go, only if this attempt still holds it (`until` of its own lease).
+      async release(id, until) {
+        const row = invoices.get(id);
+        if (row?.lockedUntil && new Date(row.lockedUntil).getTime() === new Date(until).getTime()) row.lockedUntil = null;
+      },
+      // Waiting = in the queue with a next attempt (a note parked because its order went back to Pendentes is not).
+      async queue() {
+        const waiting = [...invoices.values()].filter(i => i.status === 'fila' && i.nextAttemptAt), processing = [...invoices.values()].filter(i => i.status === 'processando');
+        const first = (list, field) => { const dates = list.map(i => i[field]).filter(Boolean).map(d => new Date(d)).sort((a, b) => a - b); return dates[0] || null; };
+        return {waiting: waiting.length, processing: processing.length, oldestWaiting: first(waiting, 'createdAt'), nextAttemptAt: first(waiting, 'nextAttemptAt')};
+      }
     },
     // Connections to outside services, one row per name (db/migrations/008_bling.sql): tokens encrypted, dates, pause.
     integrations: {
       async get(name) { return copy(integrations.get(name) || null); },
       async save(name, patch) {
-        const row = integrations.get(name) || {name, tokensEnc: null, accessExpiresAt: null, refreshExpiresAt: null, connectedBy: null, connectedAt: null, refreshedAt: null, pausedReason: null};
+        const row = integrations.get(name) || {name, tokensEnc: null, accessExpiresAt: null, refreshExpiresAt: null, connectedBy: null, connectedAt: null, refreshedAt: null, pausedReason: null,
+          failures: 0, failingSince: null, openUntil: null, lastError: null, alertedAt: null};
         Object.assign(row, patch, {name, updatedAt: new Date()});
         integrations.set(name, row);
         return copy(row);
       },
       async remove(name) { integrations.delete(name); }
+    },
+    // What went wrong with an outside service (db/migrations/011_bling_fila.sql): failures, pauses, alerts, recoveries.
+    integrationLog: {
+      async add(entry) { const row = {id: ++logSerial, operation: null, httpStatus: null, durationMs: null, reference: null, message: null, createdAt: new Date(), ...entry}; integrationLog.push(row); return copy(row); },
+      async recent(name, limit = 10) { return copy(integrationLog.filter(e => e.name === name).sort((a, b) => b.createdAt - a.createdAt || b.id - a.id).slice(0, limit)); }
     },
     // Fluxo de caixa (db/migrations/009_caixa.sql): entries Ju adds by hand and the bills to pay. Days are "YYYY-MM-DD".
     // Same sums as the MySQL store: orders and refunds before an instant, entries and paid bills up to a day.
@@ -170,6 +202,7 @@ function createMemoryStore() {
       for (const [k, c] of challenges) if (old(c.expiresAt, 30)) challenges.delete(k);
       for (const [k, s] of sessions) if (old(s.expiresAt, 183)) sessions.delete(k);
       for (const [k, s] of adminSessions) if (old(s.expiresAt, 183)) adminSessions.delete(k);
+      for (let i = integrationLog.length - 1; i >= 0; i--) if (old(integrationLog[i].createdAt, 90)) integrationLog.splice(i, 1);
     },
     // Fixed windows: at most `limit` hits per `windowMs` for a bucket.
     async rateLimit(bucket, limit, windowMs, now) {

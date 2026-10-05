@@ -24,7 +24,8 @@ autorizada não emite outra.
 | O que aparece | Quer dizer | O que fazer |
 |---|---|---|
 | "sai quando você confirmar o pedido" | Pedido pago, ainda pendente | Nada |
-| "emitindo…" | O serviço ainda está processando | Clicar em **Atualizar** depois de alguns instantes |
+| "Nota fiscal na fila: …" | O emissor não respondeu (fora do ar, instável, pedindo pausa), está desconectado ou com a emissão pausada. O pedido está salvo | Nada: a nota sai sozinha quando o emissor voltar. **Tentar agora** força uma tentativa (veja `BLING-RESILIENCIA.md`) |
+| "emitindo…" | O serviço ainda está processando | Nada: o site confere sozinho (ou **Atualizar** depois de alguns instantes) |
 | "Nota fiscal nº … · PDF · XML" | Autorizada | Nada; o cliente já recebeu |
 | "Nota fiscal com problema: …" | Recusada ou faltando dado (a mensagem diz o quê) | Corrigir e clicar em **Tentar de novo** (recusa da Fazenda: corrigir a nota no Bling) |
 | "Pedido recusado com nota emitida" | A nota saiu e depois o pedido foi recusado | Cancelar a nota no painel do serviço (a Fazenda aceita em até 24 horas) |

@@ -43,20 +43,25 @@ function toAdmin(row) {
   if (admin.totpLastStep !== null) admin.totpLastStep = Number(admin.totpLastStep);
   return admin;
 }
-const INVOICE_COLUMNS = {id: 'id', orderId: 'order_id', provider: 'provider', providerId: 'provider_id', environment: 'environment', reference: 'reference', status: 'status', number: 'number', series: 'series', accessKey: 'access_key', pdfUrl: 'pdf_url', xmlUrl: 'xml_url', message: 'message', attempts: 'attempts', authorizedAt: 'authorized_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at', updatedAt: 'updated_at'};
+const INVOICE_COLUMNS = {id: 'id', orderId: 'order_id', provider: 'provider', providerId: 'provider_id', environment: 'environment', reference: 'reference', status: 'status', number: 'number', series: 'series', accessKey: 'access_key', pdfUrl: 'pdf_url', xmlUrl: 'xml_url', message: 'message', attempts: 'attempts',
+  nextAttemptAt: 'next_attempt_at', retries: 'retries', lockedUntil: 'locked_until', authorizedAt: 'authorized_at', customerNotifiedAt: 'customer_notified_at', createdAt: 'created_at', updatedAt: 'updated_at'};
+const QUEUED = ['fila', 'processando', 'autorizada'];   // the NF-e queue: to send, to check, or the buyer's e-mail to send again
 function toInvoice(row) {
   if (!row) return null;
   const invoice = {};
   for (const [field, column] of Object.entries(INVOICE_COLUMNS)) invoice[field] = row[column] ?? null;
   return invoice;
 }
-const INTEGRATION_COLUMNS = {name: 'name', tokensEnc: 'tokens_enc', accessExpiresAt: 'access_expires_at', refreshExpiresAt: 'refresh_expires_at', connectedBy: 'connected_by', connectedAt: 'connected_at', refreshedAt: 'refreshed_at', pausedReason: 'paused_reason', updatedAt: 'updated_at'};
+const INTEGRATION_COLUMNS = {name: 'name', tokensEnc: 'tokens_enc', accessExpiresAt: 'access_expires_at', refreshExpiresAt: 'refresh_expires_at', connectedBy: 'connected_by', connectedAt: 'connected_at', refreshedAt: 'refreshed_at', pausedReason: 'paused_reason',
+  failures: 'failures', failingSince: 'failing_since', openUntil: 'open_until', lastError: 'last_error', alertedAt: 'alerted_at', updatedAt: 'updated_at'};
 function toIntegration(row) {
   if (!row) return null;
   const integration = {};
   for (const [field, column] of Object.entries(INTEGRATION_COLUMNS)) integration[field] = row[column] ?? null;
+  integration.failures = Number(integration.failures) || 0;
   return integration;
 }
+const toLogEntry = row => row && {id: Number(row.id), name: row.name, kind: row.kind, operation: row.operation, httpStatus: row.http_status, durationMs: row.duration_ms, reference: row.reference, message: row.message, createdAt: row.created_at};
 // Fluxo de caixa (db/migrations/009_caixa.sql). DATE columns come back as a Date at midnight UTC (pool timezone 'Z'):
 // back to the "YYYY-MM-DD" they were saved as.
 const toDay = value => value instanceof Date ? value.toISOString().slice(0, 10) : value === null || value === undefined ? null : String(value).slice(0, 10);
@@ -213,7 +218,23 @@ function createMysqlStore(pool) {
         if (fields.length) await run(`UPDATE invoices SET ${fields.map(f => `${INVOICE_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f] ?? null), id]);
         return this.findById(id);
       },
-      async listByOrders(orderIds) { if (!orderIds.length) return []; return (await all(`SELECT * FROM invoices WHERE order_id IN (${orderIds.map(() => '?').join(', ')})`, orderIds)).map(toInvoice); }
+      async listByOrders(orderIds) { if (!orderIds.length) return []; return (await all(`SELECT * FROM invoices WHERE order_id IN (${orderIds.map(() => '?').join(', ')})`, orderIds)).map(toInvoice); },
+      // The queue (db/migrations/011_bling_fila.sql): notes whose next step is due and that no attempt holds, oldest first.
+      async due({now, limit = 20, statuses = QUEUED}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 20, 1), 200);
+        return (await all(`SELECT * FROM invoices WHERE status IN (${statuses.map(() => '?').join(', ')}) AND next_attempt_at IS NOT NULL AND next_attempt_at <= ? AND (locked_until IS NULL OR locked_until < ?) ORDER BY next_attempt_at LIMIT ${cap}`, [...statuses, now, now])).map(toInvoice);
+      },
+      // Holds a note for one attempt until `until`; false when another attempt holds it (checked and taken in one UPDATE,
+      // so two processes never both get it).
+      async lease(id, {until, now}) { return (await run('UPDATE invoices SET locked_until = ? WHERE id = ? AND (locked_until IS NULL OR locked_until < ?)', [until, id, now])).affectedRows === 1; },
+      // Lets the note go, only if this attempt still holds it (`until` of its own lease).
+      async release(id, until) { await run('UPDATE invoices SET locked_until = NULL WHERE id = ? AND locked_until = ?', [id, until]); },
+      // Waiting = in the queue with a next attempt (a note parked because its order went back to Pendentes is not).
+      async queue() {
+        const rows = await all("SELECT status, COUNT(*) AS total, MIN(created_at) AS oldest, MIN(next_attempt_at) AS next_at FROM invoices WHERE status = 'processando' OR (status = 'fila' AND next_attempt_at IS NOT NULL) GROUP BY status", []);
+        const by = Object.fromEntries(rows.map(r => [r.status, r]));
+        return {waiting: Number(by.fila?.total || 0), processing: Number(by.processando?.total || 0), oldestWaiting: by.fila?.oldest || null, nextAttemptAt: by.fila?.next_at || null};
+      }
     },
     integrations: {
       get: async name => toIntegration(await one('SELECT * FROM integrations WHERE name = ?', [name])),
@@ -226,6 +247,19 @@ function createMysqlStore(pool) {
         return this.get(name);
       },
       remove: name => run('DELETE FROM integrations WHERE name = ?', [name])
+    },
+    // What went wrong with an outside service (db/migrations/011_bling_fila.sql): failures, pauses, alerts, recoveries.
+    integrationLog: {
+      async add(entry) {
+        const row = {operation: null, httpStatus: null, durationMs: null, reference: null, message: null, createdAt: new Date(), ...entry};
+        const result = await run('INSERT INTO integration_log (name, kind, operation, http_status, duration_ms, reference, message, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [row.name, row.kind, row.operation, row.httpStatus, row.durationMs, row.reference, row.message, row.createdAt]);
+        return {...row, id: Number(result.insertId)};
+      },
+      async recent(name, limit = 10) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 10, 1), 100);
+        return (await all(`SELECT * FROM integration_log WHERE name = ? ORDER BY created_at DESC, id DESC LIMIT ${cap}`, [name])).map(toLogEntry);
+      }
     },
     // The cash balance summed by the database, without loading a single movement: paid orders up to `before` (the
     // instant the day after `until` starts in Brasília), minus the refunds up to then, plus the entries and minus the bills
@@ -313,6 +347,7 @@ function createMysqlStore(pool) {
       await run('DELETE FROM auth_challenges WHERE expires_at < ?', [before(30)]);
       await run('DELETE FROM sessions WHERE expires_at < ?', [before(183)]);
       await run('DELETE FROM admin_sessions WHERE expires_at < ?', [before(183)]);
+      await run('DELETE FROM integration_log WHERE created_at < ?', [before(90)]);
     },
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs;

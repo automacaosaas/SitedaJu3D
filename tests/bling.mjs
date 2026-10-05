@@ -19,7 +19,8 @@ const {createFakeBling} = require('../tools/fake-bling.cjs');
 const blingEndpoint = require('../api/admin/bling'), adminOrders = require('../api/admin/orders');
 
 const fake = createFakeBling();
-const ENV = {APP_ENV: 'preview', SITE_URL: 'https://site.test', NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', AUTH_SECRET: 's'.repeat(40), BLING_CLIENT_ID: fake.clientId, BLING_CLIENT_SECRET: fake.clientSecret};
+// BLING_REQUESTS_PER_SECOND: the pace Bling asks for (3) is checked in tests/bling-resilience.mjs; here it would only add waiting.
+const ENV = {APP_ENV: 'preview', SITE_URL: 'https://site.test', NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', AUTH_SECRET: 's'.repeat(40), BLING_CLIENT_ID: fake.clientId, BLING_CLIENT_SECRET: fake.clientSecret, BLING_REQUESTS_PER_SECOND: '1000'};
 const SP = {cep: '01001000', city: 'São Paulo', state: 'SP', cityCode: '3550308'};
 // The site's network here: ViaCEP answers for the CEP of the orders, everything else goes to the simulated Bling.
 const network = async (url, init) => String(url).includes('viacep.com.br') ? {ok: true, json: async () => ({cep: '01001-000', localidade: 'São Paulo', uf: 'SP', ibge: '3550308'})} : fake.fetchImpl(url, init);
@@ -267,17 +268,23 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   await Promise.all(background);
   assert.equal(refreshes(), before + 1, 'opening the panel keeps the connection alive, after the answer');
 
+  // Too many calls (429): the same call goes again twice, after a short wait, before giving up for now.
+  const waits = [], patient = createBling({store, env: ENV, now, fetchImpl: network, sleep: async ms => { waits.push(ms); }});
+  const tries = () => fake.calls.filter(c => c.path.startsWith('/naturezas-operacoes')).length, triedBefore = tries();
   fake.state.tooManyRequests = true;
-  await assert.rejects(bling.natures(), error => error.code === 'rate_limited' && /pausa/.test(error.message));
+  await assert.rejects(patient.natures(), error => error.code === 'rate_limited' && /pausa/.test(error.message) && error.retryAt > new Date(clock));
+  assert.equal(tries() - triedBefore, 3, 'asked three times'); assert.deepEqual(waits.filter(ms => ms >= 1000), [1000, 2000], 'waiting 1 s, then 2 s');
   fake.state.tooManyRequests = false;
+  await store.integrations.save('bling', {failures: 0, failingSince: null, openUntil: null, lastError: null});   // this one 429 is not what the next checks are about
 
   // Bling refuses the refresh token (30 days unused, revoked in Bling): the site forgets the tokens and says so.
   clock += 7 * 3600e3; fake.expireAccessTokens(); fake.forgetRefreshTokens();
   await assert.rejects(bling.natures(), error => error.code === 'not_connected' && /expirou/.test(error.message));
   const lost = await bling.status();
   assert.deepEqual([lost.connected, lost.expired], [false, true], 'the panel shows it expired');
+  // The note waits in the queue (BLING-RESILIENCIA.md) until someone connects again, instead of failing.
   const lostOrder = order(), noted = await issue(lostOrder);
-  assert.equal(noted.status, 'erro'); assert.match(noted.message, /Conecte/);
+  assert.equal(noted.status, 'fila'); assert.match(noted.message, /Conecte/); assert(noted.nextAttemptAt > new Date(clock), 'looked at again later');
 
   // Reconnect.
   const again = await adminSession(store);
@@ -296,7 +303,7 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   const paused = await createBling({store, env: ENV, now, fetchImpl: network}).status();
   assert.match(paused.pausedReason, /PRODUÇÃO/, 'issuing paused');
   const next = await issue(order());
-  assert.equal(next.status, 'erro'); assert.match(next.message, /Emissão pausada/);
+  assert.equal(next.status, 'fila', 'waits in the queue while paused'); assert.match(next.message, /Emissão pausada/);
   assert.equal(next.providerId, null, 'nothing sent while paused');
   const ju = await adminSession(store);
   assert.equal((await call(endpoint, {body: {action: 'resume'}, cookie: ju.cookie})).json().bling.pausedReason, null);
@@ -321,7 +328,7 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   assert(fake.calls.some(c => c.path === '/oauth/revoke'), 'Bling asked to revoke');
   assert((await store.adminAudit.list()).some(a => a.action === 'bling_disconnected'));
   const idle = await issue(order());
-  assert.equal(idle.status, 'erro'); assert.match(idle.message, /não está conectado/);
+  assert.equal(idle.status, 'fila', 'waits in the queue until Bling is connected'); assert.match(idle.message, /não está conectado/);
 }
 
 console.log('PASS: Bling — connection from the panel (state per session, encrypted tokens, shared renewal, single-use refresh, weekly keep-alive, expired and reconnected), the note sent from the order (person or company, payment method, freight), once per order, rejections kept and the same note resent as fixed in Bling, cancelled notes replaced, environment checked in the XML (a real note on the test site pauses issuing), disconnecting.');

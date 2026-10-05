@@ -39,7 +39,7 @@ export async function loadOrders(options) {
     first ||= data; orders.push(...data.orders); cursor = data.nextCursor || null;
     if (!cursor) break;
   }
-  return {orders, invoicing: first.invoicing || 'off', provider: first.invoicingProvider || null};
+  return {orders, invoicing: first.invoicing || 'off', provider: first.invoicingProvider || null, integration: first.integration || null};
 }
 // "Conferir estorno" / "Tentar estorno de novo" on a declined order.
 export async function retryRefund(id, options) {

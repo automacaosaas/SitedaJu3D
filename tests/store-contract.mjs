@@ -181,6 +181,33 @@ async function contract(store, label) {
   assert.equal(authorized.providerId, null);
   assert.equal((await store.invoices.update(invoiceId, {providerId: '987654321'})).providerId, '987654321', `${label}: the note's code at the NF-e service`);
 
+  // The NF-e queue (011_bling_fila.sql): due notes, oldest first, never one an attempt holds; a hold is taken once and
+  // frees itself when its time is up. Other rows may exist: only this note is checked.
+  const when = new Date(Date.UTC(2026, 9, 5, 12, 0, 0)), ours = list => list.filter(i => i.id === invoiceId);
+  assert.equal(madeInvoice.invoice.nextAttemptAt ?? null, null); assert.equal(Number(madeInvoice.invoice.retries), 0); assert.equal(madeInvoice.invoice.lockedUntil ?? null, null);
+  const queued = await store.invoices.update(invoiceId, {status: 'fila', nextAttemptAt: new Date(when.getTime() - 60000), retries: 3, message: 'O Bling não respondeu.'});
+  assert.equal(new Date(queued.nextAttemptAt).getTime(), when.getTime() - 60000, `${label}: the next attempt keeps milliseconds`); assert.equal(Number(queued.retries), 3);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 1, `${label}: due once its time came`);
+  assert.equal(ours(await store.invoices.due({now: new Date(when.getTime() - 120000)})).length, 0, `${label}: not before`);
+  assert.equal(await store.invoices.lease(invoiceId, {until: new Date(when.getTime() + 120000), now: when}), true, `${label}: held`);
+  assert.equal(await store.invoices.lease(invoiceId, {until: new Date(when.getTime() + 120000), now: when}), false, `${label}: held once`);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 0, `${label}: a held note is not due`);
+  const second = new Date(when.getTime() + 300000);
+  assert.equal(await store.invoices.lease(invoiceId, {until: second, now: new Date(when.getTime() + 180000)}), true, `${label}: a hold whose time is up is taken again`);
+  // Only the attempt holding it lets it go: the first one (its hold expired) ending late must not free the second's.
+  await store.invoices.release(invoiceId, new Date(when.getTime() + 120000));
+  assert.equal(new Date((await store.invoices.findById(invoiceId)).lockedUntil).getTime(), second.getTime(), `${label}: another attempt's hold stays`);
+  await store.invoices.release(invoiceId, second);
+  assert.equal((await store.invoices.findById(invoiceId)).lockedUntil ?? null, null, `${label}: its own hold is let go`);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 1, `${label}: free again`);
+  assert.equal(ours(await store.invoices.due({now: when, statuses: ['autorizada']})).length, 0, `${label}: only the statuses asked for`);
+  const line = await store.invoices.queue();
+  assert(line.waiting >= 1, `${label}: counted in the queue`); assert(new Date(line.nextAttemptAt).getTime() <= when.getTime() - 60000, `${label}: the earliest attempt`);
+  await store.invoices.update(invoiceId, {nextAttemptAt: null});   // parked (its order went back to Pendentes)
+  assert.equal((await store.invoices.queue()).waiting, line.waiting - 1, `${label}: a parked note is not waiting`);
+  await store.invoices.update(invoiceId, {status: 'autorizada', nextAttemptAt: null, retries: 0, message: null});
+  assert.equal(ours(await store.invoices.due({now: new Date(when.getTime() + 86400e3)})).length, 0, `${label}: done, out of the queue`);
+
   // Integrations: one row per name, partial saves keep the other fields, binary tokens survive, remove clears.
   const integration = `test-${crypto.randomUUID().slice(0, 8)}`, blob = crypto.randomBytes(3000);
   assert.equal(await store.integrations.get(integration), null);
@@ -189,8 +216,29 @@ async function contract(store, label) {
   const paused = await store.integrations.save(integration, {pausedReason: 'teste'});
   assert.equal(paused.pausedReason, 'teste'); assert.equal(paused.connectedBy, 'ju@site.test', 'a partial save keeps the rest'); assert(Buffer.from(paused.tokensEnc).equals(blob));
   assert.equal((await store.integrations.save(integration, {pausedReason: null})).pausedReason, null);
+  // The circuit breaker (011_bling_fila.sql), saved with the connection and without touching it.
+  assert.equal(saved.failures, 0, `${label}: no failures to start with`); assert.equal(saved.openUntil ?? null, null);
+  const failing = await store.integrations.save(integration, {failures: 3, failingSince: when, openUntil: new Date(when.getTime() + 60000), lastError: 'O Bling não respondeu.', alertedAt: when});
+  assert.deepEqual([failing.failures, new Date(failing.openUntil).getTime(), failing.lastError, new Date(failing.alertedAt).getTime()], [3, when.getTime() + 60000, 'O Bling não respondeu.', when.getTime()]);
+  assert.equal(failing.connectedBy, 'ju@site.test', 'the breaker keeps the connection'); assert(Buffer.from(failing.tokensEnc).equals(blob));
+  const closed = await store.integrations.save(integration, {failures: 0, failingSince: null, openUntil: null, lastError: null});
+  assert.deepEqual([closed.failures, closed.openUntil, closed.failingSince], [0, null, null]);
   await store.integrations.remove(integration);
   assert.equal(await store.integrations.get(integration), null);
+
+  // The integration log: newest first, only the given name, 90 days.
+  const logName = `t${crypto.randomUUID().slice(0, 8)}`;
+  await store.integrationLog.add({name: logName, kind: 'falha', operation: 'POST /nfe', httpStatus: 503, durationMs: 120, reference, message: 'O Bling respondeu 503.', createdAt: when});
+  await store.integrationLog.add({name: logName, kind: 'recuperado', message: 'O Bling voltou a responder.', createdAt: new Date(when.getTime() + 1000)});
+  await store.integrationLog.add({name: `${logName}x`, kind: 'falha', createdAt: when});
+  const entries = await store.integrationLog.recent(logName, 10);
+  assert.deepEqual(entries.map(e => e.kind), ['recuperado', 'falha'], `${label}: newest first, one name`);
+  assert.deepEqual([entries[1].operation, Number(entries[1].httpStatus), Number(entries[1].durationMs), entries[1].reference], ['POST /nfe', 503, 120, reference]);
+  assert.equal((await store.integrationLog.recent(logName, 1)).length, 1);
+  await store.integrationLog.add({name: logName, kind: 'falha', message: 'antiga', createdAt: new Date(Date.now() - 100 * 86400e3)});
+  await store.purge(Date.now());
+  assert(!(await store.integrationLog.recent(logName, 10)).some(e => e.message === 'antiga'), `${label}: gone after 90 days`);
+  assert.equal((await store.integrationLog.recent(logName, 10)).length, 2, `${label}: the recent ones stay`);
 
   // Fluxo de caixa (009_caixa.sql): entries typed by hand and bills. Days come back as the same "YYYY-MM-DD", whatever
   // the time zone of the server; remove answers the row once, then null.

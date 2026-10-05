@@ -60,8 +60,22 @@ function outcome(note, providerId) {
 
 const tpAmb = xml => { const match = /<tpAmb>\s*([12])\s*<\/tpAmb>/.exec(String(xml || '')); return match ? (match[1] === '1' ? 'producao' : 'homologacao') : null; };
 
-function createBlingProvider({store, env = process.env, now, fetchImpl}) {
-  const bling = createBling({store, env, now, fetchImpl});
+// The creation broke after it left the site: Bling may have created the note, and creating again could make two.
+const UNKNOWN_CREATION = 'O Bling não confirmou se criou a nota: a conexão caiu no meio do envio. Confira no Bling (Vendas → Notas Fiscais de Saída) se já existe uma nota deste pedido. Se não existir, clique em Tentar de novo. Se existir, não tente por aqui: envie aquela nota pelo próprio Bling, para não sair nota em dobro.';
+
+// While it is not known whether Bling created a note (the creation broke midway), the invoice keeps, instead of Bling's
+// id, "busca:" and the second of issue the site sent: the next attempt looks for that note in Bling before anything else.
+const SEARCH = /^busca:(\d{14})$/;
+const SEARCHING = 'A conexão caiu no meio da criação da nota. Antes de tentar de novo, o site procura no Bling a nota que pode ter sido criada, para não sair nota em dobro.';
+const plain = value => String(value || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+
+// Bling down, slow, refusing for too many calls (or the breaker open), or the connection lost: the note waits in the
+// queue (`wait`) and goes by itself later. Anything else Bling refuses is about the note itself and needs a person.
+const passing = error => error instanceof BlingError && (error.transient || error.code === 'not_connected');
+const waiting = (error, providerId) => ({status: 'erro', wait: error.code === 'not_connected' ? 'conexao' : 'bling', retryAt: error.retryAt || null, providerId, message: error.message});
+
+function createBlingProvider({store, env = process.env, now, fetchImpl, sleep, clock}) {
+  const bling = createBling({store, env, now, fetchImpl, sleep, clock});
 
   async function checkEnvironment(result, xml, expected) {
     const actual = tpAmb(xml);
@@ -73,17 +87,35 @@ function createBlingProvider({store, env = process.env, now, fetchImpl}) {
     return {status: 'erro', providerId: null, message: 'O Bling está em homologação: esta nota saiu sem valor fiscal. Mude o ambiente no Bling para produção e clique em Tentar de novo (sai uma nota nova).'};
   }
 
+  // The note a broken creation may have left in Bling: among the notes of that day not yet sent, the one of this buyer
+  // (CPF or CNPJ) issued at that exact second. Exactly one: its id. None, or more than one: null, and a person decides.
+  async function findCreated(stamp, document, ref) {
+    const day = `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`;
+    const data = await bling.api('GET', `/nfe?pagina=1&limite=100&tipo=1&situacao=1&dataEmissaoInicial=${day}&dataEmissaoFinal=${day}`, null, ref);
+    const found = (data?.data || []).filter(n => n?.id && String(n.dataEmissao || '').replace(/\D/g, '') === stamp && plain(n.contato?.numeroDocumento) === plain(document) && (n.situacao === undefined || Number(n.situacao) === 1));
+    return found.length === 1 ? String(found[0].id) : null;
+  }
+
   return {
     name: 'bling',
+    wake: () => bling.wake(),
 
     // lastError: the reason the previous attempt failed, as the panel shows it (null on the first attempt).
     async emit(invoice, {providerId = null, lastError = null} = {}) {
       let id = providerId ? String(providerId) : null, asInBling = false;
+      const ref = {reference: invoice.reference};
       try {
         const {pausedReason} = await bling.status();
-        if (pausedReason) return {status: 'erro', providerId: id, message: `Emissão pausada: ${pausedReason}`};
+        if (pausedReason) return {status: 'erro', wait: 'pausa', providerId: id, message: `Emissão pausada: ${pausedReason}`};
+        const search = SEARCH.exec(id || '');
+        if (search) {
+          // Bling not answering throws here and the invoice keeps the marker: the search runs again on the next attempt.
+          id = await findCreated(search[1], invoice.recipient.cnpj || invoice.recipient.cpf, ref);
+          if (!id) { await bling.log({kind: 'incerta', operation: 'GET /nfe', reference: invoice.reference, message: 'A nota não foi encontrada no Bling com segurança: é preciso conferir à mão.'}); return {status: 'erro', providerId: null, message: UNKNOWN_CREATION}; }
+          await bling.log({kind: 'achada', operation: 'GET /nfe', reference: invoice.reference, message: `A nota ${id} foi encontrada no Bling: o envio segue com ela, sem criar outra.`});
+        }
         if (id) {
-          const current = (await bling.api('GET', `/nfe/${encodeURIComponent(id)}`))?.data;
+          const current = (await bling.api('GET', `/nfe/${encodeURIComponent(id)}`, null, ref))?.data;
           const situation = Number(current?.situacao);
           if (AUTHORIZED.has(situation) || WAITING.has(situation) || situation === 9 || situation === 11) return outcome(current, id);   // done, on its way, or needs a person: never twice
           if (situation === 2) id = null;   // cancelled in Bling on purpose: this attempt issues a new note
@@ -92,18 +124,34 @@ function createBlingProvider({store, env = process.env, now, fetchImpl}) {
           else asInBling = situation === 4 || FAZENDA_REFUSAL.test(String(lastError || ''));
         }
         if (!asInBling) {
-          const body = toBling(invoice, await bling.paymentMethodId(invoice.payment.code).catch(() => null));
-          if (id) await bling.api('PUT', `/nfe/${encodeURIComponent(id)}`, body);
+          // Bling's payment method for the note (or none: Bling's default). Bling not answering stops here, before anything
+          // is created.
+          let method = null;
+          try { method = await bling.paymentMethodId(invoice.payment.code, ref); } catch (error) { if (passing(error)) throw error; }
+          const body = toBling(invoice, method);
+          if (id) await bling.api('PUT', `/nfe/${encodeURIComponent(id)}`, body, ref);
           else {
-            const created = (await bling.api('POST', '/nfe', body))?.data;
+            let created;
+            try { created = (await bling.api('POST', '/nfe', body, {...ref, unsafe: true}))?.data; }
+            catch (error) {
+              // It may have been created: wait in the queue with the marker; the next attempt looks for it first.
+              if (error instanceof BlingError && error.unknown) {
+                await bling.log({kind: 'incerta', operation: 'POST /nfe', reference: invoice.reference, message: `${error.message} A nota pode ter sido criada: o site vai procurá-la no Bling.`});
+                return {status: 'erro', wait: 'bling', providerId: `busca:${String(body.dataEmissao).replace(/\D/g, '')}`, message: SEARCHING};
+              }
+              throw error;
+            }
             if (!created?.id) return {status: 'erro', providerId: null, message: 'O Bling não devolveu o código da nota. Confira no Bling antes de tentar de novo.'};
             id = String(created.id);
           }
         }
         let sent;
-        try { sent = await bling.api('POST', `/nfe/${encodeURIComponent(id)}/enviar?enviarEmail=false`, {}); }   // the site e-mails the buyer itself
+        try { sent = await bling.api('POST', `/nfe/${encodeURIComponent(id)}/enviar?enviarEmail=false`, {}, ref); }   // the site e-mails the buyer itself
         catch (error) {
           if (error instanceof BlingError && error.code === 'bling_rejected') {
+            // Refused because it is already on its way (an earlier sending that seemed lost got through): what Bling shows wins.
+            const shown = (await bling.api('GET', `/nfe/${encodeURIComponent(id)}`, null, ref).catch(() => null))?.data;
+            if (AUTHORIZED.has(Number(shown?.situacao)) || WAITING.has(Number(shown?.situacao))) return checkEnvironment(outcome(shown, id), null, invoice.environment);
             const message = FAZENDA_REFUSAL.test(error.message)
               ? `Nota recusada pela Fazenda: ${error.message.replace(/[.\s]+$/, '')}. Corrija a nota no Bling e clique em Tentar de novo: o site reenvia a nota como ela está no Bling.`
               : `Nota recusada: ${error.message}`;
@@ -111,20 +159,22 @@ function createBlingProvider({store, env = process.env, now, fetchImpl}) {
           }
           throw error;
         }
-        const result = outcome((await bling.api('GET', `/nfe/${encodeURIComponent(id)}`))?.data, id);
+        const result = outcome((await bling.api('GET', `/nfe/${encodeURIComponent(id)}`, null, ref))?.data, id);
         if (result.situation === 1) Object.assign(result, {status: 'processando', message: undefined});   // just sent: Bling may still be queuing it
         return checkEnvironment(result, sent?.data?.xml, invoice.environment);
       } catch (error) {
+        if (passing(error)) return waiting(error, id);
         if (!(error instanceof BlingError)) console.error('bling: unexpected failure —', error.message);
         return {status: 'erro', providerId: id, message: error instanceof BlingError ? error.message : 'Falha inesperada ao falar com o Bling. Tente de novo.'};
       }
     },
 
-    async check({providerId} = {}) {
+    // A note already sent: what Bling says of it now. Bling not answering throws (the queue asks again later).
+    async check({providerId, reference = null} = {}) {
       if (!providerId) return {status: 'erro', message: 'A nota não chegou ao Bling. Clique em Tentar de novo.'};
-      return outcome((await bling.api('GET', `/nfe/${encodeURIComponent(providerId)}`))?.data, providerId);
+      return outcome((await bling.api('GET', `/nfe/${encodeURIComponent(providerId)}`, null, {reference}))?.data, providerId);
     }
   };
 }
 
-module.exports = {createBlingProvider, toBling, outcome, tpAmb};
+module.exports = {createBlingProvider, toBling, outcome, tpAmb, UNKNOWN_CREATION};

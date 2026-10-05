@@ -6,6 +6,13 @@
 // "REJEITAR" is rejected when sent; correct(id) plays the person who fixes that note in Bling (locally:
 // /__fake-bling/corrigir?id=…). One with "DEMORAR" waits for the protocol once. state.environment '1' answers as
 // produção, '2' (default) as homologação. Nothing here talks to the real Bling.
+//
+// Failures, to see the site keep going without Bling (BLING-RESILIENCIA.md; locally: /__fake-bling/falha?modo=…):
+// state.fault = 'rede' (the connection is refused), 'lento' (never answers: the site's timeout fires), 'erro' (503),
+// 'limite' (429), 'queda' (does the work, then the connection drops before the answer), 'gateway' (does the work,
+// then answers 502) or 'corpo' (does the work, sends the start of the answer and stalls); state.faultCount limits it to
+// the next N calls, state.faultMatch to calls starting with, say,
+// 'POST /nfe'. state.retryAfter adds a Retry-After header (seconds) to the 429.
 const crypto = require('node:crypto');
 
 const NATURES = [{id: 1, situacao: 1, padrao: 1, descricao: 'Venda de produção do estabelecimento'}, {id: 2, situacao: 1, padrao: 0, descricao: 'Remessa para conserto'}, {id: 3, situacao: 1, padrao: 0, descricao: 'Venda de produção do estabelecimento – contribuinte'}];
@@ -14,10 +21,10 @@ const PAYMENTS = [{id: 500, descricao: 'Dinheiro', tipoPagamento: 1, situacao: 1
 
 function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-bling-secret', natures = NATURES, paymentMethods = PAYMENTS} = {}) {
   const codes = new Map(), access = new Map(), refresh = new Set(), notes = new Map(), calls = [];
-  const state = {environment: '2', accessTtl: 21600, tooManyRequests: false};
+  const state = {environment: '2', accessTtl: 21600, tooManyRequests: false, fault: null, faultCount: null, faultMatch: null, retryAfter: null};
   let serial = 0, lastNumber = 0;
   const random = () => crypto.randomBytes(24).toString('base64url');
-  const reply = (status, body) => ({ok: status >= 200 && status < 300, status, json: async () => body, text: async () => JSON.stringify(body)});
+  const reply = (status, body, headers = {}) => ({ok: status >= 200 && status < 300, status, headers: {get: name => headers[String(name).toLowerCase()] ?? null}, json: async () => body, text: async () => JSON.stringify(body)});
   const error = (status, type, description, fields) => reply(status, {error: {type, message: type === 'VALIDATION_ERROR' ? 'Não foi possível salvar' : type, description, ...(fields ? {fields} : {})}});
 
   function tokens() {
@@ -58,7 +65,35 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
     contato: {nome: note.body.contato.nome, numeroDocumento: note.body.contato.numeroDocumento}, naturezaOperacao: note.body.naturezaOperacao
   });
 
+  // The failure that applies to this call, if any (counting down state.faultCount).
+  function activeFault(method, u) {
+    if (!state.fault) return null;
+    if (state.faultMatch && !`${method} ${u.pathname.replace('/Api/v3', '')}`.startsWith(state.faultMatch)) return null;
+    if (state.faultCount !== null) { if (state.faultCount <= 0) { state.fault = null; state.faultCount = null; return null; } state.faultCount--; }
+    return state.fault;
+  }
+  const connectionError = code => Object.assign(new TypeError('fetch failed'), {cause: Object.assign(new Error(code), {code})});
+  // Never answers; gives up only when the caller aborts (its timeout).
+  const hang = signal => new Promise((resolve, reject) => {
+    const abort = () => reject(Object.assign(new Error('This operation was aborted'), {name: 'AbortError'}));
+    if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, {once: true});
+  });
+
   async function fetchImpl(url, init = {}) {
+    const u = new URL(String(url)), method = String(init.method || 'GET').toUpperCase();
+    const fault = activeFault(method, u);
+    if (fault === 'rede') { calls.push({method, host: u.host, path: u.pathname.replace('/Api/v3', '') + u.search, body: null, fault}); throw connectionError('ECONNREFUSED'); }
+    if (fault === 'lento') { calls.push({method, host: u.host, path: u.pathname.replace('/Api/v3', '') + u.search, body: null, fault}); return hang(init.signal); }
+    if (fault === 'erro') { calls.push({method, host: u.host, path: u.pathname.replace('/Api/v3', '') + u.search, body: null, fault}); return error(503, 'SERVICE_UNAVAILABLE', 'Serviço temporariamente indisponível (simulado)'); }
+    if (fault === 'limite') { calls.push({method, host: u.host, path: u.pathname.replace('/Api/v3', '') + u.search, body: null, fault}); return reply(429, {error: {type: 'TOO_MANY_REQUESTS', message: 'TOO_MANY_REQUESTS', description: 'Limite de requisições atingido'}}, state.retryAfter ? {'retry-after': String(state.retryAfter)} : {}); }
+    const answer = await handle(url, init);
+    if (fault === 'queda') throw connectionError('ECONNRESET');   // the work was done; the answer never arrives
+    if (fault === 'gateway') return error(502, 'BAD_GATEWAY', 'Bad Gateway (simulado)');
+    if (fault === 'corpo') return {...answer, json: () => hang(init.signal), text: () => hang(init.signal)};   // the work was done; the answer starts and stalls
+    return answer;
+  }
+
+  async function handle(url, init = {}) {
     const u = new URL(String(url)), method = String(init.method || 'GET').toUpperCase(), headers = init.headers || {};
     calls.push({method, host: u.host, path: u.pathname.replace('/Api/v3', '') + u.search, body: String(init.body || '').startsWith('{') ? JSON.parse(init.body) : null});
     if (u.host === 'www.bling.com.br' && u.pathname.startsWith('/Api/v3/oauth/')) {
@@ -80,6 +115,17 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
     const path = u.pathname.slice('/Api/v3'.length), body = init.body ? JSON.parse(init.body) : null;
 
     if (method === 'GET' && path === '/naturezas-operacoes') return reply(200, {data: natures});
+    // The list of notes, with the filters the site uses (tipo, situação, day of issue "AAAA-MM-DD"), as Bling lists them.
+    if (method === 'GET' && path === '/nfe') {
+      const q = u.searchParams, day = value => String(value || '').slice(0, 10);
+      let list = [...notes.values()];
+      if (q.get('situacao')) list = list.filter(n => n.situacao === Number(q.get('situacao')));
+      if (q.get('dataEmissaoInicial')) list = list.filter(n => day(n.body.dataEmissao) >= day(q.get('dataEmissaoInicial')));
+      if (q.get('dataEmissaoFinal')) list = list.filter(n => day(n.body.dataEmissao) <= day(q.get('dataEmissaoFinal')));
+      const limit = Number(q.get('limite')) || 100, page = Number(q.get('pagina')) || 1;
+      return reply(200, {data: list.slice((page - 1) * limit, page * limit).map(n => ({id: n.id, tipo: 1, situacao: n.situacao, numero: n.numero || '', dataEmissao: n.body.dataEmissao, dataOperacao: n.body.dataOperacao,
+        contato: {nome: n.body.contato.nome, numeroDocumento: n.body.contato.numeroDocumento}, naturezaOperacao: n.body.naturezaOperacao}))});
+    }
     if (method === 'GET' && path === '/formas-pagamentos') return reply(200, {data: paymentMethods});
     if (method === 'POST' && path === '/nfe') {
       const problem = validate(body);
@@ -116,6 +162,8 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
 
   return {
     fetchImpl, authorize, notes, calls, state, clientId, clientSecret,
+    // A failure for the next calls (see the top of this file); fail() with nothing puts Bling back to normal.
+    fail(mode = null, {count = null, match = null, retryAfter = null} = {}) { Object.assign(state, {fault: mode, faultCount: count, faultMatch: match, retryAfter}); },
     correct(id) {   // the recipient fixed by hand on the note, as in Bling's screen; false when there is no such note
       const note = notes.get(String(id));
       if (!note) return false;

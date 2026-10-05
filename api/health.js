@@ -12,6 +12,7 @@ const legal = require('./_lib/legal');
 const fiscal = require('./_lib/fiscal');
 const {createBling} = require('./_lib/bling');
 const shipping = require('./_lib/shipping');
+const {queueHeartbeat} = require('./_lib/invoice-queue');
 
 async function blingState(env, nfe) {
   if (nfe.provider !== 'bling') return 'off';
@@ -19,7 +20,7 @@ async function blingState(env, nfe) {
   if (!store) return 'off';
   try {
     const status = await createBling({store, env}).status();
-    return !status.configured ? 'not_configured' : !status.connected ? 'disconnected' : status.pausedReason ? 'paused' : 'connected';
+    return !status.configured ? 'not_configured' : !status.connected ? 'disconnected' : status.pausedReason ? 'paused' : status.unstable ? 'unstable' : 'connected';
   } catch { return 'error'; }
 }
 
@@ -36,7 +37,11 @@ function createHandler({env = process.env} = {}) {
       shipping: shipping.forEnv(env).status().mode,   // off (no Correios credentials) · pending (shop data incomplete) · correios
       legal: legal.pending() ? 'pending' : 'ok',   // store details still marked [PREENCHER] in api/_lib/legal.js
       nfe: nfe.mode, fiscal: fiscal.missing(fiscal.FISCAL, {provider: nfe.provider}).length ? 'pending' : 'ok',   // NF-e issuing (off, test, live) and the tax data of api/_lib/fiscal.js
-      bling: await blingState(env, nfe)   // off, not_configured (app variables missing), disconnected, connected or paused
+      bling: await blingState(env, nfe),   // off, not_configured (app variables missing), disconnected, connected, paused or unstable (the notes wait in the queue)
+      // Seconds since this server process started (a host that stops the app when idle shows it starting over) and the
+      // NF-e queue of this process: its timer on, and when its last round ended (BLING-RESILIENCIA.md).
+      uptime: Math.round(process.uptime()),
+      ...(nfe.mode !== 'off' ? {queue: queueHeartbeat()} : {})
     });
   };
 }

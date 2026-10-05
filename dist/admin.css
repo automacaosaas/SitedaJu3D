@@ -354,3 +354,21 @@ dialog.cash-dialog .admin-error{margin:0}
 .admin-fix summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
 .admin-fix[open] summary{margin-bottom:10px}
 @media(max-width:640px){.admin-tracking{grid-template-columns:1fr}.btn-ship{width:100%}}
+
+/* Bling sem parar a loja (BLING-RESILIENCIA.md): a note waiting in the queue is calm blue, never an error; the notice at
+   the top of Pedidos says how the integration is; the Bling card lists the last problems. */
+.admin-invoice.is-queued{background:var(--b-bg);color:var(--b-fg)}
+.admin-integration{margin:0 0 18px;padding:14px 16px;border-radius:14px;border:1px solid transparent;font-size:14px;line-height:1.55}
+.admin-integration a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.admin-integration.is-warn{background:var(--y-bg);border-color:#efd98a;color:#5c4200}
+.admin-integration.is-error{background:var(--r-bg);border-color:#f0c4cf;color:var(--r-fg)}
+.admin-integration.is-info{background:var(--b-bg);border-color:#c6dbf2;color:var(--b-fg)}
+.admin-bling-log{margin-top:6px;font-size:13px}
+.admin-bling-log summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
+.admin-bling-log ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.admin-bling-log li{line-height:1.5;padding-left:10px;border-left:3px solid var(--line)}
+.admin-bling-log li.is-falha,.admin-bling-log li.is-limite,.admin-bling-log li.is-disjuntor,.admin-bling-log li.is-incerta,.admin-bling-log li.is-conexao{border-left-color:var(--y-solid)}
+.admin-bling-log li.is-recuperado,.admin-bling-log li.is-achada{border-left-color:var(--g-solid)}
+.admin-bling-log time{color:var(--muted);font-variant-numeric:tabular-nums}
+/* The tracking code waits for the note: the piece never leaves without it. */
+.admin-ship-locked{margin:0;font-size:13.5px;color:#5c4200;background:var(--y-bg);border:1px solid #efd98a;border-radius:12px;padding:10px 12px;line-height:1.5}

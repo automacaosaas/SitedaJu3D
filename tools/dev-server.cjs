@@ -128,6 +128,7 @@ async function main() {
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
     '/api/contact/send': require('../api/contact/send').create({env, outbox, fetchImpl: loggedFetch}),
+    '/api/fila/rodar': require('../api/fila/rodar').create({env, outbox, fetchImpl: routed}),
     '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
@@ -135,6 +136,8 @@ async function main() {
   for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling', 'cash']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
+  // The NF-e queue, as on the Node server, on the same in-memory store; a round every 15 seconds to see it move.
+  require('../api/_lib/invoice-queue').startWorker({env, outbox, fetchImpl: routed, intervalMs: 15000});
 
   // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
   // Cache-Control is left out on purpose: local files stay `no-store` while editing.
@@ -165,6 +168,15 @@ async function main() {
       }
       // "Fixes" a rejected note in the simulated Bling, as the person would on Bling's screen, to try the panel's retry.
       if (fakeBling && url.pathname === '/__fake-bling/corrigir') { const ok = fakeBling.correct(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({corrigida: ok})); }
+      // Puts the simulated Bling down (or back): ?modo=rede|lento|erro|limite|queda|gateway|corpo, or nothing for normal;
+      // &vezes=N for the next N calls only; &so=POST%20/nfe for those calls only. Shows the queue and the panel's notice.
+      if (fakeBling && url.pathname === '/__fake-bling/falha') {
+        const mode = url.searchParams.get('modo') || null, times = Number(url.searchParams.get('vezes')) || null;
+        if (mode && !['rede', 'lento', 'erro', 'limite', 'queda', 'gateway', 'corpo'].includes(mode)) { res.statusCode = 400; return res.end('modo: rede, lento, erro, limite, queda, gateway ou corpo'); }
+        fakeBling.fail(mode, {count: times, match: url.searchParams.get('so') || null});
+        console.log(`[bling] simulado: ${mode ? `falha "${mode}"${times ? ` nas próximas ${times} chamadas` : ''}` : 'normal'}`);
+        res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({modo: mode || 'normal', vezes: times}));
+      }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
