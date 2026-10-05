@@ -179,8 +179,9 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
 
   // ── Banner limpo: preço, ação principal "Personalizar o meu" e, com demonstração, "Ver encaixado" ──────
   assert.ok(js.includes('href="#produto/${key}/personalizar" data-role="palette"'), 'a ação principal abre o configurador do produto ativo');
-  assert.ok(js.includes("${icon('draw')}<span>Personalizar o meu</span>"), 'ícone de lápis (pronto para desenhar) à esquerda, verbo claro');
-  assert.ok(/\.palette-button:hover \.draw-pencil \{ animation: draw-scribble \.6s/.test(css) && /\.palette-button:hover \{ transform: scale\(1\.03\);/.test(css), 'no hover o botão sobe 3% e o lápis rabisca');
+  assert.ok(js.includes("${icon('palette')}<span>Personalizar o meu</span>"), 'ícone de paleta de cores à esquerda, verbo claro');
+  assert.ok(/\.palette-button:hover svg \{ animation: palette-tilt \.6s/.test(css) && /\.palette-button:hover \{ transform: scale\(1\.03\);/.test(css), 'no hover o botão sobe 3% e a paleta balança');
+  assert.ok(/\.home \.product-rail-card\[style\*="--rail-own-1"\] \.product-rail-art img \{ transform: translateY\(-17%\) scale\(1\.15\);/.test(css), 'em "Nossa coleção" a peça sai por cima do card');
   assert.ok(/\.palette-button:active \{ transform: scale\(\.98\);/.test(css), 'no clique o botão afunda');
   assert.ok(/\.palette-button \{[^}]*box-shadow: [^;]*0 10px 25px var\(--glow\)/.test(css), 'sombra viva no tom do botão');
   assert.ok(js.includes("data-demo-open>${icon('eye')}<span>Ver encaixado</span>"), '"Ver encaixado" com o olho (ver a peça montada)');

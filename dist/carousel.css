@@ -99,14 +99,14 @@
 .copy[inert], .palette[inert] { pointer-events: none; }
 /* Ação principal, o elemento mais chamativo da vitrine: a cor da peça com um degradê vertical quase imperceptível (mais
    clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), cantos de 18 px, letra bem espaçada e
-   o lápis. No hover sobe em direção a quem olha (3% maior, sombra mais espalhada) e o lápis rabisca; no clique, afunda. */
+   a paleta de cores. No hover sobe em direção a quem olha (3% maior, sombra mais espalhada) e a paleta balança de leve;
+   no clique, afunda. */
 .palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.75em 0 1.45em; border: 0; border-radius: 18px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
   box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: all .3s cubic-bezier(.25, .8, .25, 1); }
-.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; overflow: visible; }
-.palette-button .draw-pencil { transform-box: fill-box; transform-origin: 0% 100%; }
+.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
 .palette-button, .hero-demo-button { white-space: nowrap; }
 .palette-button:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
-@keyframes draw-scribble { 0% { transform: rotate(0); } 25% { transform: rotate(-10deg); } 50% { transform: rotate(7deg); } 72% { transform: rotate(-4deg); } 100% { transform: rotate(0); } }
+@keyframes palette-tilt { 0% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 50% { transform: rotate(8deg); } 72% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 /* Secundária, só nas peças com demonstração: um link discreto com o olho (ver a peça montada), centralizado abaixo do botão. */
 .hero-demo-button { display: inline-flex; align-items: center; gap: .5em; min-height: 44px; padding: 0 .9em; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0102), 15px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer; transition: color .3s ease; }
@@ -158,8 +158,8 @@
   .hero-next:hover svg { translate: 3px 0; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
   .palette-button:hover { transform: scale(1.03); filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 18px 40px var(--glow), 0 6px 14px -6px rgba(20, 30, 40, .22); }
-  /* o lápis ganha vida: um rabisco rápido, girando pela ponta, com um quique no fim */
-  .palette-button:hover .draw-pencil { animation: draw-scribble .6s cubic-bezier(.34, 1.56, .64, 1); }
+  /* a paleta ganha vida: um balanço rápido, com um quique no fim */
+  .palette-button:hover svg { animation: palette-tilt .6s cubic-bezier(.34, 1.56, .64, 1); }
   .palette-button:hover:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
   .hero-demo-button:hover { color: var(--strong); }
   .hero-demo-button:hover > span:first-of-type { background-size: 100% 1px; }
@@ -204,7 +204,7 @@
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
   .piece img, .piece-shadow, .hero-arrow, .hero-arrow svg, .palette-button, .hero-demo-button, .hero-demo-button svg { transition: none; }
-  .palette-button:hover .draw-pencil { animation: none; }
+  .palette-button:hover svg { animation: none; }
   .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
@@ -247,3 +247,10 @@
 @media (prefers-reduced-motion: reduce) {
   .home .product-rail-card[style*="--rail-own-1"] { transition: none; }
 }
+/* A peça sai do card: a foto (fundo transparente) sobe por cima da borda de cima, maior; embaixo, a descrição como está. */
+.home .product-rail-card[style*="--rail-own-1"] { overflow: visible; }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art { position: relative; z-index: 2; overflow: visible; }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: translateY(-17%) scale(1.15); transform-origin: 50% 100%; }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(calc(-17% - 5px)) scale(1.17); }
+/* espaço acima dos cards para a peça que sai por cima deles não encostar no texto da coleção */
+.home .product-carousel-stage { margin-top: clamp(52px, 15vw, 64px); }

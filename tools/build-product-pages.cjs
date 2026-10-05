@@ -4,8 +4,8 @@
 // colors, production time, delivery and returns, and two actions, "Personalizar o meu" (the configurator in the product
 // window of the showcase) and "Adicionar nas cores originais" (straight to the mini-cart). Also writes sitemap.xml and
 // robots.txt. Built from the shop's own data (products.js, commerce-config.js), from produtos.html (head, header and
-// footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the home section
-// "O 3D nas suas consultas" into index.html and the page Escolha o seu (escolha.html), both from dist/fit-tour.js.
+// footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the page
+// Escolha o seu (escolha.html) from dist/escolha.js.
 // Run: node tools/build-product-pages.cjs   (or --check to only report; tests/product-landing.mjs fails when stale)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -22,8 +22,8 @@ const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html'
 
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
-  const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('fit-tour.js')]);
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, fitTour: tour.fitTour, chooseBanners: tour.chooseBanners};
+  const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js')]);
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners};
 }
 
 function page(id, data, base) {
@@ -81,7 +81,7 @@ function choosePage(data, base) {
   const head = base.slice(base.indexOf('<head>\n') + 7, base.indexOf('  <!-- og -->'))
     .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(description)}">`)
     .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(title)}</title>\n  <link rel="canonical" href="${esc(url)}">`)
-    .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="fit-tour.css">');
+    .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="escolha.css">');
   const preview = tags({url, title, description}).map(line => '  ' + line).join('\n') + '\n';
   const header = /<header class="header">[^]*?<\/header>/.exec(base)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(base)[0];
@@ -102,10 +102,7 @@ async function build() {
   // produtos.html: the grid of products (audit B2), the same markup product-grid.js draws in the browser.
   const base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n')
     .replace(/(<div class="product-grid" data-product-grid data-category="([a-z]+)"[^>]*><!-- grid -->)[^]*?(<!-- \/grid -->)/, (all, open, key, close) => open + data.productGrid(key) + close);
-  // index.html: the section "O 3D nas suas consultas" between its markers (fit-tour-motion.js only adds the motion).
-  const home = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8').replace(/\r\n/g, '\n')
-    .replace(/(<!-- fit-tour -->)[^]*?(<!-- \/fit-tour -->)/, (all, open, close) => open + data.fitTour() + close);
-  return [{name: 'index.html', text: home}, {name: 'produtos.html', text: base}, {name: 'escolha.html', text: choosePage(data, base)}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
+  return [{name: 'produtos.html', text: base}, {name: 'escolha.html', text: choosePage(data, base)}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
 }
 
 if (require.main === module) {
