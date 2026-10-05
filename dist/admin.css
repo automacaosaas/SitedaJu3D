@@ -115,9 +115,9 @@ dialog.admin-confirm .admin-field{text-align:left;margin:4px 0 0}
 dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;resize:vertical}
 .admin-confirm-actions{display:flex;gap:10px;margin-top:6px}
 .admin-confirm-actions button{flex:1;border-radius:999px;padding:12px 16px;font-size:14px;font-weight:700}
-.admin-confirm-actions [data-action=cancel-decline]{border:1px solid var(--line);background:#fff;color:var(--ink)}
-.admin-confirm-actions [data-action=cancel-decline]:hover{background:#f6efef}
-.admin-confirm-actions .btn-decline{border:0}
+.admin-confirm-actions [data-action^=cancel-]{border:1px solid var(--line);background:#fff;color:var(--ink)}
+.admin-confirm-actions [data-action^=cancel-]:hover{background:#f6efef}
+.admin-confirm-actions .btn-decline,.admin-confirm-actions .btn-complete{border:0;color:#fff}
 
 /* chart + calendar */
 .admin-panels{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:34px;align-items:start}
@@ -128,11 +128,11 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .chart-grid{position:absolute;inset:0;pointer-events:none}
 .chart-grid span{position:absolute;left:-44px;right:0;font-size:10.5px;color:var(--muted);transform:translateY(-50%)}
 .chart-grid span::after{content:'';position:absolute;left:44px;right:0;top:50%;height:1px;background:var(--line)}
-.chart-bars{position:relative;display:flex;align-items:flex-end;gap:3px;height:100%}
+.chart-bars{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:3px;height:100%}
 .chart-bar{flex:1 1 0;min-width:3px;max-width:24px;height:calc(var(--v,0) * 100%);background:var(--rose);border-radius:4px 4px 0 0;border:0;padding:0;cursor:pointer;transition:background .15s}
 .chart-bar:hover,.chart-bar:focus-visible{background:#8e3549}
 .chart-bar.is-today{box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 3px var(--rose)}
-.chart-axis{display:flex;justify-content:space-between;margin:6px 44px 0 44px;font-size:10.5px;color:var(--muted)}
+.chart-axis{display:flex;justify-content:space-between;margin:6px 24px 0 44px;font-size:10.5px;color:var(--muted)}
 .chart-tip{position:fixed;z-index:50;transform:translate(-50%,-100%);margin-top:-10px;background:var(--ink);color:#fff;font-size:12px;line-height:1.4;padding:7px 10px;border-radius:8px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap}
 .chart-tip.is-visible{opacity:1}
 .chart-tip strong{display:block;font-size:13px}

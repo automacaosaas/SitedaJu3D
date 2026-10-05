@@ -44,6 +44,38 @@ declineDialog.addEventListener('click', event => {
   }
 });
 
+// The same step before concluir: confirming e-mails the buyer and issues the NF-e, which "Reabrir" does not cancel.
+const completeDialog = document.createElement('dialog');
+completeDialog.className = 'admin-confirm';
+completeDialog.setAttribute('aria-labelledby', 'complete-title');
+completeDialog.innerHTML = `<form method="dialog">
+  <p class="admin-confirm-icon" aria-hidden="true">📦</p>
+  <h2 id="complete-title">Concluir este pedido?</h2>
+  <p class="admin-confirm-ref"></p>
+  <p class="admin-confirm-warn" data-invoice-warn hidden></p>
+  <p class="admin-confirm-warn">O pedido vai para a aba Concluídos e o cliente recebe um e-mail avisando que o pedido foi confirmado.</p>
+  <div class="admin-confirm-actions"><button type="button" data-action="cancel-complete">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-complete">Sim, concluir</button></div>
+</form>`;
+document.body.append(completeDialog);
+function openCompleteDialog(order) {
+  const issues = invoicingMode !== 'off' && !order.invoice, where = invoicingProvider === 'bling' ? 'no Bling' : 'no emissor';
+  completeDialog.dataset.orderId = order.id;
+  completeDialog.querySelector('.admin-confirm-ref').textContent = `${order.reference} · ${money(order.totalCents)}`;
+  const warn = completeDialog.querySelector('[data-invoice-warn]');
+  warn.hidden = !issues;
+  warn.innerHTML = issues ? `<strong>A nota fiscal é emitida na hora.</strong> "Reabrir" volta o pedido para Pendentes, mas não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '';
+  completeDialog.querySelector('[data-action="confirm-complete"]').textContent = issues ? 'Sim, concluir e emitir a nota' : 'Sim, concluir';
+  completeDialog.showModal();
+  completeDialog.querySelector('[data-action="cancel-complete"]').focus();
+}
+completeDialog.addEventListener('click', event => {
+  if (event.target.closest('[data-action="cancel-complete"]')) completeDialog.close();
+  if (event.target.closest('[data-action="confirm-complete"]')) {
+    completeDialog.close();
+    move(completeDialog.dataset.orderId, 'concluido', '', 'Pedido marcado como concluído.');
+  }
+});
+
 // screen: loading | login | code | dashboard | offline
 let screen = 'loading', session = null, busy = false, feedback = '', setup = null, orders = [];
 let tab = 'pendente';
@@ -366,7 +398,7 @@ content.addEventListener('click', event => {
   const action = event.target.closest('[data-action]');
   if (!action) return;
   const id = action.dataset.id;
-  if (action.dataset.action === 'complete') move(id, 'concluido', '', 'Pedido marcado como concluído.');
+  if (action.dataset.action === 'complete') { const order = orders.find(o => o.id === id); if (order) openCompleteDialog(order); }
   if (action.dataset.action === 'reopen') move(id, 'pendente', '', 'Pedido reaberto como pendente.');
   if (action.dataset.action === 'refund-retry') run('Conferindo o estorno…', async () => {
     try { const result = await retryRefund(id); orders = replaceOrder(orders, result.order); announce(result.refund === 'refunded' ? 'Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? 'O estorno ainda está em andamento no Mercado Pago.' : 'O estorno ainda não deu certo. Estorne pelo painel do Mercado Pago.'); }
