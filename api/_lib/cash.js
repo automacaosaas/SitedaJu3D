@@ -16,6 +16,14 @@ const MONEY_BACK = ['refunded', 'requested'];
 const MAX_CENTS = 1000000000;   // R$ 10 milhões: far above any real entry, so a typo with extra zeros is refused
 const SP_DAY = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'});
 const spDay = value => SP_DAY.format(new Date(value));
+const SP_OFFSET = new Intl.DateTimeFormat('en-US', {timeZone: 'America/Sao_Paulo', timeZoneName: 'longOffset'});
+// The instant a Brasília day ends (the next one starts): what was paid before it counts in the balance of that day.
+function dayEnd(date) {
+  const next = new Date(`${date}T00:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
+  const offset = SP_OFFSET.formatToParts(next).find(p => p.type === 'timeZoneName').value;   // "GMT-03:00"
+  const [, sign, hours, minutes] = /([+-])(\d{2}):(\d{2})/.exec(offset) || [null, '+', '00', '00'];
+  return new Date(next.getTime() - (sign === '-' ? -1 : 1) * (hours * 3600000 + minutes * 60000));
+}
 const iso = value => value ? new Date(value).toISOString() : null;
 const fail = (code, field) => Object.assign(new Error(code), {code, ...(field ? {field} : {})});
 // The bill, unlocked; 404 when it does not exist, 409 locked while the padlock is closed.
@@ -72,7 +80,7 @@ function createCash({store, now = () => Date.now()}) {
   const today = () => spDay(now());
 
   async function load() {
-    const [orders, entries, bills] = await Promise.all([store.orders.list({statuses: PAID, limit: 5000}), store.cashEntries.list(), store.bills.list()]);
+    const [orders, entries, bills] = await Promise.all([store.orders.listForCash({statuses: PAID}), store.cashEntries.list(), store.bills.list()]);
     return {list: movements({orders, entries, bills}), bills};
   }
   async function view() {
@@ -119,7 +127,8 @@ function createCash({store, now = () => Date.now()}) {
       case 'adjust-balance': {
         // Ju says how much the shop has today; the difference becomes one "Ajuste de saldo" dated today.
         const target = cents(body.balanceCents, 'balanceCents', {negative: true});
-        const difference = target - balance((await load()).list, on);
+        // Summed by the database: nothing is loaded here, the view that follows loads the movements once.
+        const difference = target - await store.cashBalance({statuses: PAID, refundStates: MONEY_BACK, before: dayEnd(on), until: on});
         if (!difference) return null;
         await store.cashEntries.create({id: crypto.randomUUID(), kind: difference > 0 ? 'entrada' : 'saida', category: 'ajuste', description: 'Ajuste de saldo', amountCents: Math.abs(difference), occurredOn: on, createdBy: actor});
         return {action: 'cash_adjust', detail: `saldo informado R$ ${reais(target)} (diferença R$ ${reais(difference)})`};
@@ -131,4 +140,4 @@ function createCash({store, now = () => Date.now()}) {
   return {view, apply, today};
 }
 
-module.exports = {createCash, movements, balance, CATEGORIES, spDay};
+module.exports = {createCash, movements, balance, dayEnd, CATEGORIES, MONEY_BACK, spDay};

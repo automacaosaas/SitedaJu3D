@@ -89,6 +89,14 @@ async function contract(store, label) {
   assert.deepEqual((await store.orders.listByCustomer(id)).map(o => o.id), [orderId]);
   assert((await store.orders.list({statuses: ['pendente']})).some(o => o.id === orderId));
   assert(!(await store.orders.list({statuses: ['concluido']})).some(o => o.id === orderId));
+  // Fluxo de caixa: the paid order with only what the cash flow shows, the pieces in their order.
+  const forCash = (await store.orders.listForCash({statuses: ['pendente']})).find(o => o.id === orderId);
+  assert.deepEqual(forCash, {id: orderId, reference, source: 'test', totalCents: 14700, paidAt: forCash.paidAt, refundState: null, refundedAt: null, decidedAt: null, items: [{title: 'Borboletoscópio', quantity: 1}, {title: 'Aviãoscopia', quantity: 2}]}, `${label}: a paid order for the cash flow`);
+  assert.equal(new Date(forCash.paidAt).getTime(), paidAt.getTime());
+  assert(!(await store.orders.listForCash({statuses: ['concluido']})).some(o => o.id === orderId));
+  // The balance summed by the store (other rows may exist: only the difference this order makes is checked).
+  const cashBalance = before => store.cashBalance({statuses: ['pendente'], refundStates: ['refunded'], before, until: '2000-01-01'});
+  assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 14700, `${label}: a paid order counts from the instant it was paid`);
 
   // Deleting the account keeps the order (fiscal record) and drops the link, the sessions and the codes.
   const sessionHash = crypto.randomBytes(32);

@@ -55,6 +55,11 @@ function createMemoryStore() {
       async transition(id, from, patch) { const row = orders.get(id); if (!row || !from.includes(row.status)) return false; Object.assign(row, patch); return true; },
       async listByCustomer(customerId, limit = 50) { return copy([...orders.values()].filter(o => o.customerId === customerId).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
       async list({statuses = null, limit = 500} = {}) { return copy([...orders.values()].filter(o => !statuses || statuses.includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      // Fluxo de caixa: every paid order, with only what the cash flow shows.
+      async listForCash({statuses}) {
+        return copy([...orders.values()].filter(o => statuses.includes(o.status) && o.paidAt).sort((a, b) => b.paidAt - a.paidAt)
+          .map(o => ({id: o.id, reference: o.reference, source: o.source, totalCents: o.totalCents, paidAt: o.paidAt, refundState: o.refundState ?? null, refundedAt: o.refundedAt ?? null, decidedAt: o.decidedAt ?? null, items: (o.items || []).map(i => ({title: i.title, quantity: i.quantity}))})));
+      },
       async addEvent(orderId, kind, detail = null, actor = null) { events.push({id: ++eventSerial, orderId, kind, detail, actor, createdAt: new Date()}); },
       async events(orderId) { return copy(events.filter(e => e.orderId === orderId)); }
     },
@@ -99,6 +104,19 @@ function createMemoryStore() {
       async remove(name) { integrations.delete(name); }
     },
     // Fluxo de caixa (db/migrations/009_caixa.sql): entries Ju adds by hand and the bills to pay. Days are "YYYY-MM-DD".
+    // Same sums as the MySQL store: orders and refunds before an instant, entries and paid bills up to a day.
+    async cashBalance({statuses, refundStates, before, until}) {
+      const at = value => new Date(value).getTime(), limit = at(before);
+      let cents = 0;
+      for (const o of orders.values()) {
+        if (!statuses.includes(o.status) || !o.paidAt) continue;
+        if (at(o.paidAt) < limit) cents += o.totalCents;
+        if (refundStates.includes(o.refundState) && at(o.refundedAt || o.decidedAt || o.paidAt) < limit) cents -= o.totalCents;
+      }
+      for (const e of cashEntries.values()) if (e.occurredOn <= until) cents += e.kind === 'entrada' ? e.amountCents : -e.amountCents;
+      for (const b of bills.values()) if (b.paidOn && b.paidOn <= until) cents -= b.amountCents;
+      return cents;
+    },
     cashEntries: {
       async create(data) { const row = {createdBy: null, createdAt: new Date(), ...data}; cashEntries.set(row.id, row); return copy(row); },
       async list(limit = 5000) { return copy([...cashEntries.values()].sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt - a.createdAt).slice(0, limit)); },
