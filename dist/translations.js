@@ -786,4 +786,16 @@ Você pode desistir da compra em até 7 dias depois de receber a peça.|You can 
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+Vistas da peça|Views of the piece|Vistas de la pieza
+Escolher a vista|Choose a view|Elegir la vista
+Vista anterior|Previous view|Vista anterior
+Próxima vista|Next view|Vista siguiente
+galeria|gallery|galería
+vista|view|vista
+Frente|Front|Frente
+Três quartos|Three-quarter|Tres cuartos
+Costas|Back|Parte trasera
+Rostinho de perto|Face up close|Carita de cerca
+Rosto de perto|Face up close|Cara de cerca
+Cabine de perto|Cockpit up close|Cabina de cerca
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

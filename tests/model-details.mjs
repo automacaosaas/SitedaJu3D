@@ -78,9 +78,14 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   }
   assert.equal(materialAt(0,.338),'body','Even gap between the two front teeth');
   assert.equal(materialAt(0,.738),'body','No crest color rectangle on the forehead');
-  // Complete crest in profile: every spike is painted from its root (top spike, back wedge, lower spike).
+  // Complete crest in profile: every spike is painted from its root (top spike, back wedge).
+  // Two spikes since 04/10/2026, like the new piece: the lower one, at the nape, touched the user's nose and was lowered into the
+  // crest strip that closes the back of the head (tools/modelo-dino/crista.cjs).
   for(const fromLeft of [false,true]){
-   for(const [h,d] of [[.83,-.08],[.68,-.23],[.60,-.30],[.45,-.36]])assert.equal(side(h,d,fromLeft).name,'details','Crest painted along the top and back of the head');
+   for(const [h,d] of [[.83,-.08],[.68,-.23],[.60,-.30]])assert.equal(side(h,d,fromLeft).name,'details','Crest painted along the top and back of the head');
+   ray.set(new T.Vector3(fromLeft?-2:2,.45,-.36),new T.Vector3(fromLeft?1:-1,0,0));
+   assert.equal(ray.intersectObject(scene,true).length,0,'No lower spike at the nape any more');
+   assert.equal(side(.45,-.28,fromLeft).name,'details','The crest strip still runs down the nape');
    assert.equal(side(.55,-.10,fromLeft).name,'body','The head itself keeps the body color');
   }
   let teeth=0;scene.traverse(o=>{if(o.material?.name==='teeth'){teeth++;assert.equal(o.material.color.getHexString(),'ffffff','Teeth stay white');}});
@@ -113,16 +118,58 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   assert.ok(nearest>.31,`The turbines sit outside the fuselage (closest |x| ${nearest.toFixed(4)})`);
  }
  if(key==='macacoscopio'){
-  // The Rodin model with the texture's colours as five fixed materials (no texture: the site's CSP blocks the blob: fetch of
-  // embedded images). Brown fur, beige face plate, belly and inner ears, black eyes, brows, nose and mouth, a white shine on each eye.
-  for(const [x,y] of [[-.137,.56],[.118,.56]])assert.equal(materialAt(x,y),'features','Black eyes');
-  for(const [x,y] of [[-.132,.621],[.111,.617]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
-  for(const [x,y] of [[-.15,.72],[.13,.72]])assert.equal(materialAt(x,y),'features','Black brows');
-  assert.equal(materialAt(0,.50),'features','Black nose');
-  for(const [x,y] of [[-.17,.47],[.15,.47],[0,.64],[-.15,.78]])assert.equal(materialAt(x,y),'face','Beige face plate, the shaded cheek included');
-  for(const [x,y] of [[0,.05],[0,-.12],[-.4,.7],[.4,.7]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
-  assert.equal(materialAt(0,-.4),'banana','Yellow banana');
-  for(const [x,y] of [[-.3,.1],[.3,.1],[0,.28],[0,.8]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
-  for(const [x,y] of [[0,0],[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown, without painted light spots');
+  // The Meshy model (03/10/2026) with the monkey's fixed colours as five materials (no texture: the site's CSP blocks the blob: fetch of
+  // embedded images). Brown fur and feet (the paw prints are relief); beige face plate, belly and inner ears; black eyes, brows, nose
+  // and mouth; a white shine on each eye; banana.
+  for(const [x,y] of [[-.147,.563],[.142,.563]])assert.equal(materialAt(x,y),'features','Black eyes');
+  for(const [x,y] of [[-.128,.63],[.131,.641]])assert.equal(materialAt(x,y),'highlight','Each eye keeps its white shine');
+  // The shine is a whole oval, the same on both eyes (it came out as a crescent on one of them): white 2 cm above and below its centre.
+  for(const [x,y] of [[-.1285,.644],[.1292,.643]])for(const dy of [-.02,.02])assert.equal(materialAt(x,y+dy),'highlight',`Whole oval shine (${x}, ${dy})`);
+  // Seen from above, the top of the nose is black too (faces hidden from the front view were left brown).
+  for(const x of [-.02,0,.02])assert.equal(hitFrom([x,1.5,.405],[0,-1,0]).name,'features',`Top of the nose, from above (${x})`);
+  // No brown spikes on the belly plate beside the fists, and its bottom edge is a smooth curve (Meshy's had a notch near the middle).
+  for(const [x,y] of [[-.165,-.1],[.165,-.1],[-.165,-.15],[.165,-.15]])assert.equal(materialAt(x,y),'face','Plain beige plate beside the fists');
+  for(const x of [-.03,.03]){
+   assert.equal(materialAt(x,-.655),'face',`Bottom of the plate, no notch (${x})`);
+   assert.equal(materialAt(x,-.675),'fur',`Brown below the plate (${x})`);
+  }
+  for(const [x,y] of [[-.13,.753],[.129,.753]])assert.equal(materialAt(x,y),'features','Black brows');
+  assert.equal(materialAt(0,.513),'features','Black nose');
+  for(const [x,y] of [[-.19,.45],[.19,.45],[0,.74],[-.05,.66],[0,.42]])assert.equal(materialAt(x,y),'face','Beige face plate and muzzle');
+  for(const [x,y] of [[0,0],[0,-.6],[.15,-.4],[-.416,.647],[.414,.647]])assert.equal(materialAt(x,y),'face','Beige belly and inner ears');
+  for(const [x,y] of [[-.055,-.458],[0,-.43],[.1,-.33]])assert.equal(materialAt(x,y),'banana','Yellow banana');
+  for(const [x,y] of [[-.32,.1],[.32,.1],[0,.28],[0,.88],[-.3,-.5],[.3,-.5]])assert.equal(materialAt(x,y),'fur','Brown fur around the face and the belly');
+  for(const [x,y] of [[-.416,.83],[-.53,.65],[.414,.83],[.53,.65]])assert.equal(materialAt(x,y),'fur','The ear rim and its outside stay brown');
+  for(const [x,y] of [[.2,.4],[-.2,-.5]])assert.equal(materialAt(x,y,true),'fur','The back is plain brown');
+  for(const [x,y] of [[-.142,-.3],[0,-.1],[-.12,.57],[.12,.57]])assert.equal(hitFrom([x,y,0],[0,0,1]).name,'fur','The inside of the tube is brown, behind the eyes too');
+  // The paw prints, remade (Meshy's were lopsided): brown, raised the same on both feet.
+  for(const [x,y] of [[-.146,-.862],[.145,-.862],[-.12,-.79],[.12,-.79],[-.31,-.84],[0,-.84]])assert.equal(materialAt(x,y),'fur','Brown feet, pads, toes and around them');
+  const padL=relief(-.146,-.862,.07),padR=relief(.145,-.862,.07);
+  assert.ok(padL>.002&&padR>.002&&Math.abs(padL-padR)<.0005,`Both pads raised alike (${padL.toFixed(4)}, ${padR.toFixed(4)})`);
+  const axis=[-.0005,-.042];
+  // No pocket around the root of the arms (Meshy left one, ~2.5 cm deep, behind each shoulder): from outside, the first surface there is
+  // the brown outer shell.
+  for(const s of [-1,1])for(const y of [-.03,.03,.09])for(const a of [112,120,128]){
+   const t=a*Math.PI/180,d=new T.Vector3(s*Math.sin(t),0,Math.cos(t)),o=new T.Vector3(axis[0],y,axis[1]);
+   const hit=hitFrom(o.clone().addScaledVector(d,1.5).toArray(),d.clone().negate().toArray());
+   assert.equal(hit.name,'fur','Brown shell behind the shoulder');
+   assert.ok(Math.hypot(hit.point.x-axis[0],hit.point.z-axis[1])>.345,`No pocket behind the ${s<0?'left':'right'} shoulder (${a} deg, ${y})`);
+  }
+  // Smooth inside: no hollow behind the belly plate (it was ~5 cm deep); the bore only ripples a few millimetres.
+  let lo=Infinity,hi=0;
+  for(let y=-.6;y<=.2;y+=.02)for(let a=-40;a<=40;a+=5){
+   const t=a*Math.PI/180,p=hitFrom([axis[0],y,axis[1]],[Math.sin(t),0,Math.cos(t)]).point,r=Math.hypot(p.x-axis[0],p.z-axis[1]);lo=Math.min(lo,r);hi=Math.max(hi,r);
+  }
+  assert.ok(hi-lo<.012,`The inside of the belly is smooth (radius ${lo.toFixed(4)} to ${hi.toFixed(4)})`);
+  // Open at the top, like the printed piece (the lamp column passes through), and the opening is round: the narrowest ring of the
+  // lip, seen from its own centre, is a circle.
+  ray.set(new T.Vector3(axis[0],1.5,axis[1]),new T.Vector3(0,-1,0));assert.equal(ray.intersectObject(scene,true).length,0,'The head is open at the top');
+  const lip=[...Array(36).keys()].map(k=>hitFrom([axis[0],.915,axis[1]],[Math.sin(k*Math.PI/18),0,Math.cos(k*Math.PI/18)]).point);
+  // circle through the points by least squares (x²+z² = 2a·x + 2b·z + c): the centre of the opening, not of the tube
+  const M=[[0,0,0],[0,0,0],[0,0,0]],v=[0,0,0];
+  for(const p of lip){const row=[2*p.x,2*p.z,1],w=p.x*p.x+p.z*p.z;for(let i=0;i<3;i++){v[i]+=row[i]*w;for(let j=0;j<3;j++)M[i][j]+=row[i]*row[j];}}
+  const det=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  const col=k=>M.map((r,i)=>r.map((x,j)=>j===k?v[i]:x)),D=det(M),cx=det(col(0))/D,cz=det(col(1))/D,rs=lip.map(p=>Math.hypot(p.x-cx,p.z-cz));
+  assert.ok(Math.max(...rs)-Math.min(...rs)<.004,`The top opening is round (radius ${Math.min(...rs).toFixed(4)} to ${Math.max(...rs).toFixed(4)})`);
  } console.log(`PASS ${key}: targeted material boundaries, relief and fixed details`);
 }
