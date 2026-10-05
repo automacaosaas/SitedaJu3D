@@ -10,7 +10,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
-const {PRODUCTS, SOON, FAMILIES, showcase} = await site('products.js');
+const {PRODUCTS, SOON, FAMILIES, showcase, originalColors} = await site('products.js');
 const {COMMERCE, money} = await site('commerce-config.js');
 const {FIT, families, familyItems, tourItems, fitFigure, fitTour, chooseBanners} = await site('fit-tour.js');
 const {productGrid} = await site('product-grid.js');
@@ -59,22 +59,28 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
     const overview = (FIT[key]?.overview || product.description).replace(/[.?()]/g, '\\$&');
     assert.match(step, new RegExp(`<p class="fit-overview fit-reveal" data-text="${overview}">${overview}</p>`), 'a visão geral é o texto da loja (data-text: a fonte para dividir em palavras no idioma escolhido)');
     assert.match(step, new RegExp(`<h3 class="fit-reveal" id="fit-name-${key}"><span class="fit-name" translate="no">${product.title}</span>`), 'o nome fica separado para subir letra a letra');
-    assert.match(step, /<p class="fit-label fit-reveal">FICHA TÉCNICA<\/p><dl class="fit-specs">/);
-    assert.match(step, new RegExp(`<dt>Encaixe</dt><dd><span>${FAMILIES[family].tool}</span></dd>`));
+    // ficha enxuta: sem tabela; as cores em esferas sem texto; encaixe, cores e produção nos pontos sobre a peça
+    assert.doesNotMatch(step, /fit-specs|fit-label|FICHA TÉCNICA|Disponibilidade|Feito em/, 'sem a tabela da ficha técnica');
+    const colors = product.soon ? product.colors : originalColors(key);
+    assert.match(step, new RegExp(`<p class="fit-colors fit-reveal"><span class="sr-only">${product.soon ? 'Cores fixas' : 'Cores originais'}</span>${colors.map(c => `<i style="--swatch:${c.hex}" role="img" aria-label="${c.name}" title="${c.name}"></i>`).join('')}</p>`), 'as cores da peça em esferas');
+    const art = /<div class="fit-step-art">([^]*?)<\/div><div class="fit-step-copy">/.exec(step)?.[1] || '';
+    const spots = [...art.matchAll(/<button type="button" class="fit-spot" style="--x:([\d.]+);--y:([\d.]+)" data-side="(left|right)" aria-expanded="false"><i class="fit-spot-dot" aria-hidden="true"><\/i><span class="fit-tip">([^<]+)<\/span><\/button>/g)].map(m => m[4]);
+    assert.equal(spots[0], FAMILIES[family].label, 'o primeiro ponto mostra onde a peça encaixa');
     if (product.soon) {
-      assert.match(step, /<dt>Cores fixas<\/dt><dd><span class="fit-swatches" aria-hidden="true">(<i style="--swatch:#[0-9a-f]{6}"><\/i>){3}<\/span><span>Marrom<\/span><span>Bege<\/span><span>Amarelo<\/span><\/dd>/);
-      assert.match(step, /<dt>Disponibilidade<\/dt><dd><span>Em breve<\/span><\/dd>/);
+      assert.deepEqual(spots, [FAMILIES[family].label, 'Impresso em 3D'], 'o macaco: encaixe no topo e impressão 3D na base');
+      assert.doesNotMatch(art, /universal/i, 'sem prometer compatibilidade que ainda não foi definida');
       assert.match(step, new RegExp(`<a class="fit-cta" href="#produto/${key}/3d">`), 'a novidade abre a prévia em 3D');
       assert.match(step, /<span class="fit-soon">Em breve<\/span>/);
     } else {
-      assert.match(step, new RegExp(`<dt>Cores à sua escolha</dt><dd>${product.parts.map(p => `<span>${p.name}</span>`).join('')}</dd>`), 'as partes que a pessoa colore');
-      assert.match(step, new RegExp(`<dt>Produção</dt><dd><span>${COMMERCE.productionLabel}</span></dd>`), 'o prazo vem da loja');
-      assert.match(step, new RegExp(`<a class="fit-cta" href="#produto/${key}/personalizar"><svg[^>]*><path d="M12 3\\.6C9\\.3 7`), 'com o ícone de gota, como o botão do banner');
+      assert.deepEqual(spots, [FAMILIES[family].label, 'Cores à sua escolha', `Produção em ${COMMERCE.productionLabel}`], 'encaixe, cores e o prazo da loja');
+      assert.match(step, new RegExp(`<a class="fit-cta" href="#produto/${key}/personalizar"><svg[^>]*><g class="draw-pencil">`), 'com o lápis, como o botão do banner');
     }
     assert.doesNotMatch(step, /fit-link|Ver encaixado/, 'a peça já aparece encaixada ao lado: a ficha termina só com a ação principal');
-    assert.equal((step.match(/class="[^"]*fit-reveal/g) || []).length, 9, 'família, nome, visão geral, rótulo, quatro linhas da ficha e ações aparecem com a rolagem');
+    assert.equal((step.match(/class="[^"]*fit-reveal/g) || []).length, 5, 'família, nome, visão geral, cores e ação aparecem com a rolagem');
   });
-  const stage = /<div class="fit-stage" aria-hidden="true">[^]*?<\/div><\/div><\/div><nav/.exec(html)?.[0] || '';
+  const stage = /<div class="fit-stage">[^]*?<\/div><\/div><\/div><nav/.exec(html)?.[0] || '';
+  assert.equal((stage.match(/class="fit-spot"/g) || []).length, items.reduce((n, {key}) => n + FIT[key].spots.length, 0), 'os pontos também sobre a peça fixa do desktop');
+  assert.doesNotMatch(stage.slice(0, 40), /aria-hidden/, 'a peça fixa não fica escondida de leitores de tela: os pontos são botões');
   assert.deepEqual([...stage.matchAll(/<div class="fit-slide" data-item="([a-z]+)" data-pos="([a-z]+)" style="--fit-accent:/g)].map(m => `${m[1]}:${m[2]}`), items.map(({key}, i) => `${key}:${i ? 'after' : 'active'}`), 'sem script, a primeira peça aparece');
   assert.deepEqual([...html.matchAll(/<a href="#consultas-([a-z]+)" aria-label="([^"]+)"/g)].map(m => m[1]), items.map(i => i.key), 'um ponto por peça');
   const backdrop = /<div class="fit-backdrop" aria-hidden="true">([^]*?)<\/div>/.exec(html)?.[1] || '';
@@ -164,7 +170,7 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /track\.addEventListener\('click', swallow, \{capture: true, once: true\}\)/);
   assert.match(motion, /event\.key !== 'ArrowLeft' && event\.key !== 'ArrowRight'/);
   // movimento reduzido
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  :is\(\.fit-float, \.fit-ground, \.fit-reveal, \.fit-carousel, \.fit-step-art, \.fit-card\) \{ animation: none !important; \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  :is\(\.fit-float, \.fit-ground, \.fit-reveal, \.fit-carousel, \.fit-step-art, \.fit-card, \.fit-spot-dot::after, \.draw-pencil\) \{ animation: none !important; \}/);
   assert.match(motion, /const behavior = calm \? 'auto' : 'smooth';/);
   assert.match(css, /\.fit-tour\[data-motion\] :is\(\.fit-figure:not\(\.is-near\), \.fit-slide:not\(\[data-pos="active"\]\) \.fit-figure\) :is\(\.fit-float, \.fit-ground\) \{ animation-play-state: paused; \}/, 'flutua só a peça ativa, perto da tela');
 }
@@ -191,7 +197,9 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /const tl = gsap\.timeline\(\{defaults: \{ease: 'power3\.out'\}\}\);/);
   assert.match(motion, /\.fromTo\(part\.title\.chars, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.8, stagger: \.03\}, \.06\)/, 'letras: opacidade 0 → 1, y 30 → 0, intervalo 0,03 s');
   assert.match(motion, /\.fromTo\(part\.words\(\)\.words, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.65, stagger: \{amount: \.35\}\}, \.18\)/, 'palavras em sequência, sem passar de ~1,2 s');
-  assert.match(motion, /\.fromTo\(part\.specs, \{autoAlpha: 0, y: 30\}, \{autoAlpha: 1, y: 0, duration: \.55, stagger: \.03\}, \.38\)/, 'ficha técnica em cascata');
+  assert.match(motion, /\.fromTo\(part\.colors, \{autoAlpha: 0, y: 14, scale: \.6\}, \{autoAlpha: 1, y: 0, scale: 1, duration: \.5, stagger: \.05, ease: 'back\.out\(2\)'\}, \.4\)/, 'as esferas de cor em cascata');
+  assert.match(motion, /if \(!calm\) popSpots\(tl, stageSpots\[index\], at \+ \.85\);/, 'os pontos sobre a peça aparecem depois da ficha');
+  assert.match(motion, /document\.addEventListener\('keydown', event => \{ if \(event\.key === 'Escape'\) close\(\); \}\);/, 'Esc fecha o cartãozinho do ponto');
   // desktop: tela fixa, uma ficha por vez; a atual sai inteira antes de a próxima entrar
   assert.match(css, /\.fit-tour\.is-pinned \.fit-pin \{ position: sticky; top: 0;/);
   assert.match(css, /\.fit-tour\.is-pinned \.fit-story \{ display: block; height: calc\(100vh \+ \(var\(--fit-count, 4\) - 1\) \* 88vh\);/);
@@ -203,7 +211,7 @@ assert.deepEqual(tourItems().map(({key, number}) => `${number} ${key}`), ['01 bo
   assert.match(motion, /ScrollTrigger\.create\(\{trigger: story, start: 'top 75%', end: 'bottom top',\n      onEnter: /, 'a primeira ficha dispara quando a história chega a 75% da tela');
   assert.match(motion, /onLeaveBack: \(\) => \{ inside = false; show\(-1\); \}/, 'rolar de volta para cima esconde');
   // celular: cada ficha dispara a 75% e volta a se esconder ao rolar de volta (play none none reverse)
-  assert.match(motion, /ScrollTrigger\.create\(\{trigger: part\.step, start: 'top 75%',\n        onEnter: \(\) => \{ played\.get\(i\)\?\.kill\(\); played\.set\(i, reveal\(part, \{art: true\}\)\); \},\n        onLeaveBack: \(\) => played\.get\(i\)\?\.reverse\(\)\}\);/);
+  assert.match(motion, /ScrollTrigger\.create\(\{trigger: part\.step, start: 'top 75%',\n        onEnter: \(\) => \{ played\.get\(i\)\?\.kill\(\); played\.set\(i, reveal\(part, \{art: true\}\)\); \},\n        onLeaveBack: \(\) => played\.get\(i\)\?\.timeScale\(1\.8\)\.reverse\(\)\}\);/, 'rolando de volta, a ficha se desfaz quase duas vezes mais rápido');
   assert.match(motion, /scrollTrigger: \{trigger: el, start: 'top 75%', toggleActions: 'play none none reverse'\}/);
   assert.match(css, /\.fit-backdrop \{ display: none; position: fixed; inset: 0; z-index: -1;/);
   // texto dividido: letras do nome com máscara por linha; palavras já no idioma escolhido, refeitas quando ele muda

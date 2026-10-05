@@ -11,6 +11,10 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
   - carrossel do celular com o cartão da vez no centro, bolinhas e setas;
   - "Nossa coleção" com os laterais no tom da página e só o do centro na cor da peça;
   - botão, setas e "Ver encaixado" do banner refeitos.
+- 2026-10-04, quinta rodada:
+  - "Personalizar o meu" com lápis que rabisca no hover, sombra viva, 3% maior no hover e afundando no clique;
+  - ficha enxuta, com os pontos sobre a peça;
+  - "Voltar à vitrine" em vidro sutil com o efeito de ímã.
 
 ## O que é
 
@@ -27,8 +31,21 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
   
   Nunca aparecem duas fichas ao mesmo tempo, nem o título da próxima cortado embaixo.
 - **Pontos na lateral** mostram onde a pessoa está e levam a cada peça.
-- **A ficha técnica** traz só o que a loja já afirma: encaixe (equipamento), partes com cores à sua escolha, produção (prazo da loja) e envio. O macaco mostra as cores fixas, "Feito em impressão 3D" e "Disponibilidade: em breve".
-- **A ação** de cada ficha: "Personalizar o meu" abre o ateliê; no macaco, "Ver em 3D" abre a prévia. Não há "Ver encaixado" aqui, porque a peça já aparece encaixada ao lado. O botão segue o do banner: degradê sutil, sombra difusa e ícone de gota.
+- **A ficha é enxuta** (mobile-first):
+  - família, nome (com o selo "Em breve" no macaco) e a frase curta;
+  - as cores em esferas pequenas, sem texto: as fixas do macaco e as originais das outras peças (o nome aparece ao passar o mouse e para leitores de tela);
+  - o botão.
+  
+  Saiu a tabela (encaixe, cores, produção, envio, "Feito em", "Disponibilidade").
+- **Pontos sobre a peça** (`FIT.<peça>.spots`, no espaço do quadrado da demonstração). As informações "saem" da própria peça: um ponto branco com o miolo na cor da peça e um anel que pulsa.
+  - O que mostram:
+    - na borboleta, no dino e no avião: onde encaixa (o texto da família), "Cores à sua escolha" e o prazo de produção;
+    - no macaco: "Encaixe para lâmpada de fenda", no topo, e "Impresso em 3D", na barriga.
+  - Sem "universal" nem "premium": as lâmpadas compatíveis ainda não estão definidas, e o texto fica no que a loja afirma.
+  - Passar o mouse ou focar abre um cartãozinho de vidro ao lado; tocar abre e fecha; tocar fora ou Esc fecha.
+  - No celular, a área de toque tem 44 px e o cartãozinho abre acima do ponto, sem sair da tela.
+  - Os pontos aparecem por último, depois da ficha.
+- **A ação** de cada ficha: "Personalizar o meu" abre o ateliê; no macaco, "Ver em 3D" abre a prévia. Não há "Ver encaixado" aqui, porque a peça já aparece encaixada ao lado. O botão segue o do banner (veja abaixo).
 - **No celular e no tablet** (sem tela fixa), cada ficha traz a sua peça logo acima. Ela se constrói sozinha ao chegar a 75% da tela e volta a se esconder se a pessoa rolar de volta. O fundo troca de cor do mesmo jeito.
 - **Peças de oftalmologia.** Um carrossel com as peças da categoria: a peça encaixada flutuando sobre uma nuvem da sua cor (sem borda), o nome, o subtítulo e o preço (ou "Em breve").
   - Tocar num cartão leva, rolando suave, à ficha técnica da peça lá em cima.
@@ -45,13 +62,23 @@ Feito na branch `vitrine/3d-nas-consultas` (a partir de `c73dcf4`). Ainda não p
 - Só na home; a página Produtos não muda.
 
 **Banner (botão, setas e "Ver encaixado"):**
-- **"Personalizar o meu":**
-  - a cor da peça com um degradê de luz bem sutil e sombra difusa;
-  - cantos de 18 px (menos oval), letra mais espaçada e o ícone de gota;
-  - no hover, cresce 2% e ganha brilho.
+- **"Personalizar o meu"** (também na demonstração e nas fichas):
+  - a cor da peça com um degradê vertical quase imperceptível (mais clara no topo, volume);
+  - uma sombra viva no próprio tom (`0 10px 25px`), que faz o botão flutuar;
+  - cantos de 18 px, letra mais espaçada;
+  - um lápis fino com a ponta inclinada (ícone `draw`).
+  
+  No hover, sobe em direção a quem olha (3% maior, sombra mais espalhada) e o lápis faz um rabisco rápido com quique, girando pela ponta. No clique, afunda (98%, sombra menor). Transições de 0,3 s em `cubic-bezier(.25, .8, .25, 1)`.
 - **"Ver encaixado":** vira um link discreto com o ícone de olho, centralizado logo abaixo do botão.
 - **Setas:** vidro translúcido (fundo branco a 50% com desfoque) e chevron fino. No hover, o vidro clareia e o chevron anda 3 px para onde aponta.
 - **No celular:** o botão ocupa a linha inteira e as setas flutuam nas bordas da pilastra, longe dele. O deslizar com o dedo continua.
+
+**"Voltar à vitrine"** (catálogo, Escolha o seu, conta e "comprar agora"; `journey.css`):
+- **Visual:** vidro sutil (branco a 40%, desfoque de 8 px, borda finíssima) e letra pequena em caixa alta espaçada, que combina com os títulos serifados.
+- **Seta:** fina, sem o círculo; no hover, desliza 4 px para a esquerda.
+- **Efeito ímã:** com mouse, o botão se inclina alguns pixels na direção do cursor (`site-shell.js`, `--mx`/`--my`).
+- **Alinhamento:** à esquerda do texto principal.
+- **Sem animação** com movimento reduzido.
 
 ## Tecnologia (modo cinema)
 
@@ -133,7 +160,7 @@ Todas com fundo transparente, então o fundo da página muda de cor por trás se
   - o gatilho a 75%;
   - o texto dividido no idioma certo;
   - os cards coloridos da coleção.
-- No Chrome headless, 33 verificações de interação (incluem as da quarta rodada: fichas sem "Ver encaixado", botão, link e setas do banner, cores da coleção com troca suave, peças centralizadas no celular, carrossel do celular com cartão central e bolinhas, setas do banner longe do botão). As demais:
+- No Chrome headless, 38 verificações de interação (incluem as da quinta rodada: ficha sem tabela, pontos com cartãozinho no hover, clique, toque e Esc, lápis rabiscando e botão 3% maior, "Voltar à vitrine" em vidro com ímã; e as da quarta rodada: fichas sem "Ver encaixado", botão, link e setas do banner, cores da coleção com troca suave, peças centralizadas no celular, carrossel do celular com cartão central e bolinhas, setas do banner longe do botão). As demais:
   - a ficha começa a se construir ao chegar a 75% e termina sozinha, sem mais rolagem;
   - em cada peça, só a ficha dela na tela, inteira, com a peça e a cor certas;
   - na troca, a atual sai antes de a próxima começar, e as peças não se sobrepõem;

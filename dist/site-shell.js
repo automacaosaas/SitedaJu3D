@@ -136,3 +136,15 @@ window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
 window.dispatchEvent(new Event('ju:header-ready'));
+
+// "Voltar à vitrine" leans a few pixels toward the cursor (journey.css reads --mx/--my); mouse only, never with reduced motion.
+if (matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  for (const link of document.querySelectorAll('.showcase-return')) {
+    link.addEventListener('pointermove', event => {
+      const box = link.getBoundingClientRect();
+      link.style.setProperty('--mx', `${(((event.clientX - box.left) / box.width - .5) * 8).toFixed(1)}px`);
+      link.style.setProperty('--my', `${(((event.clientY - box.top) / box.height - .5) * 5).toFixed(1)}px`);
+    });
+    link.addEventListener('pointerleave', () => { link.style.removeProperty('--mx'); link.style.removeProperty('--my'); });
+  }
+}

@@ -58,7 +58,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const close = node('button', 'demo-close', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
     close.type = 'button';
     close.setAttribute('aria-label', 'Voltar à vitrine');
-    const cta = node('a', 'palette-button demo-cta', icon('drop') + '<span>Personalizar o meu</span>');
+    const cta = node('a', 'palette-button demo-cta', icon('draw') + '<span>Personalizar o meu</span>');
     const atmosphere = node('div', 'demo-atmosphere', '<i class="demo-vignette"></i>');
     controls.append(close, cta);
     for (const el of [backdrop, stage, atmosphere]) el.setAttribute('aria-hidden', 'true');
@@ -111,7 +111,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       const soon = !!entries[i].soon;
       // novidade sem compra (cores fixas): o convite é para ver a peça em 3D, sem personalizar
       dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : 'Personalizar o meu';
-      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : 'drop')));
+      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : 'draw')));
       dom.cta.href = soon ? `#produto/${key}/3d` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];

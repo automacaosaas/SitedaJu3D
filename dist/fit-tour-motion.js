@@ -76,12 +76,14 @@ function cinema() {
     const name = step.querySelector('.fit-name');
     const title = SplitText.create(name, {type: 'chars,lines', mask: 'lines', tag: 'span', linesClass: 'fit-line', charsClass: 'fit-char', aria: 'auto', autoSplit: true});
     const words = overview(step.querySelector('.fit-overview'), {ScrollTrigger, SplitText});
-    const rows = [...step.querySelectorAll('.fit-specs > div')];
-    return {step, title, words, copy: step.querySelector('.fit-step-copy'), family: step.querySelector('.fit-family'), badge: step.querySelector('.fit-soon'),
-      label: step.querySelector('.fit-label'), rows, specs: rows.flatMap(row => [row.querySelector('dt'), ...row.querySelectorAll('dd > span')]),
-      actions: step.querySelector('.fit-actions'), art: step.querySelector('.fit-step-art')};
+    const art = step.querySelector('.fit-step-art');
+    return {step, title, words, art, copy: step.querySelector('.fit-step-copy'), family: step.querySelector('.fit-family'), badge: step.querySelector('.fit-soon'),
+      colors: [...step.querySelectorAll('.fit-colors i')], actions: step.querySelector('.fit-actions'), artSpots: [...(art?.querySelectorAll('.fit-spot') || [])]};
   });
-  const pieces = part => [part.copy, part.art, part.family, part.badge, part.label, part.actions, ...part.rows, ...part.specs, ...part.title.chars, ...part.words().words].filter(Boolean);
+  const stageSpots = slides.map(slide => [...slide.querySelectorAll('.fit-spot')]);
+  const pieces = part => [part.copy, part.art, part.family, part.badge, part.actions, ...part.colors, ...part.artSpots, ...part.title.chars, ...part.words().words].filter(Boolean);
+  // os pontos sobre a peça aparecem por último, um de cada vez, com um pequeno quique
+  const popSpots = (tl, spots, at) => { if (spots.length) tl.fromTo(spots, {autoAlpha: 0, scale: .4}, {autoAlpha: 1, scale: 1, duration: .5, stagger: .14, ease: 'back.out(2.2)'}, at); };
 
   // A revelação de uma ficha: roda sozinha até o fim depois de disparada (cerca de 1,2 s).
   const reveal = (part, {art = false} = {}) => {
@@ -96,11 +98,10 @@ function cinema() {
       .fromTo(part.title.chars, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .8, stagger: .03}, .06);
     if (part.badge) tl.fromTo(part.badge, {autoAlpha: 0, scale: .8}, {autoAlpha: 1, scale: 1, duration: .5}, .4);
     tl.fromTo(part.words().words, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .65, stagger: {amount: .35}}, .18)
-      .fromTo(part.label, {autoAlpha: 0, y: 16}, {autoAlpha: 1, y: 0, duration: .5}, .34)
-      // cada linha da ficha técnica (com o seu traço) surge junto com o que tem dentro, uma depois da outra
-      .fromTo(part.rows, {autoAlpha: 0}, {autoAlpha: 1, duration: .3, stagger: .07, ease: 'none'}, .36)
-      .fromTo(part.specs, {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .55, stagger: .03}, .38)
+      // as esferas de cor, uma depois da outra
+      .fromTo(part.colors, {autoAlpha: 0, y: 14, scale: .6}, {autoAlpha: 1, y: 0, scale: 1, duration: .5, stagger: .05, ease: 'back.out(2)'}, .4)
       .fromTo(part.actions, {autoAlpha: 0, y: 24}, {autoAlpha: 1, y: 0, duration: .6}, .5);
+    if (art) popSpots(tl, part.artSpots, .8);
     return tl;
   };
 
@@ -148,6 +149,7 @@ function cinema() {
         tl.fromTo(slides[index], calm ? {autoAlpha: 0} : {autoAlpha: 0, yPercent: 16 * dir, xPercent: 6 * dir, rotation: 9 * dir, scale: .9},
           calm ? {autoAlpha: 1, duration: .35} : {autoAlpha: 1, yPercent: 0, xPercent: 0, rotation: 0, scale: 1, duration: 1.15, ease: 'expo.out'}, at);
         tl.add(reveal(parts[index]), at);
+        if (!calm) popSpots(tl, stageSpots[index], at + .85);
         paint(index);
       }
       running = tl;
@@ -167,7 +169,7 @@ function cinema() {
       running?.kill();
       goToStep = scrollToStep;
       tour.classList.remove('is-pinned');
-      const all = [...slides, ...parts.flatMap(pieces)];
+      const all = [...slides, ...stageSpots.flat(), ...parts.flatMap(pieces)];
       gsap.killTweensOf(all);
       gsap.set(all, {clearProps: 'opacity,visibility,transform'});
     };
@@ -179,7 +181,7 @@ function cinema() {
       gsap.set([part.copy, part.art].filter(Boolean), {autoAlpha: 0});
       ScrollTrigger.create({trigger: part.step, start: 'top 75%',
         onEnter: () => { played.get(i)?.kill(); played.set(i, reveal(part, {art: true})); },
-        onLeaveBack: () => played.get(i)?.reverse()});
+        onLeaveBack: () => played.get(i)?.timeScale(1.8).reverse()});
       ScrollTrigger.create({trigger: part.step, start: 'top 50%', end: 'bottom 50%', onToggle: self => { if (self.isActive) paint(i); }});
     });
     return () => {
@@ -248,7 +250,36 @@ function story() {
   dots.forEach((dot, i) => dot.addEventListener('click', event => { event.preventDefault(); goToStep(steps[i]); }));
 }
 
-// ── sempre: flutuar só perto da tela e o carrossel ───────────────────────────────────────────────────────────────
+// ── sempre: pontos sobre a peça, flutuar só perto da tela e o carrossel ─────────────────────────────────────────
+// Pontos: passar o mouse ou focar abre o cartãozinho (CSS); tocar abre e fecha (um de cada vez), tocar fora ou Esc fecha.
+// O cartãozinho é empurrado para dentro da tela se for sair dela (--tip-shift).
+function spots() {
+  const all = [...tour.querySelectorAll('.fit-spot')];
+  const fit = spot => {
+    const tip = spot.querySelector('.fit-tip');
+    spot.style.setProperty('--tip-shift', '0px');
+    requestAnimationFrame(() => {
+      const box = tip.getBoundingClientRect(), pad = 10, width = document.documentElement.clientWidth;
+      const shift = box.left < pad ? pad - box.left : box.right > width - pad ? width - pad - box.right : 0;
+      spot.style.setProperty('--tip-shift', `${Math.round(shift)}px`);
+    });
+  };
+  const close = except => all.forEach(spot => { if (spot !== except) spot.setAttribute('aria-expanded', 'false'); });
+  all.forEach(spot => {
+    spot.addEventListener('pointerenter', () => fit(spot));
+    spot.addEventListener('focus', () => fit(spot));
+    spot.addEventListener('click', event => {
+      event.stopPropagation();
+      const open = spot.getAttribute('aria-expanded') !== 'true';
+      close(spot);
+      spot.setAttribute('aria-expanded', String(open));
+      if (open) fit(spot);
+    });
+  });
+  document.addEventListener('click', () => close());
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') close(); });
+}
+
 function near() {
   if (!('IntersectionObserver' in window)) { tour.querySelectorAll('.fit-figure').forEach(figure => figure.classList.add('is-near')); return; }
   const watch = new IntersectionObserver(entries => entries.forEach(entry => entry.target.classList.toggle('is-near', entry.isIntersecting)), {rootMargin: '15% 0px'});
@@ -339,6 +370,7 @@ function carousel() {
 
 if (tour) {
   tour.dataset.motion = '';
+  spots();
   near();
   carousel();
   Promise.all(LIBS.map(loadScript)).then(cinema).catch(error => {

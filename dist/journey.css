@@ -48,49 +48,55 @@ html { scrollbar-gutter:stable; }
 @media(max-width:800px) { body:not(.home) .header:not(.site-header) { display:flex; justify-content:flex-start; min-height:94px; height:94px; padding:0; } body:not(.home) .header:not(.site-header) .brand { position:absolute; left:50%; z-index:1; min-height:0; transform:translateX(-50%); } body:not(.home) .header:not(.site-header) .brand img { width:78px; height:78px; } body:not(.home) .header:not(.site-header) .shop-nav { margin-left:auto; } }
 @media(prefers-reduced-motion:reduce) { .journey-ready body:not(.home)>.page>main,.journey-ready .auth-composition,.ju-account-drawer[open],.ju-account-drawer::backdrop { animation:none; }.ju-account-drawer iframe { transition:none; } }
 
-/* A consistent return to the showcase, tinted by the selected character. */
+/* A consistent return to the showcase: subtle glass over the page tone, a hairline border, small refined uppercase that
+   sits well beside the serif titles, and a thin arrow. On hover the arrow slides left (the way back) and the whole button
+   leans a little toward the cursor (--mx/--my, set by site-shell.js); pressing settles it. */
 .showcase-return {
   display:inline-flex;
   align-items:center;
-  gap:9px;
+  gap:10px;
   width:max-content;
   min-height:44px;
-  padding:4px 16px 4px 4px;
-  border:1px solid var(--line);
+  padding:0 20px 0 15px;
+  border:1px solid rgba(0,0,0,.05);
   border-radius:999px;
-  background:color-mix(in srgb,var(--theme-wash) 35%,white);
-  box-shadow:0 5px 16px color-mix(in srgb,var(--theme-accent) 10%,transparent);
-  color:var(--theme-accent);
-  font:650 12px/1.2 'DM Sans',sans-serif;
-  letter-spacing:.01em;
+  background:rgba(255,255,255,.4);
+  -webkit-backdrop-filter:blur(8px) saturate(1.2);
+  backdrop-filter:blur(8px) saturate(1.2);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 6px 18px -10px color-mix(in srgb,var(--theme-accent) 40%,transparent);
+  color:var(--theme-text);
+  font:650 12px/1 'DM Sans',sans-serif;
+  letter-spacing:.14em;
+  text-transform:uppercase;
   text-decoration:none;
   white-space:nowrap;
-  transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+  translate:var(--mx,0px) var(--my,0px);
+  transition:translate .2s cubic-bezier(.4,0,.2,1),background-color .2s ease,box-shadow .2s ease,border-color .2s ease;
 }
 .showcase-return-icon {
   display:grid;
   place-items:center;
   flex:none;
-  width:34px;
-  height:34px;
-  border-radius:50%;
-  background:var(--theme-soft);
-  color:var(--theme-accent-strong);
+  width:18px;
+  height:18px;
+  color:var(--theme-accent);
+  transition:transform .2s cubic-bezier(.4,0,.2,1);
 }
-.showcase-return-icon svg { width:17px; height:17px; }
+.showcase-return-icon svg { width:17px; height:17px; stroke-width:1.5; }
 .showcase-return-label { max-width:none; }
 .showcase-return:hover {
-  transform:translateY(-2px);
-  border-color:color-mix(in srgb,var(--theme-accent) 35%,transparent);
-  background:var(--panel);
-  box-shadow:0 8px 18px color-mix(in srgb,var(--theme-accent) 16%,transparent);
+  border-color:rgba(0,0,0,.08);
+  background:rgba(255,255,255,.66);
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 22px -12px color-mix(in srgb,var(--theme-accent) 50%,transparent);
 }
-.showcase-return:active { transform:none; }
+.showcase-return:hover .showcase-return-icon { transform:translateX(-4px); }
+.showcase-return:active { translate:0 0; background:rgba(255,255,255,.5); }
+@media(prefers-reduced-motion:reduce) { .showcase-return,.showcase-return-icon { transition:none; } .showcase-return { translate:none; } .showcase-return:hover .showcase-return-icon { transform:none; } }
 .showcase-return:focus-visible { outline:2px solid var(--theme-accent); outline-offset:3px; }
 .products-page .showcase-return { margin-top:15px; margin-bottom:6px; }
 .account-header .showcase-return { justify-self:start; }
 @media(max-width:700px) {
-  .shop-header>.showcase-return { display:inline-flex; width:44px; min-width:44px; padding:4px; }
+  .shop-header>.showcase-return { display:inline-flex; justify-content:center; width:44px; min-width:44px; padding:0; }
   .shop-header>.showcase-return .showcase-return-label { display:none; }
   .shop-header .nav-products { display:none; }
 }

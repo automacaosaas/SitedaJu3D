@@ -4,7 +4,7 @@
 // (FAMILIES, products.js). No fim, um carrossel arrastável com as peças da categoria e "Escolha o seu".
 // A peça encaixada usa as mesmas camadas da demonstração do banner (SHOWCASE.<peça>.demo). Só marcação, sem acesso à
 // página: tools/build-product-pages.cjs grava o mesmo HTML em index.html e escolha.html; fit-tour-motion.js dá o movimento.
-import {PRODUCTS, SOON, FAMILIES, PRODUCT_CATEGORIES, showcase} from './products.js';
+import {PRODUCTS, SOON, FAMILIES, PRODUCT_CATEGORIES, showcase, originalColors} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
 
@@ -15,12 +15,18 @@ const chevron = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"
 // Por peça: `overview` troca a descrição da loja só aqui (a do macaco termina em "Em breve.", que já vira selo);
 // `frame` posiciona a peça encaixada na figura (scale: lado do quadrado da demonstração ÷ largura da figura; y: topo do
 // quadrado ÷ altura da figura); `fade` encurta o equipamento só aqui (frações da altura dele, como tool.fade).
+// `spots`: os pontos sobre a peça, no espaço do quadrado da demonstração (x, y de 0 a 1, como as chamadas do banner).
+// 'fit' = onde a peça encaixa no equipamento (o texto é o da família); 'colors' = cores à sua escolha; 'production' =
+// prazo de produção; 'printed' = impresso em 3D. Só o que a loja já afirma (nada de "universal": as lâmpadas
+// compatíveis com o macaco ainda não estão definidas).
 export const FIT = {
-  borboletoscopio: {frame: {scale: .85, y: .035}},
-  dinossauroscopio: {frame: {scale: .84, y: .085}},
-  aviaoscopia: {frame: {scale: .71, y: .07}},
-  macacoscopio: {overview: 'Um macaquinho para acompanhar o olhar dos pequenos.', frame: {scale: .74, y: .2}, fade: [.33, .47]}
+  borboletoscopio: {frame: {scale: .85, y: .035}, spots: [[.5, .44, 'fit'], [.26, .4, 'colors'], [.78, .76, 'production']]},
+  dinossauroscopio: {frame: {scale: .84, y: .085}, spots: [[.5, .5, 'fit'], [.4, .3, 'colors'], [.72, .82, 'production']]},
+  aviaoscopia: {frame: {scale: .71, y: .07}, spots: [[.5, .93, 'fit'], [.283, .522, 'colors'], [.72, .5, 'production']]},
+  macacoscopio: {overview: 'Um macaquinho para acompanhar o olhar dos pequenos.', frame: {scale: .74, y: .2}, fade: [.33, .47], spots: [[.5, .1, 'fit'], [.6, .72, 'printed']]}
 };
+const familyOf = key => Object.keys(FAMILIES).find(id => FAMILIES[id].items.includes(key));
+const spotText = (key, kind) => ({fit: FAMILIES[familyOf(key)]?.label, colors: 'Cores à sua escolha', production: `Produção em ${COMMERCE.productionLabel}`, printed: 'Impresso em 3D'})[kind];
 
 // Peças de uma família que a loja conhece hoje (as que ainda não chegaram ficam de fora) e as famílias com alguma peça.
 export const familyItems = id => (FAMILIES[id]?.items || []).filter(key => piece(key) && showcase(key).demo);
@@ -29,8 +35,9 @@ export const families = () => Object.keys(FAMILIES).filter(id => familyItems(id)
 export const tourItems = () => families().flatMap((id, i) => familyItems(id).map(key => ({key, family: id, number: String(i + 1).padStart(2, '0')})));
 
 // A peça encaixada: parede de trás, equipamento (com a mesma queda da demonstração), cabeça do equipamento (lâmpada),
-// sombra da peça sobre o equipamento e a frente. Flutua sobre uma sombra no chão.
-export function fitFigure(key, {lazy = true, alt = true} = {}) {
+// sombra da peça sobre o equipamento e a frente. Flutua sobre uma sombra no chão. Com `spots`, os pontos que abrem um
+// cartãozinho (passar o mouse, focar ou tocar) flutuam junto com a peça.
+export function fitFigure(key, {lazy = true, alt = true, spots = false} = {}) {
   const product = piece(key), {tool, layers = {}, head, message} = showcase(key).demo, fit = FIT[key] || {};
   const frame = fit.frame || {scale: .8, y: .1}, fade = fit.fade || tool.fade, front = layers.front || product.catalogImage || product.image;
   const img = (className, src, text = '') => `<img${className ? ` class="${className}"` : ''} src="assets/${esc(src)}" alt="${esc(text)}"${lazy ? ' loading="lazy"' : ''} decoding="async" draggable="false">`;
@@ -41,6 +48,7 @@ export function fitFigure(key, {lazy = true, alt = true} = {}) {
     + `<div class="fit-tool">${img('', tool.src)}</div>`
     + (head ? `<div class="fit-head">${img('', head.src)}</div>` : '')
     + img('fit-shade', front) + img('fit-cover', front, alt ? message || product.title : '')
+    + (spots && fit.spots ? `<div class="fit-spots">${fit.spots.map(([x, y, kind]) => `<button type="button" class="fit-spot" style="--x:${x};--y:${y}" data-side="${x < .5 ? 'left' : 'right'}" aria-expanded="false"><i class="fit-spot-dot" aria-hidden="true"></i><span class="fit-tip">${esc(spotText(key, kind))}</span></button>`).join('')}</div>` : '')
     + '</div></div></div>';
 }
 
@@ -51,34 +59,25 @@ const tone = key => {
 };
 const link = key => piece(key).soon
   ? {href: `#produto/${key}/3d`, label: 'Ver em 3D', icon: 'cube'}
-  : {href: `#produto/${key}/personalizar`, label: 'Personalizar o meu', icon: 'drop'};
+  : {href: `#produto/${key}/personalizar`, label: 'Personalizar o meu', icon: 'draw'};
 
-// Ficha técnica: só o que a loja já afirma (products.js, o prazo de produção e o envio).
-function specs(key, family) {
-  const product = piece(key), row = (term, value) => `<div><dt>${term}</dt><dd>${value}</dd></div>`;
-  const list = names => names.map(name => `<span>${esc(name)}</span>`).join('');
-  if (product.soon) {
-    const colors = product.colors || [];
-    return row('Encaixe', `<span>${esc(FAMILIES[family].tool)}</span>`)
-      + row('Cores fixas', `<span class="fit-swatches" aria-hidden="true">${colors.map(c => `<i style="--swatch:${c.hex}"></i>`).join('')}</span>${list(colors.map(c => c.name))}`)
-      + row('Feito em', '<span>Impressão 3D</span>')
-      + row('Disponibilidade', '<span>Em breve</span>');
-  }
-  return row('Encaixe', `<span>${esc(FAMILIES[family].tool)}</span>`)
-    + row('Cores à sua escolha', list(product.parts.map(part => part.name)))
-    + row('Produção', `<span>${esc(COMMERCE.productionLabel)}</span>`)
-    + row('Envio', '<span>Para todo o Brasil</span>');
+// As cores da peça em esferas, sem texto: as fixas da novidade ou as originais da peça (que a pessoa pode trocar).
+function spheres(key) {
+  const product = piece(key), colors = product.soon ? product.colors || [] : originalColors(key);
+  return `<p class="fit-colors fit-reveal"><span class="sr-only">${product.soon ? 'Cores fixas' : 'Cores originais'}</span>`
+    + colors.map(c => `<i style="--swatch:${c.hex}" role="img" aria-label="${esc(c.name)}" title="${esc(c.name)}"></i>`).join('') + '</p>';
 }
 
 function step({key, family, number}, i) {
   const product = piece(key), go = link(key), overview = FIT[key]?.overview || product.description;
   return `<article class="fit-step" id="consultas-${key}" data-item="${key}" data-index="${i}" style="${tone(key)}" aria-labelledby="fit-name-${key}">`
-    + `<div class="fit-step-art" aria-hidden="true"><i class="fit-glow"></i>${fitFigure(key, {alt: false})}</div>`
+    + `<div class="fit-step-art"><i class="fit-glow" aria-hidden="true"></i>${fitFigure(key, {alt: false, spots: true})}</div>`
     + '<div class="fit-step-copy">'
     + `<p class="fit-family fit-reveal"><span class="fit-index">${number}</span><span>${esc(FAMILIES[family].label)}</span></p>`
     + `<h3 class="fit-reveal" id="fit-name-${key}"><span class="fit-name" translate="no">${esc(product.title)}</span>${product.soon ? '<span class="fit-soon">Em breve</span>' : ''}</h3>`
     + `<p class="fit-overview fit-reveal" data-text="${esc(overview)}">${esc(overview)}</p>`
-    + `<p class="fit-label fit-reveal">FICHA TÉCNICA</p><dl class="fit-specs">${specs(key, family).replace(/<div>/g, '<div class="fit-reveal">')}</dl>`
+    // ficha enxuta: o encaixe, as cores e a produção saem da própria peça, nos pontos sobre ela (fitFigure, spots)
+    + spheres(key)
     // a peça já aparece encaixada ao lado: a ficha termina só com a ação principal
     + `<p class="fit-actions fit-reveal"><a class="fit-cta" href="${go.href}">${icon(go.icon)}<span>${go.label}</span><span class="sr-only"> ${esc(product.title)}</span></a></p>`
     + '</div></article>';
@@ -98,14 +97,14 @@ function card({key}) {
 // Conteúdo da seção da home (o <section data-fit-tour> fica em index.html).
 export function fitTour() {
   const items = tourItems(), category = PRODUCT_CATEGORIES[piece(items[0].key).category]?.label || '';
-  const slides = items.map(({key}, i) => `<div class="fit-slide" data-item="${key}" data-pos="${i ? 'after' : 'active'}" style="${tone(key)}">${fitFigure(key)}</div>`).join('');
+  const slides = items.map(({key}, i) => `<div class="fit-slide" data-item="${key}" data-pos="${i ? 'after' : 'active'}" style="${tone(key)}">${fitFigure(key, {spots: true})}</div>`).join('');
   const dots = items.map(({key}, i) => `<a href="#consultas-${key}" aria-label="${esc(piece(key).title)}"${i ? '' : ' aria-current="true"'}><i></i></a>`).join('');
   return '<header class="fit-tour-head fit-reveal"><p class="eyebrow">FEITO PARA ENCAIXAR</p><h2 id="fit-tour-title">O 3D nas suas consultas</h2>'
     + '<p>Cada peça é pensada para um equipamento da consulta.</p></header>'
     + `<div class="fit-story" style="${tone(items[0].key)}">`
     // .fit-pin: no desktop, com o modo cinema, vira a tela fixa onde uma ficha sai antes da próxima entrar
     + `<div class="fit-pin"><div class="fit-steps">${items.map(step).join('')}</div>`
-    + `<div class="fit-stage" aria-hidden="true"><div class="fit-stage-pin"><i class="fit-glow"></i><div class="fit-slides">${slides}</div></div></div>`
+    + `<div class="fit-stage"><div class="fit-stage-pin"><i class="fit-glow"></i><div class="fit-slides">${slides}</div></div></div>`
     + `<nav class="fit-dots" aria-label="Peças">${dots}</nav></div>`
     // fundo da página nas cores de cada peça (fit-tour-motion.js leva para logo depois do fundo do banner e troca a cada peça)
     + `<div class="fit-backdrop" aria-hidden="true">${items.map(({key}) => `<i style="${tone(key)}"></i>`).join('')}</div></div>`

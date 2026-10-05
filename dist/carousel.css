@@ -97,13 +97,16 @@
 /* O botão e, logo abaixo e centralizado, o link "Ver encaixado". */
 .palette { display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; max-width: 100%; }
 .copy[inert], .palette[inert] { pointer-events: none; }
-/* Ação principal: a cor da peça com um degradê de luz bem sutil, sombra difusa, cantos arredondados sem virar pílula,
-   letra bem espaçada e o ícone de gota (personalizar as cores). No hover cresce 2% e ganha brilho. */
-.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.75em 0 1.45em; border: 0; border-radius: 18px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, 0) 52%, rgba(0, 0, 0, .1) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .22) inset, 0 16px 32px -14px var(--glow), 0 3px 8px -3px rgba(20, 30, 40, .18); transition: transform .3s ease, box-shadow .3s ease, filter .3s ease, background-color .3s ease; }
-.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
+/* Ação principal, o elemento mais chamativo da vitrine: a cor da peça com um degradê vertical quase imperceptível (mais
+   clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), cantos de 18 px, letra bem espaçada e
+   o lápis. No hover sobe em direção a quem olha (3% maior, sombra mais espalhada) e o lápis rabisca; no clique, afunda. */
+.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.75em 0 1.45em; border: 0; border-radius: 18px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: all .3s cubic-bezier(.25, .8, .25, 1); }
+.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; overflow: visible; }
+.palette-button .draw-pencil { transform-box: fill-box; transform-origin: 0% 100%; }
 .palette-button, .hero-demo-button { white-space: nowrap; }
-.palette-button:active { transform: scale(.98); }
+.palette-button:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
+@keyframes draw-scribble { 0% { transform: rotate(0); } 25% { transform: rotate(-10deg); } 50% { transform: rotate(7deg); } 72% { transform: rotate(-4deg); } 100% { transform: rotate(0); } }
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 /* Secundária, só nas peças com demonstração: um link discreto com o olho (ver a peça montada), centralizado abaixo do botão. */
 .hero-demo-button { display: inline-flex; align-items: center; gap: .5em; min-height: 44px; padding: 0 .9em; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0102), 15px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer; transition: color .3s ease; }
@@ -154,7 +157,10 @@
   .hero-prev:hover svg { translate: -3px 0; }
   .hero-next:hover svg { translate: 3px 0; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
-  .palette-button:hover { transform: scale(1.02); filter: brightness(1.07) saturate(1.05); box-shadow: 0 1px 0 rgba(255, 255, 255, .26) inset, 0 22px 38px -16px var(--glow), 0 4px 10px -3px rgba(20, 30, 40, .2); }
+  .palette-button:hover { transform: scale(1.03); filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 18px 40px var(--glow), 0 6px 14px -6px rgba(20, 30, 40, .22); }
+  /* o lápis ganha vida: um rabisco rápido, girando pela ponta, com um quique no fim */
+  .palette-button:hover .draw-pencil { animation: draw-scribble .6s cubic-bezier(.34, 1.56, .64, 1); }
+  .palette-button:hover:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
   .hero-demo-button:hover { color: var(--strong); }
   .hero-demo-button:hover > span:first-of-type { background-size: 100% 1px; }
   .hero-demo-button:hover svg { transform: scale(1.08); }
@@ -198,6 +204,7 @@
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
   .piece img, .piece-shadow, .hero-arrow, .hero-arrow svg, .palette-button, .hero-demo-button, .hero-demo-button svg { transition: none; }
+  .palette-button:hover .draw-pencil { animation: none; }
   .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
