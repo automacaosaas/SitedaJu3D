@@ -40,19 +40,19 @@
 .pl-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 16px 6px 6px; border: 1px solid #2a1c221a; border-radius: 999px; background: #fff; color: var(--ink, #282326); font: inherit; font-size: 14px; cursor: pointer; transition: border-color .25s ease, box-shadow .25s ease, transform .25s var(--pl-ease); }
 .pl-chip i { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: var(--chip); border: 1px solid #38232630; box-shadow: inset 0 0 0 2px #ffffff88; transition: background-color .35s ease; }
 /* as cores da peça em bolinhas no canto de cima da imagem (foto ou 3D); um clique abre a escolha naquela parte */
-.pl-dots { position: absolute; top: 14px; left: 14px; z-index: 3; display: grid; gap: 7px; margin: 0; padding: 6px; list-style: none; border-radius: 999px; background: #ffffff94; backdrop-filter: blur(8px); box-shadow: 0 4px 14px #2a1c2214; }
-.pl-dot { display: block; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; transition: transform .25s var(--pl-spring), box-shadow .25s ease; }
-.pl-dot i { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--chip); border: 1px solid #38232633; box-shadow: inset 0 0 0 2px #ffffff80; transition: background-color .35s ease; }
+.pl-dots { position: absolute; top: 18px; left: 18px; z-index: 3; display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.pl-dot { display: block; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; transition: transform .25s var(--pl-spring), box-shadow .25s ease; }
+.pl-dot i { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--chip); border: 1.5px solid #ffffffd9; box-shadow: 0 2px 6px #2a1c2224; transition: background-color .35s ease; }
 .pl-dot[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pl-accent); }
 .pl-dot.is-changed i { animation: pl-dot-pop .45s var(--pl-spring); }
 @keyframes pl-dot-pop { 40% { transform: scale(1.25); } }
 .pl-note { margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: var(--muted, #71656c); }
 .pl-note span { font-weight: 650; color: var(--ink, #282326); }
-/* o carrinho flutuante: só no celular, escolhendo as cores, quando o header sai de cena (html.pl-focus) */
-.pl-fab { position: fixed; top: 18px; right: 26px; z-index: 40; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: var(--pl-accent); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--pl-accent) 40%, transparent); cursor: pointer; opacity: 0; transform: scale(.6); pointer-events: none; transition: opacity .3s ease, transform .35s var(--pl-spring); }
+/* o carrinho da peça: no celular, escolhendo as cores, só quando a peça presa no alto cobre o botão "Adicionar" (.show-fab) */
+.pl-fab { position: absolute; top: 14px; right: 14px; z-index: 3; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: var(--pl-accent); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--pl-accent) 40%, transparent); cursor: pointer; opacity: 0; transform: scale(.6); pointer-events: none; transition: opacity .3s ease, transform .35s var(--pl-spring); }
 .pl-fab .icon { width: 22px; height: 22px; }
 .pl-fab-plus { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; background: #1f7a4d; font-size: 14px; font-weight: 700; line-height: 1; }
-html.pl-focus .pl-fab { opacity: 1; transform: none; pointer-events: auto; }
+.pl.show-fab .pl-fab { opacity: 1; transform: none; pointer-events: auto; }
 .pl-fab.is-adding .icon { animation: pl-fab-spin .6s cubic-bezier(.45, .05, .3, 1); }
 @keyframes pl-fab-spin { 55% { transform: rotate(300deg) scale(1.18); } 100% { transform: rotate(360deg); } }
 .pl-fab:focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 3px; }
@@ -156,6 +156,8 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-actions { flex-direction: column; }
   /* choosing colors on the phone: the piece stays in view, smaller, above the palette */
   .pl.is-pinned .pl-stage { position: sticky; top: 8px; z-index: 6; will-change: transform; }
+  /* atrás da peça presa, uma faixa de vidro do tom da página: o que rola por baixo não aparece nas bordas */
+  .pl.is-pinned .pl-stage::before { content: ''; position: absolute; top: -8px; left: -16px; right: -16px; bottom: -14px; z-index: -1; background: color-mix(in srgb, var(--bg, #f3faf6) 84%, transparent); backdrop-filter: blur(14px); -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
   .pl-price strong { font-size: 28px; }
   .pl.is-customizing .pl-art { aspect-ratio: auto; height: min(40svh, 320px); }
   .pl.is-pinned .pl-art { box-shadow: 0 10px 26px #2a1c221f; }

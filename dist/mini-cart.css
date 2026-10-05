@@ -42,17 +42,24 @@
 .mini-cart-kit small { font-size: 13px; color: var(--muted, #71656c); }
 .mini-cart-add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--rose, #b64c68); border-radius: 999px; background: #fff; color: var(--rose, #b64c68); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .mini-cart-add .icon { width: 16px; height: 16px; }
-/* adicionar pelo kit: o carrinho corre pelo botão e volta, e o número de peças daquela no carrinho aparece num selo */
-.mini-cart-add { position: relative; overflow: visible; }
+/* adicionar pelo kit: o carrinho corre por dentro do botão (a trilha recorta só ele) e, quando volta, o selo com quantas
+   peças daquela estão no carrinho aparece ou troca de número — nunca cortado pela borda */
+.mini-cart-add { position: relative; padding: 0; overflow: visible; }
+.mini-cart-add-track { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: inherit; overflow: hidden; }
 .mini-cart-add-cart { display: inline-grid; place-items: center; }
-.mini-cart-add-count { position: absolute; top: -7px; right: -6px; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 2px solid #fff; border-radius: 999px; background: var(--rose, #b64c68); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 3px 8px #b64c6840; }
-.mini-cart-add.is-adding { overflow: hidden; background: #fdf1f4; }
+.mini-cart-add-count { position: absolute; top: -9px; right: -7px; z-index: 1; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; overflow: hidden; border: 2px solid #fff; border-radius: 999px; background: var(--rose, #b64c68); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 3px 8px #b64c6840; }
+.mini-cart-add-count span { display: block; }
+.mini-cart-add.is-adding { background: #fdf1f4; }
 .mini-cart-add.is-adding .mini-cart-add-cart { animation: kit-cart-run .9s cubic-bezier(.65, 0, .35, 1); }
 .mini-cart-add.is-adding .mini-cart-add-label { animation: kit-label-fade .9s ease; }
-.mini-cart-add.is-adding .mini-cart-add-count { animation: kit-count-pop .5s cubic-bezier(.34, 1.56, .64, 1) .7s both; }
+.mini-cart-add-count.is-new { animation: kit-count-in .5s cubic-bezier(.34, 1.56, .64, 1); }
+.mini-cart-add-count.is-bump { animation: kit-count-bump .5s cubic-bezier(.34, 1.56, .64, 1); }
+.mini-cart-add-count:is(.is-new, .is-bump) span { animation: kit-count-roll .4s cubic-bezier(.22, 1, .36, 1); }
 @keyframes kit-cart-run { 0% { transform: none; } 45% { transform: translateX(110px); opacity: 1; } 46% { transform: translateX(110px); opacity: 0; } 54% { transform: translateX(-40px); opacity: 0; } 55% { transform: translateX(-40px); opacity: 1; } 100% { transform: none; } }
 @keyframes kit-label-fade { 15%, 70% { opacity: 0; } }
-@keyframes kit-count-pop { from { transform: scale(0); } }
+@keyframes kit-count-in { from { transform: scale(0); opacity: 0; } }
+@keyframes kit-count-bump { 40% { transform: scale(1.3); } }
+@keyframes kit-count-roll { from { transform: translateY(80%); opacity: 0; } }
 .mini-cart-add:hover { background: #fdf1f4; }
 .mini-cart-actions { display: grid; gap: 8px; padding: 14px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line, #eadde1); background: #fffcfb; }
 .mini-cart-actions .primary { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 50px; text-decoration: none; }
@@ -66,7 +73,7 @@
   .mini-cart-scroll { padding: 14px 16px; }
   .mini-cart-head, .mini-cart-actions { padding-left: 16px; padding-right: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .mini-cart[open], .mini-cart.is-closing, .mini-cart.is-closing::backdrop, .mini-cart-add.is-adding * { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mini-cart[open], .mini-cart.is-closing, .mini-cart.is-closing::backdrop, .mini-cart-add.is-adding *, .mini-cart-add-count, .mini-cart-add-count span { animation: none; } }
 /* A barra do frete grátis sobe quando entra mais uma peça (free-shipping.js, riseBar): a caixa acende e um brilho corre pela barra. */
 .free-ship-track i { position: relative; overflow: hidden; }
 .free-ship.is-rising { animation: free-ship-glow 1.3s ease .15s; }

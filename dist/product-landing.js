@@ -25,9 +25,9 @@ function setup(root, key) {
   add.insertAdjacentHTML('beforeend', '<svg class="pl-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.4 4.4L19 7.2"/></svg>');
   views.hidden = false;
   stage.insertAdjacentHTML('beforeend', `<span class="pl-drag" aria-hidden="true">${icon('returns')}<span>Arraste para girar</span></span>`);
-  // No celular, escolhendo as cores, o header (e o carrinho dele) sai de cena: um carrinho flutua no canto superior direito
-  // e adiciona a peça nas cores escolhidas, abrindo o mini-carrinho como o botão de sempre.
-  root.insertAdjacentHTML('beforeend', `<button type="button" class="pl-fab" data-pl-fab aria-label="Adicionar ao carrinho">${icon('cart')}<span class="pl-fab-plus" aria-hidden="true">+</span></button>`);
+  // No celular, escolhendo as cores: quando a peça presa no alto cobre o botão de compra, um carrinho aparece no canto da
+  // própria peça (e vai embora com ela) e adiciona nas cores escolhidas, abrindo o mini-carrinho como o botão de sempre.
+  stage.insertAdjacentHTML('beforeend', `<button type="button" class="pl-fab" data-pl-fab aria-label="Adicionar ao carrinho">${icon('cart')}<span class="pl-fab-plus" aria-hidden="true">+</span></button>`);
   const fab = q('[data-pl-fab]');
   fab.addEventListener('click', () => { fab.classList.remove('is-adding'); void fab.offsetWidth; fab.classList.add('is-adding'); add.click(); });
 
@@ -127,7 +127,7 @@ function setup(root, key) {
   let follow = null;
   function pin(on = true) {
     if (follow) { window.removeEventListener('scroll', follow.schedule); window.removeEventListener('resize', follow.schedule); cancelAnimationFrame(follow.frame); follow = null; }
-    root.classList.remove('is-pinned'); document.documentElement.classList.remove('pl-focus'); holder.style.transform = '';
+    root.classList.remove('is-pinned', 'show-fab'); document.documentElement.classList.remove('pl-focus'); holder.style.transform = '';
     if (!on || !phone.matches) return;
     root.classList.add('is-pinned');
     const card = panel.querySelector('.pl-custom-card');
@@ -136,6 +136,8 @@ function setup(root, key) {
       const height = holder.offsetHeight, push = Math.min(TOP + height + GAP - card.getBoundingClientRect().bottom, height + TOP + 40);
       holder.style.transform = push > 0 ? `translate3d(0, ${-push}px, 0)` : '';
       document.documentElement.classList.toggle('pl-focus', push < height);
+      // o carrinho da peça só quando o botão "Adicionar" está escondido atrás dela (nunca os dois à vista)
+      root.classList.toggle('show-fab', add.getBoundingClientRect().bottom < TOP + height + GAP - Math.max(push, 0));
     };
     follow = {frame: 0, schedule: () => { if (!follow.frame) follow.frame = requestAnimationFrame(update); }};
     window.addEventListener('scroll', follow.schedule, {passive: true}); window.addEventListener('resize', follow.schedule, {passive: true});

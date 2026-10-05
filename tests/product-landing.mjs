@@ -97,7 +97,10 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   // the dots follow the colors chosen (3D) and show the original ones on the photo; the floating cart while the header is away
   assert.match(code, /const shown = view === '3d' \? selection : original;/);
   assert.match(code, /class="pl-fab" data-pl-fab aria-label="Adicionar ao carrinho"/);
-  assert.match(css, /html\.pl-focus \.pl-fab \{ opacity: 1; transform: none; pointer-events: auto; \}/);
+  assert.match(css, /\.pl\.show-fab \.pl-fab \{ opacity: 1; transform: none; pointer-events: auto; \}/);
+  assert.match(code, /root\.classList\.toggle\('show-fab', add\.getBoundingClientRect\(\)\.bottom < TOP \+ height \+ GAP/, 'the cart on the piece only while the main add button is covered');
+  assert.match(code, /stage\.insertAdjacentHTML\('beforeend', `<button type="button" class="pl-fab"/, 'it lives on the piece and leaves with it');
+  assert.match(css, /\.pl-dots \{ position: absolute; top: 18px; left: 18px; z-index: 3; display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; \}/, 'dots on the background, no box around them');
   for (const text of ['Ver a peça', 'Girar em 360°', 'Arraste para girar', 'Preparando sua prévia 3D…', 'A prévia 3D não abriu neste navegador; a foto mostra as cores originais.', 'Escolha a cor de cada parte', 'Partes da peça', 'Restaurar cores', 'Suas cores', 'Adicionar com estas cores', 'Adicionado', 'Cores originais restauradas para este produto.', 'Desistência em até 7 dias']) {
     assert(code.includes(text) || read(`dist/${Object.keys(PRODUCTS)[0]}.html`).includes(text), `${text}: used`);
     assert.notEqual(translate(text, 'en'), text, `${text}: EN`); assert.notEqual(translate(text, 'es'), text, `${text}: ES`);

@@ -30,7 +30,7 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">Complete o kit</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];
     const count = inCart(id);
-    return `<li><img src="assets/${esc(product.catalogImage || product.image)}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span>${count ? `<b class="mini-cart-add-count" aria-hidden="true">${count}</b>` : ''}</button></li>`;
+    return `<li><img src="assets/${esc(product.catalogImage || product.image)}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
   }).join('')}</ul></section>` : '';
   return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span>${original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
     + `<button type="button" class="mini-cart-close" data-mini-close aria-label="Fechar o carrinho">×</button></header>`
@@ -64,12 +64,20 @@ function ensureDialog() {
     const id = kit.dataset.kitAdd;
     try {
       riseFrom = totals(readCart(), 0).subtotal;
+      const before = dialog.querySelector(`[data-kit-add="${id}"] .mini-cart-add-count span`)?.textContent || '';
       writeCart(putItem(readCart(), id, defaults(id)));
       window.dispatchEvent(new Event('ju:cart'));
       // the piece shown on top stays; the kit piece stays too, with its new count, and the cart runs across its button
       paint();
-      const button = dialog.querySelector(`[data-kit-add="${id}"]`);
-      if (button && !matchMedia('(prefers-reduced-motion: reduce)').matches) { button.classList.add('is-adding'); setTimeout(() => button.classList.remove('is-adding'), 1100); }
+      // the badge keeps the old number (or stays hidden) while the cart runs, and changes as the cart comes back in
+      const button = dialog.querySelector(`[data-kit-add="${id}"]`), badge = button?.querySelector('.mini-cart-add-count');
+      if (button && badge && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const after = badge.firstChild.textContent;
+        if (before) badge.firstChild.textContent = before; else badge.hidden = true;
+        button.classList.add('is-adding');
+        setTimeout(() => { badge.hidden = false; badge.firstChild.textContent = after; badge.classList.remove('is-new', 'is-bump'); void badge.offsetWidth; badge.classList.add(before ? 'is-bump' : 'is-new'); }, 560);
+        setTimeout(() => button.classList.remove('is-adding'), 1000);
+      }
       dialog.querySelector('[role=status]').textContent = `${PRODUCTS[id].title} adicionado nas cores originais.`;
       button?.focus();
     } catch (error) { dialog.querySelector('[role=status]').textContent = error.message; }

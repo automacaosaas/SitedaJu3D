@@ -80,7 +80,7 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   for (const name of ['--rail-1', '--rail-2', '--rail-3', '--rail-a', '--rail-i']) assert.match(css, new RegExp(`@property ${name} \\{ syntax: '<color>'`), 'cores registradas: deslizam suavemente na troca');
   assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  --rail-1: color-mix\(in srgb, var\(--theme-wash, #f4e4e7\) 22%, #fff\);[^}]*--rail-a: var\(--rose, #b64c68\); --rail-i: var\(--ink, #282326\);/, 'laterais no tom da página');
   assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \{ --rail-1: var\(--rail-own-1\); --rail-2: var\(--rail-own-2\); --rail-3: var\(--rail-own-3\); --rail-a: var\(--rail-own-accent\); --rail-i: var\(--rail-own-ink\);/, 'o do centro na cor da peça');
-  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{ overflow: visible; \}/, 'a peça pode sair por cima do card');
+  assert.doesNotMatch(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{ overflow: visible; \}/, 'a peça fica dentro do card (2026-10-05)');
 }
 
 console.log('PASS: famílias de encaixe, figura encaixada, home sem a seção das fichas, Escolha o seu, filtro da página Produtos e cards da coleção.');

@@ -39,7 +39,7 @@ const {translate} = await site('i18n-core.js');
   // 2026-10-05: the kit stays — the other pieces of the same category, each with how many are in the cart (original colors)
   assert.match(all, /Complete o kit/, 'the kit does not disappear once its pieces are in the cart');
   assert.deepEqual([...all.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio'], 'same category, without the piece just added, up to 3');
-  assert.equal((all.match(/<b class="mini-cart-add-count" aria-hidden="true">1<\/b>/g) || []).length, 2, 'the count on each kit button');
+  assert.equal((all.match(/<\/span><\/span><b class="mini-cart-add-count" aria-hidden="true"><span>1<\/span><\/b><\/button>/g) || []).length, 2, 'the count on each kit button, outside the track that clips the running cart');
   assert.match(all, /Adicionado nas cores originais/); assert.match(all, /cores originais<\/span>/);
   assert.match(all, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?427,00<\/dd>/);
   assert.doesNotMatch(all, /free-ship/, 'no bar without free shipping');
@@ -60,6 +60,8 @@ const {translate} = await site('i18n-core.js');
   assert.match(read('dist/mini-cart.js'), /dialog\.addEventListener\('cancel', event => \{ event\.preventDefault\(\); leave\(\); \}\);/);
   assert.match(css, /\.mini-cart\.is-closing \{ animation: mini-cart-down \.32s/);
   assert.match(css, /\.mini-cart-add\.is-adding \.mini-cart-add-cart \{ animation: kit-cart-run \.9s/);
+  assert.match(css, /\.mini-cart-add-track \{[^}]*overflow: hidden;/); assert.doesNotMatch(css, /\.mini-cart-add\.is-adding \{[^}]*overflow: hidden/, 'the badge is never clipped');
+  assert.match(read('dist/mini-cart.js'), /badge\.classList\.add\(before \? 'is-bump' : 'is-new'\); \}, 560\);/, 'the number changes as the cart comes back');
 }
 
 // ── texts ─────────────────────────────────────────────────────────────
