@@ -115,9 +115,9 @@ dialog.admin-confirm .admin-field{text-align:left;margin:4px 0 0}
 dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;resize:vertical}
 .admin-confirm-actions{display:flex;gap:10px;margin-top:6px}
 .admin-confirm-actions button{flex:1;border-radius:999px;padding:12px 16px;font-size:14px;font-weight:700}
-.admin-confirm-actions [data-action=cancel-decline]{border:1px solid var(--line);background:#fff;color:var(--ink)}
-.admin-confirm-actions [data-action=cancel-decline]:hover{background:#f6efef}
-.admin-confirm-actions .btn-decline{border:0}
+.admin-confirm-actions [data-action^=cancel-]{border:1px solid var(--line);background:#fff;color:var(--ink)}
+.admin-confirm-actions [data-action^=cancel-]:hover{background:#f6efef}
+.admin-confirm-actions .btn-decline,.admin-confirm-actions .btn-complete{border:0;color:#fff}
 
 /* chart + calendar */
 .admin-panels{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:34px;align-items:start}
@@ -128,11 +128,11 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .chart-grid{position:absolute;inset:0;pointer-events:none}
 .chart-grid span{position:absolute;left:-44px;right:0;font-size:10.5px;color:var(--muted);transform:translateY(-50%)}
 .chart-grid span::after{content:'';position:absolute;left:44px;right:0;top:50%;height:1px;background:var(--line)}
-.chart-bars{position:relative;display:flex;align-items:flex-end;gap:3px;height:100%}
+.chart-bars{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:3px;height:100%}
 .chart-bar{flex:1 1 0;min-width:3px;max-width:24px;height:calc(var(--v,0) * 100%);background:var(--rose);border-radius:4px 4px 0 0;border:0;padding:0;cursor:pointer;transition:background .15s}
 .chart-bar:hover,.chart-bar:focus-visible{background:#8e3549}
 .chart-bar.is-today{box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 3px var(--rose)}
-.chart-axis{display:flex;justify-content:space-between;margin:6px 44px 0 44px;font-size:10.5px;color:var(--muted)}
+.chart-axis{display:flex;justify-content:space-between;margin:6px 24px 0 44px;font-size:10.5px;color:var(--muted)}
 .chart-tip{position:fixed;z-index:50;transform:translate(-50%,-100%);margin-top:-10px;background:var(--ink);color:#fff;font-size:12px;line-height:1.4;padding:7px 10px;border-radius:8px;pointer-events:none;opacity:0;transition:opacity .1s;white-space:nowrap}
 .chart-tip.is-visible{opacity:1}
 .chart-tip strong{display:block;font-size:13px}
@@ -190,3 +190,140 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* NF-e line on each order: issued (green), being issued (yellow), problem (red, with a retry button). */
 .admin-invoice{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5}.admin-invoice a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}.admin-invoice.is-ok{background:var(--g-bg);color:var(--g-fg)}.admin-invoice.is-waiting{background:var(--y-bg);color:var(--y-fg)}.admin-invoice.is-error{background:var(--r-bg);color:var(--r-fg)}.admin-invoice .admin-tag{margin-left:4px}
+
+/* Two parts of the panel, Pedidos and Fluxo de caixa: one switch at the top, always in the same place. */
+.admin-sections{display:inline-flex;gap:4px;padding:4px;margin:0 0 26px;background:var(--panel);border:1px solid var(--line);border-radius:999px}
+.admin-sections button{border:0;background:none;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:650;color:var(--muted);cursor:pointer}
+.admin-sections button:hover{color:var(--ink)}
+.admin-sections button[aria-current=page]{background:var(--rose);color:#fff}
+.admin-dash-error{margin:0 0 18px}
+
+/* Fluxo de caixa — green is money in, red is money out, everywhere (cards, chart, list, buttons). */
+.cash-tabs{margin-bottom:22px}
+.cash-notice{margin:-6px 0 18px;padding:10px 14px;border-radius:12px;background:var(--g-bg);color:var(--g-fg);font-size:13.5px}
+.cash-kpis{margin-bottom:22px}
+.cash-kpis .admin-kpi strong{white-space:nowrap;font-size:clamp(21px,2.3vw,26px)}
+.admin-kpi.is-in strong{color:var(--g-fg)}.admin-kpi.is-out strong{color:var(--r-fg)}
+.cash-kpi-balance{background:linear-gradient(135deg,#fff 0%,#fdf0f3 100%)}
+.cash-link{display:inline-block;margin-top:8px;border:0;background:none;padding:0;color:var(--rose);font:inherit;font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.cash-chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 6px}
+.cash-chart-head h2{margin:0}
+.cash-mode{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.cash-mode button{border:0;background:none;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:650;color:var(--muted);cursor:pointer}
+.cash-mode button[aria-pressed=true]{background:var(--ink);color:#fff}
+.cash-period{display:flex;align-items:center;gap:12px;margin:8px 0 14px}
+.cash-period[hidden]{display:none}
+.cash-period button{border:1px solid var(--line);background:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;line-height:1;color:var(--ink);cursor:pointer}
+.cash-period strong{font-size:14px;min-width:130px;text-align:center}.cash-period strong::first-letter{text-transform:uppercase}
+.cash-note{font-size:13.5px;line-height:1.55;color:var(--muted);background:#f6efef;border-radius:12px;padding:10px 14px;margin:0 0 14px}
+.cash-chart{position:relative;height:200px;margin:10px 4px 0 64px}
+.cash-chart .chart-grid span{left:-64px;font-size:12px}.cash-chart .chart-grid span::after{left:64px}
+.cash-bars{position:relative;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;height:100%;align-items:stretch}
+.cash-group{display:flex;align-items:flex-end;justify-content:center;gap:1px;height:100%;padding:0 1px;border:0;border-radius:4px 4px 0 0;background:none;cursor:pointer}
+.cash-group:hover,.cash-group:focus-visible{background:#f6efef;outline:none}
+.cash-group.is-today{background:#fbeef1}
+.cash-group i{display:block;flex:1 1 0;max-width:16px;height:calc(var(--v,0) * 100%);border-radius:3px 3px 0 0}
+.cash-group i.is-in{background:var(--g-solid)}.cash-group i.is-out{background:var(--r-solid)}
+.cash-axis{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin:6px 4px 0 64px;font-size:12px;color:var(--muted);text-align:center}
+.cash-axis span{white-space:nowrap;overflow:visible}
+.cash-legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin:16px 0 0;font-size:13.5px;color:var(--muted)}
+.cash-legend span{display:inline-flex;align-items:center;gap:6px}.cash-legend strong{color:var(--ink)}
+.cash-legend .is-in::before,.cash-legend .is-out::before{content:'';width:10px;height:10px;border-radius:3px;background:var(--g-solid)}
+.cash-legend .is-out::before{background:var(--r-solid)}
+.cash-upcoming{margin-top:20px}
+.cash-upcoming-list{list-style:none;margin:6px 0 0;padding:0;display:grid}
+.cash-upcoming-list li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.cash-upcoming-name strong{display:block;font-size:14px;font-weight:650}.cash-upcoming-name small{font-size:12.5px;color:var(--muted)}
+.cash-upcoming-value{font-weight:700;font-variant-numeric:tabular-nums}
+.cash-upcoming .cash-link{margin-top:10px}
+.cash-forecast{margin:14px 0 0;font-size:14px;color:var(--muted)}.cash-forecast strong{color:var(--ink)}.cash-forecast strong.is-out{color:var(--r-fg)}
+.is-late{color:var(--r-fg)!important;font-weight:650}
+.cash-actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+.cash-add{border:0;border-radius:999px;padding:13px 22px;font-size:14.5px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 6px 16px #4f22361a}
+.cash-add.is-in{background:var(--g-solid)}.cash-add.is-in:hover{background:var(--g-solid-hover)}
+.cash-add.is-out{background:var(--r-solid)}.cash-add.is-out:hover{background:var(--r-solid-hover)}
+.cash-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 12px}
+.cash-toolbar .cash-period{margin:0}
+.cash-search{flex:1 1 220px}
+.cash-search input{width:100%;padding:11px 16px;border:1px solid var(--line);border-radius:999px;background:#fff;font:inherit;font-size:14px;color:var(--ink)}
+.cash-search input:focus-visible{outline:2px solid var(--rose);outline-offset:1px}
+.cash-filter{display:inline-flex;gap:6px}
+.cash-filter button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+.cash-filter button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.cash-count{margin:0 0 10px;font-size:13px;color:var(--muted)}.cash-count strong{color:var(--ink)}
+.cash-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px}
+.cash-table th{text-align:left;font-size:12px;font-weight:650;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--line);background:#fffafa}
+.cash-table td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.cash-table tbody tr:last-child td{border-bottom:0}
+.cash-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.cash-table tr.is-in .num{color:var(--g-fg)}.cash-table tr.is-out .num{color:var(--r-fg)}.cash-table tr.is-adjust .num{color:var(--muted)}
+.cash-table .c-date{white-space:nowrap;color:var(--muted)}
+.cash-table .c-desc strong{display:block;font-weight:650}
+.cash-table small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.cash-origin{display:inline-block;margin-top:4px;font-size:12px;color:var(--muted);background:#f3eded;border-radius:999px;padding:2px 8px}
+.cash-type{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.cash-type.is-in{background:var(--g-bg);color:var(--g-fg)}.cash-type.is-out{background:var(--r-bg);color:var(--r-fg)}.cash-type.is-adjust{background:#eeeaec;color:#5f525a}
+.cash-table .c-act{width:40px;text-align:right}
+.cash-remove{border:0;background:none;color:var(--muted);padding:6px;border-radius:8px;cursor:pointer;line-height:0}
+.cash-remove svg{width:17px;height:17px}
+.cash-remove:hover,.cash-remove:focus-visible{background:var(--r-bg);color:var(--r-fg)}
+.cash-table tfoot td{background:#fffafa;border-top:1px solid var(--line);border-bottom:0;font-size:13.5px;color:var(--muted)}
+.cash-table tfoot td span{display:inline-block;margin-right:22px}.cash-table tfoot .cash-total-label{font-weight:650;color:var(--ink)}.cash-table tfoot strong{color:var(--ink)}
+.cash-table tfoot .is-in strong{color:var(--g-fg)}.cash-table tfoot .is-out strong{color:var(--r-fg)}
+.cash-bills tr.is-paid td{color:var(--muted)}.cash-bills tr.is-paid .num{color:var(--muted)}
+/* Status of a bill: a dropdown with an arrow (same yellow / red / green), and the padlock beside it. */
+.cash-status-control{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.cash-select{position:relative;display:inline-flex}
+.cash-select select{appearance:none;-webkit-appearance:none;border:1px solid transparent;border-radius:999px;padding:7px 32px 7px 14px;min-width:118px;font:inherit;font-size:13px;font-weight:700;color:inherit;cursor:pointer}
+.cash-select::after{content:'';position:absolute;right:14px;top:50%;width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.cash-select.is-pending{color:var(--y-fg)}.cash-select.is-pending select{background:var(--y-bg);border-color:#efd98a}
+.cash-select.is-late{color:var(--r-fg)}.cash-select.is-late select{background:var(--r-bg);border-color:#f0c4cd}
+.cash-select.is-paid{color:var(--g-fg)}.cash-select.is-paid select{background:var(--g-bg);border-color:#bfe3cf}
+.cash-select select:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.cash-select.is-locked::after{display:none}.cash-select.is-locked select{padding-right:14px;cursor:not-allowed;opacity:1}
+.cash-lock{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted);cursor:pointer}
+.cash-lock svg{width:16px;height:16px}
+.cash-lock:hover{color:var(--ink);border-color:#d6c4cb}
+.cash-lock.is-locked{background:var(--ink);border-color:var(--ink);color:#fff}
+.cash-remove:disabled{opacity:.35;cursor:not-allowed;background:none;color:var(--muted)}
+.cash-more{display:block;margin:14px auto 0;border:1px solid var(--line);background:#fff;border-radius:999px;padding:11px 26px;font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
+.cash-more:hover{background:#f6efef}.cash-more span{font-weight:500;color:var(--muted)}
+.cash-hint{margin:14px 0 0;font-size:13px;line-height:1.55;color:var(--muted)}
+/* The add form: same popup as "Recusar", fields aligned to the left. */
+dialog.cash-dialog form{text-align:left}
+dialog.cash-dialog h2{text-align:center;margin-bottom:6px}
+dialog.cash-dialog .admin-confirm-warn{text-align:center}
+.admin-field select{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;font:inherit;color:var(--ink)}
+.admin-field .cash-money{display:block;position:relative;margin:0;font-size:inherit;font-weight:inherit;color:inherit}
+.cash-money::before{content:'R$';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:600;color:var(--muted)}
+.cash-money input{padding-left:42px;font-variant-numeric:tabular-nums}
+dialog.cash-dialog .admin-error{margin:0}
+.btn-ink{border:0;background:var(--ink);color:#fff}
+@media(max-width:700px){
+  .admin-sections{display:flex}.admin-sections button{flex:1;padding:10px 12px}
+  .cash-chart{margin-left:52px}.cash-chart .chart-grid span{left:-52px}.cash-chart .chart-grid span::after{left:52px}.cash-axis{margin-left:52px}
+  .cash-group{padding:0}.cash-group i{max-width:none}.cash-bars,.cash-axis{gap:1px}
+  .cash-add{flex:1 1 0;padding:13px 12px}
+  .cash-filter{width:100%}.cash-filter button{flex:1}
+  .cash-period strong{min-width:0;flex:1}
+  /* The tables become one card per line: what and how much on top, the rest below. */
+  .cash-table thead{display:none}
+  .cash-table,.cash-table tbody,.cash-table tfoot{display:block}
+  .cash-table tr{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;column-gap:10px;row-gap:6px;padding:12px 14px;border-bottom:1px solid var(--line)}
+  .cash-table tbody tr:last-child{border-bottom:0}
+  .cash-table td{padding:0;border:0}
+  .cash-table .c-desc{grid-column:1/4;grid-row:1}
+  .cash-table .num{grid-column:4;grid-row:1}
+  .cash-table .c-date{grid-column:1;grid-row:2;font-size:13px}
+  .cash-table .c-cat{grid-column:2;grid-row:2;font-size:13px;color:var(--muted)}
+  .cash-table .c-type{grid-column:3;grid-row:2}
+  .cash-table .c-act{grid-column:4;grid-row:2;width:auto}
+  .cash-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.cash-tabs button{padding:10px 6px;font-size:12.5px}.cash-tabs button span{margin-left:4px}
+  /* A bill on a phone: name and value, then the due date, then the status with its padlock and the bin. */
+  .cash-bills tr{grid-template-columns:minmax(0,1fr) auto}
+  .cash-bills .c-desc{grid-column:1;grid-row:1}.cash-bills .num{grid-column:2;grid-row:1}
+  .cash-bills .c-date{grid-column:1/-1;grid-row:2;white-space:normal}.cash-bills .c-date small{display:inline;margin-left:8px}
+  .cash-bills .c-type{grid-column:1;grid-row:3}.cash-bills .c-act{grid-column:2;grid-row:3}
+  .cash-table tfoot tr{display:block;background:#fffafa;border-top:1px solid var(--line)}
+  .cash-table tfoot td{display:flex;flex-wrap:wrap;gap:4px 16px;padding:0;background:none;border:0}
+}

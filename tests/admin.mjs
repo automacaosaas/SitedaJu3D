@@ -252,6 +252,17 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert(!qr.isDark(1, 1) && qr.isDark(3, 3), 'finder pattern inside');
 }
 
+// ── the panel asks before concluir (it issues the NF-e), as it does before recusar (it refunds) ──
+{
+  const read = f => require('node:fs').readFileSync(path.join(root, 'dist', f), 'utf8');
+  const panel = read('admin.js');
+  assert(panel.includes(`if (action.dataset.action === 'complete') { const order = orders.find(o => o.id === id); if (order) openCompleteDialog(order); }`), '"Marcar como concluído" only opens the confirmation');
+  assert.equal(panel.split(`'concluido', '', 'Pedido marcado como concluído.'`).length - 1, 1, 'only the "Sim, concluir" button concludes');
+  assert(panel.includes('data-action="cancel-complete">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-complete">Sim, concluir</button>'));
+  assert(panel.includes(`completeDialog.querySelector('[data-action="cancel-complete"]').focus();`), 'Cancelar has the focus, so Enter never concludes by accident');
+  assert.match(read('admin.css'), /\.chart-bars\{[^}]*justify-content:space-between/, "the 14 bars span the chart: the last one sits over today's date");
+}
+
 // ── Ju's decision e-mails the buyer: confirmed or declined, never the reason; reopening sends nothing ──
 {
   const MAIL_ENV = {...ENV, RESEND_API_KEY: 're_test_key_admin', MAIL_FROM: 'Ju <pedidos@site.test>'};
@@ -385,4 +396,4 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(mp.refundOutcome({status: 'processed', status_detail: 'accredited'}).state, 'none');
 }
 
-console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable); browser helpers (grouping, revenue without declined orders, API client) and the vendored QR code.');
+console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable); browser helpers (grouping, revenue without declined orders, API client), a confirmation before concluding and the vendored QR code.');

@@ -5,6 +5,7 @@ import {PRODUCTS, color} from './products.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
 import {icon} from './icons.js';
+import {initCash, cashView, handleCashClick, handleCashInput, bindCash, loadCashData, hasCash, resetCash} from './admin-cash.js';
 
 const content = document.querySelector('#admin-content'), tools = document.querySelector('#admin-tools'), live = document.querySelector('#admin-live');
 const busyDialog = createBusyDialog();
@@ -44,9 +45,44 @@ declineDialog.addEventListener('click', event => {
   }
 });
 
+// The same step before concluir: confirming e-mails the buyer and issues the NF-e, which "Reabrir" does not cancel.
+const completeDialog = document.createElement('dialog');
+completeDialog.className = 'admin-confirm';
+completeDialog.setAttribute('aria-labelledby', 'complete-title');
+completeDialog.innerHTML = `<form method="dialog">
+  <p class="admin-confirm-icon" aria-hidden="true">📦</p>
+  <h2 id="complete-title">Concluir este pedido?</h2>
+  <p class="admin-confirm-ref"></p>
+  <p class="admin-confirm-warn" data-invoice-warn hidden></p>
+  <p class="admin-confirm-warn">O pedido vai para a aba Concluídos e o cliente recebe um e-mail avisando que o pedido foi confirmado.</p>
+  <div class="admin-confirm-actions"><button type="button" data-action="cancel-complete">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-complete">Sim, concluir</button></div>
+</form>`;
+document.body.append(completeDialog);
+function openCompleteDialog(order) {
+  const issues = invoicingMode !== 'off' && !order.invoice, where = invoicingProvider === 'bling' ? 'no Bling' : 'no emissor';
+  completeDialog.dataset.orderId = order.id;
+  completeDialog.querySelector('.admin-confirm-ref').textContent = `${order.reference} · ${money(order.totalCents)}`;
+  const warn = completeDialog.querySelector('[data-invoice-warn]');
+  warn.hidden = !issues;
+  warn.innerHTML = issues ? `<strong>A nota fiscal é emitida na hora.</strong> "Reabrir" volta o pedido para Pendentes, mas não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '';
+  completeDialog.querySelector('[data-action="confirm-complete"]').textContent = issues ? 'Sim, concluir e emitir a nota' : 'Sim, concluir';
+  completeDialog.showModal();
+  completeDialog.querySelector('[data-action="cancel-complete"]').focus();
+}
+completeDialog.addEventListener('click', event => {
+  if (event.target.closest('[data-action="cancel-complete"]')) completeDialog.close();
+  if (event.target.closest('[data-action="confirm-complete"]')) {
+    completeDialog.close();
+    move(completeDialog.dataset.orderId, 'concluido', '', 'Pedido marcado como concluído.');
+  }
+});
+
 // screen: loading | login | code | dashboard | offline
 let screen = 'loading', session = null, busy = false, feedback = '', setup = null, orders = [];
 let tab = 'pendente';
+// Two parts of the panel: Pedidos and Fluxo de caixa (admin-cash.js). "#caixa" in the address keeps the second on reload.
+let section = location.hash === '#caixa' ? 'caixa' : 'pedidos';
+initCash({run: (message, operation) => run(message, operation), announce, signedOut: () => signedOut(), render: focus => render(focus)});
 const now = new Date();
 let calendar = {year: now.getFullYear(), month: now.getMonth()}, selectedDay = dayKey(now);
 
@@ -224,7 +260,13 @@ function calendarView(list) {
   </div>`;
 }
 
+// The switch between the two parts, and the message of an action that did not work (shown once).
 function dashboardView() {
+  const nav = `<nav class="admin-sections" aria-label="Partes do painel">${[['pedidos', 'Pedidos'], ['caixa', 'Fluxo de caixa']].map(([id, label]) => `<button type="button" data-section="${id}"${section === id ? ' aria-current="page"' : ''}>${label}</button>`).join('')}</nav>`;
+  const error = feedback ? `<p class="admin-error admin-dash-error" role="alert">${esc(feedback)}</p>` : '';
+  return nav + error + (section === 'caixa' ? cashView() : ordersDashboard());
+}
+function ordersDashboard() {
   const s = summary(orders);
   return `<div class="admin-dash-head"><div><h1 id="admin-title" tabindex="-1">Pedidos</h1><p>Pedidos pagos, direto do banco de dados. Organize a produção e o envio.</p></div><button type="button" class="btn-reopen" data-action="refresh">Atualizar</button></div>
     <div class="admin-kpis">
@@ -293,7 +335,7 @@ function render(focus = true) {
   if (screen === 'dashboard') tools.innerHTML = `<span>Olá, <strong>${esc(session.email)}</strong></span><button type="button" id="admin-logout">Sair</button>`;
   content.innerHTML = screen === 'login' ? loginView() : screen === 'code' ? codeView() : screen === 'dashboard' ? dashboardView() : screen === 'offline' ? offlineView() : '<h1 id="admin-title" tabindex="-1">Carregando…</h1>';
   feedback = '';
-  if (screen === 'dashboard') bindChartTooltips();
+  if (screen === 'dashboard') { if (section === 'caixa') bindCash(content); else bindChartTooltips(); }
   if (screen === 'code') content.querySelector('input[name=code]')?.focus({preventScroll: true});
   else if (focus) content.querySelector('#admin-title')?.focus({preventScroll: true});
 }
@@ -308,12 +350,13 @@ async function run(message, operation) {
 }
 
 // Signed out (session ended elsewhere, or expired): back to the password, saying why.
-function signedOut() { session = null; orders = []; setup = null; revealed.clear(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
+function signedOut() { session = null; orders = []; setup = null; revealed.clear(); resetCash(); screen = 'login'; feedback = 'Sua sessão terminou. Entre de novo.'; }
 
 async function openDashboard() {
   const loaded = await loadOrders();
   orders = loaded.orders; invoicingMode = loaded.invoicing; invoicingProvider = loaded.provider;
   bling = invoicingProvider === 'bling' ? await loadBling().catch(error => { if (error.code === 'unauthorized') throw error; return {error: true}; }) : null;
+  if (section === 'caixa') await loadCashData();
   screen = 'dashboard';
 }
 
@@ -353,7 +396,19 @@ content.addEventListener('submit', event => {
   });
 });
 
+function openSection(id) {
+  if (busy || id === section) return;
+  section = id;
+  history.replaceState(null, '', id === 'caixa' ? '#caixa' : location.pathname);
+  if (id === 'caixa' && !hasCash()) run('Abrindo o fluxo de caixa…', async () => { try { await loadCashData(); } catch (error) { if (error.code === 'unauthorized') { signedOut(); return; } throw error; } });
+  else render();
+}
+
 content.addEventListener('click', event => {
+  const sectionBtn = event.target.closest('[data-section]');
+  if (sectionBtn) { openSection(sectionBtn.dataset.section); return; }
+  if (section === 'caixa' && screen === 'dashboard' && handleCashClick(event)) return;
+
   const tabBtn = event.target.closest('[data-tab]');
   if (tabBtn) { tab = tabBtn.dataset.tab; render(false); return; }
 
@@ -366,7 +421,7 @@ content.addEventListener('click', event => {
   const action = event.target.closest('[data-action]');
   if (!action) return;
   const id = action.dataset.id;
-  if (action.dataset.action === 'complete') move(id, 'concluido', '', 'Pedido marcado como concluído.');
+  if (action.dataset.action === 'complete') { const order = orders.find(o => o.id === id); if (order) openCompleteDialog(order); }
   if (action.dataset.action === 'reopen') move(id, 'pendente', '', 'Pedido reaberto como pendente.');
   if (action.dataset.action === 'refund-retry') run('Conferindo o estorno…', async () => {
     try { const result = await retryRefund(id); orders = replaceOrder(orders, result.order); announce(result.refund === 'refunded' ? 'Valor estornado pelo Mercado Pago.' : result.refund === 'requested' ? 'O estorno ainda está em andamento no Mercado Pago.' : 'O estorno ainda não deu certo. Estorne pelo painel do Mercado Pago.'); }
@@ -404,16 +459,19 @@ content.addEventListener('click', event => {
 // The logout button lives in the topbar (#admin-tools), outside #admin-content, so it needs its own listener.
 tools.addEventListener('click', async event => {
   if (!event.target.closest('#admin-logout')) return;
-  await logout(); session = null; orders = []; revealed.clear(); screen = 'login'; render();
+  await logout(); session = null; orders = []; revealed.clear(); resetCash(); screen = 'login'; render();
 });
 
-content.addEventListener('input', event => { if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = ''; });
+content.addEventListener('input', event => {
+  if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
+  if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
+});
 
 // Back from Bling's authorization page (/admin.html?code=…&state=…): the code comes off the address at once and goes
 // to the server as soon as the panel is open. Bling gives it one minute, so a signed-out return asks to start over.
 const returned = new URLSearchParams(location.search);
 let blingReturn = returned.has('state') && (returned.has('code') || returned.has('error')) ? {code: returned.get('code'), state: returned.get('state'), error: returned.get('error')} : null;
-if (blingReturn) history.replaceState(null, '', location.pathname);
+if (blingReturn) { section = 'pedidos'; history.replaceState(null, '', location.pathname); }
 
 async function finishBling() {
   const back = blingReturn; blingReturn = null; blingNote = '';

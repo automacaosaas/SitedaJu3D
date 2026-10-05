@@ -55,6 +55,17 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
+- **Página do produto, aba Foto (04/10/2026):** galeria de fotos reais da peça (nem o 3D nem imagens geradas): miniaturas à esquerda
+  no computador, arrastar de lado no celular; o 3D continua na aba ao lado, e escolher uma cor leva a ele. **Padrão: 4 fotos por peça**,
+  nesta ordem — frente, três quartos, costas e um detalhe de perto (o rosto, a cabine) —, todas 4:5 (960 x 1200), recortadas do fundo,
+  com a peça do mesmo tamanho e no mesmo lugar e uma sombra leve no chão; o detalhe enche o quadro, como o zoom das lojas
+  (`STANDARD`/`GALLERY` em `dist/gallery.js`; cada peça só diz o nome do detalhe dela). As fontes (fotos e vídeos do Luiz) ficam em
+  `design/vistas/`, com o recorte de cada foto em `design/vistas/fotos.json`; o que pedir de foto para uma peça nova está em
+  `design/vistas/PADRAO.md`. `node tools/galeria-vistas/gerar.cjs` grava em `dist/assets/vistas/` (tira o chuvisco da compressão,
+  amplia com Lanczos e realça); depois, suba `VIEWS_VERSION`. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine, no mesmo
+  quadro. Peça nova (unicórnio, girafa): entra em `GALLERY` e em `fotos.json` quando estiver à venda.
+- **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
+  combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
 
 ## Decisões já tomadas
@@ -86,7 +97,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   configurar os 3x sem juros no Mercado Pago e conferir se o webhook aponta para a Hostinger; confirmar preços; passar e-mail e WhatsApp;
   passar o id da natureza do Bling.
 - **Macacoscópio à venda (02/10/2026):** faltam preço, peso embalado, NCM e as lâmpadas compatíveis (o que muda em
-  `VITRINE-AVIAO-MACACO-QA.md`). Hoje é novidade com "Ver em 3D", já com o modelo do Rodin em cores fixas.
+  `VITRINE-AVIAO-MACACO-QA.md`). Hoje é novidade com "Ver em 3D", já com o modelo do Meshy em cores fixas.
 - **Depende de conteúdo ou decisão (auditoria):** ficha técnica (C2), fotos reais e vídeo (C4), Sobre e Contato (G1; depois remover o
   `noindex` dessas páginas), depoimentos (G3), "Avise-me" nos Sensoriais (B4), regra de cor do tema (F4 e H2; sugestão: tema do
   produto na vitrine e no produto, rosa Ju no fluxo de compra e no institucional), analytics com aviso de consentimento (K1).

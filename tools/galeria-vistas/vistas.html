@@ -1,0 +1,145 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fotos da galeria</title>
+<!-- Aberta por gerar.cjs: as fotos reais da galeria (dist/assets/vistas), recortadas das fontes de design/vistas/ como manda
+     design/vistas/fotos.json (foto ou quadro de vídeo, e o recorte), todas no mesmo quadro 4:5 (o padrão de dist/gallery.js).
+     Peça ainda sem fotos reais: só a foto da vitrine, no mesmo quadro. -->
+<script type="module">
+import {PRODUCTS,SOON} from '/dist/products.js';
+import {viewsOf} from '/dist/gallery.js';
+const q=new URLSearchParams(location.search),keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
+// O quadro de toda foto (4:5) e a miniatura. Nas vistas inteiras, a peça ocupa 80% da altura (ou 88% da largura, a que vier antes), no
+// meio, com o pé a 8% da borda de baixo — todas as peças e vistas do mesmo tamanho, como numa loja.
+const FRAME=[960,1200],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
+const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
+// um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá
+const videos=new Map();
+const still=async(src,t)=>{if(!videos.has(src))videos.set(src,URL.createObjectURL(await (await fetch(src)).blob()));const v=document.createElement('video');v.muted=true;v.preload='auto';v.src=videos.get(src);
+  await new Promise((resolve,reject)=>{v.onloadeddata=resolve;v.onerror=()=>reject(new Error(`vídeo ${src}`));});
+  v.currentTime=t;await new Promise(resolve=>{v.onseeked=resolve;});
+  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c;};
+const context=canvas=>canvas.getContext('2d',{willReadFrequently:true});
+const pixels=source=>{const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height,c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=context(c);g.drawImage(source,0,0);return {w,h,px:g.getImageData(0,0,w,h).data};};
+// cor do fundo: a mediana das bordas da fonte
+function background(source){const {w,h,px}=pixels(source),at=[];for(let x=0;x<w;x+=3)at.push(x*4,((h-1)*w+x)*4);for(let y=0;y<h;y+=3)at.push(y*w*4,(y*w+w-1)*4);
+  return '#'+[0,1,2].map(k=>{const v=at.map(i=>px[i+k]).sort((a,b)=>a-b);return v[v.length>>1].toString(16).padStart(2,'0');}).join('');}
+// x "auto": o recorte centralizado na peça (o que se afasta da cor do fundo), para as vistas de uma peça que gira no vídeo
+function centerX(source,bg){const {w,h,px}=pixels(source),b=[1,3,5].map(i=>parseInt(bg.slice(i,i+2),16));let x0=w,x1=-1;
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){const i=(y*w+x)*4;if(Math.abs(px[i]-b[0])+Math.abs(px[i+1]-b[1])+Math.abs(px[i+2]-b[2])>60){if(x<x0)x0=x;if(x>x1)x1=x;}}
+  return (x0+x1)/2;}
+// o recorte [x, y, largura, altura] da fonte, pixel a pixel (sem ampliar: a ampliação é uma só, no fim, em resample); o que passar da
+// fonte fica com a cor do fundo
+function cut(source,[x,y,w,h],bg){const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=context(c);g.fillStyle=bg;g.fillRect(0,0,w,h);g.drawImage(source,x,y,w,h,0,0,w,h);return c;}
+// tira o chuvisco da compressão (as fontes vieram pelo WhatsApp): cada pixel vira a média dos vizinhos parecidos com ele, então as
+// superfícies lisas da peça ficam lisas e as beiradas (cor contra cor) continuam onde estão
+function denoise(canvas,sigma=10){const W=canvas.width,H=canvas.height,g=context(canvas),img=g.getImageData(0,0,W,H),px=img.data,o=new Uint8ClampedArray(px),near=[];
+  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)near.push(dx,dy,Math.exp(-(dx*dx+dy*dy)/4.5));
+  const alike=new Float32Array(766);for(let d=0;d<766;d++)alike[d]=Math.exp(-d*d/(2*(3*sigma)**2));
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=(r*W+c)*4;let s0=0,s1=0,s2=0,sw=0;
+    for(let k=0;k<near.length;k+=3){const rr=r+near[k+1],cc=c+near[k];if(rr<0||rr>=H||cc<0||cc>=W)continue;const j=(rr*W+cc)*4;
+      const w=near[k+2]*alike[Math.abs(o[j]-o[i])+Math.abs(o[j+1]-o[i+1])+Math.abs(o[j+2]-o[i+2])];s0+=w*o[j];s1+=w*o[j+1];s2+=w*o[j+2];sw+=w;}
+    px[i]=s0/sw;px[i+1]=s1/sw;px[i+2]=s2/sw;}
+  g.putImageData(img,0,0);return canvas;}
+// "fundo": "recortar" — tira o fundo liso da foto (preto ou claro; a galeria fica sobre o fundo da página): é fundo o que tem a cor
+// dele e encosta na borda (a abertura entre as pernas também, que é fundo de verdade), e tudo abaixo de "chao" (y da fonte onde a peça
+// toca o chão; abaixo, só o reflexo). Na beirada, a transparência vem da distância à cor do fundo contra a da peça logo ao lado, e a
+// cor é tirada da mistura com o fundo. O recorte [x, y, …] diz onde o canvas está na fonte.
+function matte(canvas,[x,y,w,h],floor,bgHex){
+  const W=canvas.width,H=canvas.height,k=W/w,g=context(canvas),img=g.getImageData(0,0,W,H),px=img.data;
+  const B0=[1,3,5].map(i=>parseInt(bgHex.slice(i,i+2),16)),light=B0[0]+B0[1]+B0[2]>384;
+  // fundo escuro: o ruído da foto vai longe (até 40); fundo claro: a peça creme fica perto dele, então a tolerância é menor
+  const orig=new Uint8ClampedArray(px),d=i=>Math.max(Math.abs(orig[i]-B0[0]),Math.abs(orig[i+1]-B0[1]),Math.abs(orig[i+2]-B0[2]));
+  const LOW=light?7:40,FLOOR=light?3:8,HIGH=light?30:72,bg=new Uint8Array(W*H),stack=[];
+  const floorRow=floor==null?H:Math.max(0,Math.round((floor-y)*k));
+  for(let r=floorRow;r<H;r++)for(let c=0;c<W;c++)bg[r*W+c]=1;
+  const seed=(c,r)=>{const n=r*W+c;if(!bg[n]&&d(n*4)<LOW){bg[n]=1;stack.push(n);}};
+  for(let c=0;c<W;c++){seed(c,0);seed(c,Math.min(H-1,floorRow-1));}for(let r=0;r<Math.min(H,floorRow);r++){seed(0,r);seed(W-1,r);}
+  while(stack.length){const n=stack.pop(),c=n%W,r=(n-c)/W;if(c>0)seed(c-1,r);if(c<W-1)seed(c+1,r);if(r>0)seed(c,r-1);if(r<floorRow-1)seed(c,r+1);}
+  // fundo claro: as aberturas vazadas (as 16 do avião) também são fundo, mesmo cercadas pela peça — manchas da cor do fundo com área de
+  // um furo para cima (no fundo preto não: lá o escuro cercado é a parede de dentro da peça)
+  if(light){const seen=new Uint8Array(W*H),minArea=.0003*W*H;
+    for(let n0=0;n0<W*H;n0++){if(bg[n0]||seen[n0]||d(n0*4)>=LOW)continue;const comp=[n0];seen[n0]=1;
+      for(let q=0;q<comp.length;q++){const n=comp[q],c=n%W,r=(n-c)/W;for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&!seen[m]&&!bg[m]&&d(m*4)<LOW){seen[m]=1;comp.push(m);}}
+      if(comp.length>=minArea)for(const n of comp)bg[n]=1;}}
+  // beirada: até B pixels do fundo (1,5 pixel da fonte)
+  const B=Math.max(2,Math.ceil(1.5*k)),R=B+2,dist=new Uint8Array(W*H).fill(255),queue=[];
+  for(let n=0;n<W*H;n++)if(bg[n]){dist[n]=0;queue.push(n);}
+  for(let q=0;q<queue.length;q++){const n=queue[q],dd=dist[n];if(dd>=B)continue;const c=n%W,r=(n-c)/W;
+    for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&dist[m]>dd+1){dist[m]=dd+1;queue.push(m);}}
+  for(let n=0;n<W*H;n++){const i=n*4;if(bg[n]){px[i+3]=0;continue;}
+    if(dist[n]>B)continue;const c=n%W,r=(n-c)/W;
+    let ref=HIGH;for(let dr=-R;dr<=R;dr++)for(let dc=-R;dc<=R;dc++){const rr=r+dr,cc=c+dc;if(rr<0||rr>=H||cc<0||cc>=W||bg[rr*W+cc])continue;ref=Math.max(ref,d((rr*W+cc)*4));}
+    const a=Math.min(1,Math.max(0,(d(i)-FLOOR)/(ref-FLOOR)));if(a<=0){px[i+3]=0;continue;}
+    for(let j=0;j<3;j++)px[i+j]=Math.min(255,Math.max(0,Math.round((orig[i+j]-(1-a)*B0[j])/a)));px[i+3]=Math.round(a*255);}
+  g.putImageData(img,0,0);return canvas;}
+// Amplia (ou reduz) a janela [x, y, largura, altura] da fonte para um quadro largura x altura com o filtro Lanczos, que guarda mais
+// detalhe que o do canvas; a transparência entra pré-multiplicada, para a beirada não escurecer. Fora da fonte, transparente.
+function resample(source,[sx,sy,sw,sh],dw,dh){
+  const {w,h,px}=pixels(source),A=3,lanczos=x=>{if(x===0)return 1;if(x<=-A||x>=A)return 0;const p=Math.PI*x;return A*Math.sin(p)*Math.sin(p/A)/(p*p);};
+  const taps=(n,start,len,size)=>{const step=len/n,f=Math.max(1,step),list=[];
+    for(let i=0;i<n;i++){const center=start+(i+.5)*step,idx=[],wts=[];let sum=0;
+      for(let j=Math.floor(center-A*f);j<=Math.ceil(center+A*f);j++){const wt=lanczos((j+.5-center)/f);if(!wt)continue;sum+=wt;if(j>=0&&j<size){idx.push(j);wts.push(wt);}}
+      list.push({idx,wts:wts.map(v=>v/sum)});}
+    return list;};
+  const P=new Float32Array(w*h*4);for(let i=0;i<w*h;i++){const a=px[i*4+3]/255;P[i*4]=px[i*4]*a;P[i*4+1]=px[i*4+1]*a;P[i*4+2]=px[i*4+2]*a;P[i*4+3]=px[i*4+3];}
+  const X=taps(dw,sx,sw,w),Y=taps(dh,sy,sh,h),T=new Float32Array(dw*h*4);
+  for(let r=0;r<h;r++)for(let x=0;x<dw;x++){const {idx,wts}=X[x],o=(r*dw+x)*4;for(let t=0;t<idx.length;t++){const j=(r*w+idx[t])*4,wt=wts[t];T[o]+=P[j]*wt;T[o+1]+=P[j+1]*wt;T[o+2]+=P[j+2]*wt;T[o+3]+=P[j+3]*wt;}}
+  const c=document.createElement('canvas');c.width=dw;c.height=dh;const g=context(c),img=g.createImageData(dw,dh),out=img.data;
+  for(let y=0;y<dh;y++){const {idx,wts}=Y[y];for(let x=0;x<dw;x++){let s0=0,s1=0,s2=0,s3=0;
+    for(let t=0;t<idx.length;t++){const j=(idx[t]*dw+x)*4,wt=wts[t];s0+=T[j]*wt;s1+=T[j+1]*wt;s2+=T[j+2]*wt;s3+=T[j+3]*wt;}
+    if(s3<2)continue;const o=(y*dw+x)*4,a=Math.min(255,s3),m=255/a;out[o]=s0*m;out[o+1]=s1*m;out[o+2]=s2*m;out[o+3]=a;}}
+  g.putImageData(img,0,0);return c;}
+// a peça inteira (fundo já transparente) no quadro padrão: do mesmo tamanho e no mesmo lugar em toda vista
+function place(canvas){const {w,h,px}=pixels(canvas);let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[(y*w+x)*4+3]>24){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const [W,H]=FRAME,k=Math.min(TALL*H/(y1-y0+1),WIDE*W/(x1-x0+1)),sw=W/k,sh=H/k;
+  const out=resample(canvas,[(x0+x1+1)/2-sw/2,y1+1-(1-BASE)*sh,sw,sh],W,H);out.scale=k;return out;}
+// a peça recortada inteira ganha uma sombra suave no chão, por baixo dela, para não parecer colada no fundo (as de perto, não)
+function ground(canvas){const W=canvas.width,H=canvas.height,g=context(canvas),px=g.getImageData(0,0,W,H).data;
+  let x0=W,x1=-1,y1=-1;for(let r=0;r<H;r++)for(let c=0;c<W;c++)if(px[(r*W+c)*4+3]>40){if(c<x0)x0=c;if(c>x1)x1=c;if(r>y1)y1=r;}
+  if(x1<0)return canvas;const cx=(x0+x1)/2,rx=.46*(x1-x0),ry=.03*H,cy=Math.min(H-ry,y1-.2*ry);
+  g.save();g.globalCompositeOperation='destination-over';g.translate(cx,cy);g.scale(1,ry/rx);
+  const shade=g.createRadialGradient(0,0,0,0,0,rx);shade.addColorStop(0,'rgba(24,28,36,.24)');shade.addColorStop(.55,'rgba(24,28,36,.1)');shade.addColorStop(1,'rgba(24,28,36,0)');
+  g.fillStyle=shade;g.beginPath();g.arc(0,0,rx,0,2*Math.PI);g.fill();g.restore();return canvas;}
+// nitidez depois de ampliar (máscara de desfoque com raio de acordo com a ampliação): só onde a peça é inteira, para não criar contorno
+// na beirada, e só o que passa do limiar, para não realçar o que sobrou do chuvisco
+function sharpen(canvas,radius,amount,threshold=2){const W=canvas.width,H=canvas.height,g=context(canvas),img=g.getImageData(0,0,W,H),px=img.data,o=new Uint8ClampedArray(px);
+  const n=Math.ceil(2.5*radius),kernel=[];let sum=0;for(let i=-n;i<=n;i++){const v=Math.exp(-i*i/(2*radius*radius));kernel.push(v);sum+=v;}for(let i=0;i<kernel.length;i++)kernel[i]/=sum;
+  const blur=(src,horizontal)=>{const out=new Float32Array(W*H*4);for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=(r*W+c)*4;
+    for(let t=-n;t<=n;t++){const rr=horizontal?r:Math.min(H-1,Math.max(0,r+t)),cc=horizontal?Math.min(W-1,Math.max(0,c+t)):c,j=(rr*W+cc)*4,wt=kernel[t+n];
+      out[i]+=src[j]*wt;out[i+1]+=src[j+1]*wt;out[i+2]+=src[j+2]*wt;out[i+3]+=src[j+3]*wt;}}return out;};
+  const soft=blur(blur(o,true),false);
+  for(let i=0;i<W*H*4;i+=4){if(o[i+3]<255||soft[i+3]<254.5)continue;
+    for(let k=0;k<3;k++){const diff=o[i+k]-soft[i+k];if(Math.abs(diff)>threshold)px[i+k]=o[i+k]+amount*diff;}}
+  g.putImageData(img,0,0);return canvas;}
+const encode=(canvas,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),'image/webp',quality));
+const asData=blob=>new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});
+window.results={};window.info={};
+try{
+  const fotos=await (await fetch('/design/vistas/fotos.json')).json(),cache=new Map();
+  for(const key of keys){
+    const p=PRODUCTS[key]||SOON[key];
+    for(const v of viewsOf(key)){
+      const spec=fotos[key]?.[v.id];let big;
+      if(spec){
+        if(spec.fundo!=='recortar'&&!spec.detalhe)throw new Error(`${key}-${v.id}: a vista inteira precisa de "fundo": "recortar" (fica no quadro padrão)`);
+        const rect=[...spec.recorte];if(spec.detalhe&&Math.abs(rect[2]/rect[3]-FRAME[0]/FRAME[1])>.01)throw new Error(`${key}-${v.id}: o recorte do detalhe precisa ser 4:5`);
+        const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));
+        const source=cache.get(id),bg=background(source);if(rect[0]==='auto')rect[0]=Math.round(centerX(source,bg)-rect[2]/2);
+        const crop=denoise(cut(source,rect,bg));if(spec.fundo==='recortar')matte(crop,rect,spec.chao,bg);
+        big=spec.detalhe?resample(crop,[0,0,rect[2],rect[3]],...FRAME):place(crop);
+        // ampliação desta foto (pixels do quadro por pixel da fonte): quanto mais ampliada, mais largo o realce
+        const zoom=spec.detalhe?FRAME[1]/rect[3]:big.scale;
+        sharpen(big,Math.min(1.6,Math.max(.8,.7*zoom)),zoom>1.2?.7:.4);if(spec.fundo==='recortar'&&!spec.detalhe)ground(big);
+        window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · ${spec.fundo==='recortar'?'fundo recortado':`fundo ${bg}`}`;
+      }else if(v.id==='frente'){big=ground(place(await image(`/dist/assets/${p.catalogImage}`)));window.info[`${key}-${v.id}`]='foto da vitrine';}
+      else throw new Error(`${key}-${v.id}: falta a foto em design/vistas/fotos.json`);
+      window.results[`${key}-${v.id}.webp`]=await asData(await encode(big,.93));
+      window.results[`${key}-${v.id}-mini.webp`]=await asData(await encode(resample(big,[0,0,...FRAME],...MINI),.88));
+    }
+  }
+}catch(error){window.error=String(error?.stack||error);}
+window.done=true;
+</script>

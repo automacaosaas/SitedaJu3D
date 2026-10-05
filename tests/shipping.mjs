@@ -261,7 +261,8 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
 {
   const correios = fresh(), mercadoPago = createFakeMercadoPago(), net = network(correios, mercadoPago), store = createMemoryStore();
   const env = {...ENV_OF(correios), RESEND_API_KEY: 're_test_key_123', MAIL_FROM: 'Ju <pedidos@site.test>', MP_ACCESS_TOKEN: 'TEST-secret-token-000', MP_PUBLIC_KEY: 'TEST-public-key-111', MP_WEBHOOK_SECRET: 'whsec-test-222', ORDER_NOTIFY_EMAIL: 'ju@site.test', VERCEL_ENV: 'preview'};
-  const handler = createHandler.create({env, fetchImpl: net.fetchImpl, store, shippingConfig: EXAMPLE_CONFIG});
+  const emails = [];   // the paid e-mails go out after the answer; waitUntil hands them to the test
+  const handler = createHandler.create({env, fetchImpl: net.fetchImpl, store, shippingConfig: EXAMPLE_CONFIG, waitUntil: work => emails.push(work)});
   const quoter = quoteHandler.create({env, fetchImpl: net.fetchImpl, shippingConfig: EXAMPLE_CONFIG});
   const ana = await signedInBuyer(store, env);
   const subtotal = 3 * 12900 + 15900;
@@ -294,6 +295,7 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
   // Ju and the buyer see the service, the estimate and what the label costs
   const admin = createOrders({store, env}).adminView(saved);
   assert.deepEqual(admin.shipping, {service: 'pac', label: 'PAC', days: {min: 20, max: 22}, deliveryDays: 15, chargedCents: pac(6, 1, 3), costCents: pac(6, 1, 3), volumes: 3});
+  await Promise.all(emails);
   const toBuyer = net.mails.find(m => m.to[0] === 'ana@example.com'), toJu = net.mails.find(m => m.to[0] === 'ju@site.test');
   assert(toBuyer.html.includes('Entrega · PAC') && toBuyer.text.includes('Prazo estimado: 20 a 22 dias úteis (produção + envio).'), 'the buyer sees the service and the estimate');
   assert(toJu.html.includes('PAC · 3 volumes · prazo 20 a 22 dias úteis') && toJu.text.includes('custo da etiqueta'), 'Ju sees the volumes and the label cost');

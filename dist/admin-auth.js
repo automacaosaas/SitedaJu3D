@@ -51,6 +51,19 @@ export async function retryInvoice(id, options) {
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 
+// Fluxo de caixa: the whole view ({today, balanceCents, movements, bills}), and one change that answers it again.
+const cashError = answer => Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable', field: answer.data?.field});
+export async function loadCash(options) {
+  const answer = await request('/api/admin/cash', options);
+  if (answer.status === 200 && answer.data?.cash) return answer.data.cash;
+  throw cashError(answer);
+}
+export async function cashAction(action, payload = {}, options) {
+  const answer = await request('/api/admin/cash', {method: 'POST', body: {...payload, action}, ...options});
+  if (answer.status === 200 && answer.data?.cash) return answer.data.cash;
+  throw cashError(answer);
+}
+
 // The buyer's full CPF for issuing the invoice by hand (audited on the server).
 export async function revealDocument(id, options) {
   const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});

@@ -120,6 +120,32 @@ Roteiro:
 - `/api/health` mostra `"bling"`: `off`, `not_configured` (faltam as variáveis), `disconnected`, `connected` ou
   `paused`.
 
+### Corrigir uma nota rejeitada pela Fazenda (no Bling)
+
+Testado em homologação em 03/10/2026 (nota nº 20). O painel do site não edita os dados do cliente: a correção é feita na
+nota, no Bling, e o site só reenvia.
+
+1. No Bling, abra a nota rejeitada (Vendas → Notas Fiscais de Saída) e veja o motivo.
+2. Corrija o dado recusado. IE, CNPJ e endereço do cliente ficam no cadastro do contato: lápis ao lado do nome do
+   contato, na própria nota.
+3. Marque **todos** os itens como **Faturado** (abra cada item da nota, marque "Faturado" e salve o item). Os itens que
+   vêm do site chegam sem essa marca, e sem ela o Bling considera o valor faturado zero: zera a parcela e não salva a
+   nota ("Não é possível adicionar parcelas quando o valor faturado for zero").
+4. Em **Cálculo de imposto → Mostrar mais**, confira **Total faturado = Total dos produtos**.
+5. Em **Pagamento**: Condição de pagamento **0** → **Gerar parcelas** → confira **parcela = Total da nota** e a forma
+   (Cartão de crédito, Pix…). Se faltar marcar um item, a parcela sai menor que a nota (no teste, R$ 139,59 numa nota
+   de R$ 290,01).
+6. **Salvar** (não precisa enviar pelo Bling).
+7. No painel do site, **Tentar de novo** no pedido: a nota sai autorizada com o mesmo número e o cliente recebe o e-mail.
+
+Limitações do Bling vistas no mesmo teste:
+
+- **CNPJ com letras** (emitido desde julho de 2026): o Bling criou contatos repetidos para o mesmo CNPJ, e com repetidos
+  o lápis não salva ("O CNPJ já está cadastrado no contato…"); "Importar endereço da SEFAZ" falha ("Formato do XML
+  incorreto"). Com CNPJ só de números o contato foi reaproveitado (EMPRESA TESTE: 3 notas, 1 contato).
+- A API não mostra um campo para mandar o item já "Faturado": perguntar ao suporte do Bling. Se existir, o site passa a
+  mandar e o passo 3 deixa de ser preciso.
+
 ## Referência: a última nota antes do site
 
 A nota **nº 10, série 1** (19/09/2026, emissor do SEBRAE, natureza "Venda Fora do Estado") foi a última emitida antes do
@@ -189,10 +215,13 @@ padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastr
 
 ## O que ainda falta
 
-1. **No Bling:** as formas de pagamento (Pix 17, crédito 03, débito 04) e a conta em homologação para o primeiro teste.
-   As duas naturezas, a série 1 com próximo número 11 e o certificado A1 já estão feitos (01/10/2026).
-2. **Contadora:** revisar as duas naturezas e, no teste em homologação, os DANFEs (CFOP de cada caso, texto sem
-   repetir, linha do DIFAL) e confirmar "ME OU EPP" no texto.
+1. **No Bling:** naturezas, formas de pagamento, certificado A1 e os testes em homologação estão feitos (01 a
+   03/10/2026). Falta conferir o telefone da loja em "Dados da empresa" (sai com 8 dígitos no DANFE) e, na virada para
+   produção, mudar o ambiente para "1 - Produção" e o próximo número da série 1 para **11** (o contador é o mesmo da
+   homologação, que já passou do 20).
+2. **Contadora:** revisar os DANFEs de homologação (nº 13 MG 5101, nº 14 SP pessoa física 6107 com a linha do DIFAL,
+   nº 17 RS contribuinte 6101), confirmar "ME OU EPP" no texto, confirmar o nº 11 e decidir o "Total aproximado de
+   tributos" das duas naturezas (tabela IBPT, hoje 37,67%, ou alíquota fixa do Simples).
 
 CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
 inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não

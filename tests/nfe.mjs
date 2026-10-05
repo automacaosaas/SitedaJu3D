@@ -204,6 +204,22 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   assert.equal(confirmed.json().order.invoice.environment, 'homologacao');
   const listed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json();
   assert.equal(listed.invoicing, 'test'); assert.equal(listed.orders[0].invoice.number, confirmed.json().order.invoice.number, 'the panel lists the note with the order');
+
+  // Notes still processing are checked again when the panel opens: all of them, a few at a time (3) and in parallel.
+  const fake = providerFor(fiscal.nfeSettings(env)), check = fake.check;
+  const slowOnes = [];
+  for (let i = 0; i < 7; i++) {
+    const {order: o} = await store.orders.create(order({buyer: {name: `DEMORAR Painel ${i}`, email: `p${i}@example.com`, company: null}}));
+    slowOnes.push(await createInvoicing({store, env, fetchImpl, lookup: lookupFrom({'30140071': BH})}).issue(o));
+  }
+  assert(slowOnes.every(i => i.status === 'processando'));
+  let active = 0, peak = 0;
+  fake.check = async query => { active++; peak = Math.max(peak, active); await new Promise(r => setTimeout(r, 15)); active--; return check(query); };
+  try {
+    const refreshed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json().orders;
+    assert.equal(refreshed.filter(o => o.invoice?.status === 'autorizada').length, 8, 'every note processing is authorized in the list');
+    assert.equal(peak, 3, 'checked 3 at a time, never more');
+  } finally { fake.check = check; }
   const retry = await call(orderInvoice.create({env, store, fetchImpl}), {body: {id: paid.id}, cookie: admin});
   assert.equal(retry.json().order.invoice.number, confirmed.json().order.invoice.number, 'retrying an authorized note changes nothing');
   assert((await store.adminAudit.list()).some(a => a.action === 'nfe_issue'));

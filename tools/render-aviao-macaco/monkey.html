@@ -7,13 +7,14 @@
 import * as THREE from 'three';
 import {makeRenderer, studioEnvironment, renderStudio, finish} from './studio.js';
 import {buildMonkey} from './monkey.js';
+import {loadRodinMonkey} from './monkey-rodin.js';
 
 const P = Object.fromEntries(new URLSearchParams(location.search));
 const S = Number(P.size || 1254), PASSES = Number(P.passes || 40);
 const renderer = makeRenderer(S, S, {exposure: Number(P.exposure || 1.04)});
 const scene = new THREE.Scene();
 scene.environment = studioEnvironment(renderer, {top: Number(P.top || 5), left: Number(P.left || 2.6), right: Number(P.right || 2.2), scrim: Number(P.scrim || 1.4), glint: Number(P.glint ?? 18)});
-const monkey = buildMonkey(); scene.add(monkey);
+const monkey = P.model === 'rodin' ? await loadRodinMonkey() : buildMonkey(); scene.add(monkey);   // model=rodin: the site's 3D preview
 
 const fov = Number(P.fov || 14), elev = Number(P.elev || 5) * Math.PI / 180, camera = new THREE.PerspectiveCamera(fov, 1, 10, 20000);
 // frame on the projected vertices: the piece's top at 1 − bottom − h of the height, its bottom at 1 − bottom
