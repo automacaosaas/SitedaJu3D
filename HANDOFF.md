@@ -9,9 +9,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
-- **Atualização de 05/10/2026: branch `vitrine/3d-nas-consultas` (enviada ao GitHub).** Ela parte da `main` de 05/10 (`9deabd3`,
-  com a galeria de vistas, o macaco novo, o painel com fluxo de caixa e os ajustes de desempenho) e acrescenta o que o dono pediu
-  entre 03 e 05/10. 38 suítes passam. Detalhes e verificação em `CONSULTAS-3D-QA.md`.
+- **Atualização de 05/10/2026: branch `vitrine/3d-nas-consultas` (enviada ao GitHub).** Ela já tem a `main` até `6c6bb1a`
+  (galeria de vistas, macaco novo, fluxo de caixa, desempenho, página Fale com a Ju com perguntas frequentes e o pedido em
+  etapas no painel) e a paginação da lista de pedidos (`claude/project-thread-3y8z4a`, `9d1bc0f`). Acrescenta o que o dono
+  pediu entre 03 e 05/10. 39 suítes passam. Detalhes e verificação em `CONSULTAS-3D-QA.md`.
   - **Home:**
     - saiu a seção "O 3D nas suas consultas" (fichas técnicas, GSAP/Lenis);
     - "Personalizar o meu" com a paleta;
