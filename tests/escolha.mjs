@@ -1,5 +1,5 @@
 // A página Escolha o seu, o filtro por encaixe da página Produtos e os cards de "Nossa coleção" na cor da peça.
-// (A seção "O 3D nas suas consultas", com as fichas técnicas, foi retirada da home a pedido do dono em 2026-10-05.)
+// (A seção "O 3D nas suas consultas", com as fichas técnicas, foi retirada da home a pedido do dono em 2026-10-04.)
 // Run: node tests/escolha.mjs — sem rede nem navegador.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
