@@ -102,6 +102,34 @@ nada a configurar: funciona sozinho depois de publicado.
 - **Testar no computador sem internet:** `node tools/dev-server.cjs --fake-cep` (CEPs de exemplo: 01310100, 20040020, 40020000 e 35400000, este
   último da cidade inteira). Automáticos: `node tests/cep.mjs`.
 
+## Envio internacional (painel, 05/10/2026)
+
+Pedido de fora do Brasil, combinado por WhatsApp ou e-mail: no painel, **Envio internacional** (`/admin.html#internacional`). A Ju
+escolhe o país e as peças, e o site cota com o mesmo contrato e a mesma caixa do frete nacional.
+
+- **Correios:** `GET /preco/v1/internacional/{código}` (com `sgPaisDestino` no lugar do CEP de destino) e
+  `GET /prazo/v2/internacional/exportacao/{código}`, com o mesmo token, contrato e DR. Os serviços ficam em `international` no
+  `api/_lib/shipping-config.js`: Exporta Fácil Standard `45128`, Expresso `45110` e Econômico `45209`, os códigos do manual da API
+  de Preço.
+  - Só respondem os serviços que estão no contrato. Os outros aparecem em "Não cotado", com a mensagem dos Correios: é assim que se
+    descobre o que o contrato cobre.
+  - Para incluir um serviço, fale com o gerente do contrato; se o código dele for outro, troque em `shipping-config.js`.
+- **O que a tela mostra:**
+  - frete e prazo de cada serviço, e o total a cobrar (peças + frete);
+  - a caixa usada;
+  - os dados de alfândega para o Minhas Exportações: código HS `392690` e a descrição em inglês de cada peça, com botões de copiar;
+  - o aviso da DU-E acima de US$ 1.000;
+  - o passo a passo (cobrar, nota de exportação, pré-postagem, postar e avisar).
+- **Endpoint:** `POST /api/admin/international-quote` `{country, items: [{productId, quantity}]}`, só com o login do painel (senha + código).
+- **Ainda é manual:**
+  - cobrar (link de pagamento do Mercado Pago, cartão);
+  - a nota de exportação (natureza com CFOP 7101 no Bling, criada pela contadora);
+  - a pré-postagem no Minhas Exportações.
+
+  O checkout do site continua só para o Brasil. O plano completo está em `Plano-vender-para-o-exterior` (Pedro, 05/10/2026).
+- **Testar sem internet:** `node tools/dev-server.cjs --fake-correios`. No simulador, Standard e Expresso respondem, o Econômico vem
+  como "não contratado" e a Coreia do Norte (KP) não é atendida. Automáticos: `node tests/international.mjs`.
+
 ## Fora deste passo
 
 - Comprar a etiqueta e mandar o código de rastreio por e-mail (a etiqueta segue no Correios Empresa).

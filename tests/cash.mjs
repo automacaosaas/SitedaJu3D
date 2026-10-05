@@ -249,10 +249,10 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const read = file => fs.readFileSync(path.join(root, file), 'utf8');
   const sql = read('db/migrations/009_caixa.sql');
   assert.match(sql, /CREATE TABLE cash_entries \(/); assert.match(sql, /CREATE TABLE bills \(/); assert.match(sql, /occurred_on DATE NOT NULL/);
-  assert.match(read('tools/dev-server.cjs'), /'bling', 'cash'\]\) routes\[/, 'the local server answers /api/admin/cash');
+  assert.match(read('tools/dev-server.cjs'), /'bling', 'cash'(, '[a-z-]+')*\]\) routes\[/, 'the local server answers /api/admin/cash');
   const panel = read('dist/admin.js');
-  assert.match(panel, /\[\['pedidos', 'Pedidos'\], \['caixa', 'Fluxo de caixa'\]\]/, 'two parts: Pedidos and Fluxo de caixa');
-  assert.match(panel, /let section = location\.hash === '#caixa' \? 'caixa' : 'pedidos';/, '#caixa keeps the part on reload');
+  assert.match(panel, /\[\['pedidos', 'Pedidos'\], \['caixa', 'Fluxo de caixa'\](, \[[^\]]+\])*\]/, 'parts: Pedidos and Fluxo de caixa (and Envio internacional, since 05/10/2026)');
+  assert.match(panel, /let section = location\.hash === '#caixa' \? 'caixa' : /, '#caixa keeps the part on reload');
   const cash = read('dist/admin-cash.js');
   assert.match(cash, /\[\['geral', 'Visão geral'\], \['movimentacoes', 'Movimentações'\], \['contas', 'Contas a pagar'\]\]/, 'three tabs');
   // Movimentações: 10 lines, then "Ver mais" adds 10; the totals are of the whole month.
