@@ -18,7 +18,7 @@ const PAGES = {
   'index.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'produtos.html': {title: 'Produtos · Ju, imprime pra mim?', description: 'Borboletoscópio, Dinossauroscópio e Aviãoscopia: peças impressas em 3D para a consulta, personalizadas nas cores que você escolher.'},
   'sobre.html': {title: 'Sobre a Ju · Ju, imprime pra mim?', description: SHOP},
-  'contato.html': {title: 'Contato · Ju, imprime pra mim?', description: SHOP},
+  'contato.html': {title: 'Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?', description: 'Fale com a Ju pelo formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.'},
   'termos.html': {title: 'Termos de Uso · Ju, imprime pra mim?', description: 'Termos de Uso da loja Ju, imprime pra mim?: conta, pedidos sob encomenda, pagamento, produção, entrega e seus direitos.'},
   'privacidade.html': {title: 'Política de Privacidade · Ju, imprime pra mim?', description: 'Política de Privacidade da loja Ju, imprime pra mim?: quais dados coletamos, para quê, com quem compartilhamos e como exercer seus direitos (LGPD).'},
   'trocas.html': {title: 'Trocas e Devoluções · Ju, imprime pra mim?', description: 'Trocas e Devoluções da loja Ju, imprime pra mim?: desistência em 7 dias, peças com defeito e como o valor é devolvido.'},

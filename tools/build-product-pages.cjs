@@ -15,8 +15,8 @@ const {COMPANY} = require('../api/_lib/legal');
 const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const nbsp = text => text.replace(/ /g, '&nbsp;');
-// Pages search engines may list (Sobre and Contato stay out while they are empty; account and checkout steps are private).
-const LISTED = ['', 'produtos.html', '{products}', 'termos.html', 'privacidade.html', 'trocas.html'];
+// Pages search engines may list (Sobre stays out while it is empty; account and checkout steps are private).
+const LISTED = ['', 'produtos.html', '{products}', 'contato.html', 'termos.html', 'privacidade.html', 'trocas.html'];
 const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html', '/conta.html', '/email-preview.html'];
 
 async function site() {

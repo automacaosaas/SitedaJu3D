@@ -6,7 +6,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fff7f5">
-  <meta name="robots" content="noindex">
   <title>Contato · Ju imprime pra mim</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,14 +14,16 @@
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="shopping.css">
   <link rel="stylesheet" href="info.css">
+  <link rel="stylesheet" href="contact.css">
   <script type="module" src="site-shell.js"></script>
+  <script type="module" src="contato.js"></script>
   <link rel="stylesheet" href="journey.css">
   <!-- og -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Ju, imprime pra mim?">
   <meta property="og:locale" content="pt_BR">
-  <meta property="og:title" content="Contato · Ju, imprime pra mim?">
-  <meta property="og:description" content="Mais cor na consulta, mais encanto em cada olhar: capas para retinoscópio e avião para régua de grau, impressos em 3D nas cores que você escolher.">
+  <meta property="og:title" content="Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?">
+  <meta property="og:description" content="Fale com a Ju pelo formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.">
   <meta property="og:url" content="https://juimprimepramim.com.br/contato.html">
   <meta property="og:image" content="https://juimprimepramim.com.br/assets/og-ju.jpg">
   <meta property="og:image:width" content="1200">
@@ -31,19 +32,118 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- /og -->
 </head>
-<body class="info-page">
+<body class="info-page contact-page">
   <div class="page">
     <header class="header">
       <a class="brand" href="index.html" aria-label="Ju imprime pra mim — início"><img src="assets/logo-ju.webp" width="112" height="112" alt="Ju, imprime pra mim? Criatividade em 3D"></a>
       <nav class="shop-nav" data-shop-nav aria-label="Compras e conta"></nav>
     </header>
-    <main class="info-main">
-      <section class="info-card" aria-labelledby="info-title">
+    <main class="contact-main" id="conteudo">
+      <section class="contact-hero" aria-labelledby="contact-title">
         <p class="eyebrow">CONTATO</p>
-        <h1 id="info-title">Vamos conversar.</h1>
-        <p class="info-copy">Em breve, você encontrará aqui os canais oficiais para falar com a Ju sobre as peças e suas escolhas.</p>
-        <span class="info-status">Conteúdo em preparação</span>
-        <a class="primary" href="produtos.html">Conhecer os produtos <span aria-hidden="true">↗</span></a>
+        <h1 id="contact-title">Fale com a Ju <span class="contact-heart" aria-hidden="true">💜</span></h1>
+        <p class="contact-lead">Ficou com alguma dúvida sobre um produto, seu pedido ou deseja algo personalizado? Fale com a gente.</p>
+      </section>
+
+      <section class="contact-channels" aria-label="Canais de atendimento">
+        <article class="contact-channel is-whatsapp">
+          <span class="contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5 5.6 16A8.2 8.2 0 1 1 8.4 18.6Z"/><path d="M9.2 8.6c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.6 1.5c.1.2 0 .4-.1.6l-.5.6c.6 1.1 1.5 2 2.6 2.6l.6-.5c.2-.1.4-.2.6-.1l1.5.6c.3.1.4.3.4.5v.5c0 .3 0 .6-.5.8-.6.3-1.6.4-3-.3a8.6 8.6 0 0 1-3.5-3.5c-.7-1.4-.6-2.4-.3-3Z"/></svg></span>
+          <h2>WhatsApp</h2>
+          <p>Resposta rápida e atendimento direto.</p>
+          <a class="contact-cta" href="#" data-whatsapp-link target="_blank" rel="noopener" hidden>Falar agora no WhatsApp →</a>
+          <p class="contact-soon" data-whatsapp-soon>O número do WhatsApp entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.</p>
+        </article>
+        <article class="contact-channel">
+          <span class="contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg></span>
+          <h2>E-mail</h2>
+          <p>Envie sua dúvida ou arquivo.</p>
+          <a class="contact-link" href="mailto:contato@juimprimepramim.com.br"><span translate="no">contato@<wbr>juimprimepramim.com.br</span></a>
+        </article>
+        <article class="contact-channel">
+          <span class="contact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg></span>
+          <h2>Instagram</h2>
+          <p>Acompanhe os bastidores e novidades da Ju.</p>
+          <a class="contact-link" href="https://www.instagram.com/juimprimepramim/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Ju, imprime pra mim? (abre em uma nova aba)"><span translate="no">@juimprimepramim</span></a>
+        </article>
+      </section>
+
+      <section class="contact-grid" aria-label="Mensagem">
+        <div class="contact-help">
+          <h2>Precisa de ajuda?</h2>
+          <p class="contact-help-intro">Os assuntos que mais aparecem por aqui:</p>
+          <ul class="contact-topics">
+            <li><span aria-hidden="true">📦</span><span>Dúvida sobre produto</span></li>
+            <li><span aria-hidden="true">🚚</span><span>Meu pedido / Rastreio</span></li>
+            <li><span aria-hidden="true">🎨</span><span>Personalização de peças</span></li>
+            <li><span aria-hidden="true">⏰</span><span>Prazos de produção e entrega</span></li>
+          </ul>
+          <div class="contact-hours">
+            <strong>Horário de atendimento</strong>
+            <span>Segunda a sexta, das 9h às 18h</span>
+          </div>
+        </div>
+
+        <div class="contact-form-card">
+          <form class="contact-form" id="contact-form" novalidate>
+            <h2>Envie uma mensagem</h2>
+            <label class="contact-field"><span>Nome completo</span><input name="name" autocomplete="name" maxlength="80" required></label>
+            <label class="contact-field"><span>E-mail</span><input name="email" type="email" autocomplete="email" maxlength="180" required></label>
+            <label class="contact-field"><span>Assunto</span><select name="subject" required>
+              <option value="" selected disabled>Escolha um assunto</option>
+              <option value="produto">Dúvida sobre produto</option>
+              <option value="pedido">Status do meu pedido</option>
+              <option value="personalizado">Orçamento / Personalizado</option>
+              <option value="outro">Outro assunto</option>
+            </select></label>
+            <label class="contact-field"><span>Mensagem</span><textarea name="message" rows="5" minlength="10" maxlength="2000" required placeholder="Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…)."></textarea></label>
+            <div class="contact-trap" aria-hidden="true"><label>Não preencha este campo<input name="website" tabindex="-1" autocomplete="off"></label></div>
+            <p class="contact-error" role="alert" hidden></p>
+            <button type="submit" class="primary contact-submit"><span>Enviar mensagem</span><span aria-hidden="true">→</span></button>
+            <p class="contact-privacy"><span>Usamos seus dados só para responder à sua mensagem.</span> <a href="privacidade.html">Política de Privacidade</a></p>
+          </form>
+          <div class="contact-sent" role="status" tabindex="-1" hidden>
+            <span class="contact-sent-icon" aria-hidden="true">💌</span>
+            <h2>Mensagem enviada com sucesso!</h2>
+            <p>Responderemos em breve.</p>
+            <button type="button" class="contact-again" data-contact-again>Enviar outra mensagem</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact-faq" aria-labelledby="faq-title">
+        <p class="eyebrow">DÚVIDAS</p>
+        <h2 id="faq-title">Perguntas frequentes</h2>
+        <p class="contact-faq-intro">As respostas para as dúvidas mais comuns.</p>
+        <div class="faq-list">
+          <details class="faq-item" id="faq-prazo">
+            <summary>Qual é o prazo de produção e envio das peças?</summary>
+            <div class="faq-answer"><p>Cada peça é impressa sob encomenda, nas cores que você escolheu: a produção leva de 3 a 5 dias úteis. Depois, ela segue pelos Correios (PAC ou SEDEX), e o prazo de entrega aparece no carrinho e na finalização da compra assim que você informa o CEP.</p></div>
+          </details>
+          <details class="faq-item" id="faq-personalizado">
+            <summary>Posso encomendar um modelo personalizado que não está no site?</summary>
+            <div class="faq-answer"><p>Sim! Adoramos criar projetos especiais. Conte a sua ideia pelo formulário desta página ou pelo WhatsApp e preparamos um orçamento. Se já tiver um arquivo 3D ou uma referência, avise na mensagem que combinamos como enviar.</p></div>
+          </details>
+          <details class="faq-item" id="faq-pedido">
+            <summary>Como acompanho o status do meu pedido?</summary>
+            <div class="faq-answer"><p>Na sua conta, em Meus pedidos, você vê a situação de cada compra. Você também recebe um e-mail quando o pagamento é aprovado e outro quando o pedido é confirmado. Quando a peça for postada, enviamos o código de rastreio dos Correios.</p><p><a href="conta.html#pedidos">Ver meus pedidos →</a></p></div>
+          </details>
+          <details class="faq-item" id="faq-cuidados">
+            <summary>Quais são os cuidados com as peças impressas em 3D?</summary>
+            <div class="faq-answer"><p>Evite deixar as peças no calor forte ou no sol direto por muito tempo, como dentro de um carro estacionado, para preservar o acabamento e o formato. Para limpar, use um pano macio e seco.</p></div>
+          </details>
+          <details class="faq-item" id="faq-pagamento">
+            <summary>Quais são as formas de pagamento?</summary>
+            <div class="faq-answer"><p>Pix, com 5% de desconto nas peças, ou cartão de crédito em até 12x, sendo até 3x sem juros. O pagamento é feito pelo Mercado Pago, com segurança.</p></div>
+          </details>
+          <details class="faq-item" id="faq-frete">
+            <summary>O frete é grátis?</summary>
+            <div class="faq-answer"><p>Nas compras a partir de R$ 500,00 em peças, o envio por PAC é grátis. Abaixo disso, o frete é calculado pelo CEP, e você escolhe entre PAC e SEDEX.</p></div>
+          </details>
+          <details class="faq-item" id="faq-trocas">
+            <summary>Posso trocar ou devolver uma peça?</summary>
+            <div class="faq-answer"><p>Sim. Você pode desistir da compra em até 7 dias corridos depois de receber a peça. Se ela chegar com defeito ou diferente do pedido, produzimos uma peça nova, com o frete por nossa conta.</p><p><a href="trocas.html">Ler a política de Trocas e Devoluções →</a></p></div>
+          </details>
+        </div>
       </section>
     </main>
     <footer class="site-footer"><span class="signature">feito com carinho, pela Ju.</span><div class="footer-meta"><p class="footer-copy">© 2026 Ju, imprime pra mim? Todos os direitos reservados.</p><a class="footer-social" href="https://www.instagram.com/juimprimepramim/" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Ju, imprime pra mim? (abre em uma nova aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg></a></div><div class="footer-legal"><nav aria-label="Informações legais"><a href="termos.html">Termos de Uso</a><a href="privacidade.html">Política de Privacidade</a><a href="trocas.html">Trocas e Devoluções</a></nav><p class="footer-company" translate="no"><span data-company="legalName">JU IMPRIME PARA MIM LTDA</span> · CNPJ <span data-company="cnpj">67.771.044/0001-96</span> · <span data-company="address">Rua Presidente Castelo Branco, 61, Nossa Senhora de Lourdes, Ouro Preto/MG, CEP 35404-450</span> · <span data-company="email">[PREENCHER: e-mail de atendimento]</span></p></div></footer>

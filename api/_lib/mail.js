@@ -34,12 +34,14 @@ function config(env = process.env) {
 
 const mailReady = settings => Boolean(settings.secret && (settings.transport === 'console' || settings.apiKey));
 
-async function sendMail({settings, to, subject, html, text, idempotencyKey, fetchImpl = globalThis.fetch, outbox = () => {}}) {
-  if (settings.transport === 'console') { outbox({to, subject, html, text}); return {id: 'console'}; }
+// `replyTo` (a contact message: the sender's address) wins over MAIL_REPLY_TO.
+async function sendMail({settings, to, subject, html, text, idempotencyKey, replyTo, fetchImpl = globalThis.fetch, outbox = () => {}}) {
+  const reply = replyTo || settings.replyTo;
+  if (settings.transport === 'console') { outbox({to, subject, html, text, replyTo: reply}); return {id: 'console'}; }
   const response = await fetchImpl('https://api.resend.com/emails', {
     method: 'POST',
     headers: {Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json', ...(idempotencyKey ? {'Idempotency-Key': idempotencyKey} : {})},
-    body: JSON.stringify({from: settings.from, to: [to], subject, html, text, ...(settings.replyTo ? {reply_to: settings.replyTo} : {})}),
+    body: JSON.stringify({from: settings.from, to: [to], subject, html, text, ...(reply ? {reply_to: reply} : {})}),
     // A slow e-mail service must not hold the answer to a payment (the order is saved before any e-mail goes out, and a
     // later webhook or status check retries the e-mail).
     ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(SEND_TIMEOUT_MS)} : {})
