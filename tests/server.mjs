@@ -101,6 +101,47 @@ try {
   server.close();
 }
 
+// Compression never blocks the event loop: no *Sync zlib call per request, concurrent requests for the same file share
+// one async job, the result is cached, and the body decompresses back to the exact file.
+{
+  const zlib = require('node:zlib');
+  const fs = await import('node:fs');
+  const {fileURLToPath} = await import('node:url');
+  const original = {brotliCompress: zlib.brotliCompress, gzip: zlib.gzip, brotliCompressSync: zlib.brotliCompressSync, gzipSync: zlib.gzipSync};
+  const calls = {br: 0, gzip: 0, sync: 0};
+  zlib.brotliCompress = (...args) => { calls.br++; return original.brotliCompress(...args); };
+  zlib.gzip = (...args) => { calls.gzip++; return original.gzip(...args); };
+  zlib.brotliCompressSync = zlib.gzipSync = () => { calls.sync++; throw new Error('sync compression blocks the event loop'); };
+  const fresh = createServer({log: {error: (...args) => errors.push(args.join(' '))}});
+  await new Promise(resolve => fresh.listen(0, '127.0.0.1', resolve));
+  const get = (path, encoding) => new Promise((resolve, reject) => {
+    http.get(`http://127.0.0.1:${fresh.address().port}${path}`, {headers: {'accept-encoding': encoding}}, res => { const chunks = []; res.on('data', c => chunks.push(c)); res.on('end', () => resolve({status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks)})); }).on('error', reject);
+  });
+  try {
+    const glb = '/assets/models/dinossauroscopio.glb';
+    const glbFile = fs.readFileSync(fileURLToPath(new URL(`../dist${glb}`, import.meta.url)));
+    const replies = await Promise.all(Array.from({length: 5}, () => get(glb, 'br')));
+    for (const reply of replies) {
+      assert.equal(reply.status, 200);
+      assert.equal(reply.headers['content-encoding'], 'br');
+      assert.equal(Number(reply.headers['content-length']), reply.body.length);
+      assert(zlib.brotliDecompressSync(reply.body).equals(glbFile), 'brotli body decompresses to the file');
+    }
+    assert.equal(calls.br, 1, 'concurrent requests share one compression job');
+    assert.equal((await get(glb, 'br')).headers['content-encoding'], 'br');
+    assert.equal(calls.br, 1, 'later requests come from the cache');
+    const gz = await get('/vendor/three.module.min.js', 'gzip');
+    assert.equal(gz.headers['content-encoding'], 'gzip');
+    assert(zlib.gunzipSync(gz.body).equals(fs.readFileSync(fileURLToPath(new URL('../dist/vendor/three.module.min.js', import.meta.url)))), 'gzip body decompresses to the file');
+    assert.equal(calls.gzip, 1);
+    assert.equal(calls.sync, 0, 'no synchronous compression');
+    assert.deepEqual(errors, [], 'no server errors logged');
+  } finally {
+    Object.assign(zlib, original);
+    fresh.close();
+  }
+}
+
 // Like the Hostinger runner: the entry file is loaded with require(), not executed. It must still start listening
 // (a `require.main === module` guard made the first upload answer 503 for every request).
 {
@@ -128,4 +169,4 @@ try {
   }
 }
 
-console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, and blocks traversal, dot-files and api/_lib.');
+console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, async cached br/gzip, HEAD) and /api routes with the vercel.json headers, and blocks traversal, dot-files and api/_lib.');
