@@ -69,6 +69,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 - `dist/`: site estático (HTML, módulos JS, CSS). `api/`: funções servidas por `server/create-server.cjs`. `db/migrations/`: MySQL
   (aplicadas ao iniciar). `tools/`: servidor local, "fakes" e geradores. `tests/`: suítes (`npm test`, ou `node tests/x.mjs`).
+- **Migrações:** cada uma é gravada pelo nome do arquivo em `schema_migrations`. Por isso `010_pedidos_lista.sql` e `010_envio.sql`
+  convivem: as duas já rodaram e **não devem ser renomeadas**. A próxima migração nova é a **011**.
+- **Lista do painel no MySQL:** `ADMIN_ORDER_SELECT` (`api/_lib/store-mysql.js`) escolhe as colunas que `orders.adminView` lê. Campo
+  novo no painel entra nessa lista também; `tests/store-contract.mjs` confere isso, mesmo sem banco.
 - **Preço e Pix:** `dist/commerce-config.js` (loja) e `api/_lib/catalog.js` (servidor) precisam dar o mesmo resultado
   (`tests/pix.mjs` e `tests/payments.mjs` conferem). O servidor decide o desconto pela forma de pagamento realmente usada.
 - **Pagamento:** `api/payments/`, `api/_lib/mercadopago.js`, `dist/checkout.js`, `dist/live-payment.js` (`MERCADOPAGO-SETUP.md`).
