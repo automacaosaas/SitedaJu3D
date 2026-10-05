@@ -128,6 +128,12 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Antes do lançamento:** domínio na Hostinger (atualizar `SITE_URL`, o endereço de retorno do app do Bling e o webhook do Mercado
   Pago); verificar o domínio no Resend (hoje os e-mails só chegam ao e-mail de teste); Mercado Pago em `live` na conta do CNPJ;
   Bling em produção (certificado A1, plano); revisão jurídica (`LEGAL-SETUP.md`); bloquear a indexação do site de teste.
+- **Antes do lançamento — página de Contato (`contato.html`, ficou como a prévia aprovada em 05/10):** confirmar com a equipe
+  (1) o número do WhatsApp (`whatsapp` em `dist/commerce-config.js`; o botão aparece sozinho na página e no menu do celular);
+  (2) se `contato@juimprimepramim.com.br` é o e-mail oficial (criar a caixa no domínio; se for, preencher `email` em
+  `api/_lib/legal.js` e rodar `node tools/sync-legal.cjs`; criar `CONTACT_EMAIL` na Hostinger se as mensagens do formulário
+  devem ir para ela em vez do `ORDER_NOTIFY_EMAIL`); (3) o horário "segunda a sexta, das 9h às 18h"; (4) o FAQ promete enviar o
+  código de rastreio quando a peça for postada: o site não faz isso sozinho, então a Ju manda à mão (ou se implementa depois).
 
 ## Como entregar
 

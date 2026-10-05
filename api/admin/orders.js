@@ -1,5 +1,5 @@
 'use strict';
-// GET /api/admin/orders — paid orders for Ju's panel (pendente, concluido, recusado), newest first, with what is needed
+// GET /api/admin/orders — paid orders for Ju's panel (pendente, confirmado, enviado, concluido, recusado), newest first, with what is needed
 // to produce and ship, and the NF-e of each (status, number, links; notes the service is still processing are asked
 // again here, a few at a time in parallel). The CPF only masked. Orders still waiting for payment or cancelled are not
 // shown. With Bling, opening the panel also renews the connection once a week, so it never lapses in a quiet month.

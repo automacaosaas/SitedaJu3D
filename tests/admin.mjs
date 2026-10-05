@@ -173,22 +173,39 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(shown.customer.name, 'Ana Souza'); assert.equal(shown.buyer.cpf, '***.982.247-**', 'the list shows the CPF masked'); assert.equal(shown.address.cep, '30140071'); assert.equal(shown.items[0].selection.body, 'pink');
 
   const move = (body, extra = {}) => call(h['order-status'], {body, cookie, ...extra});
-  assert.equal((await move({id: paid.id, status: 'concluido'}, {origin: 'https://evil.example'})).statusCode, 403);
-  assert.equal((await move({id: paid.id, status: 'concluido'}, {cookie: ''})).statusCode, 401);
-  assert.equal((await move({id: paid.id, status: 'enviado'})).json().field, 'status');
-  assert.equal((await move({id: 'not-an-id', status: 'concluido'})).json().field, 'id');
-  assert.equal((await move({id: waiting.id, status: 'concluido'})).statusCode, 404, 'an unpaid order is not Ju\'s to move');
+  assert.equal((await move({id: paid.id, status: 'confirmado'}, {origin: 'https://evil.example'})).statusCode, 403);
+  assert.equal((await move({id: paid.id, status: 'confirmado'}, {cookie: ''})).statusCode, 401);
+  assert.equal((await move({id: paid.id, status: 'despachado'})).json().field, 'status');
+  assert.equal((await move({id: 'not-an-id', status: 'confirmado'})).json().field, 'id');
+  assert.equal((await move({id: waiting.id, status: 'confirmado'})).statusCode, 404, 'an unpaid order is not Ju\'s to move');
+  const skipped = await move({id: paid.id, status: 'concluido'});
+  assert.deepEqual([skipped.statusCode, skipped.json().error], [409, 'invalid_transition'], 'no skipping steps: concluding needs the tracking code first');
   assert.equal((await move({id: cancelled.id, status: 'pendente'})).statusCode, 404, 'nor a cancelled one');
   const declined = await move({id: paid.id, status: 'recusado', reason: '<b>sem</b> estoque'});
   assert.equal(declined.statusCode, 200); assert.equal(declined.json().order.status, 'recusado'); assert.equal(declined.json().order.declineReason, 'b sem /b  estoque');
   assert(!declined.body.includes('<b>'), 'the reason is cleaned');
   const reopened = await move({id: paid.id, status: 'pendente'});
   assert.equal(reopened.json().order.status, 'pendente'); assert.equal(reopened.json().order.declineReason, ''); assert.equal(reopened.json().order.decidedAt, null);
-  assert.equal((await move({id: paid.id, status: 'concluido'})).json().order.status, 'concluido');
+  // Confirmar → Pronto para envio; the tracking code → Enviados; Concluir. One step back at a time.
+  assert.equal((await move({id: paid.id, status: 'confirmado'})).json().order.status, 'confirmado');
+  assert.equal((await move({id: paid.id, status: 'enviado'})).json().field, 'trackingCode', 'Enviados needs the tracking code');
+  assert.equal((await move({id: paid.id, status: 'enviado', trackingCode: 'AB12345BR'})).json().field, 'trackingCode', 'a real one: 2 letters, 9 digits, 2 letters');
+  const shipped = (await move({id: paid.id, status: 'enviado', trackingCode: ' aa 123456789 br '})).json().order;
+  assert.deepEqual([shipped.status, shipped.trackingCode], ['enviado', 'AA123456789BR'], 'spaces and lower case are fine'); assert(shipped.shippedAt);
+  const fixed = (await move({id: paid.id, status: 'enviado', trackingCode: 'AA987654321BR'})).json().order;
+  assert.deepEqual([fixed.trackingCode, fixed.shippedAt], ['AA987654321BR', shipped.shippedAt], 'a corrected code keeps the day it was posted');
+  assert.equal((await move({id: paid.id, status: 'recusado'})).statusCode, 409, 'a posted order is not declined');
+  const done = (await move({id: paid.id, status: 'concluido'})).json().order;
+  assert.deepEqual([done.status, done.trackingCode], ['concluido', 'AA987654321BR']);
+  assert.equal((await move({id: paid.id, status: 'enviado'})).json().order.trackingCode, 'AA987654321BR', 'reopening a concluded order keeps the code');
+  const back = (await move({id: paid.id, status: 'confirmado'})).json().order;
+  assert.deepEqual([back.status, back.trackingCode, back.shippedAt], ['confirmado', null, null], 'back to Pronto para envio: the code comes off');
   const events = (await store.orders.events(paid.id)).map(e => [e.kind, e.actor]);
   // Here Mercado Pago is not configured, so the automatic refund of the decline is recorded as failed (and the order can be reopened).
-  assert.deepEqual(events, [['status:recusado', 'ju@site.test'], ['refund_failed', 'ju@site.test'], ['status:pendente', 'ju@site.test'], ['status:concluido', 'ju@site.test']], 'each change is recorded with who made it');
-  assert.equal((await store.adminAudit.list()).filter(a => a.action === 'order_status').length, 3);
+  assert.deepEqual(events.map(e => e[0]), ['status:recusado', 'refund_failed', 'status:pendente', 'status:confirmado', 'status:enviado', 'status:enviado', 'status:concluido', 'status:enviado', 'status:confirmado'], 'each change is recorded');
+  assert(events.every(e => e[1] === 'ju@site.test'), 'with who made it');
+  assert.equal((await store.orders.events(paid.id)).find(e => e.kind === 'status:enviado').detail, 'AA123456789BR', 'the code in the order history');
+  assert.equal((await store.adminAudit.list()).filter(a => a.action === 'order_status').length, 8);
 
   // Full CPF for the invoice: on request, paid orders only, every view recorded.
   const doc = (id, extra = {}) => call(h['order-document'], {body: {id}, cookie, ...extra});
@@ -226,7 +243,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(helpers.dailyTotals(list).map(t => [t.date, t.totalCents, t.count]), [[helpers.dayKey(at(5, 10)), 3000, 2], [helpers.dayKey(at(6, 9)), 500, 1]], 'declined orders do not count as revenue');
   assert.deepEqual(helpers.ordersForDay(list, helpers.dayKey(at(6, 9))).map(x => x.reference), ['D', 'C'], 'the day view shows every order of the day');
   const sum = helpers.summary(list, new Date(2026, 0, 20));
-  assert.deepEqual(sum, {pendentes: 2, concluidos: 1, recusados: 1, revenue: 3500, monthRevenue: 3500});
+  assert.deepEqual(sum, {pendentes: 2, confirmados: 0, enviados: 0, concluidos: 1, recusados: 1, revenue: 3500, monthRevenue: 3500});
+  assert.deepEqual(helpers.listByStatus([o('F', 'confirmado', at(8, 9), 1), o('G', 'confirmado', at(7, 9), 1)], 'confirmado').map(x => x.reference), ['G', 'F'], 'Pronto para envio is a queue too: oldest first');
+  assert.deepEqual(helpers.STATUSES, ['pendente', 'confirmado', 'enviado', 'concluido', 'recusado']);
   assert.equal(helpers.replaceOrder(list, {...list[0], status: 'concluido'})[0].status, 'concluido');
   assert.equal(client.groupSecret('JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP'), 'JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP');
 
@@ -244,6 +263,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: moved.fetchImpl}), {order: {id: 'x', status: 'concluido'}, mailed: false, refund: null});
   assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: fake([[200, {ok: true, order: {id: 'x'}, mailed: true, refund: 'refunded'}]]).fetchImpl}), {order: {id: 'x'}, mailed: true, refund: 'refunded'}, 'the panel learns whether the buyer was e-mailed and refunded');
   assert.deepEqual(JSON.parse(moved.calls[0].init.body), {id: 'x', status: 'concluido', reason: ''});
+  const tracked = fake([[200, {ok: true, order: {id: 'x', status: 'enviado'}}]]);
+  await client.changeStatus('x', 'enviado', '', {trackingCode: 'AA123456789BR', fetchImpl: tracked.fetchImpl});
+  assert.deepEqual(JSON.parse(tracked.calls[0].init.body), {id: 'x', status: 'enviado', reason: '', trackingCode: 'AA123456789BR'}, 'the tracking code goes with the status');
 
   // The vendored QR generator draws a valid symbol for an otpauth link (finder pattern in the corner).
   const qr = qrcode(0, 'M'); qr.addData(totp.otpauthUrl({secret: totp.newSecret(), account: 'powershop.bras@gmail.com'})); qr.make();
@@ -252,14 +274,17 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert(!qr.isDark(1, 1) && qr.isDark(3, 3), 'finder pattern inside');
 }
 
-// ── the panel asks before concluir (it issues the NF-e), as it does before recusar (it refunds) ──
+// ── the panel asks before the steps that e-mail the buyer: Confirmar (it issues the NF-e) and Concluir (tracking e-mail) ──
 {
   const read = f => require('node:fs').readFileSync(path.join(root, 'dist', f), 'utf8');
   const panel = read('admin.js');
-  assert(panel.includes(`if (action.dataset.action === 'complete') { const order = orders.find(o => o.id === id); if (order) openCompleteDialog(order); }`), '"Marcar como concluído" only opens the confirmation');
-  assert.equal(panel.split(`'concluido', '', 'Pedido marcado como concluído.'`).length - 1, 1, 'only the "Sim, concluir" button concludes');
-  assert(panel.includes('data-action="cancel-complete">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-complete">Sim, concluir</button>'));
-  assert(panel.includes(`completeDialog.querySelector('[data-action="cancel-complete"]').focus();`), 'Cancelar has the focus, so Enter never concludes by accident');
+  assert(panel.includes(`if (action.dataset.action === 'confirm' || action.dataset.action === 'conclude') { const order = orders.find(o => o.id === id); if (order) openStepDialog(order, action.dataset.action === 'confirm' ? 'confirmado' : 'concluido'); }`), 'both buttons only open the confirmation');
+  assert.equal(panel.split('move(orderId, step,').length - 1, 1, 'only "Sim, confirmar" / "Sim, concluir" move the order forward');
+  assert(panel.includes('data-action="cancel-step">Cancelar</button><button type="button" class="btn-complete" data-action="confirm-step"></button>'));
+  assert(panel.includes(`stepDialog.querySelector('[data-action="cancel-step"]').focus();`), 'Cancelar has the focus, so Enter never confirms by accident');
+  assert.match(panel, />Confirmar pedido<\/button>/); assert.doesNotMatch(panel, /Marcar como concluído/);
+  assert.match(panel, /<form class="admin-tracking" data-id="\$\{id\}" novalidate>/, 'the tracking code is typed on the order');
+  assert.match(panel, /const STATUS_LABEL = \{pendente: 'Pendentes', confirmado: 'Pronto para envio', enviado: 'Enviados', concluido: 'Concluídos', recusado: 'Recusados'\};/);
   assert.match(read('admin.css'), /\.chart-bars\{[^}]*justify-content:space-between/, "the 14 bars span the chart: the last one sits over today's date");
 }
 
@@ -275,10 +300,11 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const cookie = jar(await call(h.verify, {body: {code: codeFor(totp.fromBase32(login.json().setup.secret))}, cookie: jar(login)}));
   const move = body => call(h['order-status'], {body, cookie});
 
-  const done = await move({id: pt.id, status: 'concluido'});
+  const done = await move({id: pt.id, status: 'confirmado'});
   assert.equal(done.statusCode, 200); assert.equal(done.json().mailed, true, 'confirming e-mails the buyer');
   assert.equal(sent.length, 1); assert.deepEqual(sent[0].body.to, ['ana@example.com']);
   assert.equal(sent[0].body.subject, '[TESTE] Pedido confirmado · JU-DECIDE0001 · Ju, imprime pra mim?');
+  assert(sent[0].body.html.includes('A nota fiscal chega em outro e-mail'), 'the confirmation says the invoice follows');
   assert(sent[0].body.html.includes('Seu pedido foi') && sent[0].body.html.includes('JU-DECIDE0001') && sent[0].body.html.includes('Borboletoscópio'));
   assert(!sent[0].body.html.includes('<b>Ana') && sent[0].body.html.includes('&lt;b&gt;Ana&lt;/b&gt;'), 'the name is escaped');
 
@@ -291,15 +317,25 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const reopened = await move({id: en.id, status: 'pendente'});
   assert.equal(reopened.json().mailed, false); assert.equal(sent.length, 2, 'reopening sends nothing');
   advance(60000);
-  await move({id: en.id, status: 'concluido'});
+  await move({id: en.id, status: 'confirmado'});
   assert.equal(sent.length, 3); assert.notEqual(sent[2].key, sent[1].key, 'a new decision is a new e-mail (its own idempotency key)');
-  assert.match(sent[0].key, /^order-concluido-[0-9a-f-]{36}-\d+$/);
+  assert.match(sent[0].key, /^order-confirmado-[0-9a-f-]{36}-\d+$/);
+  // The tracking code goes in silently; concluding sends it, with a button to "Meus pedidos".
+  const posted = await move({id: en.id, status: 'enviado', trackingCode: 'AA123456789BR'});
+  assert.equal(posted.json().mailed, false); assert.equal(sent.length, 3, 'the tracking code going in e-mails nobody');
+  const concluded = await move({id: en.id, status: 'concluido'});
+  assert.equal(concluded.json().mailed, true); assert.equal(sent.length, 4);
+  assert.equal(sent[3].body.subject, '[TESTE] Order shipped · JU-DECIDE0002 · Ju, imprime pra mim?', 'in the buyer\'s language');
+  assert(sent[3].body.html.includes('AA123456789BR') && sent[3].body.html.includes(`href="${SITE}/conta.html#pedidos"`) && sent[3].body.html.includes('Track my order'), 'the code and the button to "Meus pedidos"');
+  assert(sent[3].body.text.includes(`Track my order: ${SITE}/conta.html#pedidos`));
+  await move({id: en.id, status: 'enviado'}); await move({id: en.id, status: 'confirmado'});
+  assert.equal(sent.length, 4, 'going back e-mails nobody, not even a second "confirmed"');
 
   // Without an e-mail service nothing is sent and nothing breaks (the route still saves the status and says mailed: false).
   const {createOrders} = require('../api/_lib/orders');
   const noMail = createOrders({store, env: ENV, now});
-  assert.equal(await noMail.notifyDecision({...pt, status: 'concluido'}, {fetchImpl}), false, 'no e-mail service: nothing sent, nothing thrown');
-  assert.equal(sent.length, 3);
+  assert.equal(await noMail.notifyDecision({...pt, status: 'confirmado'}, {fetchImpl}), false, 'no e-mail service: nothing sent, nothing thrown');
+  assert.equal(sent.length, 4);
 }
 
 // ── automatic refund: declining returns the whole amount through Mercado Pago (Orders API), once ──
@@ -346,7 +382,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual((await store.orders.events(a.id)).map(e => e.kind), ['status:recusado', 'refund_requested', 'refunded']);
   // 2 · the money went back: no reopening, no confirming
   assert.equal((await move({id: a.id, status: 'pendente'})).json().error, 'refunded');
-  assert.equal((await move({id: a.id, status: 'concluido'})).statusCode, 409);
+  assert.equal((await move({id: a.id, status: 'confirmado'})).statusCode, 409);
   // 3 · "conferir" on a refunded order asks Mercado Pago for nothing new
   const checked = await call(h['order-refund'], {body: {id: a.id}, cookie});
   assert.equal(checked.json().refund, 'refunded'); assert.equal(refundCalls().length, 1, 'never refunded twice');
@@ -396,4 +432,16 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(mp.refundOutcome({status: 'processed', status_detail: 'accredited'}).state, 'none');
 }
 
-console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable); browser helpers (grouping, revenue without declined orders, API client), a confirmation before concluding and the vendored QR code.');
+// ── "Meus pedidos": the buyer sees each step, and the tracking code once the order is posted ──
+{
+  const {createOrders} = require('../api/_lib/orders');
+  const view = createOrders({store: createMemoryStore(), env: ENV}).customerView;
+  const order = {reference: 'JU-RASTREIO1', status: 'confirmado', createdAt: new Date(clock), items: [], trackingCode: 'AA123456789BR'};
+  assert.equal(view(order).trackingCode, null, 'not before it is posted');
+  for (const status of ['enviado', 'concluido']) assert.equal(view({...order, status}).trackingCode, 'AA123456789BR', status);
+  const account = require('node:fs').readFileSync(path.join(root, 'dist/account.js'), 'utf8');
+  assert.match(account, /pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido enviado'/);
+  assert(account.includes('<strong translate="no">${esc(o.trackingCode)}</strong>'), 'the code, to copy into the Correios page');
+}
+
+console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable, Pendentes → Pronto para envio → Enviados (tracking code) → Concluídos one step at a time); browser helpers (grouping, revenue without declined orders, API client), a confirmation before concluding and the vendored QR code.');

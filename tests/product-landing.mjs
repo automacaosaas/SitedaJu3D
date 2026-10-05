@@ -112,7 +112,8 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   const sitemap = read('dist/sitemap.xml'), robots = read('dist/robots.txt');
   for (const page of ['', 'produtos.html', ...Object.keys(PRODUCTS).map(id => `${id}.html`), 'termos.html', 'privacidade.html', 'trocas.html'])
     assert(sitemap.includes(`<loc>${BASE}/${page}</loc>`), `sitemap lists /${page}`);
-  for (const hidden of ['sobre.html', 'contato.html', 'checkout.html', 'conta.html', 'admin.html']) assert(!sitemap.includes(hidden), `sitemap leaves out ${hidden}`);
+  for (const hidden of ['sobre.html', 'checkout.html', 'conta.html', 'admin.html']) assert(!sitemap.includes(hidden), `sitemap leaves out ${hidden}`);
+  assert(sitemap.includes('/contato.html</loc>'), 'the contact page (with content now) is listed');
   for (const blocked of ['/admin.html', '/api/', '/checkout.html', '/conta.html']) assert(robots.includes(`Disallow: ${blocked}`), `robots keeps ${blocked} out`);
   assert(robots.includes(`Sitemap: ${BASE}/sitemap.xml`));
   const home = JSON.parse(/<script type="application\/ld\+json">([^<]*)<\/script>/.exec(read('dist/index.html'))[1]);

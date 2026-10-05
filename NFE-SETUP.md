@@ -1,7 +1,7 @@
 # Nota fiscal eletrônica (NF-e) automática
 
 A nota de cada venda é emitida sozinha, por um serviço de NF-e com API, **quando a Ju confirma o pedido no painel**
-("Marcar como concluído"). Pedido recusado não gera nota, então nunca é preciso cancelar uma nota por recusa.
+("Confirmar pedido", que leva o pedido para Pronto para envio). Pedido recusado antes de confirmar não gera nota.
 
 ## Como funciona
 
@@ -23,7 +23,7 @@ autorizada não emite outra.
 
 | O que aparece | Quer dizer | O que fazer |
 |---|---|---|
-| "sai quando você marcar como concluído" | Pedido pago, ainda pendente | Nada |
+| "sai quando você confirmar o pedido" | Pedido pago, ainda pendente | Nada |
 | "emitindo…" | O serviço ainda está processando | Clicar em **Atualizar** depois de alguns instantes |
 | "Nota fiscal nº … · PDF · XML" | Autorizada | Nada; o cliente já recebeu |
 | "Nota fiscal com problema: …" | Recusada ou faltando dado (a mensagem diz o quê) | Corrigir e clicar em **Tentar de novo** (recusa da Fazenda: corrigir a nota no Bling) |
@@ -238,7 +238,7 @@ estiver errado, a nota daquele pedido precisa ser feita à mão no serviço.
 
 ```bash
 node tools/dev-server.cjs --fake-mp --fake-nfe     # serviço de NF-e genérico simulado
-node tools/dev-server.cjs --fake-mp --fake-bling   # Bling simulado: conectar no painel e concluir um pedido
+node tools/dev-server.cjs --fake-mp --fake-bling   # Bling simulado: conectar no painel e confirmar um pedido
 ```
 
 Mercado Pago e serviço de NF-e simulados, com **dados fiscais de exemplo** (sem valor fiscal; nunca usados em produção).
