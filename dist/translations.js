@@ -861,4 +861,10 @@ Costas|Back|Parte trasera
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
+ou 3x sem juros no cartão|or 3 interest-free card installments|o 3 cuotas sin interés con tarjeta
+Cores originais:|Original colors:|Colores originales:
+Observação:|Note:|Observación:
+Crédito|Credit|Crédito
+Débito|Debit|Débito
+Cartão de débito virtual Caixa|Caixa virtual debit card|Tarjeta de débito virtual Caixa
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

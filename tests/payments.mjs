@@ -578,4 +578,27 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert.equal(client.parseExpiry('2030-01-01T10:00:00.000-03:00', 0), Date.parse('2030-01-01T13:00:00.000Z')); assert.equal(client.parseExpiry('yesterday', 1000), 1000 + 3600000); assert.equal(client.parseExpiry('2000-01-01T00:00:00Z', 5e12), 5e12 + 3600000, 'a date in the past falls back to one hour'); assert.equal(client.parseExpiry(null, 0), 3600000);
 }
 
+// ── GET /api/payments/methods: the account's own payment methods, for the cart's marks (2026-10-05) ──
+{
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  const methodsHandler = require('../api/payments/methods');
+  const fake = createFakeMercadoPago();
+  let calls = 0, clock = 0;
+  const counted = (url, init) => { calls++; return fake.fetchImpl(url, init); };
+  const handler = methodsHandler.create({env: ENV, fetchImpl: counted, now: () => clock});
+  const res = makeRes(); await handler({method: 'GET'}, res);
+  const {methods} = res.json();
+  assert.deepEqual(methods.map(m => m.id), ['pix', 'visa', 'master', 'elo', 'amex', 'hipercard', 'debelo'], 'Pix and the cards only (no boleto, no lottery)');
+  assert.deepEqual([...new Set(methods.map(m => m.type))], ['bank_transfer', 'credit_card', 'debit_card']);
+  assert.doesNotMatch(res.body, /TEST-secret-token/, 'the Access Token never leaves the server');
+  await handler({method: 'GET'}, makeRes()); assert.equal(calls, 1, 'kept for 6 hours');
+  clock += 7 * 60 * 60 * 1000; await handler({method: 'GET'}, makeRes()); assert.equal(calls, 2, 'asked again after 6 hours');
+  const off = makeRes(); await methodsHandler.create({env: {}, fetchImpl: counted})({method: 'GET'}, off); assert.deepEqual(off.json(), {methods: null}, 'payments off: nothing to ask');
+  const down = makeRes(); await methodsHandler.create({env: ENV, fetchImpl: async () => ({ok: false, status: 500, json: async () => ({})})})({method: 'GET'}, down);
+  assert.deepEqual(down.json(), {methods: null}, 'Mercado Pago down: the cart keeps its usual marks');
+  const post = makeRes(); await handler({method: 'POST'}, post); assert.equal(post.statusCode, 405);
+  const pictures = await mp.paymentMethods({settings: mp.settings(ENV), fetchImpl: async () => ({ok: true, json: async () => [{id: 'x', name: 'X', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: 'https://evil.example/x.png'}, {id: 'y', name: 'Y', payment_type_id: 'credit_card', status: 'inactive'}]})});
+  assert.deepEqual(pictures, [{id: 'x', name: 'X', type: 'credit_card', thumbnail: ''}], 'only active methods; pictures only from Mercado Pago hosts');
+}
+
 console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped.');

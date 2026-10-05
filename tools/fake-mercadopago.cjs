@@ -73,6 +73,19 @@ function createFakeMercadoPago({now = () => Date.now(), onPaid} = {}) {
     if (path === '/v1/orders' && init.method === 'POST') { if (!init.headers['X-Idempotency-Key']) return error(400, 'missing_idempotency_key', 'X-Idempotency-Key is required'); return create(JSON.parse(init.body), init.headers['X-Idempotency-Key']); }
     const refunding = path.match(/^\/v1\/orders\/([^/?]+)\/refund$/);
     if (refunding && init.method === 'POST') return refund(refunding[1], init.headers['X-Idempotency-Key']);
+    // GET /v1/payment_methods: a Brazilian account's usual list (Pix, the credit cards, the Caixa virtual debit card), plus the
+    // boleto and lottery ones the checkout does not offer, so the filter is exercised.
+    if (path === '/v1/payment_methods' && (init.method || 'GET') === 'GET') return reply(200, [
+      {id: 'pix', name: 'Pix', payment_type_id: 'bank_transfer', status: 'active', secure_thumbnail: ''},
+      {id: 'visa', name: 'Visa', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'master', name: 'Mastercard', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'elo', name: 'Elo', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'amex', name: 'American Express', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'hipercard', name: 'Hipercard', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'debelo', name: 'Cartão de débito virtual Caixa', payment_type_id: 'debit_card', status: 'active', secure_thumbnail: ''},
+      {id: 'bolbradesco', name: 'Boleto', payment_type_id: 'ticket', status: 'active', secure_thumbnail: ''},
+      {id: 'pec', name: 'Pagamento na lotérica', payment_type_id: 'ticket', status: 'active', secure_thumbnail: ''}
+    ]);
     const found = path.match(/^\/v1\/orders\/([^/?]+)$/);
     if (found && init.method === 'GET') { const order = orders.get(found[1]); if (!order) return error(404, 'order_not_found', 'order not found'); expireIfDue(order); return reply(200, order); }
     return error(404, 'not_found', path);

@@ -37,6 +37,23 @@ Feito a partir de `c73dcf4`. Os commits estão só no computador: a branch ainda
     - até 3 peças e, no fim, o card "Ver mais" (página Produtos);
     - no celular, setas finas sobre a fileira, que somem nas pontas.
   - **Correção:** a fileira de recomendações alargava a página do carrinho no celular (`.cart-more` com `minmax(0, 1fr)`).
+- **2026-10-05, segunda leva:**
+  - **Merge da `main`** (galeria de vistas, macaco novo, painel com fluxo de caixa, desempenho) em `237ac77`. O único conflito foi em `translations.js`, e ficaram as duas listas. Backup: tag `backup/3d-nas-consultas-antes-merge-2026-10-05`.
+  - **Página do produto:**
+    - as cores viraram bolinhas no canto de cima da imagem (foto ou 3D): na foto mostram as originais e, personalizando, mudam na hora;
+    - a lista de cores e a observação ("As janelas da cabine…") foram para "Sobre a peça";
+    - saiu "valores ilustrativos nesta prévia";
+    - no celular, com o header fora de cena, um carrinho flutua no canto superior direito e adiciona a peça nas cores escolhidas.
+  - **Home:** saiu a nota "Preços ilustrativos…" da coleção.
+  - **Carrinho:**
+    - "Ver mais" pequeno, com um + num círculo fino;
+    - as quatro informações lado a lado no computador, e os meios de pagamento numa faixa só;
+    - os selos vêm da conta do Mercado Pago (`/api/payments/methods`, veja `MERCADOPAGO-SETUP.md`), em três grupos: Pix, Crédito e Débito (débito virtual Caixa).
+  - **Mini-carrinho:**
+    - "Complete o kit" mostra até 3 peças da mesma categoria da que entrou, e elas não somem depois de adicionadas;
+    - o botão ganha um selo com quantas estão no carrinho, e o carrinho corre pelo botão ao adicionar;
+    - a barra do frete continua subindo;
+    - ao fechar, o mini-carrinho desliza para baixo (para a direita no computador) em vez de sumir.
 
 ## O que ficou
 

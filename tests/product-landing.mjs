@@ -35,13 +35,18 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert(page.includes(`Produção em ${COMMERCE.productionLabel}`), `${id}: production time`);
   // hierarchy asked for on 2026-10-04: the piece, the category once (a badge above the name), name, price, colors, add
   // first, then "Personalizar o meu" (palette), accordions, and the description at the end
-  const order = ['data-pl-stage', '<p class="pl-badge">Oftalmologia</p>', `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-colors"', 'class="pl-add"', 'data-pl-customize', 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
+  const order = ['data-pl-stage', '<p class="pl-badge">Oftalmologia</p>', `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-add"', 'data-pl-customize', 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
   assert(order.every((at, i) => at > 0 && (i === 0 || at > order[i - 1])), `${id}: order of the page ${order}`);
   assert.equal((page.match(/Oftalmologia|OFTALMOLOGIA/g) || []).length, (page.match(/"category":"Oftalmologia"/g) || []).length + 1, `${id}: the category shows once`);
-  assert.equal((page.match(/Cores originais/g) || []).length, 1, `${id}: one "Cores originais"`);
+  // 2026-10-05: the colors are dots on the top corner of the picture; the list and the note moved to "Sobre a peça"
+  assert.match(page, /<ul class="pl-dots" data-pl-dots aria-label="Cores originais">/);
+  assert(page.indexOf('class="pl-dots"') < page.indexOf('class="pl-info"'), `${id}: the dots are on the picture`);
+  assert.doesNotMatch(page, /class="pl-colors"|valores ilustrativos/, `${id}: no colors block above the actions, no "valores ilustrativos"`);
+  assert.match(page, /<section class="pl-about"><h2>Sobre a peça<\/h2><p class="pl-desc">[^<]+<\/p><p class="pl-note"><span>Cores originais:<\/span> /);
+  if (product.fixed) assert(page.includes(`<p class="pl-note"><span>Observação:</span> ${product.fixed}</p>`), `${id}: the fixed colors as a note in "Sobre a peça"`);
   assert.match(page, /<a class="pl-customize" href="[^"]+" data-pl-customize><svg[^>]*>[^]*?<\/svg><span>Personalizar o meu<\/span><\/a>/);
   assert(page.includes(read('dist/icons.js').match(/palette: '([^']+)'/)[1].slice(0, 60)), `${id}: the palette on "Personalizar o meu"`);
-  for (const part of product.parts) assert(page.includes(`<button type="button" class="pl-chip" data-pl-part="${part.id}" aria-controls="pl-custom">`), `${id}: the color of ${part.id} opens the picker`);
+  for (const part of product.parts) { const c = color(defaults(id)[part.id]).name; assert(page.includes(`<button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${part.name}: ${c}" aria-label="${part.name}: ${c}">`), `${id}: the dot of ${part.id} opens the picker`); }
   assert.deepEqual([...page.matchAll(/<details class="pl-acc"><summary><svg[^]*?<strong>([^<]+)<\/strong>/g)].map(m => m[1]), ['Feito sob encomenda', 'Envio para todo o Brasil', 'Trocas e Devoluções']);
   assert.match(page, /Desistência em até 7 dias[^]*<a href="trocas\.html">Ver a política<\/a>/);
   assert.match(page, /<div class="pl-custom" id="pl-custom" data-pl-custom hidden><\/div>/);
@@ -89,6 +94,10 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(css, /\.pl-customize\[aria-expanded="true"\]::before \{ clip-path: inset\(0 0 0 0\); animation: pl-flow/);
   assert.match(css, /\.pl-customize::before \{ content: ''; /);
   assert.match(code, /<i class="pl-customize-x" aria-hidden="true"><\/i>/);
+  // the dots follow the colors chosen (3D) and show the original ones on the photo; the floating cart while the header is away
+  assert.match(code, /const shown = view === '3d' \? selection : original;/);
+  assert.match(code, /class="pl-fab" data-pl-fab aria-label="Adicionar ao carrinho"/);
+  assert.match(css, /html\.pl-focus \.pl-fab \{ opacity: 1; transform: none; pointer-events: auto; \}/);
   for (const text of ['Ver a peça', 'Girar em 360°', 'Arraste para girar', 'Preparando sua prévia 3D…', 'A prévia 3D não abriu neste navegador; a foto mostra as cores originais.', 'Escolha a cor de cada parte', 'Partes da peça', 'Restaurar cores', 'Suas cores', 'Adicionar com estas cores', 'Adicionado', 'Cores originais restauradas para este produto.', 'Desistência em até 7 dias']) {
     assert(code.includes(text) || read(`dist/${Object.keys(PRODUCTS)[0]}.html`).includes(text), `${text}: used`);
     assert.notEqual(translate(text, 'en'), text, `${text}: EN`); assert.notEqual(translate(text, 'es'), text, `${text}: ES`);

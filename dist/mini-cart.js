@@ -1,7 +1,8 @@
 // Mini-cart (audit E1): adding a piece opens a drawer instead of leaving the shop. It confirms the piece just added (in its
-// colors), shows what the cart adds up to with the free-shipping bar, offers "Complete o kit" with the pieces not in the cart
-// yet (in their original colors), and two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a
-// computer, sheet from the bottom on a phone. A <dialog>, so it sits above everything, traps focus and closes with Esc.
+// colors), shows what the cart adds up to with the free-shipping bar, offers "Complete o kit" with up to 3 other pieces of the
+// same category (in their original colors; they stay after being added, with how many are in the cart on the button), and
+// two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a computer, sheet from the bottom on a
+// phone; it slides away when closed. A <dialog>, so it sits above everything, traps focus and closes with Esc.
 import {PRODUCTS, color, defaults} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, signature} from './cart-store.js';
@@ -19,13 +20,17 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
   const item = cart.find(i => i.id === itemId) || cart.at(-1);
   const units = cart.reduce((sum, i) => sum + i.quantity, 0), amount = totals(cart, 0);
   const pix = cart.reduce((sum, i) => sum + pixPrice(i.unitPrice) * i.quantity, 0);
-  const kit = Object.keys(PRODUCTS).filter(id => !cart.some(i => i.productId === id));
+  // the kit: other pieces of the same category as the one just added (oftalmologia today; sensoriais and others later)
+  const category = item ? PRODUCTS[item.productId].category : null;
+  const kit = Object.keys(PRODUCTS).filter(id => id !== item?.productId && (!category || PRODUCTS[id].category === category)).slice(0, 3);
+  const inCart = id => cart.filter(i => signature(i.productId, i.selection) === signature(id, defaults(id))).reduce((sum, i) => sum + i.quantity, 0);
   const added = item ? `<article class="mini-cart-item"><img src="${esc(picture(item))}" alt="" width="96" height="96"><div><h3>${esc(item.title)}</h3>`
     + `<ul class="mini-cart-colors" aria-label="Cores de ${esc(item.title)}">${PRODUCTS[item.productId].parts.map(part => { const c = color(item.selection[part.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${esc(part.name)}: <strong>${esc(c.name)}</strong></li>`; }).join('')}</ul>`
     + `<p>${item.quantity} × ${money(item.unitPrice)}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>` : '';
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">Complete o kit</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];
-    return `<li><img src="assets/${esc(product.catalogImage || product.image)}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais">${icon('cart')}<span>Adicionar</span></button></li>`;
+    const count = inCart(id);
+    return `<li><img src="assets/${esc(product.catalogImage || product.image)}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span>${count ? `<b class="mini-cart-add-count" aria-hidden="true">${count}</b>` : ''}</button></li>`;
   }).join('')}</ul></section>` : '';
   return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span>${original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
     + `<button type="button" class="mini-cart-close" data-mini-close aria-label="Fechar o carrinho">×</button></header>`
@@ -49,23 +54,34 @@ function ensureDialog() {
   dialog.setAttribute('aria-label', 'Seu carrinho');
   dialog.innerHTML = '<div class="mini-cart-body"></div><p class="sr-only" role="status" aria-live="polite"></p>';
   document.body.append(dialog);
-  dialog.addEventListener('close', () => { riseFrom = null; });
+  dialog.addEventListener('close', () => { riseFrom = null; dialog.classList.remove('is-closing'); });
+  // Esc, the ×, "Continuar escolhendo" and a click outside: the drawer slides away (down on a phone) before it closes
+  dialog.addEventListener('cancel', event => { event.preventDefault(); leave(); });
   dialog.addEventListener('click', event => {
-    if (event.target === dialog || event.target.closest('[data-mini-close]')) { dialog.close(); return; }
+    if (event.target === dialog || event.target.closest('[data-mini-close]')) { leave(); return; }
     const kit = event.target.closest('[data-kit-add]');
     if (!kit) return;
     const id = kit.dataset.kitAdd;
     try {
       riseFrom = totals(readCart(), 0).subtotal;
-      const cart = writeCart(putItem(readCart(), id, defaults(id)));
-      shownId = cart.find(i => signature(i.productId, i.selection) === signature(id, defaults(id)))?.id || null; shownOriginal = true;
+      writeCart(putItem(readCart(), id, defaults(id)));
       window.dispatchEvent(new Event('ju:cart'));
+      // the piece shown on top stays; the kit piece stays too, with its new count, and the cart runs across its button
       paint();
+      const button = dialog.querySelector(`[data-kit-add="${id}"]`);
+      if (button && !matchMedia('(prefers-reduced-motion: reduce)').matches) { button.classList.add('is-adding'); setTimeout(() => button.classList.remove('is-adding'), 1100); }
       dialog.querySelector('[role=status]').textContent = `${PRODUCTS[id].title} adicionado nas cores originais.`;
-      dialog.querySelector('[data-mini-cart-go]')?.focus();
+      button?.focus();
     } catch (error) { dialog.querySelector('[role=status]').textContent = error.message; }
   });
   return dialog;
+}
+
+function leave() {
+  if (!dialog?.open || dialog.classList.contains('is-closing')) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { dialog.close(); return; }
+  dialog.classList.add('is-closing');
+  setTimeout(() => { if (dialog.classList.contains('is-closing')) dialog.close(); }, 300);
 }
 
 // Opens the drawer for the piece just added. Safe to call again while open (it repaints).
@@ -75,6 +91,7 @@ export function openMiniCart({itemId = null, original = false} = {}) {
   const cart = readCart(), item = cart.find(i => i.id === itemId);
   riseFrom = item ? totals(cart, 0).subtotal - item.unitPrice : null;
   paint();
+  dialog.classList.remove('is-closing');
   if (!dialog.open) dialog.showModal();
   dialog.querySelector('[data-mini-cart-go]')?.focus();
   configAsked ??= loadShippingConfig().then(config => config.mode === 'correios' ? config.freeShipping : null).catch(() => null);

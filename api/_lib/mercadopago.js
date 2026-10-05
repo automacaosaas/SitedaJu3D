@@ -50,6 +50,15 @@ async function call({settings: s, fetchImpl = globalThis.fetch, method, path, bo
 
 // Mercado Pago answers error 2198 ("Invalid test user email") when the buyer's address is not the test one while using test credentials.
 const isTestEmailRejection = error => Number(error?.code) === 2198 || /test user email|testuser/i.test(String(error?.message || ''));
+// The account's payment methods (GET /v1/payment_methods): only what the checkout offers — Pix and credit and debit cards — and
+// only the active ones. {id, name, type, thumbnail}; the thumbnail is Mercado Pago's own picture, kept only from its hosts.
+const PAYMENT_TYPES = new Set(['credit_card', 'debit_card', 'bank_transfer']);
+const MP_PICTURE = /^https:\/\/([a-z0-9-]+\.)*(mlstatic\.com|mercadopago\.com)\//i;
+async function paymentMethods({settings: s, fetchImpl}) {
+  const data = await call({settings: s, fetchImpl, method: 'GET', path: '/v1/payment_methods'});
+  return (Array.isArray(data) ? data : []).filter(m => m && m.status === 'active' && PAYMENT_TYPES.has(m.payment_type_id) && (m.payment_type_id !== 'bank_transfer' || m.id === 'pix'))
+    .map(m => ({id: String(m.id).slice(0, 40), name: String(m.name || m.id).slice(0, 60), type: m.payment_type_id, thumbnail: MP_PICTURE.test(String(m.secure_thumbnail || '')) ? String(m.secure_thumbnail) : ''}));
+}
 const createOrder = ({settings: s, fetchImpl, payload, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: '/v1/orders', body: payload, idempotencyKey});
 const getOrder = ({settings: s, fetchImpl, id}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/orders/${encodeURIComponent(id)}`});
 // Total refund of an order: POST /v1/orders/{id}/refund with no amount (the documented way to return everything; card
@@ -184,4 +193,4 @@ function verifySignature({secret, signature, requestId, dataId}) {
   });
 }
 
-module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, createOrder, getOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};
+module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, paymentMethods, createOrder, getOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};

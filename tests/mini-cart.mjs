@@ -1,6 +1,6 @@
 // Mini-cart (audit E1): adding a piece opens a drawer and the buyer stays in the shop. The drawer confirms the piece (in
-// its colors), shows the cart total and the Pix total, the free-shipping bar, "Complete o kit" with the pieces not in the
-// cart yet, and "Ver carrinho" / "Continuar escolhendo". Run: node tests/mini-cart.mjs — no browser.
+// its colors), shows the cart total and the Pix total, the free-shipping bar, "Complete o kit" with up to 3 other pieces of
+// the same category (they stay after being added, with their count), and "Ver carrinho" / "Continuar escolhendo". Run: node tests/mini-cart.mjs — no browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,14 +28,18 @@ const {translate} = await site('i18n-core.js');
   assert.match(html, /Faltam <strong>R\$\s?371,00<\/strong> para o frete grátis \(PAC\)/, 'how far the free delivery is');
   assert.match(html, /Complete o kit/);
   assert.match(html, /data-kit-add="dinossauroscopio"/); assert.match(html, /data-kit-add="aviaoscopia"/);
-  assert.doesNotMatch(html, /data-kit-add="borboletoscopio"/, 'a piece already in the cart is not offered again');
+  assert.doesNotMatch(html, /data-kit-add="borboletoscopio"/, 'the piece just added is not offered in its own kit');
+  assert.doesNotMatch(html, /mini-cart-add-count/, 'no count on a kit piece that is not in the cart');
   assert.match(html, /<a class="primary" href="checkout\.html" data-mini-cart-go>Ver carrinho/);
   assert.match(html, /data-mini-close>Continuar escolhendo<\/button>/);
   assert.match(html, /aria-label="Fechar o carrinho"/);
 
   const full = normalizeCart(['borboletoscopio', 'dinossauroscopio', 'aviaoscopia'].map(p => ({productId: p, selection: defaults(p)})));
   const all = miniCartBody({cart: full, itemId: full[2].id, original: true, freeShipping: null});
-  assert.doesNotMatch(all, /Complete o kit/, 'with every piece in the cart there is nothing to complete');
+  // 2026-10-05: the kit stays — the other pieces of the same category, each with how many are in the cart (original colors)
+  assert.match(all, /Complete o kit/, 'the kit does not disappear once its pieces are in the cart');
+  assert.deepEqual([...all.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio'], 'same category, without the piece just added, up to 3');
+  assert.equal((all.match(/<b class="mini-cart-add-count" aria-hidden="true">1<\/b>/g) || []).length, 2, 'the count on each kit button');
   assert.match(all, /Adicionado nas cores originais/); assert.match(all, /cores originais<\/span>/);
   assert.match(all, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?427,00<\/dd>/);
   assert.doesNotMatch(all, /free-ship/, 'no bar without free shipping');
@@ -51,7 +55,11 @@ const {translate} = await site('i18n-core.js');
   for (const page of ['dist/index.html', 'dist/produtos.html']) assert.match(read(page), /<link rel="stylesheet" href="mini-cart\.css">/, `${page}: drawer styles`);
   const css = read('dist/mini-cart.css');
   assert.match(css, /@media \(max-width: 600px\) \{\n  \.mini-cart \{ inset: auto 0 0 0;/, 'a sheet from the bottom on a phone');
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.mini-cart\[open\] \{ animation: none; \} \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.mini-cart\[open\], \.mini-cart\.is-closing,/);
+  // closing slides away (down on a phone) instead of vanishing; the kit button: the cart runs across it and the count pops
+  assert.match(read('dist/mini-cart.js'), /dialog\.addEventListener\('cancel', event => \{ event\.preventDefault\(\); leave\(\); \}\);/);
+  assert.match(css, /\.mini-cart\.is-closing \{ animation: mini-cart-down \.32s/);
+  assert.match(css, /\.mini-cart-add\.is-adding \.mini-cart-add-cart \{ animation: kit-cart-run \.9s/);
 }
 
 // ── texts ─────────────────────────────────────────────────────────────

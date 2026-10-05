@@ -124,6 +124,7 @@ async function main() {
     '/api/health': require('../api/health').create({env}),
     '/api/email-preview': require('../api/email-preview').create({env}),
     '/api/payments/config': require('../api/payments/config').create({env}),
+    '/api/payments/methods': require('../api/payments/methods').create({env, fetchImpl: routed}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
     '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),

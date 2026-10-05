@@ -13,7 +13,7 @@ if (root && PRODUCTS[key]) setup(root, key);
 function setup(root, key) {
   const product = PRODUCTS[key], original = defaults(key), q = selector => root.querySelector(selector);
   const stage = q('[data-pl-stage]'), host = q('[data-pl-viewer]'), status = q('[data-pl-status]'), views = q('[data-pl-views]');
-  const add = q('.pl-add'), customize = q('[data-pl-customize]'), panel = q('[data-pl-custom]'), title = q('[data-pl-colors-title]');
+  const add = q('.pl-add'), customize = q('[data-pl-customize]'), panel = q('[data-pl-custom]'), dots = q('[data-pl-dots]');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)'), phone = matchMedia('(max-width: 860px)');
   let selection = {...original}, part = product.parts[0].id, view = 'photo', viewer = null, viewerImport = null, request = 0;
   let spinning = !reduced.matches, onScreen = true, busy = false;
@@ -25,12 +25,17 @@ function setup(root, key) {
   add.insertAdjacentHTML('beforeend', '<svg class="pl-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.4 4.4L19 7.2"/></svg>');
   views.hidden = false;
   stage.insertAdjacentHTML('beforeend', `<span class="pl-drag" aria-hidden="true">${icon('returns')}<span>Arraste para girar</span></span>`);
+  // No celular, escolhendo as cores, o header (e o carrinho dele) sai de cena: um carrinho flutua no canto superior direito
+  // e adiciona a peça nas cores escolhidas, abrindo o mini-carrinho como o botão de sempre.
+  root.insertAdjacentHTML('beforeend', `<button type="button" class="pl-fab" data-pl-fab aria-label="Adicionar ao carrinho">${icon('cart')}<span class="pl-fab-plus" aria-hidden="true">+</span></button>`);
+  const fab = q('[data-pl-fab]');
+  fab.addEventListener('click', () => { fab.classList.remove('is-adding'); void fab.offsetWidth; fab.classList.add('is-adding'); add.click(); });
 
   // ── a peça: foto ou 3D ──
   async function setView(next) {
     view = next; const id = ++request;
     views.querySelectorAll('[data-pl-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.plView === next)));
-    stage.dataset.view = next;
+    stage.dataset.view = next; paintDots();
     if (next === 'photo') { viewer?.hide(); host.hidden = true; status.hidden = true; return; }
     host.hidden = false;
     if (!viewer?.active) { status.hidden = false; status.textContent = 'Preparando sua prévia 3D…'; }
@@ -77,18 +82,24 @@ function setup(root, key) {
   product.parts.forEach(p => { panel.querySelector(`[data-pl-tab="${p.id}"] span`).textContent = p.name; });
   PALETTE.forEach(c => { const b = panel.querySelector(`[data-pl-color="${c.id}"]`); b.title = c.name; b.setAttribute('aria-label', c.name); });
 
+  // As bolinhas no canto da peça: na foto, as cores originais (é o que ela mostra); no 3D, as escolhidas, mudando na hora.
+  function paintDots() {
+    const shown = view === '3d' ? selection : original;
+    dots.setAttribute('aria-label', shown === original || isOriginal() ? 'Cores originais' : 'Suas cores');
+    dots.querySelectorAll('[data-pl-part]').forEach(dot => {
+      const p = product.parts.find(item => item.id === dot.dataset.plPart), c = color(shown[p.id]), i = dot.querySelector('i');
+      if (i.style.getPropertyValue('--chip') !== c.hex) { i.style.setProperty('--chip', c.hex); if (!reduced.matches) { dot.classList.remove('is-changed'); void dot.offsetWidth; dot.classList.add('is-changed'); } }
+      dot.title = `${p.name}: ${c.name}`; dot.setAttribute('aria-label', dot.title);
+      dot.setAttribute('aria-pressed', String(!panel.hidden && p.id === part));
+    });
+  }
   function paint(message) {
     const current = product.parts.find(p => p.id === part);
-    root.querySelectorAll('[data-pl-part]').forEach(chip => {
-      const c = color(selection[chip.dataset.plPart]);
-      chip.querySelector('i').style.setProperty('--chip', c.hex); chip.querySelector('strong').textContent = c.name;
-      chip.setAttribute('aria-pressed', String(!panel.hidden && chip.dataset.plPart === part));
-    });
+    paintDots();
     panel.querySelectorAll('[data-pl-tab]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plTab === part)); b.querySelector('i').style.background = color(selection[b.dataset.plTab]).hex; });
     panel.querySelectorAll('[data-pl-color]').forEach(b => { const on = b.dataset.plColor === selection[part]; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
     panel.querySelector('[data-pl-hint]').textContent = current.hint;
     panel.querySelector('[data-pl-reset]').hidden = isOriginal();
-    title.textContent = isOriginal() ? 'Cores originais' : 'Suas cores';
     if (!add.classList.contains('is-added')) add.querySelector('span').textContent = isOriginal() ? 'Adicionar nas cores originais' : 'Adicionar com estas cores';
     if (message) panel.querySelector('[data-pl-now]').textContent = message;
     viewer?.update(hex());

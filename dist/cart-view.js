@@ -4,7 +4,7 @@ import {totals, pixDiscount} from './cart-store.js';
 import {icon} from './icons.js';
 import {freeShippingBar} from './free-shipping.js';
 import {formatDays, shippingMessage} from './shipping-client.js';
-import {PAYMENT_MARKS, MERCADO_PAGO_MARK} from './payment-marks.js';
+import {FALLBACK_METHODS, payMark, MERCADO_PAGO_MARK} from './payment-marks.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const editButton = (item, circular = false) => `<button type="button" class="${circular ? 'cart-customize' : 'cart-edit-link'}" data-action="edit" data-id="${esc(item.id)}" aria-label="Editar personalização de ${esc(item.title)}">${circular ? icon('pencil') : 'Editar cores'}</button>`;
@@ -63,7 +63,7 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
 function recommendations(cart) {
   const inCart = new Set(cart.map(item => item.productId)), ids = Object.keys(PRODUCTS).filter(id => !inCart.has(id)).slice(0, 3);
   if (!ids.length) return '';
-  const more = `<li><a class="cart-rec cart-rec-more" href="produtos.html"><span class="cart-rec-more-mark" aria-hidden="true">${icon('arrow')}</span><strong>Ver mais</strong><small>Todas as peças</small></a></li>`;
+  const more = `<li class="cart-rec-more-item"><a class="cart-rec cart-rec-more" href="produtos.html"><span class="cart-rec-more-mark" aria-hidden="true"></span><strong>Ver mais</strong><small>Todas as peças</small></a></li>`;
   const arrow = (step, label) => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-label="${label}" hidden>${icon('arrow')}</button>`;
   return `<section class="cart-recs" aria-labelledby="cart-recs-title"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><div class="cart-rec-rail">${arrow(-1, 'Peças anteriores')}<ul class="cart-rec-track" data-rec-track>${ids.map(id => {
     const product = PRODUCTS[id], {theme} = showcase(id);
@@ -89,25 +89,34 @@ export function wireRecArrows(root) {
   window.addEventListener('resize', () => updateRecArrows(root), {passive: true});
 }
 
+// Os meios de pagamento aceitos, em três grupos (Pix, crédito, débito): a lista da conta do Mercado Pago (methods, de
+// GET /api/payments/methods) ou, sem ela, FALLBACK_METHODS. checkout.js troca só este bloco quando a lista chega.
+const PAY_GROUPS = [['bank_transfer', 'Pix'], ['credit_card', 'Crédito'], ['debit_card', 'Débito']];
+export function paymentBlock(methods) {
+  const list = Array.isArray(methods) && methods.length ? methods : FALLBACK_METHODS;
+  const groups = PAY_GROUPS.map(([type, label]) => { const items = list.filter(m => m.type === type); return items.length ? `<div class="pay-group"><span class="pay-group-label">${label}</span><ul class="pay-marks">${items.map(payMark).join('')}</ul></div>` : ''; }).join('');
+  return `<div class="cart-pay" data-cart-pay><h2>Métodos de pagamento aceitos</h2><div class="pay-groups">${groups}</div><p class="cart-pay-by">${MERCADO_PAGO_MARK}<span>Pagamento processado pelo Mercado Pago</span></p></div>`;
+}
+
 // No fim: o que a pessoa precisa saber para comprar tranquila (cada linha leva à política) e os meios de pagamento
 // aceitos pelo Mercado Pago, só o que os Termos dizem.
-function purchaseInfo() {
+function purchaseInfo(methods) {
   const row = (name, href, title, text) => `<li>${icon(name)}<a href="${href}"><strong>${title}</strong> <span>${text}</span></a></li>`;
   return `<section class="cart-info" aria-label="Informações da compra"><ul class="cart-info-list">${[
     row('truck', 'termos.html#producao', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
     row('card', 'termos.html#precos', 'Formas de pagamento.', 'Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.'),
     row('clock', 'termos.html#producao', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
     row('returns', 'trocas.html', 'Trocas e devoluções.', 'Você pode desistir em até 7 dias depois de receber.')].join('')}</ul>
-    <div class="cart-pay"><h2>Métodos de pagamento aceitos</h2><ul class="pay-marks">${PAYMENT_MARKS}</ul><p class="cart-pay-by">${MERCADO_PAGO_MARK}<span>Pagamento processado pelo Mercado Pago</span></p></div></section>`;
+    ${paymentBlock(methods)}</section>`;
 }
-const extras = cart => `<div class="cart-more">${recommendations(cart)}${purchaseInfo()}</div>`;
+const extras = (cart, options = {}) => `<div class="cart-more">${recommendations(cart)}${purchaseInfo(options.payMethods)}</div>`;
 
 // Every piece in the cart is bought: with one to three pieces, checkboxes only add noise (audit E2).
 export function renderCart(cart, options = {}) {
   const chosen = cart;
   const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
-  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart)}`;
+  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart, options)}`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
     <div class="cart-products">${cart.map(item => itemCard(item)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
-    </section>${cartSummary(chosen, options)}</div>${extras(cart)}`;
+    </section>${cartSummary(chosen, options)}</div>${extras(cart, options)}`;
 }

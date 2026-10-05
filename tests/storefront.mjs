@@ -83,7 +83,15 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
     [['termos.html#producao', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['termos.html#producao', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
   assert.match(page, /começa depois da confirmação do pagamento\./);
-  assert.deepEqual([...page.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Mastercard', 'American Express', 'Elo', 'Hipercard']);
+  // without the account's list (payments off): Pix, the credit cards and the Caixa virtual debit card, in three groups
+  assert.deepEqual([...page.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Mastercard', 'Elo', 'American Express', 'Hipercard', 'Cartão de débito virtual Caixa']);
+  assert.deepEqual([...page.matchAll(/<span class="pay-group-label">([^<]+)<\/span>/g)].map(m => m[1]), ['Pix', 'Crédito', 'Débito']);
+  // with the account's list (GET /api/payments/methods): only what it accepts; an unknown brand shows Mercado Pago's picture
+  const {paymentBlock} = await site('cart-view.js');
+  const own = paymentBlock([{id: 'pix', name: 'Pix', type: 'bank_transfer'}, {id: 'master', name: 'Mastercard', type: 'credit_card'}, {id: 'novo', name: 'Bandeira nova', type: 'credit_card', thumbnail: 'https://http2.mlstatic.com/x.png'}]);
+  assert.deepEqual([...own.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Mastercard', 'Bandeira nova']);
+  assert.match(own, /<img src="https:\/\/http2\.mlstatic\.com\/x\.png" alt=""/);
+  assert.doesNotMatch(own, /Débito/, 'no debit group when the account has no debit card');
   assert.match(page, /Pagamento processado pelo Mercado Pago/);
   const empty = renderCart([], {});
   assert.match(empty, /<h2 id="cart-recs-title">Comece por uma destas<\/h2>/);
