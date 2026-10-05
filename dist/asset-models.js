@@ -6,7 +6,8 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 // model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=crista2-meshopt1',import.meta.url),
+  // O dinossauro do Meshy (05/10/2026), com os 2 espinhos da peça nova: corpo e detalhes coloríveis, olhos, dentes e brilho fixos
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshy-1',import.meta.url),
   aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-meshopt1',import.meta.url),
   // O macaco do Meshy com as cores fixas do macaco em cinco materiais, sem textura (VITRINE-AVIAO-MACACO-QA.md)
   macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)

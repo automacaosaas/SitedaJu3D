@@ -64,6 +64,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `design/vistas/PADRAO.md`. `node tools/galeria-vistas/gerar.cjs` grava em `dist/assets/vistas/` (tira o chuvisco da compressão,
   amplia com Lanczos e realça); depois, suba `VIEWS_VERSION`. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine, no mesmo
   quadro. Peça nova (unicórnio, girafa): entra em `GALLERY` e em `fotos.json` quando estiver à venda.
+- **Dinossauro 3D (05/10/2026):** o modelo do Meshy (`Meshy_AI__1005212758_model-edit.glb`, só a forma), com os 2 espinhos da peça
+  nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;
+  details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
+  olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
