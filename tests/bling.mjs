@@ -261,8 +261,11 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   assert.equal(await bling.keepAlive(), true, 'a week without renewing: renewed on panel load');
   clock += 8 * 86400000;
   const ju = await adminSession(store), before = refreshes();
-  const panel = await call(adminOrders.create({env: ENV, store, now, fetchImpl: network}), {method: 'GET', cookie: ju.cookie});
-  assert.equal(panel.json().invoicingProvider, 'bling'); assert.equal(refreshes(), before + 1, 'opening the panel keeps the connection alive');
+  const background = [], waitUntil = work => { background.push(work); };
+  const panel = await call(adminOrders.create({env: ENV, store, now, fetchImpl: network, waitUntil}), {method: 'GET', cookie: ju.cookie});
+  assert.equal(panel.json().invoicingProvider, 'bling'); assert.equal(refreshes(), before, 'the answer does not wait for Bling');
+  await Promise.all(background);
+  assert.equal(refreshes(), before + 1, 'opening the panel keeps the connection alive, after the answer');
 
   fake.state.tooManyRequests = true;
   await assert.rejects(bling.natures(), error => error.code === 'rate_limited' && /pausa/.test(error.message));

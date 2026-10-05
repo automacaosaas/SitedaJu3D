@@ -55,6 +55,11 @@ function createMemoryStore() {
       async transition(id, from, patch) { const row = orders.get(id); if (!row || !from.includes(row.status)) return false; Object.assign(row, patch); return true; },
       async listByCustomer(customerId, limit = 50) { return copy([...orders.values()].filter(o => o.customerId === customerId).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
       async list({statuses = null, limit = 500} = {}) { return copy([...orders.values()].filter(o => !statuses || statuses.includes(o.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)); },
+      // Painel: one page of orders, newest first (ties by id), starting right below `before` ({createdAt, id}).
+      async listForAdmin({statuses, limit = 100, before = null}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 500), below = o => !before || o.createdAt < before.createdAt || (+o.createdAt === +before.createdAt && o.id < before.id);
+        return copy([...orders.values()].filter(o => statuses.includes(o.status) && below(o)).sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, cap));
+      },
       // Fluxo de caixa: every paid order, with only what the cash flow shows.
       async listForCash({statuses}) {
         return copy([...orders.values()].filter(o => statuses.includes(o.status) && o.paidAt).sort((a, b) => b.paidAt - a.paidAt)

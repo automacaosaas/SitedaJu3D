@@ -105,6 +105,21 @@ async function contract(store, label) {
   const cashBalance = before => store.cashBalance({statuses: ['pendente'], refundStates: ['refunded'], before, until: '2000-01-01'});
   assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 14700, `${label}: a paid order counts from the instant it was paid`);
 
+  // Painel: a page of paid orders, newest first (ties by id), with what the panel shows; the next page starts right
+  // below the last order of the previous one. Far in the future, so rows from earlier runs sit below these.
+  const top = new Date(Date.now() + 100 * 365 * 86400e3), later = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse(), older = crypto.randomUUID();
+  for (const [orderAt, pageId] of [[top, later[1]], [top, later[0]], [new Date(top.getTime() - 1), older]]) {
+    await store.orders.create({...draft, id: pageId, reference: `JU-P${pageId.slice(0, 8).toUpperCase()}`, customerId: null, status: 'concluido', paidAt, createdAt: orderAt});
+  }
+  const firstPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: new Date(top.getTime() + 1), id: 'z'}});
+  assert.deepEqual(firstPage.map(o => o.id), later, `${label}: newest first, ties by id`);
+  assert.deepEqual(firstPage[0].shipTo, draft.shipTo, `${label}: the page carries what the panel shows`);
+  assert.equal(firstPage[0].notes, draft.notes); assert(Buffer.from(firstPage[0].phoneEnc).equals(draft.phoneEnc));
+  assert.deepEqual(firstPage[0].items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), draft.items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), `${label}: items in order`);
+  const nextPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: firstPage[1].createdAt, id: firstPage[1].id}});
+  assert.equal(nextPage[0].id, older, `${label}: the next page starts right below the cursor`);
+  assert(!(await store.orders.listForAdmin({statuses: ['pendente'], limit: 500})).some(o => later.includes(o.id)), `${label}: only the statuses asked`);
+
   // Deleting the account keeps the order (fiscal record) and drops the link, the sessions and the codes.
   const sessionHash = crypto.randomBytes(32);
   await store.sessions.create({tokenHash: sessionHash, customerId: id, expiresAt, ip: null, userAgent: null});
