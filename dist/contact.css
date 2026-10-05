@@ -3,7 +3,6 @@
 .contact-main { flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: clamp(34px, 6vw, 76px) 0 clamp(48px, 7vw, 96px); }
 .contact-hero { max-width: 680px; margin: 0 auto; text-align: center; }
 .contact-hero h1 { font-size: clamp(34px, 4.4vw, 54px); }
-.contact-heart { font-size: .78em; }
 .contact-lead { max-width: 56ch; margin: 18px auto 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
 
 .contact-channels { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; margin-top: clamp(30px, 5vw, 52px); }

@@ -92,7 +92,7 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.doesNotMatch(page, /name="robots" content="noindex"/, 'the contact page can be found now');
   assert.match(page, /<link rel="stylesheet" href="contact\.css">/); assert.match(page, /<script type="module" src="contato\.js"><\/script>/);
   assert.doesNotMatch(page.replace(/<script type="application\/ld\+json">[^]*?<\/script>/g, ''), /<script(?![^>]*\bsrc=)[^>]*>/, 'no inline script (CSP)');
-  assert.match(page, /<h1 id="contact-title">Fale com a Ju <span class="contact-heart" aria-hidden="true">💜<\/span><\/h1>/);
+  assert.match(page, /<h1 id="contact-title">Fale com a Ju<\/h1>/, 'the title alone, no emoji');
   // Channels: WhatsApp first; its button stays hidden until the number exists, and then carries a greeting.
   const channels = [...page.matchAll(/<article class="contact-channel[^"]*">[^]*?<h2>([^<]+)<\/h2>/g)].map(m => m[1]);
   assert.deepEqual(channels, ['WhatsApp', 'E-mail', 'Instagram']);
