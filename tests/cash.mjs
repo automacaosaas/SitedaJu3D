@@ -10,7 +10,8 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const {movements, balance, CATEGORIES, spDay} = require('../api/_lib/cash');
+const {movements, balance, dayEnd, CATEGORIES, MONEY_BACK, spDay} = require('../api/_lib/cash');
+const {PAID} = require('../api/_lib/orders');
 const {createMemoryStore} = require('../api/_lib/store-memory');
 const totp = require('../api/_lib/totp');
 const handlers = Object.fromEntries(['login', 'verify', 'cash'].map(name => [name, require(`../api/admin/${name}`)]));
@@ -26,6 +27,41 @@ const now = () => clock;
 // ── Brasília days ─────────────────────────────────────────────────────
 assert.equal(spDay('2026-10-05T02:30:00Z'), '2026-10-04', '23:30 in Brasília is still the 4th');
 assert.equal(spDay('2026-10-05T03:00:00Z'), '2026-10-05');
+assert.equal(dayEnd('2026-10-04').toISOString(), '2026-10-05T03:00:00.000Z', 'the 4th ends at midnight in Brasília');
+assert.equal(dayEnd('2026-12-31').toISOString(), '2027-01-01T03:00:00.000Z', 'across the year');
+for (const date of ['2026-02-28', '2026-10-04', '2028-02-29']) {
+  const end = dayEnd(date).getTime();
+  assert.equal(spDay(end - 1), date, `${date}: the last millisecond is still that day`); assert.notEqual(spDay(end), date);
+}
+
+// ── the balance summed by the store is the same as the one of the movements ──
+{
+  const store = createMemoryStore(), at = iso => new Date(iso);
+  const order = async (reference, status, paidAt, extra = {}) => store.orders.create({id: crypto.randomUUID(), reference, source: 'test', status, totalCents: 10000 + reference.length, paidAt, refundState: null, items: [{productId: 'p', title: 'Peça', quantity: 2, unitCents: 5000, selection: {}}], buyer: {name: 'Maria Cliente', email: 'maria@x.com'}, ...extra});
+  await order('JU-1', 'pendente', at('2026-10-04T13:00:00Z'));
+  await order('JU-22', 'concluido', at('2026-10-05T02:59:59Z'));                                         // 23:59 in Brasília: still the 4th
+  await order('JU-333', 'pendente', at('2026-10-05T03:00:00Z'));                                         // already the 5th
+  await order('JU-4444', 'recusado', at('2026-10-01T12:00:00Z'), {refundState: 'refunded', refundedAt: at('2026-10-05T12:00:00Z')});
+  await order('JU-55555', 'recusado', at('2026-10-01T12:00:00Z'), {refundState: 'requested', decidedAt: at('2026-10-03T12:00:00Z')});
+  await order('JU-666666', 'recusado', at('2026-10-01T12:00:00Z'), {refundState: 'failed'});
+  await order('JU-7', 'aguardando_pagamento', null);
+  await order('JU-88', 'cancelado', at('2026-10-01T12:00:00Z'));
+  await store.cashEntries.create({id: crypto.randomUUID(), kind: 'saida', category: 'frete', description: 'Correios', amountCents: 2800, occurredOn: '2026-10-04'});
+  await store.cashEntries.create({id: crypto.randomUUID(), kind: 'entrada', category: 'outros', description: 'Futuro', amountCents: 999, occurredOn: '2026-10-06'});
+  await store.cashEntries.create({id: crypto.randomUUID(), kind: 'entrada', category: 'ajuste', description: 'Ajuste de saldo', amountCents: 50000, occurredOn: '2026-09-30'});
+  await store.bills.create({id: 'b1', description: 'Fornecedor', amountCents: 31000, dueOn: '2026-10-15'});
+  await store.bills.setPaid('b1', '2026-10-05');
+  await store.bills.create({id: 'b2', description: 'Aluguel', amountCents: 80000, dueOn: '2026-10-06'});
+
+  const cashOrders = await store.orders.listForCash({statuses: PAID});
+  assert.deepEqual(cashOrders.map(o => o.reference).sort(), ['JU-1', 'JU-22', 'JU-333', 'JU-4444', 'JU-55555', 'JU-666666'], 'only paid orders');
+  assert.deepEqual(cashOrders[0].items, [{title: 'Peça', quantity: 2}], 'only the pieces it shows');
+  assert(!/maria/i.test(JSON.stringify(cashOrders)), 'nothing about the buyer is loaded');
+  const list = movements({orders: cashOrders, entries: await store.cashEntries.list(), bills: await store.bills.list()});
+  for (const date of ['2026-09-30', '2026-10-01', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06']) {
+    assert.equal(await store.cashBalance({statuses: PAID, refundStates: MONEY_BACK, before: dayEnd(date), until: date}), balance(list, date), `balance of ${date}`);
+  }
+}
 
 // ── movements: paid orders, refunds, entries and paid bills ───────────
 {
@@ -138,7 +174,12 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
 
   // The balance Ju types: the difference is one adjustment of today, never money in or out of the month.
   await post({action: 'remove-entry', id: (await get()).json().cash.movements.find(m => m.date === '2029-10-04').id});
+  const listForCash = store.orders.listForCash;
+  let loads = 0;
+  store.orders.listForCash = (...args) => { loads++; return listForCash(...args); };
   const adjusted = (await post({action: 'adjust-balance', balanceCents: 250000})).json().cash;
+  store.orders.listForCash = listForCash;
+  assert.equal(loads, 1, 'adjusting the balance loads the orders once (the view), the difference is summed by the store');
   assert.equal(adjusted.balanceCents, 250000);
   const adjustment = adjusted.movements.find(m => m.category === 'ajuste');
   assert.deepEqual([adjustment.type, adjustment.amountCents, adjustment.date, adjustment.removable], ['entrada', 250000 - (14700 - 31000), '2026-10-04', true]);

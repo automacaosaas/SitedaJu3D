@@ -2,13 +2,17 @@ import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection} from './pro
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
+import {staticViews,createGallery} from './gallery.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
+// A aba Foto é uma galeria de fotos reais da peça (frente, três quartos, detalhes…; gallery.js); sem elas, a foto da vitrine.
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
+// na aba Foto não há nota embaixo: as fotos falam por si (o nome de cada uma fica nas miniaturas e nos pontinhos, para leitores de tela)
+const gallery=createGallery($('.image-area'));
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
 export const PRESETS=[{id:'original',name:'Original'},{id:'pastel',name:'Pastel',colors:['pink','lilac','cream']},{id:'vibrante',name:'Vibrante',colors:['sky','orange','yellow']},{id:'surpresa',name:'Surpreenda-me'}];
 export function presetSelection(key,preset,random=Math.random){
@@ -31,7 +35,7 @@ function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
-  $('#dialog-image').src=`assets/${p.image}`;$('#dialog-image').alt=`${p.title} sobre uma pilastra branca — imagem de apresentação`;$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
+  gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
   else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
@@ -61,7 +65,7 @@ async function setView(next){
   document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   $('.image-area').hidden=next!=='photo';$('#viewer-host').hidden=next!=='model';
   $('.viewer-tools').hidden=true;$('.viewer-message').hidden=true;
-  $('.view-note').textContent=next==='photo'?'Imagem de apresentação • cores originais.':preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
+  $('.view-note').textContent=next==='photo'?'':preview()?'Arraste para girar e ver cada detalhe.':'Arraste para girar · as cores mudam na hora.';
   dialog.dataset.view=next;
   if(next==='photo'){viewer?.hide();return;}
   $('.viewer-message').hidden=false;$('.viewer-message').textContent='Preparando sua prévia 3D…';
@@ -81,7 +85,7 @@ function renderControls(){
   const p=PRODUCTS[activeProduct];
   $('#part-tabs').replaceChildren(...p.parts.map(part=>{const b=document.createElement('button');b.type='button';b.dataset.part=part.id;b.innerHTML='<span class="part-dot" aria-hidden="true"></span><span></span>';b.lastElementChild.textContent=part.name;return b;}));
   $('#palette').replaceChildren(...PALETTE.map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',value.hex);b.style.setProperty('--check',['yellow','cream','mint','white'].includes(value.id)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');b.append(swatch);return b;}));
-  $('#presets').replaceChildren(...PRESETS.map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=color(id).hex;dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
+  $('#presets').replaceChildren(...PRESETS.filter(preset=>preset.id!=='surpresa').map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=color(id).hex;dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
   updateControls();
 }
 function updateControls(){
@@ -94,7 +98,7 @@ function updateControls(){
 }
 // No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista.
 function revealSwatch(){const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
-// A foto mostra só as cores originais: ao escolher uma cor, a prévia passa para o 3D.
+// As fotos mostram só as cores da vitrine: ao escolher uma cor, a prévia passa para o 3D.
 function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
 function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
 
@@ -107,6 +111,10 @@ document.querySelectorAll('[data-sheet]').forEach(b=>{b.insertAdjacentHTML('afte
 tabs.forEach((tab,i)=>tab.addEventListener('click',()=>showTab(i)));
 sheet.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();showTab(e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length,true);});
 $('.pdp-sheet-close').addEventListener('click',()=>closeSheet());
+// No celular, as combinações prontas e o link das cores saem da tela da peça e ficam no (i), na aba Cores (já abertas).
+const more=$('.pdp-more'),moreHome=more.parentElement,phone=matchMedia('(max-width: 600px)');
+function placeMore(){if(phone.matches){more.open=true;$('#pdp-panel-1').prepend(more);}else if(more.parentElement!==moreHome){moreHome.append(more);more.open=false;}}
+phone.addEventListener('change',placeMore);placeMore();
 // (i) no topo: abre "Sobre a peça" nos detalhes.
 $('#pdp-info').insertAdjacentHTML('afterbegin',icon('info'));$('#pdp-info').addEventListener('click',e=>openSheet(0,e.currentTarget));
 
@@ -130,6 +138,8 @@ $('#share-colors').addEventListener('click',async()=>{
   catch(error){if(error?.name==='AbortError')return;const field=$('#share-link');field.value=url;field.hidden=false;field.focus();field.select();announce(`Copie o link: ${url}`);}
 });
 $('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset]');if(!b)return;const preset=PRESETS.find(p=>p.id===b.dataset.preset);applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);});
+// Surpreenda-me fica ao lado das cores, sempre à vista (as outras combinações seguem em Combinações e compartilhamento).
+$('#surprise').addEventListener('click',()=>{const preset=PRESETS.find(p=>p.id==='surpresa');applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);});
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);renderControls();setView('model');}});

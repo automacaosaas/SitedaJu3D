@@ -1,14 +1,15 @@
 'use strict';
 // GET /api/payments/status?id=ORD… — the checkout asks this while a Pix waits or a card is in review. Only the buyer
 // who placed the order gets an answer, and only its state. Each check also brings our order up to date, so a payment is
-// recorded (and Ju notified) even when a webhook is late or cannot reach the site.
+// recorded (and Ju notified) even when a webhook is late or cannot reach the site. The e-mails go out after the answer
+// (`waitUntil` receives them, for a host or a test that wants to keep the work alive or wait for it).
 const {json} = require('../_lib/http');
 const {storeFor, readCookie} = require('../_lib/account-http');
 const {createAccounts} = require('../_lib/accounts');
 const {createOrders} = require('../_lib/orders');
 const mp = require('../_lib/mercadopago');
 
-function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox} = {}) {
+function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now(), store: injected, outbox, waitUntil = () => {}} = {}) {
   return async function handler(req, res) {
     if (req.method !== 'GET') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'GET'});
     const settings = mp.settings(env);
@@ -28,7 +29,7 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
       const remote = mp.normalizeOrder(await mp.getOrder({settings, fetchImpl, id}));
       const orders = createOrders({store, env, now});
       const {order} = await orders.applyPayment(ours, remote, {actor: 'status'});
-      if (orders.PAID.includes(order.status)) await orders.notifyPaid(order, {fetchImpl, outbox, test: settings.mode === 'test'});
+      if (orders.PAID.includes(order.status)) waitUntil(orders.notifyPaidLater(order, {fetchImpl, outbox, test: settings.mode === 'test'}));
       return json(res, 200, {reference: remote.reference, state: remote.state, statusDetail: remote.statusDetail, expiresAt: remote.pix?.expiresAt || null});
     } catch (error) {
       if (error.status === 404) return json(res, 404, {error: 'not_found'});

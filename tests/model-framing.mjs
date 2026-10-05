@@ -13,7 +13,9 @@ GLTFLoader.prototype.parseAsync=function(...args){this.register(()=>({name:'node
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async url=>new Response(await readFile(url),{status:200});
 // 3D areas measured in the product modal (CSS px): desktop, tablet and phones.
-const HOSTS=[[519,741],[519,679],[519,587],[484,558],[356,750],[402,215],[362,186],[332,169]];
+// Since 04/10/2026 the 3D area is taller (the controls sit in a column on the left): desktop 614x653, tablet 720x340,
+// phones 390x342 and 375x200.
+const HOSTS=[[519,741],[519,679],[519,587],[484,558],[356,750],[402,215],[362,186],[332,169],[614,653],[720,340],[390,342],[375,200]];
 function viewerFor(model,[w,h],width=w){
  // Same pedestal as ProductViewer's constructor (which needs WebGL, unavailable here).
  const pedestal=new T.Mesh(new T.CylinderGeometry(1.9,1.9,.24,80));pedestal.position.y=-2.02;pedestal.updateMatrixWorld(true);
@@ -68,5 +70,5 @@ try{
   }
   plain.dispose();
  }finally{assets.PRESENTATION_SCALE.borboletoscopio=saved;}
- console.log('PASS: no product is cut at any rotation or polar limit on 8 layouts; the butterfly is presented larger.');
+ console.log(`PASS: no product is cut at any rotation or polar limit on ${HOSTS.length} layouts; the butterfly is presented larger.`);
 }finally{globalThis.fetch=originalFetch;GLTFLoader.prototype.parseAsync=originalParse;}

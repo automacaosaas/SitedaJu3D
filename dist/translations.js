@@ -843,4 +843,16 @@ Enviando…|Sending…|Enviando…
 Muitas mensagens seguidas. Tente de novo daqui a pouco.|Too many messages in a row. Please try again in a little while.|Demasiados mensajes seguidos. Inténtalo de nuevo en un rato.
 Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para contato@juimprimepramim.com.br.|We could not send it right now. Try again in a few minutes or write to contato@juimprimepramim.com.br.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a contato@juimprimepramim.com.br.
 Não foi possível enviar agora. Confira a sua conexão e tente de novo.|We could not send it right now. Check your connection and try again.|No se pudo enviar ahora. Revisa tu conexión e inténtalo de nuevo.
+Vistas da peça|Views of the piece|Vistas de la pieza
+Escolher a vista|Choose a view|Elegir la vista
+Vista anterior|Previous view|Vista anterior
+Próxima vista|Next view|Vista siguiente
+galeria|gallery|galería
+vista|view|vista
+Frente|Front|Frente
+Três quartos|Three-quarter|Tres cuartos
+Costas|Back|Parte trasera
+Rostinho de perto|Face up close|Carita de cerca
+Rosto de perto|Face up close|Cara de cerca
+Cabine de perto|Cockpit up close|Cabina de cerca
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

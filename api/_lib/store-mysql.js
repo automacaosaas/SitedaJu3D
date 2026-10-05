@@ -60,6 +60,14 @@ const CASH_COLUMNS = {id: 'id', kind: 'kind', category: 'category', description:
 const toCashEntry = row => row && {id: row.id, kind: row.kind, category: row.category, description: row.description, amountCents: Number(row.amount_cents), occurredOn: toDay(row.occurred_on), createdBy: row.created_by ?? null, createdAt: row.created_at};
 const BILL_COLUMNS = {id: 'id', description: 'description', amountCents: 'amount_cents', dueOn: 'due_on', paidOn: 'paid_on', lockedAt: 'locked_at', createdBy: 'created_by', createdAt: 'created_at'};
 const toBill = row => row && {id: row.id, description: row.description, amountCents: Number(row.amount_cents), dueOn: toDay(row.due_on), paidOn: toDay(row.paid_on), lockedAt: row.locked_at ?? null, createdBy: row.created_by ?? null, createdAt: row.created_at};
+// Only what the cash flow shows of a paid order: no buyer, address or document leaves the table.
+const toCashOrder = (row, items = []) => ({id: row.id, reference: row.reference, source: row.source, totalCents: Number(row.total_cents), paidAt: row.paid_at, refundState: row.refund_state ?? null, refundedAt: row.refunded_at ?? null, decidedAt: row.decided_at ?? null, items: items.map(i => ({title: i.title, quantity: i.quantity}))});
+// Rows grouped by a key, keeping their order: one pass instead of a filter per row.
+function groupBy(rows, keyOf) {
+  const groups = new Map();
+  for (const row of rows) { const key = keyOf(row), group = groups.get(key); if (group) group.push(row); else groups.set(key, [row]); }
+  return groups;
+}
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
@@ -71,7 +79,8 @@ function createMysqlStore(pool) {
   async function withItemsList(rows) {
     if (!rows.length) return [];
     const items = await all(`SELECT * FROM order_items WHERE order_id IN (${rows.map(() => '?').join(', ')}) ORDER BY order_id, position`, rows.map(r => r.id));
-    return rows.map(r => toOrder(r, items.filter(i => i.order_id === r.id)));
+    const byOrder = groupBy(items, i => i.order_id);
+    return rows.map(r => toOrder(r, byOrder.get(r.id) || []));
   }
   const run = async (sql, params) => { const [result] = await pool.execute(sql, params); return result; };
   const duplicate = (error, name) => error?.code === 'ER_DUP_ENTRY' && String(error.message).includes(name);
@@ -144,6 +153,17 @@ function createMysqlStore(pool) {
         const rows = statuses ? await all(`SELECT * FROM orders WHERE status IN (${statuses.map(() => '?').join(', ')}) ORDER BY created_at DESC LIMIT ${cap}`, statuses) : await all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ${cap}`, []);
         return withItemsList(rows);
       },
+      // Fluxo de caixa: every paid order (no cap, the balance needs all of them), only the columns it shows, and the
+      // pieces in one query that filters on the server instead of a placeholder per order.
+      async listForCash({statuses}) {
+        const marks = statuses.map(() => '?').join(', ');
+        const [rows, items] = await Promise.all([
+          all(`SELECT id, reference, source, total_cents, paid_at, refund_state, refunded_at, decided_at FROM orders WHERE status IN (${marks}) AND paid_at IS NOT NULL ORDER BY paid_at DESC`, statuses),
+          all(`SELECT i.order_id, i.title, i.quantity FROM order_items i JOIN orders o ON o.id = i.order_id WHERE o.status IN (${marks}) AND o.paid_at IS NOT NULL ORDER BY i.order_id, i.position`, statuses)
+        ]);
+        const byOrder = groupBy(items, i => i.order_id);
+        return rows.map(r => toCashOrder(r, byOrder.get(r.id)));
+      },
       addEvent: (orderId, kind, detail = null, actor = null) => run('INSERT INTO order_events (order_id, kind, detail, actor) VALUES (?, ?, ?, ?)', [orderId, kind, detail === null ? null : String(detail).slice(0, 500), actor === null ? null : String(actor).slice(0, 180)]),
       async events(orderId) { return (await all('SELECT * FROM order_events WHERE order_id = ? ORDER BY id', [orderId])).map(e => ({id: e.id, orderId: e.order_id, kind: e.kind, detail: e.detail, actor: e.actor, createdAt: e.created_at})); }
     },
@@ -192,6 +212,19 @@ function createMysqlStore(pool) {
         return this.get(name);
       },
       remove: name => run('DELETE FROM integrations WHERE name = ?', [name])
+    },
+    // The cash balance summed by the database, without loading a single movement: paid orders up to `before` (the
+    // instant the day after `until` starts in Brasília), minus the refunds up to then, plus the entries and minus the bills
+    // paid up to `until` ("YYYY-MM-DD"). Same rules as balance() in cash.js.
+    async cashBalance({statuses, refundStates, before, until}) {
+      const marks = list => list.map(() => '?').join(', ');
+      const row = await one(`SELECT
+          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND paid_at < ?) AS sales,
+          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND refund_state IN (${marks(refundStates)}) AND COALESCE(refunded_at, decided_at, paid_at) < ?) AS refunds,
+          (SELECT COALESCE(SUM(CASE WHEN kind = 'entrada' THEN amount_cents ELSE -amount_cents END), 0) FROM cash_entries WHERE occurred_on <= ?) AS entries,
+          (SELECT COALESCE(SUM(amount_cents), 0) FROM bills WHERE paid_on IS NOT NULL AND paid_on <= ?) AS bills`,
+        [...statuses, before, ...statuses, ...refundStates, before, until, until]);
+      return Number(row.sales) - Number(row.refunds) + Number(row.entries) - Number(row.bills);
     },
     cashEntries: {
       async create(data) {
