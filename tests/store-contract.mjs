@@ -105,6 +105,25 @@ async function contract(store, label) {
   const cashBalance = before => store.cashBalance({statuses: ['pendente'], refundStates: ['refunded'], before, until: '2000-01-01'});
   assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 14700, `${label}: a paid order counts from the instant it was paid`);
 
+  // Painel: a page of paid orders, newest first (ties by id), with what the panel shows; the next page starts right
+  // below the last order of the previous one. Far in the future, so rows from earlier runs sit below these.
+  const top = new Date(Date.now() + 100 * 365 * 86400e3), later = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse(), older = crypto.randomUUID();
+  const pageShippedAt = new Date(t + 2000);
+  for (const [orderAt, pageId] of [[top, later[1]], [top, later[0]], [new Date(top.getTime() - 1), older]]) {
+    await store.orders.create({...draft, id: pageId, reference: `JU-P${pageId.slice(0, 8).toUpperCase()}`, customerId: null, status: 'concluido', paidAt, trackingCode: 'AA123456789BR', shippedAt: pageShippedAt, createdAt: orderAt});
+  }
+  const firstPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: new Date(top.getTime() + 1), id: 'z'}});
+  assert.deepEqual(firstPage.map(o => o.id), later, `${label}: newest first, ties by id`);
+  assert.deepEqual(firstPage[0].shipTo, draft.shipTo, `${label}: the page carries what the panel shows`);
+  assert.equal(firstPage[0].notes, draft.notes); assert(Buffer.from(firstPage[0].phoneEnc).equals(draft.phoneEnc));
+  // the tracking code of Enviados and Concluídos (2026-10-05: the MySQL list did not read it)
+  assert.equal(firstPage[0].trackingCode, 'AA123456789BR', `${label}: the page carries the tracking code`);
+  assert.equal(new Date(firstPage[0].shippedAt).getTime(), pageShippedAt.getTime(), `${label}: and when it was shipped`);
+  assert.deepEqual(firstPage[0].items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), draft.items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), `${label}: items in order`);
+  const nextPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: firstPage[1].createdAt, id: firstPage[1].id}});
+  assert.equal(nextPage[0].id, older, `${label}: the next page starts right below the cursor`);
+  assert(!(await store.orders.listForAdmin({statuses: ['pendente'], limit: 500})).some(o => later.includes(o.id)), `${label}: only the statuses asked`);
+
   // Deleting the account keeps the order (fiscal record) and drops the link, the sessions and the codes.
   const sessionHash = crypto.randomBytes(32);
   await store.sessions.create({tokenHash: sessionHash, customerId: id, expiresAt, ip: null, userAgent: null});
@@ -216,6 +235,21 @@ async function contract(store, label) {
 }
 
 await contract(createMemoryStore(), 'memory');
+
+// The panel's list reads from MySQL only the columns in ADMIN_ORDER_SELECT, while the memory store returns every field, so
+// the contract above only catches a missing column against a real database. Here, without one: every field the panel's
+// view of an order reads (orders.adminView) must be among the selected columns. (2026-10-05: tracking_code and shipped_at
+// were missing, and the panel would show Enviados and Concluídos without the tracking code.)
+{
+  const fs = require('node:fs'), path = require('node:path'), root = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
+  const mysqlSource = fs.readFileSync(path.join(root, 'api/_lib/store-mysql.js'), 'utf8'), ordersSource = fs.readFileSync(path.join(root, 'api/_lib/orders.js'), 'utf8');
+  const map = /const ORDER_COLUMNS = \{([^}]+)\}/.exec(mysqlSource)[1], columns = Object.fromEntries([...map.matchAll(/(\w+): '([a-z_]+)'/g)].map(m => [m[1], m[2]]));
+  const selected = new Set([.../const ADMIN_ORDER_SELECT = \[([^\]]+)\]/.exec(mysqlSource)[1].matchAll(/'([a-z_]+)'/g)].map(m => m[1]));
+  const view = ordersSource.slice(ordersSource.indexOf('function adminView('), ordersSource.indexOf('function', ordersSource.indexOf('function adminView(') + 10));
+  const read = [...new Set([...view.matchAll(/order\.(\w+)/g)].map(m => m[1]))].filter(field => field !== 'items');
+  assert(read.includes('trackingCode') && read.length > 15, 'adminView found');
+  for (const field of read) assert(columns[field] && selected.has(columns[field]), `adminView reads ${field}: ADMIN_ORDER_SELECT needs ${columns[field]}`);
+}
 
 // Connection settings: separate variables, or one DATABASE_URL (what a panel wizard may write); separate ones win.
 {
