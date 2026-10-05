@@ -1,16 +1,16 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Fotos da galeria</title>
-<!-- Aberta por gerar.cjs: as fotos reais da galeria (dist/assets/vistas), recortadas das fontes de design/vistas/ como manda
-     design/vistas/fotos.json (foto ou quadro de vídeo, e o recorte), todas no mesmo quadro 4:5 (o padrão de dist/gallery.js).
-     Peça ainda sem fotos reais: só a foto da vitrine, no mesmo quadro. -->
+<!-- Aberta por gerar.cjs: as fotos da galeria (dist/assets/vistas), todas no mesmo quadro 4:5 (o padrão de dist/gallery.js), das
+     fontes de design/vistas/ como manda design/vistas/fotos.json: renders do modelo 3D ("fundo": "render", tools/render-vistas) ou
+     fotos (foto ou quadro de vídeo, e o recorte). Peça sem nenhuma: só a foto da vitrine, no mesmo quadro. -->
 <script type="module">
 import {PRODUCTS,SOON} from '/dist/products.js';
 import {viewsOf} from '/dist/gallery.js';
 const q=new URLSearchParams(location.search),keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
 // O quadro de toda foto (4:5) e a miniatura. Nas vistas inteiras, a peça ocupa 80% da altura (ou 88% da largura, a que vier antes), no
 // meio, com o pé a 8% da borda de baixo — todas as peças e vistas do mesmo tamanho, como numa loja.
-const FRAME=[960,1200],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
+const FRAME=[1200,1500],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
 const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
 // um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá
 const videos=new Map();
@@ -123,7 +123,11 @@ try{
     const p=PRODUCTS[key]||SOON[key];
     for(const v of viewsOf(key)){
       const spec=fotos[key]?.[v.id];let big;
-      if(spec){
+      if(spec?.fundo==='render'){
+        // render do modelo 3D (tools/render-vistas): já vem no quadro padrão, com fundo transparente; só ganha a sombra no chão
+        const img=await image(`/design/vistas/${spec.fonte}`);if(img.naturalWidth*FRAME[1]!==img.naturalHeight*FRAME[0])throw new Error(`${key}-${v.id}: o render precisa ser 4:5`);
+        big=resample(img,[0,0,img.naturalWidth,img.naturalHeight],...FRAME);if(!spec.detalhe)ground(big);window.info[`${key}-${v.id}`]=`${spec.fonte} · render`;
+      }else if(spec){
         if(spec.fundo!=='recortar'&&!spec.detalhe)throw new Error(`${key}-${v.id}: a vista inteira precisa de "fundo": "recortar" (fica no quadro padrão)`);
         const rect=[...spec.recorte];if(spec.detalhe&&Math.abs(rect[2]/rect[3]-FRAME[0]/FRAME[1])>.01)throw new Error(`${key}-${v.id}: o recorte do detalhe precisa ser 4:5`);
         const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));

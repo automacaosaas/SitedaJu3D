@@ -1,22 +1,28 @@
 {
-  "_como": "Fotos reais da galeria da aba Foto, no padrão de 4 por peça (dist/gallery.js): frente, três quartos, costas e um detalhe de perto. Para cada uma, a fonte nesta pasta, o instante do vídeo em segundos (t) e o recorte [x, y, largura, altura] em pixels da fonte (x \"auto\": centralizado na peça). As três vistas inteiras saem recortadas do fundo (\"fundo\": \"recortar\", preto ou claro; \"chao\": y da fonte onde a peça toca o chão, abaixo só há reflexo) e são enquadradas iguais: a peça com o mesmo tamanho e a mesma margem, e uma sombra leve no chão. O detalhe (\"detalhe\": true) é um recorte na proporção 4:5 da parte de cima da peça (o rosto, a cabine), que enche o quadro; não muito justo, porque as fontes não aguentam ampliar demais. node tools/galeria-vistas/gerar.cjs grava em dist/assets/vistas/.",
-  "_fontes": "dinossauroscopio-girando.mp4: vídeo do Luiz (04/10/2026), o dinossauro girando em fundo preto, 1920 x 1920. *-3-vistas.webp: as fotos do Luiz em três vistas (04/10/2026), 1600 x 1006 (vieram comprimidas; com os arquivos originais, as fotos ficam mais nítidas).",
-  "dinossauroscopio": {
-    "frente": {"fonte": "dinossauroscopio-girando.mp4", "t": 0.02, "recorte": ["auto", 140, 1200, 1600], "fundo": "recortar"},
-    "tres-quartos": {"fonte": "dinossauroscopio-girando.mp4", "t": 6.3, "recorte": ["auto", 140, 1200, 1600], "fundo": "recortar"},
-    "costas": {"fonte": "dinossauroscopio-girando.mp4", "t": 4.2, "recorte": ["auto", 140, 1200, 1600], "fundo": "recortar"},
-    "detalhe": {"fonte": "dinossauroscopio-girando.mp4", "t": 0.02, "recorte": [660, 150, 600, 750], "fundo": "recortar", "detalhe": true}
-  },
+  "_como": "Fotos da galeria da aba Foto, no padrão de 4 por peça (dist/gallery.js): frente, três quartos, costas e um detalhe de perto, todas 4:5. Desde 05/10/2026 são renders do modelo 3D de cada peça (\"fundo\": \"render\"): node tools/render-vistas/renderizar.cjs grava em renders/ (Cycles, luz de estúdio, cores da vitrine, fundo transparente, a peça já no quadro padrão; o detalhe é uma câmera de perto). node tools/galeria-vistas/gerar.cjs leva para dist/assets/vistas/, com a sombra leve no chão nas vistas inteiras. Para usar uma foto no lugar de um render: a fonte nesta pasta, o instante do vídeo em segundos (t) e o recorte [x, y, largura, altura] (x \"auto\": centralizado na peça), com \"fundo\": \"recortar\" (tira o fundo liso; \"chao\": y onde a peça toca o chão) — veja PADRAO.md.",
+  "_fontes": "renders/: tools/render-vistas (05/10/2026). dinossauroscopio-girando.mp4 e *-3-vistas.webp: as fotos do Luiz de 04/10/2026, que vieram comprimidas pelo WhatsApp (as fotos da galeria até 05/10).",
   "borboletoscopio": {
-    "frente": {"fonte": "borboletoscopio-3-vistas.webp", "recorte": [515, 190, 555, 740], "fundo": "recortar", "chao": 916},
-    "tres-quartos": {"fonte": "borboletoscopio-3-vistas.webp", "recorte": [60, 195, 470, 700], "fundo": "recortar", "chao": 862},
-    "costas": {"fonte": "borboletoscopio-3-vistas.webp", "recorte": [1068, 195, 470, 700], "fundo": "recortar", "chao": 862},
-    "detalhe": {"fonte": "borboletoscopio-3-vistas.webp", "recorte": [580, 200, 440, 550], "fundo": "recortar", "detalhe": true}
+    "frente": {"fonte": "renders/borboletoscopio-frente.webp", "fundo": "render"},
+    "tres-quartos": {"fonte": "renders/borboletoscopio-tres-quartos.webp", "fundo": "render"},
+    "costas": {"fonte": "renders/borboletoscopio-costas.webp", "fundo": "render"},
+    "detalhe": {"fonte": "renders/borboletoscopio-detalhe.webp", "fundo": "render", "detalhe": true}
+  },
+  "dinossauroscopio": {
+    "frente": {"fonte": "renders/dinossauroscopio-frente.webp", "fundo": "render"},
+    "tres-quartos": {"fonte": "renders/dinossauroscopio-tres-quartos.webp", "fundo": "render"},
+    "costas": {"fonte": "renders/dinossauroscopio-costas.webp", "fundo": "render"},
+    "detalhe": {"fonte": "renders/dinossauroscopio-detalhe.webp", "fundo": "render", "detalhe": true}
   },
   "aviaoscopia": {
-    "frente": {"fonte": "aviaoscopia-3-vistas.webp", "recorte": [538, 120, 525, 700], "fundo": "recortar"},
-    "tres-quartos": {"fonte": "aviaoscopia-3-vistas.webp", "recorte": [10, 120, 525, 700], "fundo": "recortar"},
-    "costas": {"fonte": "aviaoscopia-3-vistas.webp", "recorte": [1072, 120, 525, 700], "fundo": "recortar"},
-    "detalhe": {"fonte": "aviaoscopia-3-vistas.webp", "recorte": [580, 120, 440, 550], "fundo": "recortar", "detalhe": true}
+    "frente": {"fonte": "renders/aviaoscopia-frente.webp", "fundo": "render"},
+    "tres-quartos": {"fonte": "renders/aviaoscopia-tres-quartos.webp", "fundo": "render"},
+    "costas": {"fonte": "renders/aviaoscopia-costas.webp", "fundo": "render"},
+    "detalhe": {"fonte": "renders/aviaoscopia-detalhe.webp", "fundo": "render", "detalhe": true}
+  },
+  "macacoscopio": {
+    "frente": {"fonte": "renders/macacoscopio-frente.webp", "fundo": "render"},
+    "tres-quartos": {"fonte": "renders/macacoscopio-tres-quartos.webp", "fundo": "render"},
+    "costas": {"fonte": "renders/macacoscopio-costas.webp", "fundo": "render"},
+    "detalhe": {"fonte": "renders/macacoscopio-detalhe.webp", "fundo": "render", "detalhe": true}
   }
 }
