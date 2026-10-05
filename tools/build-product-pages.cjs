@@ -57,7 +57,8 @@ function page(id, data, base) {
           <h1>${esc(product.title)}</h1>
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>
-          <p class="pl-installments">ou 3x sem juros no cartão · valores ilustrativos nesta prévia</p>
+          <p class="pl-installments">ou 3x sem juros no cartão</p>${COMMERCE.extraPrices?.[id] ? `
+          <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : ''}
           <p class="pl-desc">${esc(product.description)}</p>
           <div class="pl-colors"><h2>Cores originais</h2><ul>${colors}</ul>${product.fixed ? `<p class="pl-fixed">${esc(product.fixed)}</p>` : ''}</div>
           <div class="pl-actions"><a class="primary pl-customize" href="index.html#produto/${id}/personalizar">${icon('palette')}<span>Personalizar o meu</span></a><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button></div>

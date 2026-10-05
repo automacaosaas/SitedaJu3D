@@ -14,6 +14,7 @@
 .pl-price strong { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--pl-ink); }
 .pl-pix { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 12px; border-radius: 999px; background: #1f7a4d; color: #fff; font-size: 14px; font-weight: 650; white-space: nowrap; }
 .pl-installments { margin: 0; font-size: 14px; color: var(--muted, #71656c); }
+.pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: var(--theme-accent, #1f7a4d); }
 .pl-desc { margin: 20px 0; font-size: 16px; line-height: 1.6; }
 .pl-colors h2 { margin: 0 0 10px; font-size: 13px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted, #71656c); }
 .pl-colors ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

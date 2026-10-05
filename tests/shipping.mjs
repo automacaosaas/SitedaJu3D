@@ -265,7 +265,7 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
   const handler = createHandler.create({env, fetchImpl: net.fetchImpl, store, shippingConfig: EXAMPLE_CONFIG, waitUntil: work => emails.push(work)});
   const quoter = quoteHandler.create({env, fetchImpl: net.fetchImpl, shippingConfig: EXAMPLE_CONFIG});
   const ana = await signedInBuyer(store, env);
-  const subtotal = 3 * 12900 + 15900;
+  const subtotal = 3 * 26500 + 28500;
   const quoted = (await call(quoter, {body: {items: ITEMS, cep: ADDRESS.cep}})).json().options;   // what the buyer is shown
   const pacOption = quoted.find(o => o.service === 'pac');
   const orders = () => store.orders.list();

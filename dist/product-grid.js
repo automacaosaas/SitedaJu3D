@@ -20,7 +20,6 @@ export function productGridCard(id) {
     + `<p class="product-grid-colors"><span class="sr-only">Cores originais: ${colors.map(c => c.name).join(', ')}</span><span class="product-swatches" aria-hidden="true">${colors.map(c => `<i style="--swatch:${c.hex}" title="${c.name}"></i>`).join('')}</span></p>`
     + `<p class="product-grid-price"><strong>${money(price)}</strong><span class="product-grid-pix">${money(pixPrice(price))} no Pix</span></p>`
     + `<p class="product-grid-made">${icon('clock')}<span>Feito sob encomenda · ${COMMERCE.productionLabel}</span></p>`
-    + `<p class="product-grid-note">Preço ilustrativo</p>`
     + `<a class="product-customize" href="index.html#produto/${id}/personalizar">Personalizar o meu</a></div></article>`;
 }
 

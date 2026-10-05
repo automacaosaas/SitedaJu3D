@@ -76,7 +76,13 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Prazo de produção:** 3 a 5 dias úteis.
 - **Cartão:** texto "3x sem juros"; a loja configura isso no Mercado Pago depois (hoje a tabela de parcelas ainda mostra juros em 2x e 3x).
 - **Frete:** Correios com contrato próprio, PAC marcado por padrão (SEDEX também); PAC grátis a partir de R$ 500.
-- **Preços** R$ 129 / 139 / 159: ainda "ilustrativos" (aguardando confirmação).
+- **Preços confirmados (05/10/2026):** Borboletoscópio R$ 265, Dinossauroscópio R$ 265, Aviãoscopia R$ 285 — e o 2.º avião (e os
+  seguintes) na mesma compra sai por R$ 215 (`extraPrices` em `dist/commerce-config.js` = `extraPrice` em `api/_lib/catalog.js`; o
+  servidor divide a linha em dois preços exatos para o Mercado Pago e a nota, e o site mostra "Levando 2, o segundo sai por R$ 215,00").
+  Sem os avisos de "ilustrativo".
+- **Textos (05/10/2026, pedidos do Luiz):** borboleta e dino "feitos para encaixe no retinoscópio da marca Welch Allyn"; avião "para
+  régua de esquiascopia", "feito para encaixe na régua Luneau" (**falta pôr as medidas, que o Luiz vai passar**). Peças da lâmpada de
+  fenda: o macaco se chama **MonkeyLamp**; a girafa e o unicórnio, quando entrarem, **GiraffeLamp** e **UnicornLamp**.
 - **Nota fiscal:** Bling, em toda venda (pessoa física e jurídica), emitida quando a Ju marca "concluído" no painel. Empresa ME no
   Simples Nacional, MG. A conta do Bling deve estar em homologação no primeiro teste (o site pausa se detectar produção).
 - Sem faixa de cookies e sem analytics por enquanto (analytics conflita com a Política de Privacidade atual).
@@ -91,7 +97,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   homologação: próximo número (11, série 1), CFOP de cada caso, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
 - **C. Atendimento.** Quando o Pedro passar e-mail e WhatsApp: `api/_lib/legal.js` (e-mail e telefone) e `dist/commerce-config.js`
   (`whatsapp`), depois `node tools/sync-legal.cjs`. Com o número, o "Fale com a Ju" aparece sozinho no menu do celular.
-- **D. Preços.** Quando forem confirmados, tirar "Preço ilustrativo" e "valores ilustrativos nesta prévia".
+- **D. Preços.** Feito em 05/10/2026 (valores acima).
 
 ## Pendências por responsável
 

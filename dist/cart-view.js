@@ -1,6 +1,6 @@
 import {PRODUCTS, color} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
-import {totals, pixDiscount} from './cart-store.js';
+import {totals, pixDiscount, lineCents} from './cart-store.js';
 import {icon} from './icons.js';
 import {freeShippingBar} from './free-shipping.js';
 import {formatDays, shippingMessage} from './shipping-client.js';
@@ -16,13 +16,13 @@ function swatches(item) {
   }).join('')}</ul></div>`;
 }
 
-function itemCard(item) {
+function itemCard(item, cart) {
   const product = PRODUCTS[item.productId];
   return `<article class="cart-product" aria-label="${esc(item.title)}">
     <div class="cart-product-art"><img src="assets/${esc(product.catalogImage || product.image)}" width="1024" height="1024" alt="${esc(item.title)} — imagem nas cores originais">${editButton(item, true)}</div>
     <div class="cart-product-info"><h2>${esc(item.title)}</h2><p class="item-type">${esc(product.subtitle)}</p>${swatches(item)}${editButton(item)}</div>
     <div class="cart-product-controls"><div class="quantity-control" role="group" aria-label="Quantidade de ${esc(item.title)}"><button type="button" data-action="minus" data-id="${esc(item.id)}" aria-label="Diminuir quantidade de ${esc(item.title)}" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><output aria-label="Quantidade de ${esc(item.title)}">${item.quantity}</output><button type="button" data-action="plus" data-id="${esc(item.id)}" aria-label="Aumentar quantidade de ${esc(item.title)}" ${item.quantity >= 99 ? 'disabled' : ''}>+</button></div><button type="button" class="trash-button" data-action="remove" data-id="${esc(item.id)}" aria-label="Remover ${esc(item.title)}">${icon('trash')}</button></div>
-    <strong class="cart-product-price" aria-label="Preço de ${item.quantity} ${esc(item.title)}">${money(item.unitPrice * item.quantity)}</strong>
+    <strong class="cart-product-price" aria-label="Preço de ${item.quantity} ${esc(item.title)}">${money(lineCents(cart, item))}</strong>
   </article>`;
 }
 
@@ -65,6 +65,6 @@ export function renderCart(cart, options = {}) {
   const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
   if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
-    <div class="cart-products">${cart.map(item => itemCard(item)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
+    <div class="cart-products">${cart.map(item => itemCard(item, cart)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
     </section>${cartSummary(chosen, options)}</div>`;
 }

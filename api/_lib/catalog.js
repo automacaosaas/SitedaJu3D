@@ -21,10 +21,12 @@ const PARTS = Object.freeze({
   engines: ['Motores', 'Engines', 'Motores']
 });
 // The part ids below are the site's own ("body", "details", "engines"); `names` says which wording each product uses.
+// Prices confirmed on 05/10/2026. `extraPrice`: what each unit after the first of the same product in the same order costs (the
+// second airplane is R$ 215); dist/commerce-config.js has the same table (extraPrices).
 const PRODUCTS = Object.freeze({
-  borboletoscopio: {title: 'Borboletoscópio', price: 12900, parts: [{id: 'body', names: PARTS.body, default: 'mint'}, {id: 'details', names: PARTS.wings, default: 'yellow'}]},
-  dinossauroscopio: {title: 'Dinossauroscópio', price: 13900, parts: [{id: 'body', names: PARTS.body, default: 'moss'}, {id: 'details', names: PARTS.spikes, default: 'cream'}]},
-  aviaoscopia: {title: 'Aviãoscopia', price: 15900, parts: [{id: 'body', names: PARTS.body, default: 'blue'}, {id: 'details', names: PARTS.stars, default: 'red'}, {id: 'engines', names: PARTS.engines, default: 'yellow'}]}
+  borboletoscopio: {title: 'Borboletoscópio', price: 26500, parts: [{id: 'body', names: PARTS.body, default: 'mint'}, {id: 'details', names: PARTS.wings, default: 'yellow'}]},
+  dinossauroscopio: {title: 'Dinossauroscópio', price: 26500, parts: [{id: 'body', names: PARTS.body, default: 'moss'}, {id: 'details', names: PARTS.spikes, default: 'cream'}]},
+  aviaoscopia: {title: 'Aviãoscopia', price: 28500, extraPrice: 21500, parts: [{id: 'body', names: PARTS.body, default: 'blue'}, {id: 'details', names: PARTS.stars, default: 'red'}, {id: 'engines', names: PARTS.engines, default: 'yellow'}]}
 });
 const LANG_INDEX = {'pt-BR': 0, en: 1, es: 2};
 
@@ -39,6 +41,21 @@ function cleanSelection(productId, value) {
   return selection;
 }
 
+// Quantity pricing: the first unit of a product (in cart order) keeps the full price and the rest cost `extraPrice`, so a line
+// holding both becomes two lines (each with an exact unit price for Mercado Pago, the invoice and the e-mails). The site does the
+// same (dist/cart-store.js priceSegments).
+function splitByQuantity() {
+  const seen = {};
+  return line => {
+    const extra = PRODUCTS[line.productId].extraPrice, before = seen[line.productId] || 0;seen[line.productId] = before + line.quantity;
+    if (extra == null) return [line];
+    const full = Math.max(0, Math.min(line.quantity, 1 - before)), out = [];
+    if (full) out.push({...line, quantity: full});
+    if (line.quantity > full) out.push({...line, quantity: line.quantity - full, unitCents: extra});
+    return out;
+  };
+}
+
 // Turns what the browser sent into priced lines. Anything that does not look like a real cart is refused, never "fixed".
 function priceOrder(rawItems) {
   if (!Array.isArray(rawItems) || !rawItems.length || rawItems.length > MAX_LINES) throw fail('invalid_items');
@@ -48,7 +65,7 @@ function priceOrder(rawItems) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) throw fail('invalid_items');
     const product = PRODUCTS[raw.productId];
     return {productId: raw.productId, title: product.title, quantity, unitCents: product.price, selection: cleanSelection(raw.productId, raw.selection)};
-  });
+  }).flatMap(splitByQuantity());
   const subtotal = lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
   return {lines, subtotal, shipping: SHIPPING_CENTS, total: subtotal + SHIPPING_CENTS};
 }
