@@ -21,6 +21,9 @@ const ORDER_COLUMNS = {
   decidedAt: 'decided_at', declineReason: 'decline_reason', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
   ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
 };
+// What the panel's list (orders.adminView) reads of an order: the rest stays in the table.
+const ADMIN_ORDER_SELECT = ['id', 'reference', 'source', 'status', 'method', 'installments', 'subtotal_cents', 'shipping_cents', 'total_cents', 'buyer', 'buyer_doc_enc', 'phone_enc',
+  'ship_to', 'shipping_info', 'notes', 'paid_at', 'decided_at', 'decline_reason', 'refund_state', 'refunded_at', 'refund_error', 'created_at'].join(', ');
 const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
 const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
@@ -76,9 +79,9 @@ function createMysqlStore(pool) {
   const one = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows[0] || null; };
   const all = async (sql, params) => { const [rows] = await pool.execute(sql, params); return rows; };
   async function withItems(row) { return row ? toOrder(row, await all('SELECT * FROM order_items WHERE order_id = ? ORDER BY position', [row.id])) : null; }
-  async function withItemsList(rows) {
+  async function withItemsList(rows, columns = '*') {
     if (!rows.length) return [];
-    const items = await all(`SELECT * FROM order_items WHERE order_id IN (${rows.map(() => '?').join(', ')}) ORDER BY order_id, position`, rows.map(r => r.id));
+    const items = await all(`SELECT ${columns} FROM order_items WHERE order_id IN (${rows.map(() => '?').join(', ')}) ORDER BY order_id, position`, rows.map(r => r.id));
     const byOrder = groupBy(items, i => i.order_id);
     return rows.map(r => toOrder(r, byOrder.get(r.id) || []));
   }
@@ -152,6 +155,16 @@ function createMysqlStore(pool) {
         const cap = Math.min(Number(limit) || 500, 2000);
         const rows = statuses ? await all(`SELECT * FROM orders WHERE status IN (${statuses.map(() => '?').join(', ')}) ORDER BY created_at DESC LIMIT ${cap}`, statuses) : await all(`SELECT * FROM orders ORDER BY created_at DESC LIMIT ${cap}`, []);
         return withItemsList(rows);
+      },
+      // Painel: one page of orders, newest first, with only the columns the panel shows (no payment ids, terms or
+      // e-mail marks). Keyset pagination on (created_at, id): the page after `before` starts right below that order, so
+      // an order paid while Ju scrolls neither repeats nor pushes another one out, and no page reads past its own rows.
+      async listForAdmin({statuses, limit = 100, before = null}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 500);
+        const where = [`status IN (${statuses.map(() => '?').join(', ')})`], params = [...statuses];
+        if (before) { where.push('(created_at < ? OR (created_at = ? AND id < ?))'); params.push(before.createdAt, before.createdAt, before.id); }
+        const rows = await all(`SELECT ${ADMIN_ORDER_SELECT} FROM orders WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT ${cap}`, params);
+        return withItemsList(rows, 'order_id, product_id, title, quantity, unit_price_cents, selection');
       },
       // Fluxo de caixa: every paid order (no cap, the balance needs all of them), only the columns it shows, and the
       // pieces in one query that filters on the server instead of a placeholder per order.

@@ -180,9 +180,9 @@ function order(over = {}) {
 
 // ── panel and "Meus pedidos" ──────────────────────────────────────────
 function makeRes() { return {statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, end(d) { this.body = d || ''; }, json() { return JSON.parse(this.body); }}; }
-async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
+async function call(handler, {method = 'POST', body = {}, cookie = '', url = '/'} = {}) {
   const res = makeRes();
-  await handler({method, headers: {origin: 'https://site.test', 'x-forwarded-for': '203.0.113.7', ...(cookie ? {cookie} : {})}, body, socket: {}, url: '/'}, res);
+  await handler({method, headers: {origin: 'https://site.test', 'x-forwarded-for': '203.0.113.7', ...(cookie ? {cookie} : {})}, body, socket: {}, url}, res);
   return res;
 }
 {
@@ -205,7 +205,9 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   const listed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json();
   assert.equal(listed.invoicing, 'test'); assert.equal(listed.orders[0].invoice.number, confirmed.json().order.invoice.number, 'the panel lists the note with the order');
 
-  // Notes still processing are checked again when the panel opens: all of them, a few at a time (3) and in parallel.
+  // Notes still processing are checked again when the panel opens, after the answer: all of them on the page, a few at
+  // a time (3) and in parallel. The answer shows them as saved; the next opening shows what came back.
+  const background = [], waitUntil = work => { background.push(work); }, settled = () => Promise.all(background.splice(0));
   const fake = providerFor(fiscal.nfeSettings(env)), check = fake.check;
   const slowOnes = [];
   for (let i = 0; i < 7; i++) {
@@ -216,10 +218,30 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   let active = 0, peak = 0;
   fake.check = async query => { active++; peak = Math.max(peak, active); await new Promise(r => setTimeout(r, 15)); active--; return check(query); };
   try {
-    const refreshed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json().orders;
-    assert.equal(refreshed.filter(o => o.invoice?.status === 'autorizada').length, 8, 'every note processing is authorized in the list');
+    const panel = adminOrders.create({env, store, fetchImpl, waitUntil});
+    const answered = (await call(panel, {method: 'GET', cookie: admin})).json().orders;
+    assert.equal(answered.filter(o => o.invoice?.status === 'processando').length, 7, 'the answer does not wait for the service');
+    assert.equal(background.length, 1, 'the checks were handed to waitUntil');
+    await settled();
+    const refreshed = (await call(panel, {method: 'GET', cookie: admin})).json().orders;
+    assert.equal(refreshed.filter(o => o.invoice?.status === 'autorizada').length, 8, 'every note processing is authorized on the next opening');
     assert.equal(peak, 3, 'checked 3 at a time, never more');
+    assert.equal(background.length, 0, 'nothing left to check: nothing handed to waitUntil');
   } finally { fake.check = check; }
+
+  // A page at a time: each page's cursor leads to the next, with no order repeated or skipped, until there is none.
+  const panel = adminOrders.create({env, store, fetchImpl}), page = (query = '') => call(panel, {method: 'GET', cookie: admin, url: `/api/admin/orders${query}`});
+  const whole = (await page()).json();
+  assert.equal(whole.orders.length, 8); assert.equal(whole.nextCursor, null, 'everything fits in the default page');
+  const paged = [];
+  let cursor = null, pages = 0;
+  do { const answer = (await page(`?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)).json(); paged.push(...answer.orders); cursor = answer.nextCursor; pages++; } while (cursor);
+  assert.equal(pages, 3); assert.deepEqual(paged.map(o => o.id), whole.orders.map(o => o.id), 'the pages join into the same list, newest first');
+  assert.equal(paged.filter(o => o.invoice?.status === 'autorizada').length, 8, 'each page carries its notes');
+  for (const query of ['?limit=0', '?limit=201', '?limit=abc', '?cursor=nada', `?cursor=${Buffer.from('["ontem","x"]').toString('base64url')}`]) {
+    const refused = await page(query);
+    assert.equal(refused.statusCode, 400, `${query} is refused`); assert.equal(refused.json().field, query.includes('cursor') ? 'cursor' : 'limit');
+  }
   const retry = await call(orderInvoice.create({env, store, fetchImpl}), {body: {id: paid.id}, cookie: admin});
   assert.equal(retry.json().order.invoice.number, confirmed.json().order.invoice.number, 'retrying an authorized note changes nothing');
   assert((await store.adminAudit.list()).some(a => a.action === 'nfe_issue'));

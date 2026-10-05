@@ -1,6 +1,8 @@
 'use strict';
 // HTTP side of the admin panel, like endpoint() in account-http.js: the admin cookie, the origin check on every change
 // and, unless the endpoint is `open` (login, code, logout), a signed-in admin with the second factor done.
+// Work that must not hold the answer (an outside service) goes to `waitUntil`, for a host or a test that wants to keep
+// it alive or wait for it.
 const {json, readJson, clientIp, sameOrigin} = require('./http');
 const {config} = require('./mail');
 const {storeFor, STATUS} = require('./account-http');
@@ -9,7 +11,7 @@ const {createAdminAuth, sessionCookie, clearCookie, readCookie} = require('./adm
 const ADMIN_STATUS = {...STATUS, not_found: 404, invoicing_off: 409, refunded: 409, locked: 409, bling_off: 409, bling_not_configured: 409, bling_code_invalid: 400, bling_unavailable: 502};
 
 function adminEndpoint({methods, open = false, handle}) {
-  function create({env = process.env, store, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox} = {}) {
+  function create({env = process.env, store, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox, waitUntil = () => {}} = {}) {
     return async function handler(req, res) {
       if (!methods.includes(req.method)) return json(res, 405, {error: 'method_not_allowed'}, {Allow: methods.join(', ')});
       const writing = req.method !== 'GET';
@@ -19,7 +21,7 @@ function adminEndpoint({methods, open = false, handle}) {
       let body = {};
       if (writing) { try { body = await readJson(req, 8 * 1024); } catch (error) { return json(res, error.status || 400, {error: 'invalid_request'}); } }
       const auth = createAdminAuth({store: active, env, now}), token = readCookie(req);
-      const context = {req, body, auth, store: active, env, now, token, fetchImpl, outbox, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || '')};
+      const context = {req, body, auth, store: active, env, now, token, fetchImpl, outbox, waitUntil, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || '')};
       try {
         if (!open) {
           const current = await auth.authenticate(token);
