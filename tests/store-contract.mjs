@@ -33,6 +33,10 @@ async function contract(store, label) {
   const session = await store.sessions.find(tokenHash);
   assert.equal(session.customerId, id);
   assert.equal(session.revokedAt, null);
+  const signedIn = await store.sessions.findWithCustomer(tokenHash);
+  assert.equal(signedIn.session.customerId, id); assert.equal(signedIn.customer.id, id, `${label}: the session comes with its account`);
+  assert.equal(signedIn.customer.firstName, 'Ana'); assert.equal(signedIn.customer.marketingOptIn, true, `${label}: the account is read like findById`);
+  assert.equal(await store.sessions.findWithCustomer(crypto.randomBytes(32)), null);
   await store.sessions.touch(tokenHash, new Date(expiresAt.getTime() + 1000), at);
   assert.equal(new Date((await store.sessions.find(tokenHash)).expiresAt).getTime(), expiresAt.getTime() + 1000);
   await store.sessions.revokeAllFor(id, at);
@@ -77,7 +81,13 @@ async function contract(store, label) {
   assert.equal(again.created, false, `${label}: a retried attempt reuses the order`);
   assert.equal(again.order.id, orderId);
   await store.orders.update(orderId, {mpOrderId: `ORD${id.slice(0, 8).toUpperCase()}`, paymentState: 'pending_pix', method: 'pix'});
-  assert.equal((await store.orders.findByMpId(`ORD${id.slice(0, 8).toUpperCase()}`)).id, orderId);
+  const byMp = await store.orders.findByMpId(`ORD${id.slice(0, 8).toUpperCase()}`);
+  assert.equal(byMp.id, orderId); assert.deepEqual(byMp.shipTo, draft.shipTo, `${label}: findByMpId reads the whole order`);
+  assert.deepEqual(byMp.items, first.order.items, `${label}: with its items, in order`);
+  assert.equal(await store.orders.findByMpId('ORDNAOEXISTE000'), null);
+  const bare = (await store.orders.create({...draft, id: crypto.randomUUID(), reference: `${reference}-0`, customerId: null, items: []})).order;
+  await store.orders.update(bare.id, {mpOrderId: `ORD0${id.slice(0, 8).toUpperCase()}`});
+  assert.deepEqual((await store.orders.findByMpId(`ORD0${id.slice(0, 8).toUpperCase()}`)).items, [], `${label}: an order without items has none`);
   const paidAt = new Date(t);
   assert.equal(await store.orders.transition(orderId, ['aguardando_pagamento'], {status: 'pendente', paymentState: 'approved', paidAt}), true, `${label}: first transition wins`);
   assert.equal(await store.orders.transition(orderId, ['aguardando_pagamento'], {status: 'pendente', paymentState: 'approved', paidAt}), false, `${label}: a repeated notice changes nothing`);
@@ -218,6 +228,40 @@ await contract(createMemoryStore(), 'memory');
   assert.equal(dbSettings({DB_HOST: 'localhost', DB_NAME: 'x', DB_USER: 'y', DB_PASSWORD: 'z', DATABASE_URL: 'mysql://a:b@c/d'}).host, 'localhost');
   assert.equal(dbSettings({}).configured, false);
   assert.equal(dbSettings({DATABASE_URL: 'postgres://a:b@c/d'}).configured, false, 'only MySQL URLs');
+}
+
+// Round trips of the MySQL store on the Pix polling path, against a fake pool (no database needed): the session comes
+// with its account, the order with its items, and a rate-limit hit is a single write.
+{
+  const {createMysqlStore} = require('../api/_lib/store-mysql.js');
+  const fakePool = answer => { const calls = []; return {calls, async execute(query, params) { const sql = typeof query === 'string' ? query : query.sql; calls.push(sql); return [answer(sql, params)]; }}; };
+  const sessionRow = {token_hash: Buffer.alloc(32), customer_id: 'c1', created_at: new Date(), last_seen_at: new Date(), expires_at: new Date(), revoked_at: null, ip: null, user_agent: null};
+  let pool = fakePool(() => [{s: sessionRow, c: {id: 'c1', email: 'ana@exemplo.com', marketing_opt_in: 0}}]);
+  const signedIn = await createMysqlStore(pool).sessions.findWithCustomer(Buffer.alloc(32));
+  assert.deepEqual([signedIn.session.customerId, signedIn.customer.email, signedIn.customer.marketingOptIn], ['c1', 'ana@exemplo.com', false]);
+  assert.equal(pool.calls.length, 1, 'session and account: one query');
+  pool = fakePool(() => [{s: sessionRow, c: {id: null, email: null, marketing_opt_in: null}}]);
+  assert.equal((await createMysqlStore(pool).sessions.findWithCustomer(Buffer.alloc(32))).customer, null, 'a session without its account has no customer');
+
+  const orderRow = {id: 'o1', reference: 'JU-1', status: 'aguardando_pagamento', mp_order_id: 'ORD1', buyer: '{"name":"Ana"}', total_cents: 100};
+  const item = (position, title) => ({id: position, order_id: 'o1', position, product_id: 'p', title, quantity: 1, unit_price_cents: 100, selection: '{"body":"pink"}'});
+  pool = fakePool(() => [{o: orderRow, i: item(0, 'A')}, {o: orderRow, i: item(1, 'B')}]);
+  const order = await createMysqlStore(pool).orders.findByMpId('ORD1');
+  assert.deepEqual([order.id, order.buyer, order.items.map(i => i.title), order.items[0].selection], ['o1', {name: 'Ana'}, ['A', 'B'], {body: 'pink'}]);
+  assert.equal(pool.calls.length, 1, 'order and items: one query');
+  pool = fakePool(() => [{o: orderRow, i: {id: null, order_id: null, position: null}}]);
+  assert.deepEqual((await createMysqlStore(pool).orders.findByMpId('ORD1')).items, [], 'no items: the empty LEFT JOIN row is not an item');
+  pool = fakePool(() => []);
+  assert.equal(await createMysqlStore(pool).orders.findByMpId('ORD1'), null);
+
+  pool = fakePool(sql => sql.startsWith('INSERT') ? {insertId: 3, affectedRows: 2} : [{hits: 99}]);
+  assert.deepEqual(await createMysqlStore(pool).rateLimit('b', 3, 60000, 0), {ok: true});
+  assert.equal(pool.calls.length, 1, 'a rate-limit hit: one query, the count comes back with the write');
+  pool = fakePool(sql => sql.startsWith('INSERT') ? {insertId: 4, affectedRows: 2} : [{hits: 99}]);
+  assert.equal((await createMysqlStore(pool).rateLimit('b', 3, 60000, 0)).ok, false);
+  pool = fakePool(sql => sql.startsWith('INSERT') ? {insertId: 0, affectedRows: 2} : [{hits: 4}]);
+  assert.equal((await createMysqlStore(pool).rateLimit('b', 3, 60000, 0)).ok, false, 'without the count from the write, it is read back');
+  assert.equal(pool.calls.length, 2);
 }
 
 let mysql = 'skipped (defina TEST_DB_HOST, TEST_DB_NAME, TEST_DB_USER, TEST_DB_PASSWORD)';

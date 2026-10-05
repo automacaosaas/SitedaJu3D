@@ -145,6 +145,7 @@ function createMemoryStore() {
     sessions: {
       async create(session) { sessions.set(key(session.tokenHash), {revokedAt: null, lastSeenAt: new Date(), ...session}); },
       async find(tokenHash) { return copy(sessions.get(key(tokenHash)) || null); },
+      async findWithCustomer(tokenHash) { const s = sessions.get(key(tokenHash)); return s ? {session: copy(s), customer: copy(customers.get(s.customerId) || null)} : null; },
       async touch(tokenHash, expiresAt, now) { const s = sessions.get(key(tokenHash)); if (s) Object.assign(s, {expiresAt, lastSeenAt: now}); },
       async revoke(tokenHash, now) { const s = sessions.get(key(tokenHash)); if (s) s.revokedAt = now; },
       async revokeAllFor(customerId, now) { for (const s of sessions.values()) if (s.customerId === customerId && !s.revokedAt) s.revokedAt = now; }

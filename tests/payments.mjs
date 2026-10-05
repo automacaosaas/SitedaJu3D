@@ -429,8 +429,13 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
 
   const writes = {transition: 0, update: 0, findById: 0}, real = {...store.orders};
   for (const name of Object.keys(writes)) store.orders[name] = (...args) => { writes[name]++; return real[name](...args); };
+  const reads = {session: 0, sessionWithCustomer: 0, customer: 0}, realSessions = {...store.sessions}, realCustomers = {...store.customers};
+  store.sessions.find = (...args) => { reads.session++; return realSessions.find(...args); };
+  store.sessions.findWithCustomer = (...args) => { reads.sessionWithCustomer++; return realSessions.findWithCustomer(...args); };
+  store.customers.findById = (...args) => { reads.customer++; return realCustomers.findById(...args); };
   for (let i = 0; i < 3; i++) assert.equal((await get()).json().state, 'pending_pix');
   assert.deepEqual(writes, {transition: 0, update: 0, findById: 0}, 'a Pix still waiting: no write and no re-read of the order on each check');
+  assert.deepEqual(reads, {session: 0, sessionWithCustomer: 3, customer: 0}, 'the buyer is identified with one read per check (session and account together)');
   assert.equal((await store.orders.events((await store.orders.findByReference(reference)).id)).filter(e => e.actor === 'status').length, 0, 'nor an event per check');
 
   net.pay(id);

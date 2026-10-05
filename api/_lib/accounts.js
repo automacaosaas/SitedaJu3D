@@ -170,10 +170,8 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
 
     async authenticate(token) {
       if (typeof token !== 'string' || !/^[\w-]{43}$/.test(token)) return null;
-      const session = await store.sessions.find(sha256(token));
-      if (!session || session.revokedAt || now() >= time(session.expiresAt)) return null;
-      const customer = await store.customers.findById(session.customerId);
-      if (!customer) return null;
+      const found = await store.sessions.findWithCustomer(sha256(token)), session = found?.session, customer = found?.customer;
+      if (!session || session.revokedAt || now() >= time(session.expiresAt) || !customer) return null;
       if (now() - time(session.lastSeenAt) > TOUCH_EVERY) await store.sessions.touch(sha256(token), new Date(now() + SESSION_TTL), date());
       return customer;
     },

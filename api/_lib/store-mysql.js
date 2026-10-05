@@ -82,6 +82,8 @@ function createMysqlStore(pool) {
     const byOrder = groupBy(items, i => i.order_id);
     return rows.map(r => toOrder(r, byOrder.get(r.id) || []));
   }
+  // Joined rows keyed by table alias ({o: {...}, i: {...}}), so columns with the same name in both tables stay apart.
+  const nested = async (sql, params) => { const [rows] = await pool.execute({sql, nestTables: true}, params); return rows; };
   const run = async (sql, params) => { const [result] = await pool.execute(sql, params); return result; };
   const duplicate = (error, name) => error?.code === 'ER_DUP_ENTRY' && String(error.message).includes(name);
 
@@ -135,7 +137,11 @@ function createMysqlStore(pool) {
       },
       async findById(id) { return withItems(await one('SELECT * FROM orders WHERE id = ?', [id])); },
       async findByReference(reference) { return withItems(await one('SELECT * FROM orders WHERE reference = ?', [reference])); },
-      async findByMpId(mpOrderId) { return withItems(await one('SELECT * FROM orders WHERE mp_order_id = ?', [mpOrderId])); },
+      // The checkout polls this while a Pix waits: the order and its items come in one round trip (mp_order_id is unique).
+      async findByMpId(mpOrderId) {
+        const rows = await nested('SELECT * FROM orders o LEFT JOIN order_items i ON i.order_id = o.id WHERE o.mp_order_id = ? ORDER BY i.position', [mpOrderId]);
+        return rows.length ? toOrder(rows[0].o, rows.filter(r => r.i.id !== null).map(r => r.i)) : null;
+      },
       async update(id, patch) {
         const fields = Object.keys(patch).filter(f => ORDER_COLUMNS[f] && f !== 'id');
         if (fields.length) await run(`UPDATE orders SET ${fields.map(f => `${ORDER_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => toDb(f, patch[f])), id]);
@@ -277,6 +283,11 @@ function createMysqlStore(pool) {
     sessions: {
       create: s => run('INSERT INTO sessions (token_hash, customer_id, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)', [s.tokenHash, s.customerId, s.expiresAt, s.ip, s.userAgent]),
       find: async tokenHash => toSession(await one('SELECT * FROM sessions WHERE token_hash = ?', [tokenHash])),
+      // The session and its account in one round trip (every signed-in request needs both); customer is null without one.
+      async findWithCustomer(tokenHash) {
+        const [row] = await nested('SELECT * FROM sessions s LEFT JOIN customers c ON c.id = s.customer_id WHERE s.token_hash = ?', [tokenHash]);
+        return row ? {session: toSession(row.s), customer: row.c.id === null ? null : toCustomer(row.c)} : null;
+      },
       touch: (tokenHash, expiresAt, now) => run('UPDATE sessions SET expires_at = ?, last_seen_at = ? WHERE token_hash = ?', [expiresAt, now, tokenHash]),
       revoke: (tokenHash, now) => run('UPDATE sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL', [now, tokenHash]),
       revokeAllFor: (customerId, now) => run('UPDATE sessions SET revoked_at = ? WHERE customer_id = ? AND revoked_at IS NULL', [now, customerId])
@@ -302,8 +313,11 @@ function createMysqlStore(pool) {
     },
     async rateLimit(bucket, limit, windowMs, now) {
       const start = Math.floor(now / windowMs) * windowMs;
-      await run('INSERT INTO rate_limits (bucket, window_start, hits) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1', [bucket.slice(0, 200), start]);
-      const {hits} = await one('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start = ?', [bucket.slice(0, 200), start]);
+      // LAST_INSERT_ID(expr) hands the new count back with the write itself, so a hit costs one round trip. The SELECT is
+      // only a fallback should a server not report it.
+      const key = [bucket.slice(0, 200), start];
+      const counted = await run('INSERT INTO rate_limits (bucket, window_start, hits) VALUES (?, ?, LAST_INSERT_ID(1)) ON DUPLICATE KEY UPDATE hits = LAST_INSERT_ID(hits + 1)', key);
+      const hits = Number(counted.insertId) || (await one('SELECT hits FROM rate_limits WHERE bucket = ? AND window_start = ?', key)).hits;
       if (Math.random() < 0.01) this.purge(now).catch(error => console.error('db: cleanup failed —', error.code || error.message));
       return hits <= limit ? {ok: true} : {ok: false, retryAfter: Math.ceil((start + windowMs - now) / 1000)};
     }
