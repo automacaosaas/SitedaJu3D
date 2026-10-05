@@ -92,6 +92,10 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.deepEqual([...own.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Mastercard', 'Bandeira nova']);
   assert.match(own, /<img src="https:\/\/http2\.mlstatic\.com\/x\.png" alt=""/);
   assert.doesNotMatch(own, /Débito/, 'no debit group when the account has no debit card');
+  // Pix always shows (shop rule, offered by the checkout): the test credentials do not list it (2026-10-05)
+  const testAccount = paymentBlock([{id: 'visa', name: 'Visa', type: 'credit_card'}, {id: 'debelo', name: 'Elo Débito', type: 'debit_card'}]);
+  assert.deepEqual([...testAccount.matchAll(/<span class="pay-group-label">([^<]+)<\/span>/g)].map(m => m[1]), ['Pix', 'Crédito', 'Débito']);
+  assert.deepEqual([...testAccount.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Elo Débito']);
   assert.match(page, /Pagamento processado pelo Mercado Pago/);
   const empty = renderCart([], {});
   assert.match(empty, /<h2 id="cart-recs-title">Comece por uma destas<\/h2>/);

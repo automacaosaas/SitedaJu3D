@@ -91,9 +91,13 @@ export function wireRecArrows(root) {
 
 // Os meios de pagamento aceitos, em três grupos (Pix, crédito, débito): a lista da conta do Mercado Pago (methods, de
 // GET /api/payments/methods) ou, sem ela, FALLBACK_METHODS. checkout.js troca só este bloco quando a lista chega.
+// O Pix aparece sempre: é regra da loja (5% de desconto) e o checkout sempre o oferece. As credenciais de teste do
+// Mercado Pago não o listam, e por isso ele não pode depender da lista (pedido do dono, 05/10/2026).
 const PAY_GROUPS = [['bank_transfer', 'Pix'], ['credit_card', 'Crédito'], ['debit_card', 'Débito']];
+const PIX = {id: 'pix', name: 'Pix', type: 'bank_transfer'};
 export function paymentBlock(methods) {
-  const list = Array.isArray(methods) && methods.length ? methods : FALLBACK_METHODS;
+  const given = Array.isArray(methods) && methods.length ? methods : FALLBACK_METHODS;
+  const list = given.some(m => m.id === 'pix') ? given : [PIX, ...given];
   const groups = PAY_GROUPS.map(([type, label]) => { const items = list.filter(m => m.type === type); return items.length ? `<div class="pay-group"><span class="pay-group-label">${label}</span><ul class="pay-marks">${items.map(payMark).join('')}</ul></div>` : ''; }).join('');
   return `<div class="cart-pay" data-cart-pay><h2>Métodos de pagamento aceitos</h2><div class="pay-groups">${groups}</div><p class="cart-pay-by">${MERCADO_PAGO_MARK}<span>Pagamento processado pelo Mercado Pago</span></p></div>`;
 }
