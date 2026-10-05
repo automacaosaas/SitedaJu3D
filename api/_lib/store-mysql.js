@@ -23,7 +23,8 @@ const ORDER_COLUMNS = {
 };
 // What the panel's list (orders.adminView) reads of an order: the rest stays in the table.
 const ADMIN_ORDER_SELECT = ['id', 'reference', 'source', 'status', 'method', 'installments', 'subtotal_cents', 'shipping_cents', 'total_cents', 'buyer', 'buyer_doc_enc', 'phone_enc',
-  'ship_to', 'shipping_info', 'notes', 'paid_at', 'decided_at', 'decline_reason', 'refund_state', 'refunded_at', 'refund_error', 'created_at'].join(', ');
+  'ship_to', 'shipping_info', 'notes', 'paid_at', 'decided_at', 'decline_reason', 'tracking_code', 'shipped_at', 'refund_state', 'refunded_at', 'refund_error',
+  'created_at'].join(', ');
 const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
 const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
