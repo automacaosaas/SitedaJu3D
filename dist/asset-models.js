@@ -5,7 +5,9 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 // GLBs are Meshopt-compressed (EXT_meshopt_compression, 16-bit positions); see PERFORMANCE-QA.md. Bump `v` whenever a
 // model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
-  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
+  // A borboleta do arquivo de impressão (BORBOLETA COMPLETO.3mf, 06/10/2026): corpo e cabeça exatos, os encaixes das asas nos detalhes,
+  // rosto creme, olhos, sobrancelhas e sorriso pretos, bochechas rosadas (tools/modelo-borboleta)
+  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=3mf-1',import.meta.url),
   // O dinossauro do Meshy (05/10/2026), com os 2 espinhos da peça nova: corpo e detalhes coloríveis, olhos, dentes e brilho fixos
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshy-1',import.meta.url),
   aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
