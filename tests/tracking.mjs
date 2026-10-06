@@ -259,7 +259,7 @@ async function posted(store, code, over = {}) {
   const account = read('dist/account.js');
   assert.match(account, /data-track="\$\{ref\}" aria-expanded="false"/); assert.match(account, /await loadTracking\(track\.dataset\.track\)/);
   const {translate} = await import(new URL('../dist/i18n-core.js', import.meta.url).href);
-  for (const text of ['Acompanhar entrega', 'Ocultar entrega', 'Pedido entregue', 'Saiu para entrega', 'Entrega não realizada', 'Devolvido ao remetente']) for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${lang}: ${text}`);
+  for (const text of ['Rastrear pacote', 'Ocultar rastreio', 'Em trânsito', 'Saiu para entrega', 'Entrega não realizada', 'Devolvido ao remetente']) for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${lang}: ${text}`);
 }
 
 console.log('PASS: rastreio — the Correios events (codes, words, Brasília time), one code or a batch, the round (Concluídos on delivery, one e-mail per notice, Ju warned once per problem, unknown codes, 60 days, down and refused), the e-mail when the code goes in, the code changing or coming off, the check digit (UPU S10, panel and server), a reopened delivery, the list in the panel with the last event only, a delivered order not asked again, the timeline endpoint and the wiring.');

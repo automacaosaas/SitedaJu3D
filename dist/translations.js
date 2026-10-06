@@ -942,4 +942,26 @@ Ocultar entrega|Hide the delivery|Ocultar la entrega
 Carregando…|Loading…|Cargando…
 Os Correios ainda não registraram este pacote. Volte a olhar mais tarde.|The Correios have not registered this package yet. Check again later.|Correios todavía no registró este paquete. Vuelve a mirar más tarde.
 Não foi possível carregar o rastreio agora. Tente de novo em instantes.|We could not load the tracking right now. Try again in a moment.|No pudimos cargar el seguimiento ahora. Inténtalo de nuevo en un momento.
+Acompanhe a produção e a entrega dos seus pedidos.|Follow the production and delivery of your orders.|Sigue la producción y la entrega de tus pedidos.
+Filtrar pedidos|Filter orders|Filtrar pedidos
+Todos|All|Todos
+Em produção|In production|En producción
+Enviados|Shipped|Enviados
+Concluídos|Completed|Completados
+Não pôde ser atendido|Could not be fulfilled|No pudo ser atendido
+Produção 3D|3D production|Producción 3D
+Detalhes do pedido|Order details|Detalles del pedido
+Ocultar detalhes|Hide details|Ocultar detalles
+Rastrear pacote|Track package|Rastrear paquete
+Ocultar rastreio|Hide tracking|Ocultar seguimiento
+Código completo|Full code|Código completo
+Data da compra|Purchase date|Fecha de compra
+Cartão de crédito|Credit card|Tarjeta de crédito
+Cartão de débito|Debit card|Tarjeta de débito
+Frete|Shipping|Envío
+Desconto no Pix|Pix discount|Descuento en Pix
+Nota fiscal|Invoice|Factura
+Você ainda não fez nenhum pedido.|You have not placed any orders yet.|Aún no has hecho ningún pedido.
+Que tal dar uma olhada nas nossas coleções?|How about a look at our collections?|¿Qué tal echar un vistazo a nuestras colecciones?
+Ver as coleções|See the collections|Ver las colecciones
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
