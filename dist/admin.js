@@ -112,7 +112,9 @@ function trackingStatus(o) {
   // Asked but without an answer to keep (the Correios refused the query): said as it is, not as "not asked yet".
   if (!t || !t.state) return `<p class="admin-track is-waiting">${o.status !== 'enviado' ? '' : t?.checkedAt ? `A consulta aos Correios de ${esc(formatWhen(t.checkedAt))} não deu certo; o site tenta de novo sozinho em algumas horas. O motivo fica no log do servidor (linha "rastreio:").` : 'Os Correios ainda não foram consultados: o rastreio aparece aqui em algumas horas.'}</p>`;
   const last = t.last, when = last ? formatWhen(last.at) : '';
-  const line = last ? [last.description, placeText(last.place), when].filter(Boolean).join(' · ') : TRACK_STATE[t.state];
+  // No event yet (the Correios do not know the code): what that means and what to check, instead of the badge again.
+  const line = last ? [last.description, placeText(last.place), when].filter(Boolean).join(' · ')
+    : t.state === 'nao_encontrado' ? `Consultado em ${formatWhen(t.checkedAt)}. O código costuma aparecer algumas horas depois da postagem; se não aparecer até o dia seguinte, confira se foi digitado certo.` : '';
   return `<p class="admin-track is-${esc(t.state)}"><span class="admin-track-state">${esc(TRACK_STATE[t.state] || t.state)}</span><span>${esc(line)}</span>${last?.detail ? `<small>${esc(last.detail)}</small>` : ''}</p>`;
 }
 const INVOICED = ['confirmado', 'enviado', 'concluido'];

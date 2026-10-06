@@ -261,6 +261,7 @@ async function posted(store, code, over = {}) {
   assert.match(panel, /\.admin-order\.status-confirmado \.admin-tracking input'\)\.focus\(/, 'the field is ready for the next code');
   assert.match(panel, />Marcar como entregue<\/button>/);
   assert.match(panel, /t\?\.checkedAt \? `A consulta aos Correios de \$\{esc\(formatWhen\(t\.checkedAt\)\)\} não deu certo/, 'a refused query is not shown as "not asked yet"');
+  assert.match(panel, /t\.state === 'nao_encontrado' \? `Consultado em \$\{formatWhen\(t\.checkedAt\)\}\. O código costuma aparecer/, 'a code the Correios do not know yet: what it means, not the badge twice');
   const account = read('dist/account.js');
   assert.match(account, /data-track="\$\{ref\}" aria-expanded="false"/); assert.match(account, /await loadTracking\(track\.dataset\.track\)/);
   const {translate} = await import(new URL('../dist/i18n-core.js', import.meta.url).href);
