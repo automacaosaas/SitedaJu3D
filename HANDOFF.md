@@ -95,7 +95,9 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
   olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
 - **Girafa e unicórnio (06/10/2026):** já são novidades na vitrine (GiraffeLamp e UnicornLamp, `SOON` em `products.js`; o macaco agora é MonkeyLamp), no molde do
-  macaco e com as cores de cada bicho; as imagens ainda são as do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`). **3D de cada um (06/10/2026):**
+  macaco e com as cores de cada bicho. Sem foto real ainda, as imagens (vitrine, card, miniatura do card e a vista da galeria) são
+  renders do 3D de cada um (`tools/render-vistas/render.py` com `ocupa`/`base` da vitrine e dos cards); no "Ver encaixado", a lâmpada
+  encolhe na proporção do tubo de cada um (`fit` em `products.js`). Quando chegar a foto: troque os arquivos e meça `art` de novo. **3D de cada um (06/10/2026):**
   os modelos do Rodin (`rodin-v2_-0 (10).glb`, girafa; `(11)`, unicórnio) com as cores fixas em materiais, sem textura, por
   `tools/modelo-novidades/preparar_novidade.py` (Blender 5.2): a cor de cada face vem da textura e segue o relevo (lateral, pé, entalhes);
   por dentro, liso, na cor do corpo (some o borrado das bolinhas da girafa); o miolo das orelhas é a concha; as 5 estrelas do unicórnio

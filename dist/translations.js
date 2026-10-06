@@ -21,8 +21,8 @@ Uma girafinha para acompanhar o olhar dos pequenos. Em breve.|A little giraffe t
 Um unicórnio para acompanhar o olhar dos pequenos. Em breve.|A unicorn to keep the little ones company. Coming soon.|Un unicornio para acompañar la mirada de los pequeños. Próximamente.
 GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
 UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.
-GiraffeLamp sobre uma pilastra branca|GiraffeLamp on a white pedestal|GiraffeLamp sobre un pedestal blanco
-UnicornLamp sobre uma pilastra branca|UnicornLamp on a white pedestal|UnicornLamp sobre un pedestal blanco
+GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca|GiraffeLamp, a yellow giraffe cover with brown spots, on a white pedestal|GiraffeLamp, funda de jirafa amarilla con manchas marrones, sobre un pedestal blanco
+UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca|UnicornLamp, a white unicorn cover with a mane, a rainbow and stars, on a white pedestal|UnicornLamp, funda de unicornio blanca con crin, arcoíris y estrellas, sobre un pedestal blanco
 Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.

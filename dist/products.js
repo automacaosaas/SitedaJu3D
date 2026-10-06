@@ -122,18 +122,24 @@ export const SHOWCASE = {
     }
   }
 };
-// Girafa e unicórnio: o enquadramento e a demonstração do macaco (as imagens provisórias são as dele), com o nome e o tema de cada um.
-// Quando chegar a foto de um deles, ajuste `art` (node tools/render-aviao-macaco/art.cjs) e as medidas da demonstração.
-for (const [key, alt, theme, demo] of [
-  ['girafoscopio', 'GiraffeLamp sobre uma pilastra branca',
+// Girafa e unicórnio: a demonstração do macaco (a lâmpada em duas camadas), com o nome e o tema de cada um. As fotos são renders do 3D
+// deles (06/10/2026, tools/modelo-novidades): `art` medido nelas, e a lâmpada na escala de cada peça. Na foto, o tubo da girafa e o do
+// unicórnio saem mais finos que o do macaco (as orelhas e o chifre ocupam altura): a largura do tubo / a do macaco é o `fit`, e a lâmpada
+// encolhe nessa proporção, ancorada no pé da peça (a coluna continua dentro da capa; a cabeça desce até o mesmo ponto).
+const fitLamp = (demo, fit, foot) => {
+  const t = demo.tool, h = demo.head, bottom = h.top + h.width / h.ratio;
+  return {...demo, tool:{...t, width:t.width * fit, top:foot - (foot - t.top) * fit}, head:{...h, width:h.width * fit, top:bottom - h.width * fit / h.ratio}};
+};
+for (const [key, art, fit, theme, demo] of [
+  ['girafoscopio', {h:.874, bottom:.053, foot:.286, alt:'GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca'}, .92,
     {bannerStops:'#fff6df 0%,#fbe4b0 52%,#f4d08a 100%', headerBackground:'#fbe9c0', textColor:'#2e1c07', mutedColor:'#5c3a10', accentColor:'#87430c'},
     {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'GiraffeLamp encaixado na lâmpada de fenda.'}],
-  ['unicornioscopio', 'UnicornLamp sobre uma pilastra branca',
+  ['unicornioscopio', {h:.876, bottom:.052, foot:.257, alt:'UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca'}, .817,
     {bannerStops:'#fcf6fe 0%,#f1e3f8 52%,#e5d1f1 100%', headerBackground:'#f4e9fa', textColor:'#291532', mutedColor:'#5a3d6a', accentColor:'#87397a'},
     {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'UnicornLamp encaixado na lâmpada de fenda.'}]
 ]) {
   const monkey = SHOWCASE.macacoscopio, title = SOON[key].title;
-  SHOWCASE[key] = {art:{...monkey.art, alt}, theme, demo:{...monkey.demo, ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
+  SHOWCASE[key] = {art, theme, demo:{...fitLamp(monkey.demo, fit, 1 - art.bottom), ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
 }
 export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}
 export function defaults(key){return Object.fromEntries(PRODUCTS[key].parts.map(part=>[part.id,part.default]));}

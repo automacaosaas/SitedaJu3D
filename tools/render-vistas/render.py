@@ -6,12 +6,13 @@ a peça com 80% da altura e o pé a 8% da borda de baixo, girada na frente da c�
 outra câmera, perto de verdade (não uma ampliação).
 Uso: blender -b -P render.py -- <config.json>
   config: {"modelo": "...glb", "saida": "pasta", "cores": {"body": "#...", ...}, "vistas": [{"id", "giro", "detalhe": [centro, altura]}],
-           "largura": 1200, "altura": 1500, "amostras": 128}
+           "largura": 1200, "altura": 1500, "amostras": 128, "ocupa": .8, "base": .08, "qualidade": 96}
+  (06/10/2026: também a foto da vitrine e os cards da girafa e do unicórnio, que ainda não têm foto: veja tools/modelo-novidades)
 """
 import bpy,sys,os,json,math,numpy as np
 from mathutils import Vector,Matrix
 C=json.load(open(sys.argv[sys.argv.index('--')+1],encoding='utf-8'))
-W,H=C.get('largura',1200),C.get('altura',1500);TALL,BASE=.80,.08
+W,H=C.get('largura',1200),C.get('altura',1500);TALL,BASE=C.get('ocupa',.80),C.get('base',.08)      # a vitrine e os cards usam outro enquadramento
 
 def limpar():
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -101,6 +102,6 @@ os.makedirs(C['saida'],exist_ok=True)
 for v in C['vistas']:
     if v.get('detalhe'):detalhe(sc,co,obj,altura,v.get('giro',0),v.get('elev',8),*v['detalhe'])
     else:enquadrar(sc,co,obj,altura,v.get('giro',0),v.get('elev',6))
-    sc.render.image_settings.file_format='WEBP';sc.render.image_settings.color_mode='RGBA';sc.render.image_settings.quality=96
+    sc.render.image_settings.file_format='WEBP';sc.render.image_settings.color_mode='RGBA';sc.render.image_settings.quality=C.get('qualidade',96)
     sc.render.filepath=os.path.join(C['saida'],v['id']+'.webp');bpy.ops.render.render(write_still=True)
     print('VISTA',v['id'],'pronta',flush=True)
