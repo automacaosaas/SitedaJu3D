@@ -1,7 +1,8 @@
 import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, readDemoOrders, loadProfile, saveProfile, loadOrders, loadTracking, startDeletion, adoptDeletion, confirmDeletion} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 import {icon} from './icons.js';
-import {mountLanguagePicker} from './i18n.js';
+import {mountLanguagePicker, getLanguage} from './i18n.js';
+import {PRODUCTS, SOON, color} from './products.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
 const host = document.querySelector('#account-content'), feedback = document.querySelector('#account-feedback');
@@ -19,28 +20,79 @@ const stamp = () => `<div class="email-stamp"><span>${esc(email)}</span>${action
 const previewNote = AUTH_MODE === 'demo' ? '<p class="auth-demo-note">Prévia: use dados fictícios. Quando o envio não estiver disponível, um código de teste aparece nesta página.</p>' : '';
 const demoCode = () => screen === 'verify' ? challenge?.demoCode : screen === 'delete' ? deletion?.demoCode : '';
 // "Meus pedidos": the account's orders from the server; demonstration orders (payments off) from this tab.
-// The steps of a paid order, as the buyer sees them: paid, confirmed by Ju (being made, invoice issued), posted (with the
-// Correios tracking code) and delivered. The delivery comes from the Correios by itself (api/_lib/tracking.js): where the
-// package stands, the last event and, with "Acompanhar entrega", every step. The code stays there to copy.
-const ORDER_STATUS = {aguardando_pagamento: 'Aguardando pagamento', pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido entregue', recusado: 'Pedido não pôde ser atendido', cancelado: 'Pagamento não concluído'};
+// One card per order, in three parts: on top the number (its short form; the full code, the one in the e-mails, is under
+// "Detalhes do pedido"), the date and a coloured badge for where it stands; then the pieces with their colours, the
+// total and the invoice; at the bottom the four steps (payment, 3D production, shipping, delivered) and the buttons: the
+// details, and the Correios timeline once it is posted. The delivery comes from the Correios by itself
+// (api/_lib/tracking.js). With orders in more than one stage, pills filter them.
 const CORREIOS = 'https://rastreamento.correios.com.br/app/index.php';
-const TRACK_STATE = {postado: 'Postado', em_transito: 'Em trânsito', saiu_para_entrega: 'Saiu para entrega', aguardando_retirada: 'Aguardando retirada', entregue: 'Entregue', problema: 'Entrega não realizada', devolvido: 'Devolvido ao remetente', nao_encontrado: 'Aguardando registro nos Correios'};
+// The badge: words and tone (its colour) per stage; a posted order shows where the package stands.
+const BADGE = {aguardando_pagamento: ['Aguardando pagamento', 'neutral'], pendente: ['Pagamento confirmado', 'wait'], confirmado: ['Em produção', 'making'], enviado: ['Em trânsito', 'transit'], concluido: ['Entregue', 'done'], recusado: ['Não pôde ser atendido', 'stop'], cancelado: ['Pagamento não concluído', 'neutral']};
+const TRACK_STATE = {postado: ['Postado', 'transit'], em_transito: ['Em trânsito', 'transit'], saiu_para_entrega: ['Saiu para entrega', 'transit'], aguardando_retirada: ['Aguardando retirada', 'wait'], entregue: ['Entregue', 'done'], problema: ['Entrega não realizada', 'stop'], devolvido: ['Devolvido ao remetente', 'stop'], nao_encontrado: ['Postado', 'transit']};
+const badgeOf = o => (o.status === 'enviado' && TRACK_STATE[o.tracking?.state]) || BADGE[o.status] || [o.status, 'neutral'];
+// The pills: Em produção (paid, waiting for Ju or being made), Enviados, Concluídos; the rest only under Todos.
+const GROUP = {pendente: 'producao', confirmado: 'producao', enviado: 'enviados', concluido: 'concluidos'};
+const FILTERS = [['todos', 'Todos'], ['producao', 'Em produção'], ['enviados', 'Enviados'], ['concluidos', 'Concluídos']];
+let orderFilter = 'todos';
+// The steps: how many each stage has behind it; the next one is where the order is now.
+const STEPS = ['Pagamento', 'Produção 3D', 'Envio', 'Entregue'];
+const PROGRESS = {aguardando_pagamento: 0, pendente: 1, confirmado: 1, enviado: 3, concluido: 4};
+const PAYMENT = {pix: 'Pix', card: 'Cartão de crédito', debit: 'Cartão de débito'};
+const shortNumber = reference => `#${String(reference).replace(/^JU-/, '').slice(0, 6)}`;
 const placeText = p => p ? [String(p.city || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()), p.uf].filter(Boolean).join('/') : '';
-const when = iso => new Date(iso).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
-const trackingLine = o => {
-  if (!o.trackingCode) return '';
-  const t = o.tracking, last = t?.last, ref = esc(o.reference);
-  return `<div class="order-tracking${t?.state ? ` is-${esc(t.state)}` : ''}"><p class="order-tracking-head"><span>Código de rastreio</span> <strong translate="no">${esc(o.trackingCode)}</strong>${t?.state ? ` <em class="order-track-state">${esc(TRACK_STATE[t.state] || t.state)}</em>` : ''}</p>`
-    + (last ? `<p class="order-tracking-last"><span translate="no">${esc(last.description)}</span>${last.place ? ` · <span translate="no">${esc(placeText(last.place))}</span>` : ''} · <time datetime="${esc(last.at)}">${esc(when(last.at))}</time></p>` : '')
-    + `<p class="order-tracking-actions"><button type="button" class="order-track-toggle" data-track="${ref}" aria-expanded="false" aria-controls="timeline-${ref}">Acompanhar entrega</button><a href="${CORREIOS}" target="_blank" rel="noopener">Rastrear nos Correios ↗</a></p><ol class="order-timeline" id="timeline-${ref}" hidden></ol></div>`;
-};
-// The timeline: every Correios event, newest first (their own words, kept untranslated), with the place and the time.
+// Dates in the language of the page ("05 out 2026", "05 Oct 2026"); the page draws them again when the language changes.
+const when = iso => new Date(iso).toLocaleString(getLanguage(), {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+const dayText = iso => { const parts = new Intl.DateTimeFormat(getLanguage(), {day: '2-digit', month: 'short', year: 'numeric'}).formatToParts(new Date(iso)), part = type => parts.find(p => p.type === type)?.value || ''; return `${part('day')} ${part('month').replace('.', '')} ${part('year')}`; };
+// The piece: its catalogue thumbnail, the quantity and, as dots, the colours chosen for each part (named in the details).
+const partsOf = item => (PRODUCTS[item.productId]?.parts || []).filter(part => item.selection?.[part.id]);
+const thumb = id => PRODUCTS[id] || SOON[id] ? `<img src="assets/card-preview-${esc(id)}.webp" alt="" width="56" height="56" loading="lazy" decoding="async">` : `<span class="order-thumb-empty">${icon('bag')}</span>`;
+const swatches = item => partsOf(item).length ? `<span class="order-swatches" aria-hidden="true">${partsOf(item).map(part => { const c = color(item.selection[part.id]); return `<i style="--swatch:${esc(c.hex)}" title="${esc(c.name)}"></i>`; }).join('')}</span>` : '';
+const itemRow = item => `<li><span class="order-thumb">${thumb(item.productId)}</span><span class="order-item-name"><strong>${Number(item.quantity) || 1}×</strong> <span translate="no">${esc(item.title)}</span></span>${swatches(item)}</li>`;
+// The last thing the Correios said, on the card; every step in the timeline under "Rastrear pacote".
+const lastEvent = o => { const last = o.tracking?.last; return last ? `<p class="order-last">${icon('truck')}<span><span translate="no">${esc(last.description)}</span>${last.place ? ` · <span translate="no">${esc(placeText(last.place))}</span>` : ''} · <time datetime="${esc(last.at)}">${esc(when(last.at))}</time></span></p>` : ''; };
 const timelineView = tracking => tracking?.events?.length
   ? tracking.events.map(e => `<li class="is-${esc(e.state)}"><strong translate="no">${esc(e.description)}</strong>${e.detail ? `<span translate="no">${esc(e.detail)}</span>` : ''}<small>${e.place ? `<span translate="no">${esc(placeText(e.place))}</span> · ` : ''}<time datetime="${esc(e.at)}">${esc(when(e.at))}</time></small></li>`).join('')
   : '<li class="is-empty"><span>Os Correios ainda não registraram este pacote. Volte a olhar mais tarde.</span></li>';
-const orderDate = iso => new Date(iso).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
-const orderCard = o => `<article class="order-preview status-${esc(o.status)}"><h3>Pedido <span translate="no">${esc(o.reference)}</span></h3><small><span>${esc(ORDER_STATUS[o.status] || o.status)}</span>${o.refunded ? ' · <span>Valor estornado</span>' : ''} · <time datetime="${esc(o.createdAt)}">${esc(orderDate(o.createdAt))}</time></small>${o.test ? '<small class="order-test">Pedido de teste · nenhum valor real</small>' : ''}<p>${o.items.map(i => `${Number(i.quantity) || 1} × ${esc(i.title)}`).join('<br>')}</p>${trackingLine(o)}<strong>${money(o.totalCents || 0)}</strong>${o.invoice?.pdfUrl ? `<a class="order-invoice" href="${esc(o.invoice.pdfUrl)}" target="_blank" rel="noopener"><span>Ver nota fiscal</span> <span translate="no">nº ${esc(o.invoice.number)}</span></a>` : ''}</article>`;
-const demoCard = o => `<article class="order-preview"><h3>Pedido <span translate="no">${esc(o.id)}</span></h3><small>Pagamento simulado · nenhuma cobrança</small><p>${o.items.map(i => `${Number(i.quantity) || 1} × ${esc(i.title)}`).join('<br>')}</p><strong>${money(o.total || 0)}</strong></article>`;
+function stepsBar(o) {
+  if (!(o.status in PROGRESS)) return '';
+  const done = PROGRESS[o.status];
+  return `<ol class="order-steps" aria-label="Andamento do pedido" style="--fill:${Math.min(done, 3) / 3}">${STEPS.map((label, i) => `<li class="${i < done ? 'is-done' : i === done ? 'is-now' : ''}"${i === done ? ' aria-current="step"' : ''}><span>${label}</span></li>`).join('')}</ol>`;
+}
+const fact = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
+function orderDetails(o) {
+  const lines = o.items.map(item => `<li><span><strong>${Number(item.quantity) || 1}×</strong> <span translate="no">${esc(item.title)}</span></span><span>${money((item.unitCents || 0) * (Number(item.quantity) || 1))}</span>${partsOf(item).length ? `<small>${partsOf(item).map(part => `<span>${esc(part.name)}</span>: <span>${esc(color(item.selection[part.id]).name)}</span>`).join(' · ')}</small>` : ''}</li>`).join('');
+  return `<dl class="order-facts">${fact('Código completo', `<span translate="no">${esc(o.reference)}</span>`)}${fact('Data da compra', esc(dayText(o.paidAt || o.createdAt)))}${PAYMENT[o.method] ? fact('Forma de pagamento', PAYMENT[o.method]) : ''}`
+    + `${o.trackingCode ? fact('Código de rastreio', `<code translate="no">${esc(o.trackingCode)}</code> <a href="${CORREIOS}" target="_blank" rel="noopener">Rastrear nos Correios ↗</a>`) : ''}</dl>`
+    + `<ul class="order-lines">${lines}</ul>`
+    + `<dl class="order-totals">${fact('Subtotal', money(o.subtotalCents || 0))}${fact('Frete', o.shippingCents ? money(o.shippingCents) : 'Grátis')}${o.discountCents ? fact('Desconto no Pix', `− ${money(o.discountCents)}`) : ''}<div class="is-total"><dt>Total</dt><dd>${money(o.totalCents || 0)}</dd></div></dl>`;
+}
+const collapse = (id, inner) => `<div class="order-collapse" id="${id}" data-open="false"><div class="order-collapse-inner">${inner}</div></div>`;
+function orderCard(o) {
+  const ref = esc(o.reference), [label, tone] = badgeOf(o), hidden = orderFilter !== 'todos' && GROUP[o.status] !== orderFilter;
+  return `<article class="order-card tone-${tone}" data-group="${GROUP[o.status] || 'outros'}" aria-labelledby="pedido-${ref}"${hidden ? ' hidden' : ''}>`
+    + `<div class="order-card-top"><h3 id="pedido-${ref}"><span>Pedido</span> <span class="order-number" translate="no">${esc(shortNumber(o.reference))}</span></h3><time datetime="${esc(o.createdAt)}">${esc(dayText(o.createdAt))}</time><span class="order-badge">${esc(label)}</span></div>`
+    + `<div class="order-card-body"><ul class="order-items">${o.items.map(itemRow).join('')}</ul>${lastEvent(o)}`
+    + `<div class="order-sum"><span>Total</span><strong>${money(o.totalCents || 0)}</strong></div>`
+    + `${o.test ? '<p class="order-flag">Pedido de teste · nenhum valor real</p>' : ''}${o.refunded ? '<p class="order-flag">Valor estornado</p>' : ''}`
+    + `${o.invoice?.pdfUrl ? `<a class="order-invoice" href="${esc(o.invoice.pdfUrl)}" target="_blank" rel="noopener">${icon('document')}<span>Nota fiscal</span> <span translate="no">nº ${esc(o.invoice.number)}</span></a>` : ''}</div>`
+    + `<div class="order-card-foot">${stepsBar(o)}<div class="order-actions"><button type="button" class="order-more-toggle" data-more="${ref}" aria-expanded="false" aria-controls="detalhes-${ref}"><span>Detalhes do pedido</span></button>`
+    + `${o.trackingCode ? `<button type="button" class="order-track-toggle" data-track="${ref}" aria-expanded="false" aria-controls="rastreio-${ref}">${icon('truck')}<span>Rastrear pacote</span></button>` : ''}</div>`
+    + collapse(`detalhes-${ref}`, orderDetails(o)) + (o.trackingCode ? collapse(`rastreio-${ref}`, `<ol class="order-timeline" id="timeline-${ref}"></ol>`) : '') + `</div></article>`;
+}
+const demoCard = o => `<article class="order-card tone-neutral" data-group="outros"><div class="order-card-top"><h3><span>Pedido</span> <span class="order-number" translate="no">#${esc(String(o.id).replace(/^DEMO-/, '').slice(0, 6))}</span></h3><span class="order-badge">Pagamento simulado · nenhuma cobrança</span></div><div class="order-card-body"><ul class="order-items">${o.items.map(itemRow).join('')}</ul><div class="order-sum"><span>Total</span><strong>${money(o.total || 0)}</strong></div></div></article>`;
+function filterBar(list) {
+  const count = key => key === 'todos' ? list.length : list.filter(o => GROUP[o.status] === key).length;
+  const shown = FILTERS.filter(([key]) => key === 'todos' || count(key));
+  return shown.length < 3 ? '' : `<div class="orders-filter" role="group" aria-label="Filtrar pedidos">${shown.map(([key, label]) => `<button type="button" data-filter="${key}" aria-pressed="${orderFilter === key}"><span>${label}</span> <span class="orders-filter-count">${count(key)}</span></button>`).join('')}</div>`;
+}
+const noOrders = `<div class="account-empty orders-empty"><span class="orders-empty-art" aria-hidden="true">${icon('bag')}<i>♡</i></span><h3>Você ainda não fez nenhum pedido.</h3><p>Que tal dar uma olhada nas nossas coleções?</p><a class="primary account-submit" href="produtos.html">Ver as coleções ${icon('arrow')}</a></div>`;
+// A panel under a card (the details, or the timeline): opens and closes in place, with its button saying which.
+function setOpen(button, open, [closed, opened]) {
+  const panel = host.querySelector(`#${CSS.escape(button.getAttribute('aria-controls'))}`);
+  if (!panel) return;
+  panel.dataset.open = String(open); button.setAttribute('aria-expanded', String(open));
+  button.querySelector('span').textContent = open ? opened : closed;
+}
 function showCode() {
   // Only when the e-mail service could not send the code; a real e-mailed code is never shown on the page.
   document.querySelector('#demo-inbox').innerHTML = demoCode() ? `<div class="demo-code">Código de teste · não enviado<strong>${esc(demoCode())}</strong></div>` : '';
@@ -68,8 +120,9 @@ function render(focus = true) {
     wireIdentification(host.querySelector('#details-form'));
   }
   if (screen === 'orders') {
+    if (orderFilter !== 'todos' && !myOrders.some(o => GROUP[o.status] === orderFilter)) orderFilter = 'todos';
     const cards = myOrders.map(orderCard).join('') + readDemoOrders().map(demoCard).join('');
-    host.innerHTML = title('CADA ESCOLHA CONTA', 'Meus pedidos.', 'Acompanhe o pagamento e a produção de cada pedido.') + (cards ? cards : `<div class="account-empty">${icon('bag')}<h3>Seu primeiro encanto<br>está por vir.</h3><a class="primary account-submit" href="produtos.html">Conhecer as peças ${icon('arrow')}</a></div>`) + action('Voltar à minha conta', 'profile');
+    host.innerHTML = title('CADA ESCOLHA CONTA', 'Meus pedidos.', 'Acompanhe a produção e a entrega dos seus pedidos.') + (cards ? `${filterBar(myOrders)}<div class="orders-list">${cards}</div>` : noOrders) + action('Voltar à minha conta', 'profile');
   }
   if (screen === 'delete') host.innerHTML = title('EXCLUIR CONTA', 'Excluir minha<br>conta.', deletion ? 'Enviamos um código de seis números para o seu e-mail. Digite o código para confirmar.' : 'Esta ação não pode ser desfeita.') + (deletion
     ? `<form id="delete-form"><label class="auth-field code-input" for="delete-code"><span>Código de 6 números</span><input id="delete-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" required></label><p class="password-help">O código vale por 10 minutos.</p><button class="primary account-submit danger" type="submit">Excluir minha conta definitivamente</button></form>`
@@ -110,19 +163,31 @@ host.addEventListener('click', async event => {
   if (event.target.closest('#signout')) { await signOut(); auth.cancel(); challenge = null; screen = 'email'; render(); }
   if (event.target.closest('#resend-code')) run('Enviando outro código…', async () => {challenge = await auth.resend(); notice = challenge.demoCode ? 'Novo código de teste gerado.' : 'Enviamos um novo código para o seu e-mail.';});
   if (event.target.closest('#delete-start')) run('Enviando o código…', async () => {deletion = await startDeletion(); notice = deletion.demoCode ? 'Código de teste gerado.' : 'Enviamos o código para o seu e-mail.';});
+  const pill = event.target.closest('[data-filter]');
+  if (pill) {
+    orderFilter = pill.dataset.filter;
+    host.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button === pill)));
+    host.querySelectorAll('.order-card').forEach(card => { card.hidden = orderFilter !== 'todos' && card.dataset.group !== orderFilter; });
+    return;
+  }
+  const more = event.target.closest('[data-more]');
+  if (more) { setOpen(more, more.getAttribute('aria-expanded') !== 'true', ['Detalhes do pedido', 'Ocultar detalhes']); return; }
+  // "Rastrear pacote": the Correios timeline, asked for the first time it opens (api/account/tracking).
   const track = event.target.closest('[data-track]');
   if (track) {
-    const list = host.querySelector(`#${CSS.escape(`timeline-${track.dataset.track}`)}`), open = track.getAttribute('aria-expanded') === 'true';
+    const list = host.querySelector(`#${CSS.escape(`timeline-${track.dataset.track}`)}`), open = track.getAttribute('aria-expanded') === 'true', words = ['Rastrear pacote', 'Ocultar rastreio'];
     if (!list) return;
-    if (open || list.dataset.loaded) { list.hidden = open; track.setAttribute('aria-expanded', String(!open)); track.textContent = open ? 'Acompanhar entrega' : 'Ocultar entrega'; return; }
-    track.disabled = true; track.textContent = 'Carregando…';
-    try { list.innerHTML = timelineView(await loadTracking(track.dataset.track)); list.dataset.loaded = '1'; list.hidden = false; track.setAttribute('aria-expanded', 'true'); track.textContent = 'Ocultar entrega'; }
-    catch { list.innerHTML = '<li class="is-empty"><span>Não foi possível carregar o rastreio agora. Tente de novo em instantes.</span></li>'; list.hidden = false; track.textContent = 'Acompanhar entrega'; }
+    if (open || list.dataset.loaded) { setOpen(track, !open, words); return; }
+    track.disabled = true; track.querySelector('span').textContent = 'Carregando…';
+    try { list.innerHTML = timelineView(await loadTracking(track.dataset.track)); list.dataset.loaded = '1'; }
+    catch { list.innerHTML = '<li class="is-empty"><span>Não foi possível carregar o rastreio agora. Tente de novo em instantes.</span></li>'; }
     finally { track.disabled = false; }
+    setOpen(track, true, words);
     return;
   }
   if (event.target.closest('#forgot-password')) run('Preparando a recuperação de acesso…', async () => {challenge = await auth.forgot({email}); screen = 'verify';});
 });
+window.addEventListener('ju:language', () => { if (screen === 'orders' && !busy) render(false); });
 host.addEventListener('input', event => {
   event.target.removeAttribute('aria-invalid'); feedback.textContent = '';
   if (event.target.name === 'email') email = event.target.value;

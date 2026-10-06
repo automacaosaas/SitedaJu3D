@@ -452,8 +452,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(view(order).trackingCode, null, 'not before it is posted');
   for (const status of ['enviado', 'concluido']) assert.equal(view({...order, status}).trackingCode, 'AA123456785BR', status);
   const account = require('node:fs').readFileSync(path.join(root, 'dist/account.js'), 'utf8');
-  assert.match(account, /pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido entregue'/);
-  assert(account.includes('<strong translate="no">${esc(o.trackingCode)}</strong>'), 'the code, to copy into the Correios page');
+  // "Meus pedidos" (redesign): a badge per stage, the posted ones by where the package stands; the code in the details.
+  assert.match(account, /pendente: \['Pagamento confirmado', 'wait'\], confirmado: \['Em produção', 'making'\], enviado: \['Em trânsito', 'transit'\], concluido: \['Entregue', 'done'\]/);
+  assert(account.includes('<code translate="no">${esc(o.trackingCode)}</code>'), 'the code, to copy into the Correios page');
 }
 
 console.log('PASS: TOTP (RFC 6238 vectors, drift window, single use), first admin only from ADMIN_EMAIL/ADMIN_PASSWORD (12+ characters), password then code with a short session (10 min, 5 codes) and a full one (12 h, new token), encrypted app secret, rate limits and audit; HTTP endpoints (HttpOnly __Host- SameSite=Strict cookie, origin, only paid orders, status changes recorded with who made them, unpaid orders untouchable, Pendentes → Pronto para envio → Enviados (tracking code) → Concluídos one step at a time); browser helpers (grouping, revenue without declined orders, API client), a confirmation before concluding and the vendored QR code.');
