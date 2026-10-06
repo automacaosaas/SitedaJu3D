@@ -30,6 +30,11 @@ assert.equal(classify({codigo: 'LDI', tipo: '01', descricao: 'Objeto aguardando 
 assert.equal(classify({codigo: 'BDE', tipo: '20', descricao: 'Carteiro não atendido'}), 'problema', 'a "baixa" that is not a delivery');
 assert.equal(classify({codigo: 'BDE', tipo: '23', descricao: 'Objeto devolvido ao remetente'}), 'devolvido');
 assert.equal(classify({codigo: 'BDE', tipo: '01', descricao: 'Objeto entregue ao remetente'}), 'devolvido', 'delivered back to the shop is a return');
+// The words are a backstop, never a way around a "não entregue": no Concluído nor "Pedido entregue" e-mail by mistake.
+assert.equal(classify({codigo: 'BDE', tipo: '25', descricao: 'Objeto não entregue ao destinatário'}), 'problema', 'a delivery that did not happen');
+assert.equal(classify({codigo: 'XYZ', descricao: 'Objeto não foi entregue ao destinatário'}), 'problema', 'also for a code we do not know');
+assert.equal(classify({codigo: 'XYZ', descricao: 'Objeto entregue ao destinatário'}), 'entregue', 'the words still count for an unknown code');
+assert.equal(classify({codigo: 'OEC', tipo: '01', descricao: 'Objeto saiu para entrega ao remetente'}), 'devolvido', 'on its way back to the shop: no "saiu para entrega" e-mail to the buyer');
 assert.equal(classify({codigo: 'PO', tipo: '01', descricao: 'Objeto postado'}), 'postado');
 assert.equal(classify({codigo: 'RO', tipo: '01', descricao: 'Objeto em transferência - por favor aguarde'}), 'em_transito');
 assert.equal(timeOf('2026-10-05T14:32:00'), '2026-10-05T17:32:00.000Z', 'no zone: Brasília time');

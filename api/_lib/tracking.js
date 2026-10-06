@@ -27,11 +27,14 @@ const STATES = ['postado', 'em_transito', 'saiu_para_entrega', 'aguardando_retir
 const BAIXA = new Set(['BDE', 'BDI', 'BDR']);
 function classify({codigo = '', tipo = '', descricao = ''} = {}) {
   const code = String(codigo).toUpperCase(), kind = String(tipo).padStart(2, '0'), text = String(descricao).toLowerCase();
-  if (/devolvid|devolu[cç][aã]o ao remetente|entregue ao remetente/.test(text)) return 'devolvido';
-  if ((BAIXA.has(code) && ['00', '01'].includes(kind)) || /entregue ao destinat/.test(text)) return 'entregue';
+  // "ao remetente": the package is going back (also "saiu para entrega ao remetente", which is no delivery to the buyer).
+  if (/devolvid|ao remetente/.test(text)) return 'devolvido';
+  // The words never turn a "não entregue" into a delivery: "Objeto não entregue ao destinatário" is a problem.
+  const notDelivered = /n[aã]o (foi )?entregue/.test(text);
+  if ((BAIXA.has(code) && ['00', '01'].includes(kind)) || (!notDelivered && /entregue ao destinat/.test(text))) return 'entregue';
   if (code === 'OEC' || /saiu para entrega/.test(text)) return 'saiu_para_entrega';
   if (code === 'LDI' || /aguardando retirada|dispon[ií]vel para retirada/.test(text)) return 'aguardando_retirada';
-  if (BAIXA.has(code) || /ausente|n[aã]o localizado|endere[cç]o incorreto|recusad|extraviad|roubad|avariad|n[aã]o entregue|insuficiente/.test(text)) return 'problema';
+  if (BAIXA.has(code) || notDelivered || /ausente|n[aã]o localizado|endere[cç]o incorreto|recusad|extraviad|roubad|avariad|insuficiente/.test(text)) return 'problema';
   if (code === 'PO' || /postado/.test(text)) return 'postado';
   return 'em_transito';
 }
