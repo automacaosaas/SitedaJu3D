@@ -128,3 +128,38 @@ então guarda detalhe onde a forma tem) e `meshopt --level high --quantize-posit
 por metade e é agrupado numa grade de 0,25 mm antes. Mesmos materiais (`body`, `details`, `engines`, `fixed`), sem textura nem cor por
 vértice. Resultado: 387 mil triângulos, 1.688 KB (o anterior tinha 2.452 KB). A URL ganhou `?v=cad-21-08-meshopt1`.
 `tests/model-details.mjs` e `tests/asset-models.mjs` passaram a medir o avião real (furos, estrelas, turbinas, janelas e capacete).
+
+## 06/10/2026: fotos da vitrine em 768 px para celular
+
+A foto da peça na vitrine aparece com 190 a 390 px de largura (medido de 320 a 1920 px de tela). Por isso cada uma das quatro
+fotos da vitrine ganhou uma versão de 768 px, com o mesmo recorte reduzido (a caixa do alfa difere menos de 1 px da grande em
+escala):
+
+| Foto | 1254 px | 768 px |
+|---|---|---|
+| `product-borboletoscopio-cutout` | 135 KB | 65 KB |
+| `product-dinossauroscopio-cutout` | 34 KB | 18 KB |
+| `product-aviaoscopia-cutout` | 61 KB | 35 KB |
+| `product-macacoscopio-cutout` | 77 KB | 30 KB |
+
+**Onde cada versão é usada:**
+
+- **Vitrine:** `srcset` com as duas versões e `sizes` medido (`HERO_SIZES` em `products.js`). Celular (até 3x) e computador
+  (1x e 2x) baixam a de 768 px. Só telas grandes e muito densas pegam a de 1254 px.
+- **Pré-carregamento e imagem de reserva do `index.html`:** o mesmo `srcset` e o mesmo `sizes`, para o navegador baixar um
+  arquivo só.
+- **Demonstração:** `DEMO_SIZES`, porque a peça aparece 1,4 a 1,6 vez maior. Celular 2x e computador 1x reaproveitam a de
+  768 px; telas 3x e retina pegam a de 1254 px.
+- **Página da peça:** `PHOTO_SIZES`, gerado por `tools/build-product-pages.cjs`.
+- **Carrinho e mini-carrinho:** a de 768 px direto (`artSmall`), que já está no cache depois da vitrine.
+
+**Conferido pelo registro de rede do Chrome:**
+
+- iPhone (390 px, 3x), Android (360 px, 2x), notebook (1280 px, 1x) e Mac (1440 px, 2x) baixam só a de 768 px na home, sem
+  repetir arquivo.
+- Uma tela de 1920 px em 2,5x baixa a de 1254 px.
+
+**Como foi feito:** a borboleta sai do PNG original (`design/originais/`); as outras três saem das fotos atuais, porque o
+avião e o macaco foram refeitos depois que os originais foram guardados. Reduzidas e gravadas em WebP com perda, qualidade 80,
+pelo codificador do Chrome (libwebp). `tests/assets.mjs` limita cada versão de 768 px a 80 KB, e `tests/storefront.mjs`
+confere o `srcset` e os `sizes` em todos os lugares.

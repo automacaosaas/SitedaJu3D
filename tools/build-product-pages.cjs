@@ -60,7 +60,7 @@ function page(id, data, base) {
       <nav class="pl-crumbs" aria-label="Você está em"><a href="produtos.html">Produtos</a><span aria-hidden="true">/</span><span aria-current="page">${esc(product.title)}</span></nav>
       <article class="pl" style="${style}" data-pl="${id}">
         <div class="pl-stage">
-          <div class="pl-art" data-pl-stage data-view="photo"><img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}" alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"><div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
+          <div class="pl-art" data-pl-stage data-view="photo"><img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}"${data.artSrcset(product.catalogImage || product.image) ? ` srcset="${esc(data.artSrcset(product.catalogImage || product.image))}" sizes="${esc(data.PHOTO_SIZES)}"` : ''} alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"><div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
           <div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden><button type="button" data-pl-view="photo" aria-pressed="true">Foto</button><button type="button" data-pl-view="3d" aria-pressed="false">${icon('cube')}<span>Girar em 360°</span></button></div>
         </div>
         <div class="pl-info">

@@ -3,7 +3,7 @@
 // same category (in their original colors; they stay after being added, with how many are in the cart on the button), and
 // two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a computer, sheet from the bottom on a
 // phone; it slides away when closed. A <dialog>, so it sits above everything, traps focus and closes with Esc.
-import {PRODUCTS, color, defaults} from './products.js';
+import {PRODUCTS, color, defaults, artSmall} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, signature} from './cart-store.js';
 import {loadShippingConfig} from './shipping-client.js';
@@ -12,7 +12,7 @@ import {icon} from './icons.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const pieces = n => `${n} ${n === 1 ? 'peça' : 'peças'}`;
-const picture = item => item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`;
+const picture = item => item.thumbnail || `assets/${artSmall(PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image)}`;
 
 // The drawer's content for a cart, without touching the page (tests render it in Node).
 // itemId: the piece just added; original: it went in with the original colors; freeShipping: {fromCents, label} or null.
@@ -30,7 +30,7 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">Complete o kit</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];
     const count = inCart(id);
-    return `<li><img src="assets/${esc(product.catalogImage || product.image)}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
+    return `<li><img src="assets/${esc(artSmall(product.catalogImage || product.image))}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
   }).join('')}</ul></section>` : '';
   return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span>${original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
     + `<button type="button" class="mini-cart-close" data-mini-close aria-label="Fechar o carrinho">×</button></header>`

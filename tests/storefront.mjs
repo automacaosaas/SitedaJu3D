@@ -127,6 +127,24 @@ const html = string => string.replace(/ /g, '&nbsp;');
   const showcase = read('dist/carousel.js');
   assert.match(showcase, /Promise\.race\(\[drawn, new Promise\(r => setTimeout\(r, 600\)\)\]\)\.then\(\(\) => window\.finishJuReturn\?\.\(\)\);/, 'the showcase shows the page once the piece in front is drawn (600 ms at most)');
   assert.ok(showcase.indexOf('window.finishJuReturn') > showcase.indexOf("region.querySelector('[data-hero-stage]').innerHTML ="), 'only after the showcase is built');
+  // 2026-10-06: the showcase photos in 768 px for phones and 1x/2x computers (products.js). The home's preload, the
+  // picture written in the page and the carousel share one srcset and one sizes: one file downloaded. The demonstration
+  // shows the piece larger, with its own sizes.
+  const {ART_768, HERO_SIZES, PHOTO_SIZES, artSrcset, artSmall} = await import('../dist/products.js');
+  const butterfly = 'product-borboletoscopio-cutout.webp', set = artSrcset(butterfly), home = read('dist/index.html');
+  assert.equal(set, 'assets/product-borboletoscopio-cutout-768.webp 768w, assets/product-borboletoscopio-cutout.webp 1254w');
+  assert.equal(artSmall(butterfly), 'product-borboletoscopio-cutout-768.webp'); assert.equal(artSmall('card-x.webp'), 'card-x.webp'); assert.equal(artSrcset('card-x.webp'), '');
+  assert.ok(home.includes(`<link rel="preload" as="image" href="assets/${butterfly}" imagesrcset="${set}" imagesizes="${HERO_SIZES}" fetchpriority="high">`), 'the preload matches the showcase');
+  assert.ok(home.includes(`<img class="hero-fallback" src="assets/${butterfly}" srcset="${set}" sizes="${HERO_SIZES}"`), 'and so does the picture written in the page');
+  assert.match(showcase, /const set = artSrcset\(product\.catalogImage \|\| product\.image\), sources = set \? ` sizes="\$\{HERO_SIZES\}" \$\{near \? '' : 'data-'\}srcset="\$\{set\}"` : '';/);
+  assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
+  assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');
+  for (const file of ['dist/mini-cart.js', 'dist/cart-view.js']) assert.match(read(file), /artSmall\(/, `${file}: the light photo for the small pictures`);
+  for (const id of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) {
+    const photo = /<img class="pl-photo"[^>]*>/.exec(read(`dist/${id}.html`))[0];
+    assert.ok(photo.includes(`srcset="${artSrcset(`product-${id}-cutout.webp`)}"`) && photo.includes(`sizes="${PHOTO_SIZES}"`), `${id}.html: the photo picks its size`);
+  }
+  assert.equal(Object.keys(ART_768).length, 4);
   // C6: one label for the action that opens the configurator
   for (const file of ['dist/catalog.js', 'dist/produtos.html', 'dist/hero-demo.js', 'dist/index.html', 'dist/carousel.js']) assert.doesNotMatch(read(file), /Personalize o seu|PERSONALIZE O SEU/, `${file}: "Personalizar o meu"`);
   assert.match(read('dist/catalog.js'), /class="product-customize" href="\$\{productHref\(id\)\}\/personalizar">Personalizar o meu</, 'the card button opens the configurator');

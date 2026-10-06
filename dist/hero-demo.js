@@ -13,6 +13,7 @@ import {Timeline} from './motion-timeline.js';
 import {withAlpha} from './hero-motion.js';
 import {imageReady} from './loading-ui.js';
 import {icon} from './icons.js';
+import {artSrcset, DEMO_SIZES} from './products.js';
 
 const PERSPECTIVE = 1600;
 const CLOSE_RATE = 1.35;
@@ -83,7 +84,10 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (prepared !== i) {
       prepared = i;
       const {key, product} = entries[i], {tool, layers = {}, callouts = []} = config;
-      const toolSrc = `assets/${tool.src}`, front = `assets/${layers.front || product.catalogImage || product.image}`;
+      const toolSrc = `assets/${tool.src}`, frontFile = layers.front || product.catalogImage || product.image, front = `assets/${frontFile}`;
+      // 768 ou 1254 px conforme a tela (products.js): a peça aqui aparece 1,4 a 1,6 vez maior que na vitrine, então o
+      // celular 2x e o computador 1x reaproveitam a de 768 da vitrine, e as telas 3x e retina pegam a de 1254, nítida.
+      const frontSet = artSrcset(frontFile);
       // turn: peça fotografada levemente de lado → o equipamento gira igual (graus em Y; negativo = de frente para a esquerda),
       // fica um pouco mais para o lado de trás (shift), escurece do lado que se afasta e mostra a lateral do lado que se aproxima.
       const turn = tool.turn || 0, far = turn < 0 ? ['--tool-dim-l', '--tool-dim-r'] : ['--tool-dim-r', '--tool-dim-l'];
@@ -101,7 +105,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // bounce: false — equipamento que já vem renderizado com a luz do estúdio (a régua): sem o reflexo colorido por cima, que lavaria o cabo preto
       dom.stage.toggleAttribute('data-plain-tool', tool.bounce === false);
       for (const host of [dom.stage, dom.backdrop, dom.controls, dom.atmosphere]) for (const name in vars) host.style.setProperty(name, vars[name]);
-      dom.cover.src = dom.drop.src = dom.shade.src = front;
+      for (const img of [dom.cover, dom.drop, dom.shade]) { img.sizes = frontSet ? DEMO_SIZES : ''; img.srcset = frontSet; img.src = front; }
       dom.back.hidden = dom.cast.hidden = !layers.back;
       if (layers.back) dom.back.src = `assets/${layers.back}`;
       dom.toolImage.src = dom.castImage.src = toolSrc;
