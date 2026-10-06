@@ -35,6 +35,8 @@ node runpage.cjs "layers=monkey,base,top&above=.5&below=2.1&model=rodin" saida.p
 node art.cjs imagem.webp                                                          # h, bottom e foot de uma imagem de vitrine
 node runpage.cjs "" og.png og-patch.html                                          # prévia de link do avião: troca só o avião na arte
 node export-glb.cjs                                                               # prévia 3D do avião (dist/assets/models/aviaoscopia.glb), simplificada e comprimida
+GLTF_NM=<node_modules> node estrelas.cjs [in.glb] [out.glb]                     # estrelas das asas no rebaixo delas (sem out: só mede); veja abaixo
+node runpage.cjs "variants=full,front,card,ped" saida.png plane-glb.html       # as camadas do avião feitas do GLB do site, sem os STL
 node close-frames.cjs macacoscopio saida                                          # quadros da saída de uma demonstração (Voltar)
 ```
 
@@ -57,3 +59,15 @@ Arquivos do site gerados aqui: `product-aviaoscopia-cutout`, `aviaoscopia` (popu
 passadas para os vértices (cores fixas, nada colorível). Foi a prévia 3D do site até 02/10/2026; agora `dist/assets/models/macacoscopio.glb`
 é o modelo do Meshy (`tools/modelo-macaco/meshy/`, veja `VITRINE-AVIAO-MACACO-QA.md`), então não grave por cima dele.
 `glb.js` é o gravador de GLB das duas exportações.
+
+## Estrelas das asas (06/10/2026)
+
+Cada asa tem um rebaixo em forma de estrela, de fundo plano, e a estrela é uma peça à parte que entra nele. Postas à mão em `plane.html`, as
+estrelas ficaram 1,83 mm abaixo do rebaixo: sem caber nele, paravam em cima da asa e a ponta de cima do rebaixo vazio aparecia acima de cada
+uma, como uma sombra. `estrelas.cjs` mede o rebaixo no GLB do site, leva a estrela para o centro dele (folga de ~0,12 mm em volta) e a assenta
+no fundo, 0,1 mm para dentro (fica ~1,9 mm acima da asa, como nos renders do Luiz); depois comprime como o `export-glb.cjs`. Os números já
+estão em `plane.html` (`at` das estrelas e `GAPS.stars`), então uma exportação nova a partir dos STL sai certa. As imagens da vitrine (foto,
+popup, card, camada da frente e prévia de link) foram corrigidas só em volta das estrelas: `plane-glb.html` com o GLB antigo e com o novo
+(mesma câmera e mesmas passadas): na estrela e no rebaixo entra o render novo e, em volta, só a diferença entre os dois (a sombra da
+estrela), sobre as imagens publicadas; o resto delas ficou igual pixel a pixel.
+`tests/model-details.mjs` confere que logo depois de cada ponta da estrela está a asa, e não o fundo do rebaixo.

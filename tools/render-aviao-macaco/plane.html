@@ -35,7 +35,7 @@ const SPEC = {
   back:   {file: 'Airplane_BodyShellbACK_001', mat: plastic(C.body), at: [0, 0, 0]},
   glass:  {file: 'Cockpit_Windshield', mat: glassMat, at: [90, 122.2, -52]},
   pylons: {file: 'Engine_Pylons', mat: plastic(C.engines, .4, .4), at: [90, 90, -50]},
-  stars:  {file: 'Wing_Stars', mat: plastic(C.details, .4, .4), at: [90, 112.5, -50]},
+  stars:  {file: 'Wing_Stars', mat: plastic(C.details, .4, .4), at: [90, 112.5, -48.17]},   // z: 1.83 mm higher than first placed, centred on the recess (estrelas.cjs)
   nosef:  {file: 'NoseCone_Front', mat: plastic(C.details, .4, .4), at: [0, 0, Number(P.nz || 205)]},
   noseb:  {file: 'NoseCone_Back', mat: plastic(C.details, .4, .4), at: [0, 0, Number(P.nz || 205)]}
 };
@@ -82,8 +82,11 @@ function seat(m, embed) {
   scene.updateMatrixWorld(true); return +gap.toFixed(2);
 }
 // the ray casts take half a minute in software WebGL: their result (gap before seating, mm) is kept here; ?reseat=1 measures again
-const GAPS = {glass: -27.56, stars: -11.32}, sit = (k, embed) => { if (P.reseat) return seat(mesh[k], embed); nudge(mesh[k], 0, 0, -GAPS[k] - embed); scene.updateMatrixWorld(true); return GAPS[k]; };
-const seated = {stars: sit("stars", Number(P.sembed ?? .5))};
+// The stars rest on the flat floor of their recess (2.5 mm under the wing), a hair into it: placed 1.83 mm too low, they used to stop on the
+// wing beside the recess (gap −11.32), with the top of the empty recess showing above them. −8.34 is the gap to the floor measured on the
+// GLB by estrelas.cjs (06/10/2026).
+const GAPS = {glass: -27.56, stars: -8.34}, sit = (k, embed) => { if (P.reseat) return seat(mesh[k], embed); nudge(mesh[k], 0, 0, -GAPS[k] - embed); scene.updateMatrixWorld(true); return GAPS[k]; };
+const seated = {stars: sit("stars", Number(P.sembed ?? .1))};
 window.FLAT = FLAT;
 
 // ── height fields: the outermost surface of a part seen along z (over x, y) or along y (over x, z), rasterised from its triangles ──

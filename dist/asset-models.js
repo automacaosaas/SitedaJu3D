@@ -7,7 +7,7 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=crista2-meshopt1',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-meshopt1',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
   // O macaco do Meshy com as cores fixas do macaco em cinco materiais, sem textura (VITRINE-AVIAO-MACACO-QA.md)
   macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)
 };
