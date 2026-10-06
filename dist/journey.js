@@ -20,6 +20,8 @@
   // home's showcase opens on this piece. A page restored by Back/Forward claims its piece again.
   const claim = () => { if (root.dataset.themeProduct) try { window.juTheme.save(root.dataset.themeProduct, JSON.parse(root.dataset.themeColors)); } catch {} };
   claim();
+  // English or Spanish chosen before: the dictionary (i18n.js loads it only for them) starts downloading now, with the page.
+  try { if (/^(en|es)$/.test(localStorage.getItem('ju.language') || '')) for (const href of ['i18n-core.js', 'translations.js']) { const link = document.createElement('link'); link.rel = 'modulepreload'; link.href = href; document.head.append(link); } } catch {}
   const embedded = window.parent !== window && new URLSearchParams(location.search).get('panel') === '1';
   if (embedded) root.classList.add('account-embedded');
   if (embedded) window.addEventListener('message', event => {

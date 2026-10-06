@@ -1,4 +1,8 @@
-import {SUPPORTED as supported, translate as translateText} from './i18n-core.js';
+// The dictionary (translations.js, ~90 KB, through i18n-core.js) comes only for English or Spanish: Portuguese is the source
+// and never needs it, so most visitors skip it, and the walk through the page and its observer below, altogether.
+const supported = ['pt-BR', 'en', 'es'];   // the same list as SUPPORTED in i18n-core.js
+let core = null, loading = null;
+const loadCore = () => loading ??= import('./i18n-core.js').then(module => (core = module));
 
 const KEY = 'ju.language';
 let language = 'pt-BR';
@@ -6,7 +10,7 @@ try { const saved = localStorage.getItem(KEY); if (supported.includes(saved)) la
 const originals = new WeakMap();
 const attributes = ['aria-label', 'aria-roledescription', 'placeholder', 'title', 'alt'];
 const ignored = 'script,style,[translate="no"],.language-picker';
-export function translate(value, locale = language) { return translateText(value, locale); }
+export function translate(value, locale = language) { return locale === 'pt-BR' || !core ? value : core.translate(value, locale); }
 function update(node, key, read, write) {
   let state = originals.get(node);
   if (!state) { state = new Map(); originals.set(node, state); }
@@ -42,11 +46,12 @@ function apply() {
   syncPickers();
   observe();
 }
-export function setLanguage(locale) {
+export async function setLanguage(locale) {
   if (!supported.includes(locale)) return;
   language = locale;
   try { localStorage.setItem(KEY, language); } catch {}
   document.querySelector('.language-suggest')?.remove();
+  if (language !== 'pt-BR') await loadCore().catch(() => {});
   apply();
   window.dispatchEvent(new CustomEvent('ju:language', {detail:language}));
 }
@@ -157,6 +162,19 @@ function dismissSuggestion() {
   try { localStorage.setItem(PROMPTED, '1'); } catch {}
   document.querySelector('.language-suggest')?.remove();
 }
-function init() { apply(); suggestLanguage(); }
+// A page in Portuguese is already written in Portuguese: nothing to walk or watch until another language is chosen.
+// languageReady: the page is in its language (site-shell.js waits for it before showing the header, so English and
+// Spanish never flash Portuguese; journey.js shows the page anyway after 2 s).
+let markReady;
+export const languageReady = new Promise(resolve => { markReady = resolve; });
+async function init() {
+  try { if (language !== 'pt-BR') { await loadCore().catch(() => {}); apply(); } else syncPickers(); }
+  finally { markReady(); }
+  suggestLanguage();
+}
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();
-window.addEventListener('storage', event => { if (event.key === KEY) { language = supported.includes(event.newValue) ? event.newValue : 'pt-BR'; apply(); } });
+window.addEventListener('storage', event => {
+  if (event.key !== KEY) return;
+  language = supported.includes(event.newValue) ? event.newValue : 'pt-BR';
+  (language === 'pt-BR' ? Promise.resolve() : loadCore()).catch(() => {}).then(apply);
+});
