@@ -170,3 +170,5 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl *, .pl *::before, .pl *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; transition-delay: 0s !important; }
   .pl-customize[aria-expanded="true"]::before { animation: none; }
 }
+/* "entre em contato" na descrição: abre o e-mail da Ju */
+.pl-desc .contact-mail { color: var(--pl-accent); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }

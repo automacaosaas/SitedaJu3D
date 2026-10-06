@@ -260,3 +260,5 @@
   .pdp-sheet, #product-dialog .swatch i { transition: none; }
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
+/* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */
+#dialog-description .contact-mail { color: var(--pd-accent, var(--rose)); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }

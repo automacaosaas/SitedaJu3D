@@ -6,6 +6,8 @@ export const COMMERCE = Object.freeze({
   // (api/_lib/catalog.js PIX_DISCOUNT_BPS); tests/payments.mjs fails if the two drift apart.
   pixDiscountBps: 500,
   whatsapp: '',
+  // o e-mail da Ju: o "entre em contato" das descrições abre ele (contact-link.js)
+  contactEmail: 'juimprimepramim@gmail.com',
   // Preços confirmados em 05/10/2026. extraPrices: o preço de cada unidade a partir da segunda da mesma peça na mesma compra (o 2.º
   // avião sai por R$ 215). O servidor tem a mesma tabela (api/_lib/catalog.js); tests/payments.mjs falha se as duas se separarem.
   prices: Object.freeze({borboletoscopio: 26500, dinossauroscopio: 26500, aviaoscopia: 28500}),

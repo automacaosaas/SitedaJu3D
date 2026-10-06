@@ -3,6 +3,7 @@ import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money} from './commerce-config.js';
 import {icon} from './icons.js';
 import {staticViews,createGallery} from './gallery.js';
+import {fillDescription} from './contact-link.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
@@ -34,7 +35,7 @@ function announce(message){$('#color-announcement').textContent=message;}
 function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
-  $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
+  $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;fillDescription($('#dialog-description'),p.description,p.title);
   gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
   else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;

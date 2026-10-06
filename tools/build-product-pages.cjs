@@ -25,12 +25,16 @@ const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html'
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
   const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js')]);
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners};
+  const contact = await load('contact-link.js');
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, splitContact: contact.splitContact, contactMail: contact.contactMail};
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, defaults, color, showcase, icon} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, defaults, color, showcase, icon, splitContact, contactMail} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
+  // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
+  const [before, phrase, after] = splitContact(product.description);
+  const description = phrase ? `${esc(before)}<a class="contact-mail" href="${esc(contactMail(`Dúvida sobre o ${product.title}`))}">${phrase}</a>${esc(after)}` : esc(product.description);
   const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}.html`;
   const lines = base.replace(/\r\n/g, '\n');
   const head = lines.slice(lines.indexOf('<head>\n') + 7, lines.indexOf('  <!-- og -->'))
@@ -77,7 +81,7 @@ function page(id, data, base) {
             ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.')}
             ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
           </div>
-          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${esc(product.description)}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
+          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${description}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
         </div>
       </article>
     </main>`;
