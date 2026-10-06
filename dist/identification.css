@@ -21,6 +21,10 @@
 .id-company[open] summary::after { transform:rotate(180deg); }
 .id-company[open] summary { margin-bottom:10px; }
 .id-company .id-note { margin-top:10px; }
+/* "Remover dados de pessoa jurídica": a quiet link under the company fields; the note after it says what happens on confirm. */
+.id-remove-company { display:inline-flex; align-items:center; min-height:44px; margin-top:6px; padding:0; border:0; background:none; font:inherit; font-size:14px; color:#98364e; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; cursor:pointer; }
+.id-remove-company[hidden], .id-company-removed[hidden] { display:none; }
+.id-company-removed { color:#1f6b47; }
 .id-check { display:flex; align-items:center; gap:12px; min-height:44px; font-size:15px; line-height:1.4; cursor:pointer; }
 .id-check input { width:20px; height:20px; flex:none; margin:0; accent-color:var(--rose, #b64c68); }
 .id-exempt { align-self:end; }

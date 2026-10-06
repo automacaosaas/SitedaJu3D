@@ -964,4 +964,6 @@ Nota fiscal|Invoice|Factura
 Você ainda não fez nenhum pedido.|You have not placed any orders yet.|Aún no has hecho ningún pedido.
 Que tal dar uma olhada nas nossas coleções?|How about a look at our collections?|¿Qué tal echar un vistazo a nuestras colecciones?
 Ver as coleções|See the collections|Ver las colecciones
+Remover dados de pessoa jurídica|Remove company details|Eliminar los datos de persona jurídica
+Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.|Company details removed. Once you confirm, the invoice will be issued to your CPF.|Datos de persona jurídica eliminados. Al confirmar, la factura se emitirá a tu CPF.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
