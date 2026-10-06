@@ -20,7 +20,9 @@ O que mudou no fluxo dos e-mails:
 
 - **Antes:** o código entrava em silêncio e o e-mail com o código só saía quando a Ju clicava em "Concluir".
 - **Agora:** o e-mail com o código sai **quando o código entra**. "Concluído" passou a querer dizer **entregue**.
-- **Código corrigido** em Enviados: não manda e-mail de novo. O rastreio do código antigo é apagado.
+- **Código corrigido** em Enviados: não manda e-mail de novo. O rastreio do código antigo é apagado. A exceção é quando
+  o código substituído era de outro pacote (veja "Código de um pacote antigo", abaixo): aí o cliente recebeu um código
+  errado, e o certo vai por e-mail.
 - **Voltar um passo** (Enviados → Expedição): o código e o rastreio saem do pedido, e ninguém recebe e-mail.
 
 ### Expedição: o campo do código
@@ -69,7 +71,19 @@ Não há variável nova no hPanel.
 | `nao_encontrado` | os Correios ainda não conhecem o código (postado agora há pouco, ou digitado errado) |
 
 As palavras da descrição servem de reserva, caso os Correios mudem algum código de evento. O horário dos Correios vem sem
-fuso e é lido como horário de Brasília.
+fuso e é lido como horário de Brasília. O detalhe de um evento é descartado quando traz um link ou a pesquisa de
+satisfação dos Correios ("Queremos te ouvir!…", que vem junto da entrega), porque não fala do pacote.
+
+**Código de um pacote antigo** (colado por engano; visto no primeiro teste real, 06/10/2026, com um pacote entregue em
+18/09): se os Correios registram eventos do código **antes do pagamento do pedido** (com 6 h de folga), o código é de
+outro pacote, porque nenhum pacote é postado antes da compra. A comparação é com o pagamento, não com o dia em que o
+código entrou: um código digitado dias depois da postagem não dispara o aviso.
+
+- A linha fica salva e o painel mostra "Código de outro pacote?", com o que fazer.
+- O pedido **não** vai para Concluídos e ninguém recebe aviso: nem "Pedido entregue" nem "saiu para entrega" para o
+  cliente, nem e-mail para a Ju.
+- O cliente não vê esse rastreio em "Meus pedidos".
+- Ao corrigir o código, o certo vai por e-mail ao cliente.
 
 **Os avisos (cada um sai uma vez só, guardado em `tracking_notices`):**
 

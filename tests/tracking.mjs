@@ -215,6 +215,37 @@ async function posted(store, code, over = {}) {
   assert.equal(w.mails.filter(m => m.subject.includes('Pedido entregue')).length, 2, 'and the buyer hears about it again');
 }
 
+// ── 2026-10-06, the first real test (AP503109323BR, delivered 18/09): an old package's code, and the Correios survey ──
+{
+  // the survey the Correios put in a delivery's detail is not tracking; a real detail stays
+  const survey = eventsOf({eventos: [{codigo: 'BDE', tipo: '01', descricao: 'Objeto entregue ao destinatário', detalhe: 'Queremos te ouvir! Responda: https://survey3.medallia.com/?e=1', dtHrCriado: '2026-09-18T16:50:00'}]});
+  assert.equal(survey[0].detail, null, 'the survey never shows as a detail');
+  assert.equal(eventsOf({eventos: [{codigo: 'BDE', tipo: '20', descricao: 'Carteiro não atendido', detalhe: 'Destinatário ausente.', dtHrCriado: '2026-09-18T16:50:00'}]})[0].detail, 'Destinatário ausente.');
+
+  // a code the Correios registered before the purchase (posted() pays on 03/10): another package's, pasted by mistake
+  const w = world(), orders = createOrders({store: w.store, env: w.env, now: w.now}), tracking = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet});
+  const at = (codigo, descricao, dtHrCriado, cidade) => ({codigo, tipo: '01', descricao, dtHrCriado, unidade: {endereco: {cidade, uf: 'MG'}}});
+  w.fake.setTracking('AP503109323BR', [{...at('BDE', 'Objeto entregue ao destinatário', '2026-09-18T16:50:00', 'BELO HORIZONTE'), detalhe: 'Queremos te ouvir!… https://survey3.medallia.com/x'}, at('PO', 'Objeto postado', '2026-09-15T10:00:00', 'OURO PRETO')]);
+  const id = await posted(w.store, 'AP503109323BR');
+  await tracking.runOnce();
+  const old = await w.store.orders.findById(id);
+  assert.deepEqual([old.status, old.trackingState, old.deliveredAt ?? null, old.trackingNotices], ['enviado', 'entregue', null, 'antigo'], 'not concluded, marked as another package\'s');
+  assert.equal(w.mails.length, 0, 'no "Pedido entregue", no notice at all');
+  const panel = orders.adminView(old).tracking;
+  assert.deepEqual([panel.oldCode, panel.state, panel.last.place.city, panel.last.detail], [true, 'entregue', 'BELO HORIZONTE', null], 'the panel sees the line, with the warning');
+  assert.deepEqual([orders.customerView(old).tracking.state, orders.customerView(old).tracking.last], [null, null], 'the buyer sees nothing of it');
+  assert.deepEqual(trackingView(old, {all: true, buyer: true}).events, [], 'nor in the timeline');
+  w.advance(EVERY + 60000); await tracking.runOnce();
+  assert.equal((await w.store.orders.findById(id)).status, 'enviado'); assert.equal(w.mails.length, 0, 'the next rounds keep it so');
+  assert(read('dist/admin.js').includes('Código de outro pacote?') && read('dist/admin.js').includes("quiet: order.status === 'enviado' && !order.tracking?.oldCode"), 'the panel warns, and says when the right code was e-mailed');
+
+  // posted after the purchase but entered days later: still this order's (the reference is the payment, not the code going in)
+  const late = await posted(w.store, 'AA123456745BR', {shippedAt: new Date(Date.parse('2026-10-05T14:00:00Z'))});
+  w.fake.setTracking('AA123456745BR', [at('BDE', 'Objeto entregue ao destinatário', '2026-10-04T15:00:00', 'BELO HORIZONTE'), at('PO', 'Objeto postado', '2026-10-03T18:00:00', 'OURO PRETO')]);
+  await tracking.runOnce();
+  assert.equal((await w.store.orders.findById(late)).status, 'concluido', 'delivered before the code went in, but after the purchase: concluded');
+}
+
 // ── "Meus pedidos": the timeline endpoint, only the buyer's own posted orders ──
 {
   const w = world(), handler = require('../api/account/tracking').create({env: w.env, store: w.store, now: w.now, fetchImpl: w.fetchImpl});

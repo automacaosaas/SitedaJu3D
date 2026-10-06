@@ -27,7 +27,7 @@ const ORDER_COLUMNS = {
 // event (tracking_last), never the whole line of up to 40 (tracking_events, for "Meus pedidos").
 const ADMIN_ORDER_SELECT = ['id', 'reference', 'source', 'status', 'method', 'installments', 'subtotal_cents', 'shipping_cents', 'total_cents', 'buyer', 'buyer_doc_enc', 'phone_enc',
   'ship_to', 'shipping_info', 'notes', 'paid_at', 'decided_at', 'decline_reason', 'tracking_code', 'shipped_at', 'refund_state', 'refunded_at', 'refund_error',
-  'created_at', 'tracking_state', 'tracking_last', 'tracking_checked_at', 'delivered_at'].join(', ');
+  'created_at', 'tracking_state', 'tracking_last', 'tracking_checked_at', 'delivered_at', 'tracking_notices'].join(', ');
 const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo', 'trackingEvents', 'trackingLast']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
 const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
