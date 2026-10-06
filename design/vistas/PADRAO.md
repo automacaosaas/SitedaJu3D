@@ -1,15 +1,17 @@
 # Padrão de fotos da galeria (aba Foto)
 
-Toda peça à venda tem **4 fotos**, sempre nesta ordem:
+Toda peça tem **6 fotos**, sempre nesta ordem:
 
 | # | Foto | O que mostra |
 |---|------|--------------|
 | 1 | Frente | A peça inteira, de frente. É a que abre a galeria. |
 | 2 | Três quartos | A peça inteira, virada uns 45° (vê a frente e um lado). |
-| 3 | Costas | A peça inteira, por trás (ou três quartos de trás). |
-| 4 | Detalhe de perto | A parte de cima da peça bem de perto: o rosto, a cabine. Enche o quadro, como o zoom das lojas. |
+| 3 | Três quartos de trás | A peça inteira, virada uns 145° (vê as costas e o outro lado). |
+| 4 | Costas | A peça inteira, por trás. |
+| 5 | De cima | A peça inteira vista do alto (35°), virada uns 25°: o ângulo de vitrine. |
+| 6 | Detalhe de perto | A parte de cima da peça bem de perto: o rosto, a cabine. Enche o quadro, como o zoom das lojas. |
 
-No site, as quatro saem no mesmo formato (4:5, retrato, 1200 x 1500), com fundo transparente, a peça do mesmo tamanho e no mesmo
+No site, as seis saem no mesmo formato (4:5, retrato, 1200 x 1500), com fundo transparente, a peça do mesmo tamanho e no mesmo
 lugar em todas e uma sombra leve no chão.
 
 ## De onde vêm (desde 05/10/2026): render do modelo 3D
@@ -19,9 +21,9 @@ resolução, e o detalhe de perto é uma câmera perto de verdade (não uma ampl
 
 1. O modelo em `dist/assets/models/<peça>.glb` (e em `dist/asset-models.js`).
 2. Em `tools/render-vistas/renderizar.cjs`, o enquadramento do detalhe dela (`DETALHE`: a altura do centro e a do quadro).
-3. `GLTF_NM=<node_modules do gltf-transform> node tools/render-vistas/renderizar.cjs <peça>` grava os 4 renders em `renders/`
-   (uns 7 minutos por peça, só no processador). Confira os 4.
-4. As 4 entradas em `fotos.json` (`"fundo": "render"`), a peça em `GALLERY` (`dist/gallery.js`) com o nome do detalhe (e a tradução
+3. `GLTF_NM=<node_modules do gltf-transform> node tools/render-vistas/renderizar.cjs <peça>` grava os 6 renders em `renders/`
+   (uns 5 minutos por peça, só no processador). Confira os 6.
+4. As 6 entradas em `fotos.json` (`"fundo": "render"`), a peça em `GALLERY` (`dist/gallery.js`) com o nome do detalhe (e a tradução
    em `dist/translations.js`), `node tools/galeria-vistas/gerar.cjs <peça>`, `VIEWS_VERSION` e `npm test`.
 
 ## Se for usar fotos de verdade

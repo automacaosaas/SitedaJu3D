@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fotos da galeria renderizadas dos modelos do site (render.py, Blender 5.2, Cycles): para cada peça, as 4 vistas do padrão
+// Fotos da galeria renderizadas dos modelos do site (render.py, Blender 5.2, Cycles): para cada peça, as 6 vistas do padrão
 // (dist/gallery.js) nas cores da vitrine, em design/vistas/renders/<peça>-<vista>.webp (1200 x 1500, fundo transparente). Depois,
 // node tools/galeria-vistas/gerar.cjs leva para dist/assets/vistas/ (com a sombra no chão).
 //   GLTF_NM=<node_modules do gltf-transform> node tools/render-vistas/renderizar.cjs [peças] [--vistas=detalhe,…] [--amostras=128] [--rascunho]
@@ -21,7 +21,9 @@ const SO = opt('vistas')?.split(',');
 const VISTAS = key => [
   {id: 'frente', giro: 0},
   {id: 'tres-quartos', giro: -35},
+  {id: 'tres-quartos-costas', giro: 145},
   {id: 'costas', giro: 180},
+  {id: 'de-cima', giro: -25, elev: 35},
   {id: 'detalhe', giro: 12, elev: 8, detalhe: DETALHE[key]}
 ].filter(v => !SO || SO.includes(v.id));
 

@@ -21,18 +21,18 @@ for (const part of ['class="gallery-rail" role="group" aria-label="Escolher a vi
 // em fotos.json.
 const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
 assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'macacoscopio']);
-const standardIds = ['frente', 'tres-quartos', 'costas', 'detalhe'];
-assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, costas e um detalhe de perto');
+const standardIds = ['frente', 'tres-quartos', 'tres-quartos-costas', 'costas', 'de-cima', 'detalhe'];
+assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, três quartos de trás, costas, de cima e um detalhe de perto');
 for (const key of keys) {
-  assert(hasGallery(key), `${key} tem as 4 fotos`);
+  assert(hasGallery(key), `${key} tem as 6 fotos`);
   // renders com fundo transparente: ficam direto no fundo da página
   assert(Object.values(fotos[key]).every(f => f.fundo === 'render' && f.fonte === `renders/${key}-${Object.keys(fotos[key]).find(id => fotos[key][id] === f)}.webp`), `${key}: renders`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), Object.keys(fotos[key]).filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
   for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo preto (com transparência)`); }
   const ids = viewsOf(key).map(v => v.id);
-  assert.deepEqual(ids, standardIds, `${key}: as 4 fotos do padrão`);
-  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_')), standardIds, `${key}: fotos.json com as 4 fotos do padrão, na ordem`);
-  assert(/ de perto$/.test(viewsOf(key)[3].name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
+  assert.deepEqual(ids, standardIds, `${key}: as 6 fotos do padrão`);
+  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_')), standardIds, `${key}: fotos.json com as 6 fotos do padrão, na ordem`);
+  assert(/ de perto$/.test(viewsOf(key).at(-1).name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(`../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
@@ -51,7 +51,7 @@ for (const key of keys) for (const item of staticViews(key)) {
     total += bytes;
   }
 }
-assert(total < 3000000, `as imagens somam menos de 3 MB (${total} B)`);
+assert(total < 4000000, `as imagens somam menos de 4 MB (${total} B)`);
 
 // Controlador: a galeria troca com a peça, com a cor do fundo das fotos; sem nota embaixo da foto; cor leva ao 3D.
 assert(controller.includes("import {staticViews,createGallery} from './gallery.js';"));
@@ -84,6 +84,6 @@ assert(page.includes("await (await fetch('/design/vistas/fotos.json')).json()") 
 assert(!/Fotografo|ProductViewer|kit/.test(page + generator), 'o gerador não tira fotos do visualizador do site');
 assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video/mp4'"));
 // Tradução: nota, rótulos e texto alternativo das fotos.
-assert(i18n.includes('(Frente|Três quartos|Costas|.+ de perto)'));
+assert(i18n.includes('(Frente|Três quartos|Três quartos de trás|Costas|De cima|.+ de perto)'));
 
-console.log(`PASS: photo gallery — the 4-photo standard, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), rendered from the 3D models on the page background, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);
+console.log(`PASS: photo gallery — the 6-photo standard, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), rendered from the 3D models on the page background, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);

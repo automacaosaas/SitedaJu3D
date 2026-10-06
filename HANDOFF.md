@@ -56,11 +56,11 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
 - **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
-  continua na aba ao lado, e escolher uma cor leva a ele. **Padrão: 4 fotos por peça** (o macaco também), nesta ordem — frente, três
-  quartos, costas e um detalhe de perto (o rosto, a cabine) —, todas 4:5 (1200 x 1500), com a peça do mesmo tamanho e no mesmo lugar
+  continua na aba ao lado, e escolher uma cor leva a ele. **Padrão: 6 fotos por peça** (o macaco também), nesta ordem — frente, três
+  quartos, três quartos de trás, costas, de cima e um detalhe de perto (o rosto, a cabine) —, todas 4:5 (1200 x 1500), com a peça do mesmo tamanho e no mesmo lugar
   e uma sombra leve no chão; o detalhe enche o quadro, como o zoom das lojas (`STANDARD`/`GALLERY` em `dist/gallery.js`). **Desde
   05/10/2026 as fotos são renders do modelo 3D** (as fotos do Luiz vinham comprimidas e ficavam ruins): `tools/render-vistas/renderizar.cjs`
-  (Blender 5.2, Cycles, luz de estúdio, cores da vitrine) grava em `design/vistas/renders/`, e `node tools/galeria-vistas/gerar.cjs`
+  (Blender 5.2, Cycles, luz de estúdio, plástico acetinado com verniz fino, cores da vitrine) grava em `design/vistas/renders/`, e `node tools/galeria-vistas/gerar.cjs`
   leva para `dist/assets/vistas/` como manda `design/vistas/fotos.json`; depois, suba `VIEWS_VERSION`. Peça nova: `design/vistas/PADRAO.md`.
 - **Dinossauro 3D (05/10/2026):** o modelo do Meshy (`Meshy_AI__1005212758_model-edit.glb`, só a forma), com os 2 espinhos da peça
   nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;

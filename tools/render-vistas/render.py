@@ -38,7 +38,7 @@ def importar(src):
 def lin(h):
     c=np.array([int(h[i:i+2],16)/255 for i in (1,3,5)]);return tuple(np.where(c<=.04045,c/12.92,((c+.055)/1.055)**2.4))+(1,)
 def materiais(obj):
-    """plástico de impressão: fosco com um brilho largo; as cores da vitrine nas partes coloríveis"""
+    """plástico acetinado com um verniz fino (06/10: as primeiras saíram foscas e chapadas, "massinha"); as cores da vitrine nas partes coloríveis"""
     for m in obj.data.materials:
         if not m:continue
         m.use_nodes=True;bs=m.node_tree.nodes.get('Principled BSDF')
@@ -46,22 +46,24 @@ def materiais(obj):
         nome=m.name.split('.')[0]
         if nome in C['cores']:bs.inputs['Base Color'].default_value=lin(C['cores'][nome])
         r=bs.inputs['Roughness'].default_value
-        bs.inputs['Roughness'].default_value=max(.32,min(.55,r if nome in ('eyes','features','highlight') else .46))
+        bs.inputs['Roughness'].default_value=max(.32,min(.55,r)) if nome in ('eyes','features','highlight') else C.get('aspereza',.32)
+        # um verniz fino por cima do plástico (o brilho que as fotos da peça têm); 0 = sem
+        if 'Coat Weight' in bs.inputs and nome not in ('eyes','features'):bs.inputs['Coat Weight'].default_value=C.get('brilho',.3);bs.inputs['Coat Roughness'].default_value=C.get('brilho_aspereza',.2)
         if 'Coat Weight' in bs.inputs and nome in ('eyes','features'):bs.inputs['Coat Weight'].default_value=C.get('verniz',.1)   # o olho preto brilha um pouco
 
 def cena(altura):
     sc=bpy.context.scene;sc.render.engine='CYCLES';sc.cycles.device='CPU';sc.cycles.samples=C.get('amostras',128)
     sc.cycles.use_adaptive_sampling=True;sc.cycles.adaptive_threshold=.01;sc.cycles.use_denoising=True;sc.cycles.denoiser='OPENIMAGEDENOISE'
     sc.render.resolution_x,sc.render.resolution_y=W,H;sc.render.resolution_percentage=100;sc.render.film_transparent=True
-    sc.view_settings.view_transform=C.get('transform','Standard');sc.view_settings.look=C.get('look','None');sc.view_settings.exposure=C.get('exposicao',-.35)
+    sc.view_settings.view_transform=C.get('transform','Standard');sc.view_settings.look=C.get('look','Medium High Contrast');sc.view_settings.exposure=C.get('exposicao',-.35)
     sc.cycles.max_bounces=8;sc.cycles.transparent_max_bounces=8
     # céu: o studio.exr do Blender, fraco, só para os reflexos e a luz de preenchimento
     w=bpy.data.worlds.new('estudio');sc.world=w;w.use_nodes=True;nt=w.node_tree;nt.nodes.clear()
     env=nt.nodes.new('ShaderNodeTexEnvironment');env.image=bpy.data.images.load(os.path.join(bpy.utils.system_resource('DATAFILES',path='studiolights'),'world','studio.exr'))
-    bg=nt.nodes.new('ShaderNodeBackground');bg.inputs['Strength'].default_value=C.get('ceu',.45);out=nt.nodes.new('ShaderNodeOutputWorld')
+    bg=nt.nodes.new('ShaderNodeBackground');bg.inputs['Strength'].default_value=C.get('ceu',.32);out=nt.nodes.new('ShaderNodeOutputWorld')
     nt.links.new(env.outputs['Color'],bg.inputs['Color']);nt.links.new(bg.outputs['Background'],out.inputs['Surface'])
-    # luz principal grande e suave, à esquerda e no alto; contraluz fraca atrás à direita (separa a peça do fundo)
-    for nome,pos,energia,tam in (('principal',(-1.6,-2.2,2.6),C.get('luz',140),2.2),('contraluz',(1.8,2.0,2.4),C.get('contraluz',70),1.6),('preenche',(2.4,-1.4,1.2),C.get('preenche',40),2.5)):
+    # luz principal à esquerda e no alto, menor (sombra e brilho mais definidos); contraluz atrás à direita (contorna a peça); preenchimento fraco
+    for nome,pos,energia,tam in (('principal',(-1.6,-2.2,2.6),C.get('luz',190),C.get('tamanho_luz',1.1)),('contraluz',(1.8,2.0,2.4),C.get('contraluz',120),1.6),('preenche',(2.4,-1.4,1.2),C.get('preenche',22),2.5)):
         l=bpy.data.lights.new(nome,'AREA');l.energy=energia*altura**2;l.size=tam*altura;l.shape='DISK'
         o=bpy.data.objects.new(nome,l);sc.collection.objects.link(o);o.location=Vector(pos)*altura
         o.rotation_euler=(Vector((0,0,.45*altura))-o.location).to_track_quat('-Z','Y').to_euler()
