@@ -180,8 +180,9 @@ Empresa no Simples Nacional que **fabrica** o que vende: por isso os CFOPs são 
 - **Frete**: modalidade 0 (por conta do emitente), com o valor destacado no campo do frete e somado ao total.
 - **Informações complementares** (texto da contadora, 01/10/2026): "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO
   SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI. Pedido nº: JU-…". Quem escreve é o site, com o número
-  do pedido da loja; o campo "Informações complementares" da natureza no Bling fica **vazio** para não repetir. Falta
-  ela confirmar se é "ME OU EPP" (como está) ou "ME EPP" (como no documento dela).
+  do pedido da loja; o campo "Informações complementares" da natureza no Bling fica **vazio** para não repetir
+  (confirmado pela contadora em 06/10/2026). O texto vai sem acentos ("NAO", "CREDITO"). Falta ela confirmar se é
+  "ME OU EPP" (como está) ou "ME EPP" (como no documento dela), e se pode ficar sem acentos.
 - Não usados: 5102, 6102 e 6108 são de revenda; o CSOSN 101 exige informar a alíquota do crédito, e o contador não
   pediu isso.
 
@@ -220,9 +221,19 @@ padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastr
    03/10/2026). Falta conferir o telefone da loja em "Dados da empresa" (sai com 8 dígitos no DANFE) e, na virada para
    produção, mudar o ambiente para "1 - Produção" e o próximo número da série 1 para **11** (o contador é o mesmo da
    homologação, que já passou do 20).
-2. **Contadora:** revisar os DANFEs de homologação (nº 13 MG 5101, nº 14 SP pessoa física 6107 com a linha do DIFAL,
-   nº 17 RS contribuinte 6101), confirmar "ME OU EPP" no texto, confirmar o nº 11 e decidir o "Total aproximado de
-   tributos" das duas naturezas (tabela IBPT, hoje 37,67%, ou alíquota fixa do Simples).
+2. **Contadora:**
+   - **Respondido em 06/10/2026:**
+     - a primeira nota de produção pelo Bling é a **nº 11** da série 1;
+     - o "Total aproximado de tributos" das duas naturezas usa a **tabela IBPT**;
+     - o campo "Informações complementares" da natureza fica vazio;
+     - empresa sem inscrição estadual vai como **não contribuinte** (CFOP 6107);
+     - a linha do DIFAL zerado continua nas vendas para pessoa física de outro estado.
+
+     O site já faz os três últimos itens; os dois primeiros são configurados no Bling.
+   - **Falta:**
+     - revisar os DANFEs de homologação: nº 13 (MG, 5101), nº 14 (SP, pessoa física, 6107, com a linha do DIFAL) e
+       nº 17 (RS, contribuinte, 6101);
+     - confirmar "ME OU EPP" ou "ME EPP" no texto, e se pode ficar sem acentos.
 
 CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
 inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não
