@@ -144,9 +144,13 @@ carrinho, e a área do produto mostra as cores fixas com o preço e a compra.
   ponta de cima do rebaixo vazio aparecia acima delas, como uma sombra. Agora cada estrela fica no centro do rebaixo (folga de ~0,12 mm em
   volta) e assentada no fundo, ~1,9 mm acima da asa, como nos renders do Luiz. Corrigido no 3D (`?v=cad-21-08-estrelas1`) e nas imagens:
   vitrine, popup, card, miniatura, camada da frente da demonstração e prévia de link (`tools/render-aviao-macaco/README.md`).
+- **Nomes das capas de lâmpada de fenda (pedido de 06/10):** **MonkeyLamp** (o macaco, antes Macacoscópio), **GiraffeLamp** e **UnicornLamp**
+  (os títulos em `products.js`; os identificadores e os endereços continuam `macacoscopio`, `girafoscopio` e `unicornioscopio`).
+- **Descrição do avião:** ganhou "Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber
+  mais medidas, entre em contato." (PT/EN/ES; também na página `aviaoscopia.html` e na prévia de link).
 - **Girafa e unicórnio.** Duas abas novas no banner, iguais à do macaco (novidade sem venda: "Ver em 3D", "Ver encaixado", cards em "Nossa
-  coleção" e em Produtos), com as cores principais de cada bicho: **Girafoscópio** em amarelo-ocre, marrom e creme (banner dourado) e
-  **Unicornioscópio** em branco, rosa, lilás e dourado (banner lilás). Nomes, subtítulo e descrição são provisórios (`SOON` em `products.js`).
+  coleção" e em Produtos), com as cores principais de cada bicho: **GiraffeLamp** em amarelo-ocre, marrom e creme (banner dourado) e
+  **UnicornLamp** em branco, rosa, lilás e dourado (banner lilás). Nomes, subtítulo e descrição são provisórios (`SOON` em `products.js`).
   Até chegarem a foto e o 3D deles, as imagens são cópias das do macaco com o nome de cada peça e o 3D aponta para o do macaco. Para trocar:
   - foto da vitrine: `dist/assets/product-<peça>-cutout.webp` (1254 x 1254, fundo transparente, no quadro das outras) e, se o
     enquadramento mudar, `art` da peça em `products.js` (`node tools/render-aviao-macaco/art.cjs imagem.webp`);

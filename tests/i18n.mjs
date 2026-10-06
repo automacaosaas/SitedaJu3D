@@ -64,7 +64,7 @@ for (const text of ['Enviamos um código de seis números para', 'Código enviad
 }
 
 // ── static pages: every visible string has an English translation ─────
-const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal', 'Total', 'Pix', 'Borboletoscópio', 'Dinossauroscópio', 'Aviãoscopia', 'Instagram', 'WhatsApp', '3D', 'Macacoscópio', 'Girafoscópio', 'Unicornioscópio']);
+const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal', 'Total', 'Pix', 'Borboletoscópio', 'Dinossauroscópio', 'Aviãoscopia', 'Instagram', 'WhatsApp', '3D', 'MonkeyLamp', 'GiraffeLamp', 'UnicornLamp']);
 const entities = {'&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&copy;': '©', '&larr;': '←', '&rarr;': '→', '&middot;': '·', '&hearts;': '♥'};
 const decode = text => text.replace(/&#?\w+;/g, entity => entities[entity] ?? entity);
 const missing = [];
