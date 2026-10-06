@@ -54,12 +54,15 @@ try{
   model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
  }
  // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
- // (the giraffe and the unicorn load the monkey's model until theirs arrive: the file comes from asset-models.js)
+ // 2026-10-06: the giraffe and the unicorn have their own models (Rodin, tools/modelo-novidades), each in its fixed colours.
+ const NOVELTY_MATERIALS={macacoscopio:['banana','face','features','fur','highlight'],girafoscopio:['coat','features','muzzle','spots'],unicornioscopio:['blue','coat','features','horn','purple']};
  for(const key of Object.keys(SOON)){
   const raw=await readFile(modelURL(key));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
   // The loader reads embedded images through a blob: fetch, which the site's CSP (connect-src) blocks: colours go in the materials.
   assert.equal(json.textures?.length||0,0,`${key}: fixed colours in the materials, no texture`);
+  assert.ok(String(modelURL(key)).includes(`/models/${key}.glb`),`${key}: its own model`);
+  assert.deepEqual(json.materials.map(m=>m.name).sort(),NOVELTY_MATERIALS[key],`${key}: the materials of its colours`);
   const model=await createAssetModel(key,{},new AbortController().signal);
   assert.equal(model.parts.size,0,`${key}: fixed colours, no selectable part`);
   model.group.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model.group);

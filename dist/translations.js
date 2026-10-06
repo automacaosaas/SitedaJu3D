@@ -776,6 +776,8 @@ Bege|Beige|Beige
 Amarelo-ocre|Ochre yellow|Amarillo ocre
 Creme|Cream|Crema
 Dourado|Gold|Dorado
+Roxo|Purple|Morado
+Azul-lavanda|Lavender blue|Azul lavanda
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original

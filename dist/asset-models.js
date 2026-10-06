@@ -11,9 +11,10 @@ const ASSETS={
   aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
   // O macaco do Meshy com as cores fixas do macaco em cinco materiais, sem textura (VITRINE-AVIAO-MACACO-QA.md)
   macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
-  // Girafa e unicórnio (novidades no molde do macaco): até chegar o 3D de cada um, o do macaco (troque pelo .glb deles e suba o ?v=)
-  girafoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
-  unicornioscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)
+  // Girafa e unicórnio do Rodin (06/10/2026) com as cores fixas de cada um em materiais, sem textura; por dentro, lisos; as estrelas
+  // do unicórnio refeitas (tools/modelo-novidades)
+  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-1',import.meta.url),
+  unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-1',import.meta.url)
 };
 // The file each piece loads (tests read the same one).
 export const modelURL=key=>ASSETS[key];

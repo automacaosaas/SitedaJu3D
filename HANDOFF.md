@@ -95,7 +95,12 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
   olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
 - **Girafa e unicórnio (06/10/2026):** já são novidades na vitrine (GiraffeLamp e UnicornLamp, `SOON` em `products.js`; o macaco agora é MonkeyLamp), no molde do
-  macaco e com as cores de cada bicho; as imagens e o 3D ainda são os do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`).
+  macaco e com as cores de cada bicho; as imagens ainda são as do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`). **3D de cada um (06/10/2026):**
+  os modelos do Rodin (`rodin-v2_-0 (10).glb`, girafa; `(11)`, unicórnio) com as cores fixas em materiais, sem textura, por
+  `tools/modelo-novidades/preparar_novidade.py` (Blender 5.2): a cor de cada face vem da textura e segue o relevo (lateral, pé, entalhes);
+  por dentro, liso, na cor do corpo (some o borrado das bolinhas da girafa); o miolo das orelhas é a concha; as 5 estrelas do unicórnio
+  refeitas regulares, em pé e iguais, longe das nuvens. Depois `tools/modelo-novidades/reduzir-comprimir.cjs` (metade dos triângulos
+  com a borda de cada cor travada + Meshopt; ~1 MB cada) e o `?v=` em `dist/asset-models.js`. As cores fixas da vitrine são as do modelo.
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
