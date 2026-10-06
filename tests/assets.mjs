@@ -24,7 +24,8 @@ for (const name of referenced) assert(await exists(name), `referenced asset exis
 for (const name of referenced) assert(!/\.png$/.test(name) || name === 'logo-ju-email.png', `served images are WebP (PNG only for the e-mail logo): ${name}`);
 
 // Budgets for what visitors download. Raise them only on purpose, after measuring.
-const budget = {'logo-ju.webp': 40, 'julia-auth.webp': 400};
+// The butterfly on the home's banner is the first picture every new visitor downloads (index.html preloads it).
+const budget = {'logo-ju.webp': 40, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150};
 for (const name of referenced) {
   const kb = (await stat(new URL(`assets/${name}`, dist))).size / 1024;
   const limit = budget[name] ?? (name.endsWith('.glb') ? 2500 : 300);
