@@ -17,6 +17,12 @@ Lâmpada de fenda|Slit lamp|Lámpara de hendidura
 Macacoscópio encaixado na lâmpada de fenda.|Macacoscópio fitted on the slit lamp.|Macacoscópio encajado en la lámpara de hendidura.
 Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca|Macacoscópio, a brown monkey cover holding a banana, on a white pedestal|Macacoscópio, funda de mono marrón con una banana, sobre un pedestal blanco
 Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
+Uma girafinha para acompanhar o olhar dos pequenos. Em breve.|A little giraffe to keep the little ones company. Coming soon.|Una jirafita para acompañar la mirada de los pequeños. Próximamente.
+Um unicórnio para acompanhar o olhar dos pequenos. Em breve.|A unicorn to keep the little ones company. Coming soon.|Un unicornio para acompañar la mirada de los pequeños. Próximamente.
+Girafoscópio encaixado na lâmpada de fenda.|Girafoscópio fitted on the slit lamp.|Girafoscópio encajado en la lámpara de hendidura.
+Unicornioscópio encaixado na lâmpada de fenda.|Unicornioscópio fitted on the slit lamp.|Unicornioscópio encajado en la lámpara de hendidura.
+Girafoscópio sobre uma pilastra branca|Girafoscópio on a white pedestal|Girafoscópio sobre un pedestal blanco
+Unicornioscópio sobre uma pilastra branca|Unicornioscópio on a white pedestal|Unicornioscópio sobre un pedestal blanco
 Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
@@ -759,8 +765,15 @@ Cores da peça|The piece's colors|Colores de la pieza
 Ainda não está à venda. Gire a peça e veja cada detalhe.|Not on sale yet. Turn the piece and see every detail.|Aún no está a la venta. Gira la pieza y mira cada detalle.
 Arraste para girar e ver cada detalhe.|Drag to rotate and see every detail.|Arrastra para girar y ver cada detalle.
 Ver o Macacoscópio encaixado|See the Macacoscópio fitted|Ver el Macacoscópio encajado
+Ver o Girafoscópio em 3D|See the Girafoscópio in 3D|Ver el Girafoscópio en 3D
+Ver o Girafoscópio encaixado|See the Girafoscópio fitted|Ver el Girafoscópio encajado
+Ver o Unicornioscópio em 3D|See the Unicornioscópio in 3D|Ver el Unicornioscópio en 3D
+Ver o Unicornioscópio encaixado|See the Unicornioscópio fitted|Ver el Unicornioscópio encajado
 Marrom|Brown|Marrón
 Bege|Beige|Beige
+Amarelo-ocre|Ochre yellow|Amarillo ocre
+Creme|Cream|Crema
+Dourado|Gold|Dorado
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original

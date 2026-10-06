@@ -17,7 +17,11 @@ export const PRODUCTS = {
 // Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
 // Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
 export const SOON = {
-  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
+  macacoscopio:{number:'04',category:'oftalmologia',title:'Macacoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]},
+  // Girafa e unicórnio (06/10/2026): duas abas iguais à do macaco, com as cores de cada bicho no banner, no header e nos pontinhos. Até
+  // chegarem a foto e o 3D deles, as imagens (arquivos com o nome de cada um) e o 3D são os do macaco; é só trocar os arquivos.
+  girafoscopio:{number:'05',category:'oftalmologia',title:'Girafoscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-girafoscopio-cutout.webp',catalogImage:'product-girafoscopio-cutout.webp',description:'Uma girafinha para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'ochre',name:'Amarelo-ocre',hex:'#e3a83a'},{id:'brown',name:'Marrom',hex:'#8b4f24'},{id:'cream',name:'Creme',hex:'#f3e2b8'}]},
+  unicornioscopio:{number:'06',category:'oftalmologia',title:'Unicornioscópio',subtitle:'Capa para lâmpada de fenda portátil',image:'product-unicornioscopio-cutout.webp',catalogImage:'product-unicornioscopio-cutout.webp',description:'Um unicórnio para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'white',name:'Branco',hex:'#f4f1ed'},{id:'pink',name:'Rosa Ju',hex:'#ee8eaa'},{id:'lilac',name:'Lilás',hex:'#ab91d1'},{id:'gold',name:'Dourado',hex:'#e2b84a'}]}
 };
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
@@ -109,6 +113,19 @@ export const SHOWCASE = {
     }
   }
 };
+// Girafa e unicórnio: o enquadramento e a demonstração do macaco (as imagens provisórias são as dele), com o nome e o tema de cada um.
+// Quando chegar a foto de um deles, ajuste `art` (node tools/render-aviao-macaco/art.cjs) e as medidas da demonstração.
+for (const [key, alt, theme, demo] of [
+  ['girafoscopio', 'Girafoscópio sobre uma pilastra branca',
+    {bannerStops:'#fff6df 0%,#fbe4b0 52%,#f4d08a 100%', headerBackground:'#fbe9c0', textColor:'#2e1c07', mutedColor:'#5c3a10', accentColor:'#87430c'},
+    {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'Girafoscópio encaixado na lâmpada de fenda.'}],
+  ['unicornioscopio', 'Unicornioscópio sobre uma pilastra branca',
+    {bannerStops:'#fcf6fe 0%,#f1e3f8 52%,#e5d1f1 100%', headerBackground:'#f4e9fa', textColor:'#291532', mutedColor:'#5a3d6a', accentColor:'#87397a'},
+    {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'Unicornioscópio encaixado na lâmpada de fenda.'}]
+]) {
+  const monkey = SHOWCASE.macacoscopio, title = SOON[key].title;
+  SHOWCASE[key] = {art:{...monkey.art, alt}, theme, demo:{...monkey.demo, ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
+}
 export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}
 export function defaults(key){return Object.fromEntries(PRODUCTS[key].parts.map(part=>[part.id,part.default]));}
 export function color(id){return PALETTE.find(c=>c.id===id)||PALETTE[0];}
