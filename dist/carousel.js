@@ -3,13 +3,15 @@
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
+// A peça em foco na home é uma só: a vitrine e a coleção logo abaixo (catalog.js) se avisam por este evento e andam juntas.
+const FOCUS = 'ju:product-focus';
 if (region && shell) init();
 
 function init() {
@@ -28,12 +30,12 @@ function init() {
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
     const product = PRODUCTS[key] || SOON[key], soon = !PRODUCTS[key], {art, theme, demo} = showcase(key);
-    // wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo.
-    const wash = mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3);
-    return {key, product, art, theme, demo, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    // colors: o que a peça empresta às outras páginas (journey.js); wash: o tom claro do card ativo do catálogo e do fundo.
+    const colors = journeyColors(theme), wash = colors['--theme-wash'];
+    return {key, product, art, theme, demo, colors, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
-  let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false;
+  let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false, shared = '';
   let travel = 600, rise = 12;
 
   function fromHash() {
@@ -134,27 +136,32 @@ function init() {
     const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
     for (const element of themed) for (const name in vars) element.style.setProperty(name, vars[name]);
   }
-  function report() {
-    const i = mod(Math.round(target), total);
-    const {key, theme, wash} = entries[i];
-    window.juTheme?.save(key, {'--theme-text':theme.textColor, '--theme-muted':theme.mutedColor, '--theme-accent':theme.accentColor, '--theme-wash':wash, '--theme-soft':mixColor(theme.accentColor, '#ffffff', .78), '--theme-accent-strong':mixColor(theme.accentColor, '#000000', .2)});
-    status.textContent = `${entries[i].product.title}, produto ${i + 1} de ${total}.`;
+  function report({announce = true} = {}) {
+    const i = mod(Math.round(target), total), {key, colors} = entries[i];
+    window.juTheme?.save(key, colors);
+    status.textContent = announce ? `${entries[i].product.title}, produto ${i + 1} de ${total}.` : '';   // vazio não fica desatualizado
+    // A coleção (catalog.js) acompanha a vitrine; só quando a peça muda, não a cada relatório da mesma peça.
+    if (key !== shared) { shared = key; dispatchEvent(new CustomEvent(FOCUS, {detail: {product: key, source: 'showcase'}})); }
   }
 
   // ── Movimento ────────────────────────────────────────────────────────────────
   function stop() { cancelAnimationFrame(frame); frame = 0; }
-  function settle(next) {
+  function settle(next, {announce = true} = {}) {
     stop(); target = next;
+    // #produto/<peça> diz por onde se chegou (Ver encaixado, Produtos, carrinho). Trocada a peça, o endereço sai já: senão o
+    // "Continuar escolhendo" do carrinho e o recarregar voltavam à peça antiga (e, se à venda, abriam a janela dela).
+    const routed = fromHash();
+    if (routed >= 0 && routed !== mod(Math.round(target), total)) history.replaceState(history.state, '', location.pathname + location.search);
     setActive(mod(Math.round(target), total));
     preloadAround(active);
     const from = position, start = performance.now(), duration = settleDuration(target - from, {reduced: reduced.matches});
-    if (from === target) { render(); report(); return; }
+    if (from === target) { render(); report({announce}); return; }
     function tick(now) {
       const progress = Math.min(1, (now - start) / duration);
       position = from + (target - from) * easeOut(progress);
       render();
       if (progress < 1) frame = requestAnimationFrame(tick);
-      else { frame = 0; position = target; render(); report(); }
+      else { frame = 0; position = target; render(); report({announce}); }
     }
     frame = requestAnimationFrame(tick);
   }
@@ -260,12 +267,25 @@ function init() {
     requestAnimationFrame(open);
   }
   addEventListener('hashchange', fromRoute);
+  // Escolher uma peça na coleção traz a vitrine (e as cores da página) até ela. Assim a peça guardada para a volta à home
+  // (logo, Início, carrinho) é a escolhida lá embaixo, e não a última vista aqui no alto.
+  addEventListener(FOCUS, e => {
+    const index = keys.indexOf(e.detail?.product);
+    if (e.detail?.source === 'showcase' || index < 0 || gesture || index === mod(Math.round(target), total)) return;
+    if (locked) demo.close({immediate: true});
+    // Sem anunciar (quem anuncia é a coleção) e guardando já: a vitrine pode estar fora da tela, ou a pessoa ir ao carrinho
+    // antes do fim do movimento.
+    settle(target + wrapDistance(index, target, total), {announce: false});
+    report({announce: false});
+  });
   addEventListener('resize', measure);
   if ('ResizeObserver' in window) new ResizeObserver(() => measure()).observe(shell);
   reduced.addEventListener('change', () => { stop(); position = target; render(); report(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stop(); gesture = null; region.classList.remove('is-dragging'); position = target; render(); report(); }
   });
+  // Voltar (Back) restaura a home como estava: a peça à vista volta a ser a guardada, mesmo que outra página tenha guardado outra.
+  addEventListener('pageshow', e => { if (e.persisted) report(); });
 
   position = target = initial;
   setActive(initial); preloadAround(initial); measure(); report();

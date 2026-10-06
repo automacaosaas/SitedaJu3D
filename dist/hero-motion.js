@@ -49,6 +49,17 @@ export function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// As cores que a peça empresta às outras páginas (journey.js): as do tema e as derivadas. A vitrine guarda as da peça da
+// frente; a página de cada peça (tools/build-product-pages.cjs) já nasce com as dela.
+// wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo e o fundo das páginas.
+export function journeyColors(theme) {
+  return {
+    '--theme-text': theme.textColor, '--theme-muted': theme.mutedColor, '--theme-accent': theme.accentColor,
+    '--theme-wash': mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3),
+    '--theme-soft': mixColor(theme.accentColor, '#ffffff', .78), '--theme-accent-strong': mixColor(theme.accentColor, '#000000', .2)
+  };
+}
+
 // Fundo e header: cross-fade entre as duas camadas vizinhas da posição atual.
 export function layerMix(position, total) {
   const lo = Math.floor(position);

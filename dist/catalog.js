@@ -1,6 +1,6 @@
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {productGrid} from './product-grid.js';
-import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, color, defaults, showcase} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, ALIASES, color, defaults, showcase} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
@@ -46,9 +46,17 @@ function productCard({id, product}) {
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 
+// A peça em foco na home é uma só: a coleção e a vitrine do topo (carousel.js) se avisam por este evento e andam juntas.
+// A coleção começa onde a vitrine começa: na peça do endereço (#produto/<peça>) ou na última vista (journey.js), não na primeira.
+const FOCUS = 'ju:product-focus';
+function startAt(items) {
+  const raw = location.hash.startsWith('#produto/') ? location.hash.slice(9).split('/')[0] : '';
+  return [ALIASES[raw] || raw, window.juTheme?.product()].map(id => items.findIndex(item => item.id === id)).find(index => index >= 0) ?? 0;
+}
+
 class ProductCarousel {
   constructor(host, items) {
-    this.host = host; this.items = items; this.active = 0; this.gesture = null; this.wheelLock = false;
+    this.host = host; this.items = items; this.active = startAt(items); this.gesture = null; this.wheelLock = false;
     const initialCards = [...host.querySelectorAll('.product-rail-card')];
     const preRendered = host.dataset.preRendered === 'true' && initialCards.length === items.length &&
       initialCards.every((card, index) => card.dataset.productId === items[index].id &&
@@ -115,15 +123,19 @@ class ProductCarousel {
     this.stage.addEventListener('pointerleave', event => { if (!this.gesture?.moved) end(event); });
   }
   move(direction) { this.goTo((this.active + direction + this.items.length) % this.items.length); }
-  goTo(index) { if (index === this.active) return; this.active = index; this.render(true); }
+  goTo(index) { if (index === this.active) return; this.active = index; this.render(true); dispatchEvent(new CustomEvent(FOCUS, {detail: {product: this.items[index].id, source: 'collection'}})); }
+  // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine) e sem avisar de volta.
+  follow(id) { const index = this.items.findIndex(item => item.id === id); if (index < 0 || index === this.active) return; this.active = index; this.render(false); }
   render(announce) {
     this.cards.forEach((card, index) => { const position = offsetFrom(index, this.active, this.items.length); card.style.setProperty('--slot', position); card.classList.toggle('is-active', position === 0); card.classList.toggle('is-side', Math.abs(position) === 1); card.classList.toggle('is-far', Math.abs(position) > 1); card.tabIndex = position === 0 ? 0 : -1; card.querySelector('.product-rail-active-details').setAttribute('aria-hidden', String(position !== 0)); });
     [...this.dots.children].forEach((dot, index) => dot.setAttribute('aria-selected', String(index === this.active)));
     if (announce) this.live.textContent = `${this.items[this.active].product.title}, ${this.active + 1} de ${this.items.length}.`;
   }
 }
-function mountCarousel(host, key = host.dataset.category) { const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); return; } new ProductCarousel(host, list); }
+const rails = new Map();   // uma coleção por host; trocar de categoria troca a do host
+function mountCarousel(host, key = host.dataset.category) { const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); rails.delete(host); return; } rails.set(host, new ProductCarousel(host, list)); }
 for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
+window.addEventListener(FOCUS, event => { if (event.detail?.source !== 'collection') for (const rail of rails.values()) rail.follow(event.detail?.product); });
 // Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
 // Aberta por um banner da página Escolha o seu (produtos.html?encaixe=<família>): só as peças daquele encaixe, com um selo
 // para voltar a ver todas e o caminho para os outros encaixes. Trocar de categoria volta à página inteira.

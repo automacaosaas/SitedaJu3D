@@ -16,6 +16,10 @@
     },
     product() { try { return JSON.parse(sessionStorage.getItem(key))?.product || ''; } catch { return ''; } }
   };
+  // A product page (tools/build-product-pages.cjs) wears its piece's colors from the first frame and carries them on, so the
+  // home's showcase opens on this piece. A page restored by Back/Forward claims its piece again.
+  const claim = () => { if (root.dataset.themeProduct) try { window.juTheme.save(root.dataset.themeProduct, JSON.parse(root.dataset.themeColors)); } catch {} };
+  claim();
   const embedded = window.parent !== window && new URLSearchParams(location.search).get('panel') === '1';
   if (embedded) root.classList.add('account-embedded');
   if (embedded) window.addEventListener('message', event => {
@@ -47,7 +51,7 @@
   const deadline = setTimeout(reveal, 2000);
   window.addEventListener('ju:header-ready', revealWhenReady, {once:true});
   document.addEventListener('DOMContentLoaded', revealWhenReady, {once:true});
-  window.addEventListener('pageshow', () => { root.classList.remove('journey-leaving'); });
+  window.addEventListener('pageshow', event => { root.classList.remove('journey-leaving'); if (event.persisted) claim(); });
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href]');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.download || (link.target && link.target !== '_self')) return;
