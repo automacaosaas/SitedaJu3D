@@ -137,3 +137,24 @@ carrinho, e a área do produto mostra as cores fixas com o preço e a compra.
    cabe nela; `tests/model-framing.mjs`, que não corta em nenhuma rotação; `tests/assets.mjs`, a compressão e o limite de tamanho;
    `tests/model-details.mjs`, as cores e a forma do modelo do Meshy (num modelo novo, trocar esses pontos).
    Se preferir, suba o STL ou o 3MF em `design/modelos/macacoscopio/` (fora do site publicado) e peça a conversão.
+
+## Ajustes de 06/10/2026 (branch `claude/girafa-unicornio-abas-dylhoi`)
+
+- **Estrelas do avião.** Ficavam 1,83 mm abaixo do rebaixo em forma de estrela de cada asa e, sem caber nele, paravam em cima da asa: a
+  ponta de cima do rebaixo vazio aparecia acima delas, como uma sombra. Agora cada estrela fica no centro do rebaixo (folga de ~0,12 mm em
+  volta) e assentada no fundo, ~1,9 mm acima da asa, como nos renders do Luiz. Corrigido no 3D (`?v=cad-21-08-estrelas1`) e nas imagens:
+  vitrine, popup, card, miniatura, camada da frente da demonstração e prévia de link (`tools/render-aviao-macaco/README.md`).
+- **Girafa e unicórnio.** Duas abas novas no banner, iguais à do macaco (novidade sem venda: "Ver em 3D", "Ver encaixado", cards em "Nossa
+  coleção" e em Produtos), com as cores principais de cada bicho: **Girafoscópio** em amarelo-ocre, marrom e creme (banner dourado) e
+  **Unicornioscópio** em branco, rosa, lilás e dourado (banner lilás). Nomes, subtítulo e descrição são provisórios (`SOON` em `products.js`).
+  Até chegarem a foto e o 3D deles, as imagens são cópias das do macaco com o nome de cada peça e o 3D aponta para o do macaco. Para trocar:
+  - foto da vitrine: `dist/assets/product-<peça>-cutout.webp` (1254 x 1254, fundo transparente, no quadro das outras) e, se o
+    enquadramento mudar, `art` da peça em `products.js` (`node tools/render-aviao-macaco/art.cjs imagem.webp`);
+  - cards: `card-<peça>.webp` (768) e `card-preview-<peça>.webp` (384); aba Foto: `vistas/<peça>-frente.webp` (960 x 1200) e `-mini` (160 x 200);
+  - 3D: o `.glb` em `dist/assets/models/<peça>.glb` (como o do macaco, sem textura) e a linha da peça em `dist/asset-models.js`;
+  - "Ver encaixado": hoje é a demonstração do macaco na lâmpada; para o retinoscópio, as camadas como as da borboleta e do dinossauro.
+- **Página da peça.** Detalhes, Cores, Entrega e Trocas ficam só no (i) do topo, também no computador. A barra do 3D foi para a direita (no
+  celular, numa linha no alto, ao lado do Foto | 3D). No celular, as cores aparecem sempre e a área da peça fica com o resto da tela.
+- **Dinossauro.** O disquinho de brilho em cima de cada olho, que saiu cinza-escuro, agora é branco como na peça real, nas imagens da vitrine,
+  do popup, do card e da prévia de link (o 3D continua com o olho todo preto).
+
