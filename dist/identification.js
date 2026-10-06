@@ -63,14 +63,38 @@ export function identificationForm({email = '', profile = null, submitLabel, for
       <label class="id-check id-exempt"><input type="checkbox" name="stateRegistrationExempt"${exempt ? ' checked' : ''}><span>Isenta de inscrição estadual</span></label>
     </div>
     <p class="id-note">A nota fiscal sai no CNPJ. O CPF continua sendo o de quem compra.</p>
+    <button type="button" class="id-remove-company" data-id-action="remove-company"${p.company ? '' : ' hidden'}>Remover dados de pessoa jurídica</button>
   </details>
+  <p class="id-note id-company-removed" role="status" hidden>Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.</p>
   <label class="id-check"><input type="checkbox" name="marketingOptIn"${p.marketingOptIn ? ' checked' : ''}><span>Quero receber comunicações promocionais.</span></label>
   <p class="id-error" role="alert"></p>
   <button class="primary id-submit" type="submit">${submitLabel}<span aria-hidden="true">›</span></button>
 </form>`;
 }
 
-// Masks while typing, the "isenta" switch and the "Alterar" button of a saved CPF.
+// Pessoa jurídica: closing the section keeps what was typed, so "Remover dados de pessoa jurídica" empties it. With the
+// three fields empty the form sends `company: null` and the server erases the saved company (api/_lib/accounts.js): the
+// invoice goes back to the buyer's CPF. The button shows while the section holds anything.
+const COMPANY_FIELDS = ['cnpj', 'companyName', 'stateRegistration'];
+const companyTyped = form => COMPANY_FIELDS.some(name => form.querySelector(`[name="${name}"]`)?.value.trim()) || form.querySelector('[name="stateRegistrationExempt"]')?.checked === true;
+function syncCompany(form) {
+  const typed = companyTyped(form), remove = form.querySelector('[data-id-action="remove-company"]');
+  if (remove) remove.hidden = !typed;
+  if (typed) { const removed = form.querySelector('.id-company-removed'); if (removed) removed.hidden = true; }
+}
+function removeCompany(form) {
+  for (const name of COMPANY_FIELDS) { const input = form.querySelector(`[name="${name}"]`); input.value = ''; input.removeAttribute('aria-invalid'); }
+  form.querySelector('[name="stateRegistrationExempt"]').checked = false;
+  form.querySelector('[name="stateRegistration"]').disabled = false;
+  form.querySelector('.id-error').textContent = '';
+  const section = form.querySelector('.id-company');
+  section.open = false;
+  form.querySelector('[data-id-action="remove-company"]').hidden = true;
+  form.querySelector('.id-company-removed').hidden = false;
+  section.querySelector('summary').focus();
+}
+
+// Masks while typing, the "isenta" switch, the "Alterar" button of a saved CPF and the removal of the company data.
 export function wireIdentification(form) {
   form.addEventListener('input', event => {
     const input = event.target;
@@ -79,14 +103,17 @@ export function wireIdentification(form) {
     if (input.name === 'cpf') input.value = maskCpf(input.value);
     if (input.name === 'phone') input.value = maskPhone(input.value);
     if (input.name === 'cnpj') input.value = maskCnpj(input.value);
+    if (COMPANY_FIELDS.includes(input.name)) syncCompany(form);
   });
   form.addEventListener('change', event => {
     if (event.target.name !== 'stateRegistrationExempt') return;
     const ie = form.querySelector('[name="stateRegistration"]');
     ie.disabled = event.target.checked;
     if (event.target.checked) ie.value = '';
+    syncCompany(form);
   });
   form.addEventListener('click', event => {
+    if (event.target.closest('[data-id-action="remove-company"]')) { removeCompany(form); return; }
     if (!event.target.closest('[data-id-action="change-cpf"]')) return;
     const slot = form.querySelector('[data-cpf-slot]');
     slot.outerHTML = cpfInput();
