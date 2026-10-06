@@ -4,8 +4,9 @@
 // others find nothing left to do (atomic transitions), so an order is marked paid once and its e-mails go out once.
 //
 // Statuses: aguardando_pagamento → pendente (paid, waiting for Ju) → confirmado (Ju confirmed it: the NF-e is issued and the
-// order is "pronto para envio") → enviado (posted at the Correios, with the tracking code) → concluido (the buyer gets the
-// tracking e-mail) | recusado (before it is posted). Ju can step back (FROM below).
+// order is in "Expedição") → enviado (posted at the Correios: the tracking code goes in and the buyer gets the e-mail with
+// it) → concluido (delivered: by itself when the Correios register the delivery, api/_lib/tracking.js, or by Ju) |
+// recusado (before it is posted). Ju can step back (FROM below).
 // Declining also refunds the buyer through Mercado Pago (refund); a refunded order can no longer be reopened.
 // A refused card or an expired Pix ends as cancelado. The order keeps a snapshot of buyer and delivery, so it survives
 // the account being deleted (fiscal record).
@@ -26,11 +27,20 @@ const FROM = Object.freeze({
   concluido: ['enviado'],                           // only once the tracking code is in
   recusado: ['pendente', 'confirmado']              // never after it is posted
 });
-const DECIDED = ['confirmado', 'concluido', 'recusado'];   // the steps the buyer hears about by e-mail
+const DECIDED = ['confirmado', 'enviado', 'concluido', 'recusado'];   // the steps the buyer hears about by e-mail
 const INVOICED = ['confirmado', 'enviado', 'concluido'];   // the NF-e is issued when Ju confirms
 const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;                // a Correios object code: AA123456789BR
 const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
+// Everything the automatic tracking saved (api/_lib/tracking.js): cleared when the code comes off or changes.
+const NO_TRACKING = Object.freeze({trackingState: null, trackingEvents: null, trackingCheckedAt: null, deliveredAt: null, trackingNotices: null});
+const iso = value => value ? new Date(value).toISOString() : null;
+// What the panel and "Meus pedidos" show of the tracking: where the package stands and the last event (all of them with
+// `all`, for the timeline).
+function trackingView(order, {all = false} = {}) {
+  const events = Array.isArray(order.trackingEvents) ? order.trackingEvents : [];
+  return {code: order.trackingCode || null, state: order.trackingState || null, last: events[0] || null, checkedAt: iso(order.trackingCheckedAt), deliveredAt: iso(order.deliveredAt), ...(all ? {events} : {})};
+}
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
 // The Pix discount is not a column: the order keeps the list subtotal and the total charged, so it is what is missing.
 const discountOf = order => Math.max(0, (order.subtotalCents || 0) + (order.shippingCents || 0) - (order.totalCents || 0));
@@ -147,6 +157,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, discountCents: discountOf(order), totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
       trackingCode: ['enviado', 'concluido'].includes(order.status) ? order.trackingCode || null : null,
+      tracking: ['enviado', 'concluido'].includes(order.status) && order.trackingCode ? trackingView(order) : null,
       items: order.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitCents, selection: i.selection}))
     };
   }
@@ -164,6 +175,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       decidedAt: order.decidedAt ? new Date(order.decidedAt).toISOString() : null, declineReason: order.declineReason || '',
       trackingCode: order.trackingCode || null, shippedAt: order.shippedAt ? new Date(order.shippedAt).toISOString() : null,
+      tracking: order.trackingCode ? trackingView(order) : null,
       refund: {state: order.refundState || null, at: order.refundedAt ? new Date(order.refundedAt).toISOString() : null, error: order.refundError || null}
     };
   }
@@ -185,17 +197,19 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       code = String(trackingCode || '').replace(/\s+/g, '').toUpperCase();
       if (!TRACKING.test(code)) throw fail('invalid_request', {field: 'trackingCode'});
       Object.assign(patch, {trackingCode: code, shippedAt: current.status === 'enviado' && current.shippedAt ? current.shippedAt : date()});
+      if (code !== current.trackingCode) Object.assign(patch, NO_TRACKING);   // a new code: what was tracked for the old one goes
     }
-    if (['pendente', 'confirmado', 'recusado'].includes(status)) Object.assign(patch, {trackingCode: null, shippedAt: null});
+    if (['pendente', 'confirmado', 'recusado'].includes(status)) Object.assign(patch, {trackingCode: null, shippedAt: null}, NO_TRACKING);
     const moved = await store.orders.transition(id, [current.status], patch);
     if (!moved) throw fail('invalid_transition');
     await store.orders.addEvent(id, `status:${status}`, code || clean || null, actor);
     return store.orders.findById(id);
   }
 
-  // Tells the buyer each step Ju takes in the panel: confirmed (confirmado), posted with the tracking code (concluido, with a
-  // button to "Meus pedidos") or declined (recusado). Going back sends nothing, and the decline reason never leaves the panel. One e-mail per decision: the key carries the decision time, so a retry
-  // cannot double it, while a new decision after reopening is a new e-mail. The status is already saved either way.
+  // Tells the buyer each step: confirmed (confirmado), posted with the tracking code (enviado, with a button to "Meus
+  // pedidos"), delivered (concluido) or declined (recusado). Going back sends nothing, and the decline reason never leaves
+  // the panel. One e-mail per decision: the key carries the decision time, so a retry cannot double it, while a new
+  // decision after reopening is a new e-mail. The status is already saved either way.
   async function notifyDecision(order, {fetchImpl = globalThis.fetch, outbox, test = order.source !== 'live'} = {}) {
     if (!DECIDED.includes(order.status)) return false;
     const mail = config(env), data = summary(order);
@@ -206,6 +220,19 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${order.status}-${order.id}-${decided}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind: order.status, reference: order.reference}))});
       return true;
     } catch (error) { console.error(`orders: decision e-mail (${order.status}) failed for ${order.reference} —`, error.status || '', error.message); return false; }
+  }
+
+  // A tracking notice that is not a step of the order: "saiu para entrega" (api/_lib/tracking.js). Once per package (the key
+  // carries the day it was posted).
+  async function notifyTracking(order, kind, {fetchImpl = globalThis.fetch, outbox, test = order.source !== 'live'} = {}) {
+    const mail = config(env), data = summary(order);
+    if (kind !== 'saiu' || !mailReady(mail) || !data.customer.email) return false;
+    const message = renderDecisionEmail({summary: data, status: kind, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta.html#pedidos`});
+    const shipped = order.shippedAt ? new Date(order.shippedAt).getTime() : 0;
+    try {
+      await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${kind}-${order.id}-${shipped}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind, reference: order.reference}))});
+      return true;
+    } catch (error) { console.error(`orders: tracking e-mail (${kind}) failed for ${order.reference} —`, error.status || '', error.message); return false; }
   }
 
   // Ju declined a paid order: ask Mercado Pago for the whole amount back. Each attempt has its own idempotency key (the
@@ -251,7 +278,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     return store.orders.findById(order.id);
   }
 
-  return {open, applyPayment, notifyPaid, notifyPaidLater, notifyDecision, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
+  return {open, applyPayment, notifyPaid, notifyPaidLater, notifyDecision, notifyTracking, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
-module.exports = {createOrders, PAID, ADMIN_STATUSES, FROM, INVOICED, TRACKING};
+module.exports = {createOrders, trackingView, PAID, ADMIN_STATUSES, FROM, INVOICED, TRACKING};

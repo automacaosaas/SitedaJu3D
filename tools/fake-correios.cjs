@@ -92,11 +92,44 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     return reply(200, {coProduto: code5, dataMaxEntrega: at(max), dataMinEntrega: at(min), prazoMaximo: max, prazoMinimo: min, sgPaisDestino: destination, sgPaisOrigem: 'BR'});
   }
 
+  // API Rastro (GET /srorastro/v1/objetos/{code} and ?codigosObjetos=…, up to 50): the events in the real shape, newest
+  // first, times in Brasília without a zone. The last digit of the code's number picks the story (setTracking overrides):
+  //   0 unknown to the Correios (mensagem, no events) · 1 posted · 2 in transit · 3 out for delivery · 4 delivered ·
+  //   5 recipient away · 6 returned to the sender · 7 waiting at the agency · 8 and 9 in transit
+  const tracked = new Map();
+  const STEPS = {
+    po: {codigo: 'PO', tipo: '01', descricao: 'Objeto postado', unidade: {tipo: 'Agência dos Correios', endereco: {cidade: 'OURO PRETO', uf: 'MG'}}},
+    ro: {codigo: 'RO', tipo: '01', descricao: 'Objeto em transferência - por favor aguarde', unidade: {tipo: 'Unidade de Tratamento', endereco: {cidade: 'BELO HORIZONTE', uf: 'MG'}}, unidadeDestino: {tipo: 'Unidade de Tratamento', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}},
+    oec: {codigo: 'OEC', tipo: '01', descricao: 'Objeto saiu para entrega ao destinatário', unidade: {tipo: 'Unidade de Distribuição', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}},
+    bde: {codigo: 'BDE', tipo: '01', descricao: 'Objeto entregue ao destinatário', unidade: {tipo: 'Unidade de Distribuição', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}},
+    away: {codigo: 'BDE', tipo: '20', descricao: 'Carteiro não atendido', detalhe: 'Destinatário ausente. Será realizada nova tentativa de entrega.', unidade: {tipo: 'Unidade de Distribuição', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}},
+    back: {codigo: 'BDE', tipo: '23', descricao: 'Objeto devolvido ao remetente', unidade: {tipo: 'Unidade de Distribuição', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}},
+    ldi: {codigo: 'LDI', tipo: '01', descricao: 'Objeto aguardando retirada no endereço indicado', unidade: {tipo: 'Agência dos Correios', endereco: {cidade: 'SAO PAULO', uf: 'SP'}}}
+  };
+  const STORIES = {1: ['po'], 2: ['po', 'ro'], 3: ['po', 'ro', 'oec'], 4: ['po', 'ro', 'oec', 'bde'], 5: ['po', 'ro', 'oec', 'away'], 6: ['po', 'ro', 'oec', 'away', 'back'], 7: ['po', 'ro', 'ldi'], 8: ['po', 'ro'], 9: ['po', 'ro']};
+  const local = ms => new Date(ms - 3 * 3600000).toISOString().slice(0, 19);   // "2026-10-05T14:32:00", Brasília
+  function objectFor(code) {
+    if (tracked.has(code)) return {codObjeto: code, eventos: tracked.get(code)};
+    const story = STORIES[code.slice(-3, -2)];
+    if (!story) return {codObjeto: code, mensagem: 'SRO-020: Objeto não encontrado na base de dados dos Correios.'};
+    const start = Date.now() - story.length * 6 * 3600000;
+    return {codObjeto: code, tipoPostal: {sigla: code.slice(0, 2)}, eventos: story.map((step, i) => ({...STEPS[step], dtHrCriado: local(start + i * 6 * 3600000)})).reverse()};
+  }
+  function rastro(codes, init) {
+    const bearer = /^Bearer (.+)$/.exec(init.headers?.Authorization || '');
+    if (!bearer || !tokens.has(bearer[1])) return refused(403, 'Token inválido ou expirado');
+    if (!codes.length || codes.length > 50) return refused(400, 'SRO-001: informe de 1 a 50 objetos');
+    return reply(200, {versao: '3.5.38', quantidade: codes.length, objetos: codes.map(code => objectFor(code.toUpperCase())), resultado: 'Todos os Eventos'});
+  }
+
   async function fetchImpl(url, init = {}) {
     const parsed = new URL(String(url));
     calls.push({method: init.method || 'GET', path: parsed.pathname, params: Object.fromEntries(parsed.searchParams)});
     if (down) return refused(503, 'Serviço indisponível');
     if (parsed.pathname === '/token/v1/autentica/cartaopostagem' && init.method === 'POST') return authenticate(init);
+    const one = parsed.pathname.match(/^\/srorastro\/v1\/objetos\/([A-Za-z0-9]{13})$/);
+    if (one && (!init.method || init.method === 'GET')) return rastro([one[1]], init);
+    if (parsed.pathname === '/srorastro/v1/objetos' && (!init.method || init.method === 'GET')) return rastro(parsed.searchParams.getAll('codigosObjetos'), init);
     const abroad = parsed.pathname.match(/^\/preco\/v1\/internacional\/(\d{5})$/), abroadTime = parsed.pathname.match(/^\/prazo\/v2\/internacional\/exportacao\/(\d{5})$/);
     if (abroad && (!init.method || init.method === 'GET')) return internationalPrice(abroad[1], parsed.searchParams, init);
     if (abroadTime && (!init.method || init.method === 'GET')) return internationalDeadline(abroadTime[1], parsed.searchParams, init);
@@ -109,6 +142,7 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
     fetchImpl, calls,
     setDown(value = true) { down = value; },          // every call answers 503
     expireTokens() { tokens.clear(); },               // the next authenticated call is answered 403, like an expired token
+    setTracking(code, eventos) { tracked.set(code, eventos); },   // the Rastro events of one code, as the Correios send them
     creds: {CORREIOS_USER: user, CORREIOS_CODE: code, CORREIOS_CARD: card, CORREIOS_CONTRACT: '9912345678', CORREIOS_DR: '20', SHIP_FROM_CEP: '30140071'},
     tokenCalls: () => calls.filter(c => c.path.startsWith('/token')).length
   };

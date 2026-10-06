@@ -248,9 +248,31 @@
 .auth-terms-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; font-size: 12px; }
 .auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
 /* "Ver nota fiscal": the NF-e of the order, once authorized. */
-.order-tracking { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 8px 0; padding: 9px 11px; border-radius: 10px; background: #f3eefb; color: #56399a !important; font-size: 12px; }
-.order-tracking strong { letter-spacing: 1px; font-size: 13px; }
+/* The delivery: the code, where the package stands (from the Correios, api/_lib/tracking.js), the last event and the
+   timeline under "Acompanhar entrega". */
+.order-tracking { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: #f3eefb; color: #56399a !important; font-size: 12px; }
+.order-tracking p { margin: 0; }
+.order-tracking-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.order-tracking-head strong { letter-spacing: 1px; font-size: 13px; }
+.order-track-state { display: inline-flex; padding: 2px 9px; border-radius: 999px; background: #fff; font-style: normal; font-weight: 700; }
+.order-tracking.is-entregue .order-track-state { background: #e3f4ea; color: #1f6b47; }
+.order-tracking.is-saiu_para_entrega .order-track-state, .order-tracking.is-aguardando_retirada .order-track-state { background: #fff4dc; color: #7a5410; }
+.order-tracking.is-problema .order-track-state, .order-tracking.is-devolvido .order-track-state { background: #fde8ea; color: #a3273a; }
+.order-tracking-last { margin-top: 6px !important; color: #3f2f66; line-height: 1.45; }
+.order-tracking-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 8px !important; }
 .order-tracking a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.order-invoice { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+.order-track-toggle { min-height: 36px; padding: 0 14px; border: 1px solid #c9b8ec; border-radius: 999px; background: #fff; color: #56399a; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.order-track-toggle:disabled { opacity: .7; cursor: wait; }
+.order-timeline { list-style: none; margin: 10px 0 2px; padding: 0 0 0 16px; border-left: 2px solid #d9cdf3; display: grid; gap: 10px; }
+.order-timeline[hidden] { display: none; }
+.order-timeline li { position: relative; display: grid; gap: 2px; color: #3f2f66; line-height: 1.4; }
+.order-timeline li::before { content: ''; position: absolute; left: -23px; top: 3px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #b9a6e6; }
+.order-timeline li:first-child::before { background: #56399a; }
+.order-timeline li.is-entregue::before { background: #1f6b47; }
+.order-timeline li.is-problema::before, .order-timeline li.is-devolvido::before { background: #a3273a; }
+.order-timeline li.is-empty::before { display: none; }
+.order-timeline strong { font-size: 13px; }
+.order-timeline span, .order-timeline small { font-size: 12px; color: #6b5a8f; }
+.order-invoice { display: flex; width: fit-content; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
 /* Sign-up: the password is optional (without one, the buyer always signs in with an e-mailed code). */
 .auth-hint { margin: -4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--auth-muted); }

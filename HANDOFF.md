@@ -9,6 +9,11 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
+- **Atualização de 05/10/2026 (noite): branch `rastreio/correios`**, feita sobre a `bling/resiliencia` (`285ea15`). Traz o
+  rastreio automático pelos Correios (API Rastro, mesmo contrato do frete) e a aba "Pronto para envio" virou **Expedição**,
+  com o campo do código pronto para o leitor de código de barras. O e-mail com o código sai quando o código entra; o pedido
+  vai sozinho para Concluídos (= entregue) quando os Correios registram a entrega. "Meus pedidos" tem a linha do tempo.
+  Migração `012_rastreio.sql`. Tudo em `RASTREIO.md`.
 - **Atualização de 05/10/2026: branch `vitrine/3d-nas-consultas` (enviada ao GitHub).** Ela já tem a `main` até `6c6bb1a`
   (galeria de vistas, macaco novo, fluxo de caixa, desempenho, página Fale com a Ju com perguntas frequentes e o pedido em
   etapas no painel) e a paginação da lista de pedidos (`claude/project-thread-3y8z4a`, `9d1bc0f`). Acrescenta o que o dono
@@ -142,7 +147,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   (2) se `contato@juimprimepramim.com.br` é o e-mail oficial (criar a caixa no domínio; se for, preencher `email` em
   `api/_lib/legal.js` e rodar `node tools/sync-legal.cjs`; criar `CONTACT_EMAIL` na Hostinger se as mensagens do formulário
   devem ir para ela em vez do `ORDER_NOTIFY_EMAIL`); (3) o horário "segunda a sexta, das 9h às 18h"; (4) o FAQ promete enviar o
-  código de rastreio quando a peça for postada: o site não faz isso sozinho, então a Ju manda à mão (ou se implementa depois).
+  código de rastreio quando a peça for postada: desde a `rastreio/correios` o site manda sozinho, quando a Ju informa o código
+  no painel (`RASTREIO.md`).
 
 ## Como entregar
 

@@ -353,6 +353,16 @@ dialog.cash-dialog .admin-error{margin:0}
 .btn-reopen.is-danger{color:var(--r-fg);border-color:#f0c4cd}.btn-reopen.is-danger:hover{background:var(--r-bg)}
 .admin-tracking-line{margin:0;font-size:14px;color:var(--v-fg);background:var(--v-bg);border-radius:12px;padding:10px 12px}
 .admin-tracking-line code,.admin-decision-note code{font-family:inherit;font-weight:700;letter-spacing:1px}
+/* Rastreio dos Correios (api/_lib/tracking.js): where the package stands, in a chip, and the last event. */
+.admin-track{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0 10px;font-size:13px;line-height:1.45}
+.admin-track:empty{display:none}
+.admin-track.is-waiting{color:var(--muted)}
+.admin-track small{flex-basis:100%;font-size:12px;color:var(--muted)}
+.admin-track-state{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;background:#eef1f7;color:#3b4a6b;font-size:12px;font-weight:700;white-space:nowrap}
+.admin-track.is-saiu_para_entrega .admin-track-state,.admin-track.is-aguardando_retirada .admin-track-state{background:#fff4dc;color:#7a5410}
+.admin-track.is-entregue .admin-track-state{background:#e3f4ea;color:#1f6b47}
+.admin-track.is-problema .admin-track-state,.admin-track.is-devolvido .admin-track-state{background:#fde8ea;color:#a3273a}
+.admin-track.is-nao_encontrado .admin-track-state{background:#f2f0f1;color:var(--muted)}
 .admin-fix{font-size:13px}
 .admin-fix summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
 .admin-fix[open] summary{margin-bottom:10px}

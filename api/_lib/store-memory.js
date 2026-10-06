@@ -62,6 +62,12 @@ function createMemoryStore() {
         const cap = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 500), below = o => !before || o.createdAt < before.createdAt || (+o.createdAt === +before.createdAt && o.id < before.id);
         return copy([...orders.values()].filter(o => statuses.includes(o.status) && below(o)).sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, cap));
       },
+      // Rastreio: the posted packages due for a look at the Correios (never looked at first, then the oldest look).
+      async listForTracking({statuses, checkedBefore, shippedAfter, limit = 50}) {
+        const due = o => statuses.includes(o.status) && o.trackingCode && o.shippedAt && new Date(o.shippedAt) >= new Date(shippedAfter) && (!o.trackingCheckedAt || new Date(o.trackingCheckedAt) < new Date(checkedBefore));
+        const checked = o => o.trackingCheckedAt ? new Date(o.trackingCheckedAt).getTime() : -Infinity;
+        return copy([...orders.values()].filter(due).sort((a, b) => checked(a) - checked(b)).slice(0, Math.min(Math.max(Math.floor(Number(limit)) || 50, 1), 500)));
+      },
       // Fluxo de caixa: every paid order, with only what the cash flow shows.
       async listForCash({statuses}) {
         return copy([...orders.values()].filter(o => statuses.includes(o.status) && o.paidAt).sort((a, b) => b.paidAt - a.paidAt)

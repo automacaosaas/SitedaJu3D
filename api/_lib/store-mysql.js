@@ -19,13 +19,14 @@ const ORDER_COLUMNS = {
   installments: 'installments', subtotalCents: 'subtotal_cents', shippingCents: 'shipping_cents', totalCents: 'total_cents', buyer: 'buyer',
   buyerDocEnc: 'buyer_doc_enc', phoneEnc: 'phone_enc', shipTo: 'ship_to', shippingInfo: 'shipping_info', notes: 'notes', lang: 'lang', mpOrderId: 'mp_order_id', paidAt: 'paid_at',
   decidedAt: 'decided_at', declineReason: 'decline_reason', trackingCode: 'tracking_code', shippedAt: 'shipped_at', refundState: 'refund_state', refundId: 'refund_id', refundedAt: 'refunded_at', refundError: 'refund_error',
-  ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
+  ownerNotifiedAt: 'owner_notified_at', customerNotifiedAt: 'customer_notified_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at',
+  trackingState: 'tracking_state', trackingEvents: 'tracking_events', trackingCheckedAt: 'tracking_checked_at', deliveredAt: 'delivered_at', trackingNotices: 'tracking_notices'
 };
 // What the panel's list (orders.adminView) reads of an order: the rest stays in the table.
 const ADMIN_ORDER_SELECT = ['id', 'reference', 'source', 'status', 'method', 'installments', 'subtotal_cents', 'shipping_cents', 'total_cents', 'buyer', 'buyer_doc_enc', 'phone_enc',
   'ship_to', 'shipping_info', 'notes', 'paid_at', 'decided_at', 'decline_reason', 'tracking_code', 'shipped_at', 'refund_state', 'refunded_at', 'refund_error',
-  'created_at'].join(', ');
-const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo']);
+  'created_at', 'tracking_state', 'tracking_events', 'tracking_checked_at', 'delivered_at'].join(', ');
+const JSON_FIELDS = new Set(['buyer', 'shipTo', 'shippingInfo', 'trackingEvents']);
 const parse = value => { if (value === null || value === undefined) return null; if (typeof value !== 'string') return value; try { return JSON.parse(value); } catch { return null; } };
 const toDb = (field, value) => JSON_FIELDS.has(field) && value !== null && value !== undefined ? JSON.stringify(value) : value ?? null;
 function toOrder(row, items = []) {
@@ -171,6 +172,14 @@ function createMysqlStore(pool) {
         if (before) { where.push('(created_at < ? OR (created_at = ? AND id < ?))'); params.push(before.createdAt, before.createdAt, before.id); }
         const rows = await all(`SELECT ${ADMIN_ORDER_SELECT} FROM orders WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT ${cap}`, params);
         return withItemsList(rows, 'order_id, product_id, title, quantity, unit_price_cents, selection');
+      },
+      // Rastreio (api/_lib/tracking.js): the posted packages whose last look at the Correios is older than `checkedBefore`
+      // (never looked at first, then the oldest look), shipped after `shippedAfter` (a code that never moves is dropped
+      // after a while). Without the pieces: the round only needs the code and what it already knows.
+      async listForTracking({statuses, checkedBefore, shippedAfter, limit = 50}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 50, 1), 500);
+        const rows = await all(`SELECT * FROM orders WHERE status IN (${statuses.map(() => '?').join(', ')}) AND tracking_code IS NOT NULL AND shipped_at >= ? AND (tracking_checked_at IS NULL OR tracking_checked_at < ?) ORDER BY tracking_checked_at IS NOT NULL, tracking_checked_at ASC LIMIT ${cap}`, [...statuses, shippedAfter, checkedBefore]);
+        return rows.map(row => toOrder(row));
       },
       // Fluxo de caixa: every paid order (no cap, the balance needs all of them), only the columns it shows, and the
       // pieces in one query that filters on the server instead of a placeholder per order.

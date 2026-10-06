@@ -8,6 +8,9 @@
 //                                             vlDeclarado optional → {pcFinal, …}  (Exporta Fácil: 45128 Standard, 45110 Expresso,
 //                                             45209 Econômico; only the services in the contract answer)
 //   GET  /prazo/v2/internacional/exportacao/{service}   sgPaisOrigem=BR, sgPaisDestino, dtPostagem (DD-MM-AAAA) → the time
+//   GET  /srorastro/v1/objetos/{code}?resultado=T       the tracking events of one package (API Rastro, same token; the
+//   GET  /srorastro/v1/objetos?codigosObjetos=…        contract must have it enabled); up to 50 codes at once (repeated
+//                                                       parameter) → {objetos: [{codObjeto, eventos: [...], mensagem?}]}
 // Errors carry a `code`: correios_auth (credentials or token refused), correios_unavailable (network, 5xx, 429, timeout)
 // and correios_rejected (the request itself was refused — a CEP or service the contract cannot ship; the caller drops that
 // option). Messages from the Correios are kept only for the server log, never sent to the browser.
@@ -131,7 +134,19 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     console.error(`correios: prazo internacional ${code} para ${country} sem prazo reconhecido — resposta: ${JSON.stringify(data ?? null).slice(0, 600)}`);
     return null;
   }
-  return {settings: config, price, deadline, priceInternational, deadlineInternational};
+  // Tracking (API Rastro): every event of up to 50 packages in one call (resultado=T), as the Correios send them. A code
+  // the Correios do not know yet comes back with a `mensagem` and no events (not an error).
+  const TRACK_BATCH = 50;
+  async function track(codes) {
+    const list = [...new Set(codes.map(c => text(c).toUpperCase()).filter(Boolean))];
+    if (!list.length) return [];
+    if (list.length > TRACK_BATCH) throw fail('correios_rejected', {messages: [`more than ${TRACK_BATCH} codes`]});
+    const data = list.length === 1
+      ? await get(`/srorastro/v1/objetos/${encodeURIComponent(list[0])}`, {resultado: 'T'})
+      : await get('/srorastro/v1/objetos', [...list.map(code => ['codigosObjetos', code]), ['resultado', 'T']]);
+    return Array.isArray(data?.objetos) ? data.objetos : [];
+  }
+  return {settings: config, price, deadline, priceInternational, deadlineInternational, track, TRACK_BATCH};
 }
 
 module.exports = {createCorreios, settings, parseMoney, boxParams, MIN_BOX, BASE};

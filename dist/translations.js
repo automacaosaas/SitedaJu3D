@@ -928,4 +928,18 @@ Pedido confirmado · preparando o envio|Order confirmed · preparing shipment|Pe
 Pedido enviado|Order shipped|Pedido enviado
 Código de rastreio|Tracking code|Código de seguimiento
 Rastrear nos Correios ↗|Track with Correios ↗|Rastrear en Correios ↗
+Pedido entregue|Order delivered|Pedido entregado
+Postado|Posted|Enviado
+Em trânsito|In transit|En tránsito
+Saiu para entrega|Out for delivery|Salió para entrega
+Aguardando retirada|Waiting to be picked up|Esperando retiro
+Entregue|Delivered|Entregado
+Entrega não realizada|Delivery not completed|Entrega no realizada
+Devolvido ao remetente|Returned to the sender|Devuelto al remitente
+Aguardando registro nos Correios|Waiting for the Correios to register it|Esperando el registro en Correios
+Acompanhar entrega|Track the delivery|Seguir la entrega
+Ocultar entrega|Hide the delivery|Ocultar la entrega
+Carregando…|Loading…|Cargando…
+Os Correios ainda não registraram este pacote. Volte a olhar mais tarde.|The Correios have not registered this package yet. Check again later.|Correios todavía no registró este paquete. Vuelve a mirar más tarde.
+Não foi possível carregar o rastreio agora. Tente de novo em instantes.|We could not load the tracking right now. Try again in a moment.|No pudimos cargar el seguimiento ahora. Inténtalo de nuevo en un momento.
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

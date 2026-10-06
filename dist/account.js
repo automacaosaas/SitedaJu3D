@@ -1,4 +1,4 @@
-import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, readDemoOrders, loadProfile, saveProfile, loadOrders, startDeletion, adoptDeletion, confirmDeletion} from './auth-service.js';
+import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, readDemoOrders, loadProfile, saveProfile, loadOrders, loadTracking, startDeletion, adoptDeletion, confirmDeletion} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 import {icon} from './icons.js';
 import {mountLanguagePicker} from './i18n.js';
@@ -20,10 +20,24 @@ const previewNote = AUTH_MODE === 'demo' ? '<p class="auth-demo-note">Prévia: u
 const demoCode = () => screen === 'verify' ? challenge?.demoCode : screen === 'delete' ? deletion?.demoCode : '';
 // "Meus pedidos": the account's orders from the server; demonstration orders (payments off) from this tab.
 // The steps of a paid order, as the buyer sees them: paid, confirmed by Ju (being made, invoice issued), posted (with the
-// Correios tracking code) and concluded. The Correios page asks for the code, so it is shown to copy.
-const ORDER_STATUS = {aguardando_pagamento: 'Aguardando pagamento', pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido enviado', recusado: 'Pedido não pôde ser atendido', cancelado: 'Pagamento não concluído'};
+// Correios tracking code) and delivered. The delivery comes from the Correios by itself (api/_lib/tracking.js): where the
+// package stands, the last event and, with "Acompanhar entrega", every step. The code stays there to copy.
+const ORDER_STATUS = {aguardando_pagamento: 'Aguardando pagamento', pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido entregue', recusado: 'Pedido não pôde ser atendido', cancelado: 'Pagamento não concluído'};
 const CORREIOS = 'https://rastreamento.correios.com.br/app/index.php';
-const trackingLine = o => o.trackingCode ? `<p class="order-tracking"><span>Código de rastreio</span> <strong translate="no">${esc(o.trackingCode)}</strong> <a href="${CORREIOS}" target="_blank" rel="noopener">Rastrear nos Correios ↗</a></p>` : '';
+const TRACK_STATE = {postado: 'Postado', em_transito: 'Em trânsito', saiu_para_entrega: 'Saiu para entrega', aguardando_retirada: 'Aguardando retirada', entregue: 'Entregue', problema: 'Entrega não realizada', devolvido: 'Devolvido ao remetente', nao_encontrado: 'Aguardando registro nos Correios'};
+const placeText = p => p ? [String(p.city || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()), p.uf].filter(Boolean).join('/') : '';
+const when = iso => new Date(iso).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'});
+const trackingLine = o => {
+  if (!o.trackingCode) return '';
+  const t = o.tracking, last = t?.last, ref = esc(o.reference);
+  return `<div class="order-tracking${t?.state ? ` is-${esc(t.state)}` : ''}"><p class="order-tracking-head"><span>Código de rastreio</span> <strong translate="no">${esc(o.trackingCode)}</strong>${t?.state ? ` <em class="order-track-state">${esc(TRACK_STATE[t.state] || t.state)}</em>` : ''}</p>`
+    + (last ? `<p class="order-tracking-last"><span translate="no">${esc(last.description)}</span>${last.place ? ` · <span translate="no">${esc(placeText(last.place))}</span>` : ''} · <time datetime="${esc(last.at)}">${esc(when(last.at))}</time></p>` : '')
+    + `<p class="order-tracking-actions"><button type="button" class="order-track-toggle" data-track="${ref}" aria-expanded="false" aria-controls="timeline-${ref}">Acompanhar entrega</button><a href="${CORREIOS}" target="_blank" rel="noopener">Rastrear nos Correios ↗</a></p><ol class="order-timeline" id="timeline-${ref}" hidden></ol></div>`;
+};
+// The timeline: every Correios event, newest first (their own words, kept untranslated), with the place and the time.
+const timelineView = tracking => tracking?.events?.length
+  ? tracking.events.map(e => `<li class="is-${esc(e.state)}"><strong translate="no">${esc(e.description)}</strong>${e.detail ? `<span translate="no">${esc(e.detail)}</span>` : ''}<small>${e.place ? `<span translate="no">${esc(placeText(e.place))}</span> · ` : ''}<time datetime="${esc(e.at)}">${esc(when(e.at))}</time></small></li>`).join('')
+  : '<li class="is-empty"><span>Os Correios ainda não registraram este pacote. Volte a olhar mais tarde.</span></li>';
 const orderDate = iso => new Date(iso).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
 const orderCard = o => `<article class="order-preview status-${esc(o.status)}"><h3>Pedido <span translate="no">${esc(o.reference)}</span></h3><small><span>${esc(ORDER_STATUS[o.status] || o.status)}</span>${o.refunded ? ' · <span>Valor estornado</span>' : ''} · <time datetime="${esc(o.createdAt)}">${esc(orderDate(o.createdAt))}</time></small>${o.test ? '<small class="order-test">Pedido de teste · nenhum valor real</small>' : ''}<p>${o.items.map(i => `${Number(i.quantity) || 1} × ${esc(i.title)}`).join('<br>')}</p>${trackingLine(o)}<strong>${money(o.totalCents || 0)}</strong>${o.invoice?.pdfUrl ? `<a class="order-invoice" href="${esc(o.invoice.pdfUrl)}" target="_blank" rel="noopener"><span>Ver nota fiscal</span> <span translate="no">nº ${esc(o.invoice.number)}</span></a>` : ''}</article>`;
 const demoCard = o => `<article class="order-preview"><h3>Pedido <span translate="no">${esc(o.id)}</span></h3><small>Pagamento simulado · nenhuma cobrança</small><p>${o.items.map(i => `${Number(i.quantity) || 1} × ${esc(i.title)}`).join('<br>')}</p><strong>${money(o.total || 0)}</strong></article>`;
@@ -96,6 +110,17 @@ host.addEventListener('click', async event => {
   if (event.target.closest('#signout')) { await signOut(); auth.cancel(); challenge = null; screen = 'email'; render(); }
   if (event.target.closest('#resend-code')) run('Enviando outro código…', async () => {challenge = await auth.resend(); notice = challenge.demoCode ? 'Novo código de teste gerado.' : 'Enviamos um novo código para o seu e-mail.';});
   if (event.target.closest('#delete-start')) run('Enviando o código…', async () => {deletion = await startDeletion(); notice = deletion.demoCode ? 'Código de teste gerado.' : 'Enviamos o código para o seu e-mail.';});
+  const track = event.target.closest('[data-track]');
+  if (track) {
+    const list = host.querySelector(`#${CSS.escape(`timeline-${track.dataset.track}`)}`), open = track.getAttribute('aria-expanded') === 'true';
+    if (!list) return;
+    if (open || list.dataset.loaded) { list.hidden = open; track.setAttribute('aria-expanded', String(!open)); track.textContent = open ? 'Acompanhar entrega' : 'Ocultar entrega'; return; }
+    track.disabled = true; track.textContent = 'Carregando…';
+    try { list.innerHTML = timelineView(await loadTracking(track.dataset.track)); list.dataset.loaded = '1'; list.hidden = false; track.setAttribute('aria-expanded', 'true'); track.textContent = 'Ocultar entrega'; }
+    catch { list.innerHTML = '<li class="is-empty"><span>Não foi possível carregar o rastreio agora. Tente de novo em instantes.</span></li>'; list.hidden = false; track.textContent = 'Acompanhar entrega'; }
+    finally { track.disabled = false; }
+    return;
+  }
   if (event.target.closest('#forgot-password')) run('Preparando a recuperação de acesso…', async () => {challenge = await auth.forgot({email}); screen = 'verify';});
 });
 host.addEventListener('input', event => {

@@ -136,8 +136,11 @@ async function main() {
   for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
+  // the delivery timeline asks the Correios (the simulator with --fake-correios)
+  routes['/api/account/tracking'] = require('../api/account/tracking').create({env, outbox, fetchImpl: routed});
   // The NF-e queue, as on the Node server, on the same in-memory store; a round every 15 seconds to see it move.
   require('../api/_lib/invoice-queue').startWorker({env, outbox, fetchImpl: routed, intervalMs: 15000});
+  require('../api/_lib/tracking').startTrackingWorker({env, outbox, fetchImpl: routed, intervalMs: 60000});
 
   // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
   // Cache-Control is left out on purpose: local files stay `no-store` while editing.

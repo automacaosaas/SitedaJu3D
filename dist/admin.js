@@ -46,8 +46,8 @@ declineDialog.addEventListener('click', event => {
   }
 });
 
-// A real confirmation before the two steps that e-mail the buyer: "Confirmar" (it issues the NF-e, which going back to
-// Pendentes does not cancel) and "Concluir" (the e-mail with the tracking code and the button to "Meus pedidos").
+// A real confirmation before two steps that e-mail the buyer: "Confirmar" (it issues the NF-e, which going back to
+// Pendentes does not cancel) and "Marcar como entregue" (normally the Correios tracking does it by itself).
 const stepDialog = document.createElement('dialog');
 stepDialog.className = 'admin-confirm';
 stepDialog.setAttribute('aria-labelledby', 'step-title');
@@ -65,10 +65,10 @@ function openStepDialog(order, step) {
   const copy = step === 'confirmado'
     ? {icon: '📦', title: 'Confirmar este pedido?', button: issues ? 'Sim, confirmar e emitir a nota' : 'Sim, confirmar',
       warn: issues ? `<strong>A nota fiscal é emitida na hora</strong> e vai para o cliente por e-mail (PDF e XML); se o emissor estiver fora do ar, ela fica na fila e sai sozinha depois. "Voltar para Pendentes" não cancela a nota: o cancelamento é feito ${where} (a Fazenda aceita em até 24 horas).` : '',
-      mail: 'O pedido vai para Pronto para envio e o cliente recebe o e-mail de pedido confirmado.'}
-    : {icon: '🚚', title: 'Concluir este pedido?', button: 'Sim, concluir e avisar o cliente',
-      warn: `Código de rastreio: <strong translate="no">${esc(order.trackingCode || '')}</strong>`,
-      mail: 'O cliente recebe um e-mail com o código de rastreio e um botão que abre Meus pedidos no site. O pedido vai para Concluídos.'};
+      mail: 'O pedido vai para Expedição e o cliente recebe o e-mail de pedido confirmado.'}
+    : {icon: '📬', title: 'Marcar como entregue?', button: 'Sim, marcar como entregue',
+      warn: `Rastreio <strong translate="no">${esc(order.trackingCode || '')}</strong>. Normalmente não precisa: quando os Correios registram a entrega, o pedido vai sozinho para Concluídos.`,
+      mail: 'O cliente recebe o e-mail de pedido entregue. O pedido vai para Concluídos.'};
   Object.assign(stepDialog.dataset, {orderId: order.id, step});
   stepDialog.querySelector('.admin-confirm-icon').textContent = copy.icon;
   stepDialog.querySelector('#step-title').textContent = copy.title;
@@ -85,7 +85,7 @@ stepDialog.addEventListener('click', event => {
   if (event.target.closest('[data-action="confirm-step"]')) {
     const {orderId, step} = stepDialog.dataset;
     stepDialog.close();
-    move(orderId, step, '', step === 'confirmado' ? 'Pedido confirmado: ele foi para Pronto para envio.' : 'Pedido concluído.');
+    move(orderId, step, '', step === 'confirmado' ? 'Pedido confirmado: ele foi para Expedição.' : 'Pedido marcado como entregue.');
   }
 });
 
@@ -101,7 +101,17 @@ const now = new Date();
 let calendar = {year: now.getFullYear(), month: now.getMonth()}, selectedDay = dayKey(now);
 
 const SOURCE_LABEL = {test: 'Teste Mercado Pago', live: 'Pedido real'};
-const STATUS_LABEL = {pendente: 'Pendentes', confirmado: 'Pronto para envio', enviado: 'Enviados', concluido: 'Concluídos', recusado: 'Recusados'};
+const STATUS_LABEL = {pendente: 'Pendentes', confirmado: 'Expedição', enviado: 'Enviados', concluido: 'Concluídos', recusado: 'Recusados'};
+// The Correios tracking (api/_lib/tracking.js): where the package stands, in a word, and the last event.
+const TRACK_STATE = {postado: 'Postado', em_transito: 'Em trânsito', saiu_para_entrega: 'Saiu para entrega', aguardando_retirada: 'Aguardando retirada', entregue: 'Entregue', problema: 'Precisa de atenção', devolvido: 'Devolvido', nao_encontrado: 'Ainda sem registro nos Correios'};
+const placeText = p => p ? [p.city.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()), p.uf].filter(Boolean).join('/') : '';
+function trackingStatus(o) {
+  const t = o.tracking;
+  if (!t || !t.state) return `<p class="admin-track is-waiting">${o.status === 'enviado' ? 'Os Correios ainda não foram consultados: o rastreio aparece aqui em algumas horas.' : ''}</p>`;
+  const last = t.last, when = last ? formatWhen(last.at) : '';
+  const line = last ? [last.description, placeText(last.place), when].filter(Boolean).join(' · ') : TRACK_STATE[t.state];
+  return `<p class="admin-track is-${esc(t.state)}"><span class="admin-track-state">${esc(TRACK_STATE[t.state] || t.state)}</span><span>${esc(line)}</span>${last?.detail ? `<small>${esc(last.detail)}</small>` : ''}</p>`;
+}
 const INVOICED = ['confirmado', 'enviado', 'concluido'];
 const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;
 const formatDay = iso => iso ? new Date(iso).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
@@ -251,8 +261,9 @@ function orderCard(o) {
   // Declined orders show where the automatic refund stands; once the money is going back, the order cannot be reopened.
   const refund = o.refund?.state || null, moneyBack = refund === 'refunded' || refund === 'requested';
   const refundLine = o.status === 'recusado' || refund ? refundNote(o) : '';
-  // What Ju can do at each step: Pendentes → Confirmar (or Recusar); Pronto para envio → the tracking code (or back, or
-  // Recusar); Enviados → Concluir (or fix the code, or back); Concluídos and Recusados → Reabrir.
+  // What Ju can do at each step: Pendentes → Confirmar (or Recusar); Expedição → the tracking code (typed or read by a
+  // barcode scanner; or back, or Recusar); Enviados → the Correios' last event (the delivery moves the order by itself), and on
+  // the side Marcar como entregue, fix the code or back; Concluídos and Recusados → Reabrir.
   const id = esc(o.id), code = o.trackingCode ? `<code translate="no">${esc(o.trackingCode)}</code>` : '';
   const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456789BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button></form>`;
   const back = (to, label) => `<button type="button" class="btn-reopen" data-action="move" data-to="${to}" data-id="${id}">${label}</button>`;
@@ -261,9 +272,9 @@ function orderCard(o) {
     // The piece never leaves without its note: with NF-e on, the tracking code waits for the note to be authorized.
     confirmado: () => `<div class="admin-ship">${invoicingMode !== 'off' && o.invoice?.status !== 'autorizada'
       ? `<p class="admin-ship-locked" role="note"><strong>🔒 Envio bloqueado até a nota fiscal ser autorizada.</strong> A peça não pode sair sem a nota. ${!o.invoice ? 'Clique em Emitir nota fiscal, acima.' : o.invoice.status === 'erro' ? 'Resolva o problema da nota acima e clique em Tentar de novo.' : 'A nota sai sozinha; depois clique em Atualizar para liberar o rastreio.'}</p>`
-      : `<p class="admin-ship-hint">Postou nos Correios? Digite o código de rastreio: o pedido vai para Enviados.</p>${trackingForm('', 'Salvar rastreio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
-    enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p><div class="admin-order-actions"><button type="button" class="btn-complete" data-action="conclude" data-id="${id}">Concluir pedido</button></div><details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary">${back('confirmado', 'Voltar para Pronto para envio')}</div></div>`,
-    concluido: () => `<div class="admin-order-actions"><span class="admin-decision-note">Concluído em ${esc(formatWhen(o.decidedAt))}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,
+      : `<p class="admin-ship-hint">Postou nos Correios? Digite, cole ou leia com o leitor o código de rastreio: o pedido vai para Enviados e o cliente recebe o e-mail com o código.</p>${trackingForm('', 'Confirmar envio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
+    enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p>${trackingStatus(o)}<details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary"><button type="button" class="btn-reopen" data-action="conclude" data-id="${id}">Marcar como entregue</button>${back('confirmado', 'Voltar para Expedição')}</div></div>`,
+    concluido: () => `${o.tracking?.state ? trackingStatus(o) : ''}<div class="admin-order-actions"><span class="admin-decision-note">${o.tracking?.deliveredAt ? `Entregue em ${esc(formatWhen(o.tracking.deliveredAt))}` : `Concluído em ${esc(formatWhen(o.decidedAt))}`}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,
     recusado: () => `<div class="admin-order-actions"><span class="admin-decision-note">Recusado em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : back('pendente', 'Reabrir')}</div>`
   };
   const actions = refundLine + (steps[o.status] || steps.recusado)();
@@ -343,7 +354,7 @@ function ordersDashboard() {
     ${integrationBanner()}
     <div class="admin-kpis">
       <div class="admin-kpi is-pendente"><span>Pendentes</span><strong>${s.pendentes}</strong></div>
-      <div class="admin-kpi is-confirmado"><span>Pronto para envio</span><strong>${s.confirmados}</strong></div>
+      <div class="admin-kpi is-confirmado"><span>Expedição</span><strong>${s.confirmados}</strong></div>
       <div class="admin-kpi is-enviado"><span>Enviados</span><strong>${s.enviados}</strong></div>
       <div class="admin-kpi is-concluido"><span>Concluídos</span><strong>${s.concluidos}</strong></div>
       <div class="admin-kpi is-recusado"><span>Recusados</span><strong>${s.recusados}</strong></div>
@@ -411,6 +422,8 @@ function render(focus = true) {
   feedback = '';
   if (screen === 'dashboard') { if (section === 'caixa') bindCash(content); else bindChartTooltips(); }
   if (screen === 'code') content.querySelector('input[name=code]')?.focus({preventScroll: true});
+  // Expedição: the first tracking field is ready for the next code (typed, pasted or read by a barcode scanner).
+  else if (screen === 'dashboard' && section === 'pedidos' && tab === 'confirmado' && content.querySelector('.admin-order.status-confirmado .admin-tracking input')) content.querySelector('.admin-order.status-confirmado .admin-tracking input').focus({preventScroll: !focus});
   else if (focus) content.querySelector('#admin-title')?.focus({preventScroll: true});
 }
 
@@ -468,12 +481,12 @@ content.addEventListener('submit', event => {
   event.preventDefault();
   if (busy || !event.target.reportValidity()) return;
   const data = Object.fromEntries(new FormData(event.target));
-  // The tracking code of an order (Pronto para envio, or a correction in Enviados).
+  // The tracking code of an order (Expedição, or a correction in Enviados).
   if (event.target.classList.contains('admin-tracking')) {
     const input = event.target.elements.trackingCode, code = String(data.trackingCode || '').replace(/\s+/g, '').toUpperCase();
     if (!TRACKING.test(code)) { input.setCustomValidity('São 2 letras, 9 números e 2 letras, como AA123456789BR.'); input.reportValidity(); input.addEventListener('input', () => input.setCustomValidity(''), {once: true}); return; }
     const order = orders.find(o => o.id === event.target.dataset.id);
-    if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Rastreio salvo: o pedido foi para Enviados.', {trackingCode: code, quiet: true});
+    if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Envio confirmado: o pedido foi para Enviados.', {trackingCode: code, quiet: order.status === 'enviado'});
     return;
   }
   if (event.target.id === 'admin-login-form') run('Conferindo seu acesso…', async () => {
@@ -521,8 +534,8 @@ content.addEventListener('click', event => {
   const id = action.dataset.id;
   if (action.dataset.action === 'confirm' || action.dataset.action === 'conclude') { const order = orders.find(o => o.id === id); if (order) openStepDialog(order, action.dataset.action === 'confirm' ? 'confirmado' : 'concluido'); }
   if (action.dataset.action === 'move') {
-    const to = action.dataset.to, done = {pendente: 'O pedido voltou para Pendentes.', confirmado: 'O pedido voltou para Pronto para envio.', enviado: 'O pedido foi reaberto em Enviados.'}[to];
-    if (to === 'confirmado' && !confirm('Voltar este pedido para Pronto para envio? O código de rastreio sai do pedido.')) return;
+    const to = action.dataset.to, done = {pendente: 'O pedido voltou para Pendentes.', confirmado: 'O pedido voltou para Expedição.', enviado: 'O pedido foi reaberto em Enviados.'}[to];
+    if (to === 'confirmado' && !confirm('Voltar este pedido para Expedição? O código de rastreio sai do pedido.')) return;
     if (done) move(id, to, '', done, {quiet: true});
   }
   if (action.dataset.action === 'refund-retry') run('Conferindo o estorno…', async () => {
@@ -564,8 +577,17 @@ tools.addEventListener('click', async event => {
   await logout(); session = null; orders = []; revealed.clear(); resetCash(); resetIntl(); screen = 'login'; render();
 });
 
+// Expedição: a complete code in the tracking field (typed, pasted or read by a barcode scanner, which types it and presses
+// Enter) confirms the shipment by itself; a scanner's Enter gets there first, and the busy flag keeps it to one save.
+let scanTimer = 0;
 content.addEventListener('input', event => {
   if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
+  const scan = event.target.closest?.('.admin-order.status-confirmado .admin-tracking input[name="trackingCode"]');
+  if (scan) {
+    clearTimeout(scanTimer);
+    const complete = () => TRACKING.test(scan.value.replace(/\s+/g, '').toUpperCase());
+    if (complete()) scanTimer = setTimeout(() => { if (!busy && scan.isConnected && complete()) scan.form.requestSubmit(); }, 250);
+  }
   if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
   if (section === 'internacional' && screen === 'dashboard') handleIntlInput(event);
 });

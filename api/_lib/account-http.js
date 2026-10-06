@@ -49,7 +49,7 @@ function mailerFor(env, fetchImpl, outbox) {
 
 const STATUS = {
   invalid_request: 400, invalid_email: 400, invalid_code: 400, invalid_challenge: 400, invalid_grant: 400, weak_password: 400,
-  invalid_credentials: 401, unauthorized: 401, account_exists: 409, cpf_in_use: 409, expired: 410,
+  invalid_credentials: 401, unauthorized: 401, not_found: 404, account_exists: 409, cpf_in_use: 409, expired: 410,
   too_many_requests: 429, too_many_attempts: 429, send_failed: 502, email_not_configured: 503, accounts_unavailable: 503, data_keys_missing: 503
 };
 
@@ -66,7 +66,7 @@ function endpoint({methods, handle}) {
       let body = {};
       if (writing) { try { body = await readJson(req); } catch (error) { return json(res, error.status || 400, {error: 'invalid_request'}); } }
       const token = readCookie(req);
-      const context = {req, res, body, accounts, store: active, env, now, token, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || ''), user: () => accounts.authenticate(token)};
+      const context = {req, res, body, accounts, store: active, env, now, fetchImpl, outbox, token, ip: clientIp(req), userAgent: String(req.headers['user-agent'] || ''), user: () => accounts.authenticate(token)};
       try {
         const {status = 200, body: answer = {ok: true}, session, clear} = await handle(context);
         const headers = session ? {'Set-Cookie': sessionCookie(session)} : clear ? {'Set-Cookie': clearCookie()} : {};

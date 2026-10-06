@@ -145,6 +145,8 @@ function start({env = process.env, log = console} = {}) {
   // NF-e issuing is off; a failure to start never stops the site.
   let stopQueue = () => {};
   ready.then(() => { try { stopQueue = require('../api/_lib/invoice-queue').startWorker({env, log}); } catch (error) { log.error('fila de notas: não ligou —', error.message); } });
+  // The Correios tracking (api/_lib/tracking.js): a round every 10 minutes, each package looked up every 2 hours.
+  ready.then(() => { try { require('../api/_lib/tracking').startTrackingWorker({env, log}); } catch (error) { log.error('rastreio dos Correios: não ligou —', error.message); } });
   const stop = () => { stopQueue(); running.close(() => process.exit(0)); };
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);

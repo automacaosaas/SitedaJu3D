@@ -37,6 +37,14 @@ const COPY = {
     title: 'Uma nota fiscal precisa de você',
     lines: [`O emissor ficou fora do ar por mais de dois dias, e a nota do pedido ${reference} saiu da fila sem ser emitida${detail ? ` (${detail.replace(/[.\s]+$/, '')})` : ''}.`, 'No painel, abra o pedido e clique em Tentar de novo quando o emissor estiver de volta.']
   }),
+  // A package the Correios could not deliver, or are sending back (api/_lib/tracking.js). One e-mail per kind of problem.
+  pacote: ({reference, detail, code, returned}) => ({
+    area: 'ENTREGA',
+    subject: returned ? `O pacote do pedido ${reference} está voltando` : `O pacote do pedido ${reference} precisa de atenção`,
+    title: returned ? 'Um pacote está voltando para a loja' : 'Um pacote não foi entregue',
+    lines: [`Os Correios registraram no pedido ${reference}${code ? ` (rastreio ${code})` : ''}: ${String(detail || '').replace(/[.\s]+$/, '')}.`,
+      returned ? 'O pacote volta para a loja. Fale com o cliente para combinar um novo envio.' : 'Confira o rastreio no painel e, se precisar, fale com o cliente (endereço, alguém para receber) ou com a agência.']
+  }),
   parada: ({reference}) => ({
     subject: `A nota fiscal do pedido ${reference} ficou parada`,
     title: 'Uma nota fiscal precisa de você',
@@ -49,7 +57,7 @@ function renderAlert(kind, data = {}, {test = false, siteUrl = ''} = {}) {
   const link = siteUrl ? `${siteUrl}/admin.html` : '';
   const text = `${copy.title}\n\n${copy.lines.join('\n\n')}${link ? `\n\nPainel: ${link}` : ''}`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#2b1d24;max-width:560px;margin:0 auto;padding:24px">
-  <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.5px;color:#b0476b">NOTA FISCAL · AVISO DO SITE${test ? ' · TESTE' : ''}</p>
+  <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.5px;color:#b0476b">${esc(copy.area || 'NOTA FISCAL')} · AVISO DO SITE${test ? ' · TESTE' : ''}</p>
   <h1 style="margin:0 0 18px;font-size:22px;font-weight:600">${esc(copy.title)}</h1>
   ${copy.lines.map(line => `<p style="margin:0 0 12px;line-height:1.6">${esc(line)}</p>`).join('\n  ')}
   ${link ? `<p style="margin:18px 0 0"><a href="${esc(link)}" style="display:inline-block;background:#b0476b;color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:600">Abrir o painel</a></p>` : ''}

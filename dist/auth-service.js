@@ -120,6 +120,8 @@ export function createClient({fetchImpl = (...args) => fetch(...args), language 
     loadProfile: async () => (await request('GET', '/api/account/profile')).profile,
     async saveProfile(data) { const profile = (await request('PUT', '/api/account/profile', data)).profile; if (cached) remember({...cached, profileComplete: true}); return profile; },
     loadOrders: async () => (await request('GET', '/api/account/orders')).orders || [],
+    // "Acompanhar entrega": the delivery of one order, step by step (the Correios events, newest first).
+    loadTracking: async reference => (await request('GET', `/api/account/tracking?ref=${encodeURIComponent(reference)}`)).tracking,
 
     // "Excluir minha conta": a code goes to the account's e-mail; confirming it deletes the account and ends the session.
     async startDeletion() { deletion = await request('POST', '/api/account/delete-start', {lang: language()}); return view(deletion); },
@@ -146,6 +148,7 @@ export const signOut = client.signOut;
 export const loadProfile = client.loadProfile;
 export const saveProfile = client.saveProfile;
 export const loadOrders = client.loadOrders;
+export const loadTracking = client.loadTracking;
 export const startDeletion = client.startDeletion;
 export const adoptDeletion = client.adoptDeletion;
 export const confirmDeletion = client.confirmDeletion;

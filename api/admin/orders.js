@@ -13,6 +13,7 @@ const {adminEndpoint} = require('../_lib/admin-http');
 const {createOrders, PAID} = require('../_lib/orders');
 const {createInvoicing} = require('../_lib/invoicing');
 const {createInvoiceQueue, panelStatus} = require('../_lib/invoice-queue');
+const {createTracking} = require('../_lib/tracking');
 const {mapLimit} = require('../_lib/concurrency');
 
 // How many notes are checked with the service at the same time. The Bling client keeps Bling's pace (3 requests a
@@ -63,6 +64,8 @@ module.exports = adminEndpoint({methods: ['GET'], async handle({req, store, env,
   const integration = bling ? await panelStatus({store, env, now}).catch(error => { console.error('admin orders: Bling status unavailable —', error.code || '', error.message); return null; }) : null;
   // Last thing before answering: the work after the answer starts here.
   if (processing.length || waiting || bling) waitUntil(refreshLater({store, invoicing, processing, queue: waiting || bling ? createInvoiceQueue({store, env, now, fetchImpl, outbox}) : null}));
+  // Packages on their way: a round of the Correios tracking too (api/_lib/tracking.js; only the ones due for a look).
+  if (!before && list.some(o => o.status === 'enviado')) waitUntil(createTracking({store, env, now, fetchImpl, outbox}).kick());
   return {body: {
     orders: list.map(order => ({...orders.adminView(order), invoice: invoicing.view(invoices.get(order.id))})),
     nextCursor: more ? encodeCursor(list[list.length - 1]) : null,
