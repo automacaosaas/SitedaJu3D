@@ -134,8 +134,20 @@ const html = string => string.replace(/ /g, '&nbsp;');
   const butterfly = 'product-borboletoscopio-cutout.webp', set = artSrcset(butterfly), home = read('dist/index.html');
   assert.equal(set, 'assets/product-borboletoscopio-cutout-768.webp 768w, assets/product-borboletoscopio-cutout.webp 1254w');
   assert.equal(artSmall(butterfly), 'product-borboletoscopio-cutout-768.webp'); assert.equal(artSmall('card-x.webp'), 'card-x.webp'); assert.equal(artSrcset('card-x.webp'), '');
-  assert.ok(home.includes(`<link rel="preload" as="image" href="assets/${butterfly}" imagesrcset="${set}" imagesizes="${HERO_SIZES}" fetchpriority="high">`), 'the preload matches the showcase');
-  assert.ok(home.includes(`<img class="hero-fallback" src="assets/${butterfly}" srcset="${set}" sizes="${HERO_SIZES}"`), 'and so does the picture written in the page');
+  assert.ok(home.includes(`<img class="hero-fallback" loading="lazy" src="assets/${butterfly}" srcset="${set}" sizes="${HERO_SIZES}"`), 'the picture written in the page matches the showcase, and is lazy');
+  // The first photo is preloaded by page-entry.js for the piece the home opens on (the address, then the remembered one,
+  // then the butterfly), not by a fixed link that always fetched the butterfly; the picture written in the page stays out
+  // while the page waits, so it never fetches another one.
+  assert.doesNotMatch(home, /<link rel="preload" as="image"[^>]*cutout/, 'no fixed preload of one piece');
+  const entryCode = read('dist/page-entry.js');
+  assert.ok(entryCode.includes(`const HERO_SIZES = '${HERO_SIZES}';`), 'page-entry.js sizes the preload like the showcase');
+  const pieces = JSON.parse(/const PIECES = (\[[^\]]+\]);/.exec(entryCode)[1].replace(/'/g, '"'));
+  assert.deepEqual(pieces.map(key => `product-${key}-cutout.webp`).sort(), Object.keys(ART_768).sort(), 'every showcase photo with a 768 px version, by the same names');
+  assert.equal(pieces[0], 'borboletoscopio', 'the butterfly when there is no piece to open on');
+  assert.match(entryCode, /const piece = \[routed, saved\]\.find\(key => PIECES\.includes\(key\)\) \|\| PIECES\[0\]/, 'the address first, then the remembered piece');
+  assert.match(entryCode, /preload\.setAttribute\('imagesrcset', `\$\{file\}-768\.webp 768w, \$\{file\}\.webp 1254w`\);/);
+  assert.ok(entryCode.indexOf('document.head.append(preload)') < entryCode.indexOf('if (seen) {'), 'on every visit, first or later');
+  assert.match(experience, /\.ju-opening \.hero-fallback,\.ju-returning \.hero-fallback \{ display:none; \}/);
   assert.match(showcase, /const set = artSrcset\(product\.catalogImage \|\| product\.image\), sources = set \? ` sizes="\$\{HERO_SIZES\}" \$\{near \? '' : 'data-'\}srcset="\$\{set\}"` : '';/);
   assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
   assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');

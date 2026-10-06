@@ -146,12 +146,23 @@ escala):
 
 - **Vitrine:** `srcset` com as duas versões e `sizes` medido (`HERO_SIZES` em `products.js`). Celular (até 3x) e computador
   (1x e 2x) baixam a de 768 px. Só telas grandes e muito densas pegam a de 1254 px.
-- **Pré-carregamento e imagem de reserva do `index.html`:** o mesmo `srcset` e o mesmo `sizes`, para o navegador baixar um
-  arquivo só.
+- **Pré-carregamento da primeira foto:** feito pelo `page-entry.js`, para a peça em que a home vai abrir (a do endereço, a
+  lembrada pelo `journey.js` ou, sem nenhuma, a borboleta), com o mesmo `srcset` e o mesmo `sizes` da vitrine. Até 06/10 era
+  um `<link rel="preload">` fixo no `index.html`, que baixava a borboleta mesmo para quem voltava a outra peça.
+- **Imagem de reserva do `index.html`:** o mesmo `srcset` e `sizes`, com `loading="lazy"` e escondida enquanto a página
+  espera a vitrine. Assim nunca baixa outra peça. Ela aparece se a vitrine falhar (aos 2,5 s) ou sem JavaScript.
 - **Demonstração:** `DEMO_SIZES`, porque a peça aparece 1,4 a 1,6 vez maior. Celular 2x e computador 1x reaproveitam a de
   768 px; telas 3x e retina pegam a de 1254 px.
 - **Página da peça:** `PHOTO_SIZES`, gerado por `tools/build-product-pages.cjs`.
 - **Carrinho e mini-carrinho:** a de 768 px direto (`artSmall`), que já está no cache depois da vitrine.
+
+**Pré-carregamento da peça certa, medido com rede de celular simulada** (latência 150 ms, 1,6 Mbit/s, 375 px em 2x; três
+rodadas de cada):
+
+| Caminho | Antes | Depois |
+|---|---|---|
+| Direto na home (borboleta) | foto pedida aos 0,56 s; página aos 4,4 s | foto pedida aos 0,60 s; página aos 4,4 s |
+| Da página do avião para a home | borboleta pedida à toa; avião aos 3,75 s; página aos 4,85 s | sem a borboleta; avião aos 0,62 s; página aos 3,8 s |
 
 **Conferido pelo registro de rede do Chrome:**
 

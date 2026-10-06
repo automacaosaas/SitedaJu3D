@@ -28,6 +28,9 @@
 .ju-arrived .home .site-header { animation:ju-appear .42s both; }
 .ju-arrived .home .showcase { animation:ju-appear .55s .07s both; }
 .hero-fallback { display:block; width:auto; height:auto; max-width:min(100%,300px); max-height:100%; margin:auto; }
+/* While the page waits for the showcase (opening screen, or a later visit), the picture written in the page stays out:
+   being lazy, it then never fetches the butterfly for a visitor the home opens on another piece (page-entry.js). */
+.ju-opening .hero-fallback,.ju-returning .hero-fallback { display:none; }
 .piece .image-unavailable { position:absolute; inset:20% 10%; display:grid; place-content:center; text-align:center; font:14px/1.5 'DM Sans',sans-serif; color:var(--theme-muted); }
 .ju-arrived .catalog-home { animation:ju-appear .55s .14s both; }
 .product-rail-art { position:relative; }
