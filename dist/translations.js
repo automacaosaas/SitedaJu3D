@@ -862,6 +862,7 @@ Desistência em até 7 dias|Cancel within 7 days|Desistimiento hasta 7 días
 Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in the chosen colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en los colores elegidos. La producción empieza después de confirmarse el pago.
 Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
 Ver mais|See more|Ver más
+Ver todas|See all|Ver todas
 Todas as peças|All pieces|Todas las piezas
 Peças anteriores|Previous pieces|Piezas anteriores
 Mais peças|More pieces|Más piezas

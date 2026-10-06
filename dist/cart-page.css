@@ -45,39 +45,57 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-checkout-total { display: none; }
 .cart-checkout:focus-visible, .cart-checkout-total:focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
 .cart-order-summary h2 { scroll-margin-top: 24px; }
+.cart-order-summary h2:focus { outline: none; }
+/* o resumo acende quando o "Ver resumo" da barra de baixo chega nele */
+.cart-order-summary.is-spotlight { animation: summary-spot 1.7s cubic-bezier(.25, .8, .25, 1); }
+@keyframes summary-spot {
+  0% { box-shadow: 0 0 0 0 transparent, 0 8px 32px #65364904; }
+  22% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--rose) 20%, transparent), 0 16px 40px #6536491c; border-color: color-mix(in srgb, var(--rose) 55%, transparent); }
+  100% { box-shadow: 0 0 0 16px transparent, 0 8px 32px #65364904; }
+}
+@keyframes chip-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+@media (prefers-reduced-motion: reduce) { .cart-order-summary.is-spotlight, .cart-summary-chip svg { animation: none; } }
 .cart-selection-help { font-size: 12px; color: var(--rose); margin: 10px 0 0; }
 /* Depois do resumo (largura toda): "Você também pode gostar" e as informações da compra com os meios de pagamento. */
 .cart-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
 .cart-recs h2, .cart-pay h2 { margin: 0 0 18px; font: 500 clamp(24px, 2.4vw, 30px)/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.6px; }
-.cart-rec-track { display: flex; flex-wrap: wrap; gap: 16px; margin: 0; padding: 0; list-style: none; }
-.cart-rec-track > li { flex: 0 1 260px; }
-.cart-rec { display: grid; height: 100%; border: 1px solid #b64c681b; border-radius: 16px; overflow: hidden; background: var(--panel); color: inherit; text-decoration: none; box-shadow: 0 6px 22px #65364908; transition: transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s ease; }
-.cart-rec-art { display: grid; place-items: center; aspect-ratio: 1 / .8; background: radial-gradient(120% 90% at 50% 30%, var(--rec-stops)); }
-.cart-rec-art img { width: 82%; height: 92%; object-fit: contain; filter: drop-shadow(0 10px 10px color-mix(in srgb, var(--rec-ink) 18%, transparent)); transition: transform .4s cubic-bezier(.25, .8, .25, 1); }
-.cart-rec-copy { display: grid; gap: 3px; padding: 14px 16px 16px; }
-.cart-rec-name { font: 500 19px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.3px; }
-.cart-rec-sub { font-size: 12px; color: var(--muted); }
-.cart-rec-price { margin-top: 6px; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+/* "Você também pode gostar" (06/10/2026): cards pequenos (foto, nome, preço) lado a lado num carrossel que anda sozinho, um por vez.
+   A fileira desliza de lado (toque, roda do mouse, arraste) e assenta num card; as bordas esmaecem onde ainda há cards. */
+.cart-recs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.cart-recs-head h2 { margin: 0; }
+.cart-recs-all { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; min-height: 40px; color: var(--rose); font-size: 13px; font-weight: 650; text-decoration: none; }
+.cart-recs-all .icon { width: 15px; height: 15px; transition: transform .3s cubic-bezier(.34, 1.56, .64, 1); }
+.cart-rec-rail { position: relative; --rec-w: 176px; --rec-gap: 14px; }
+.cart-rec-track { display: flex; flex-wrap: nowrap; gap: var(--rec-gap); margin: 0 -16px; padding: 6px 16px 14px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cart-rec-track::-webkit-scrollbar { display: none; }
+.cart-rec-rail.can-scroll .cart-rec-track { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
+.cart-rec-rail.can-scroll:not(.at-start) .cart-rec-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); }
+.cart-rec-track.is-dragging { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+.cart-rec-track > li { flex: 0 0 var(--rec-w); scroll-snap-align: start; }
+.cart-rec { display: grid; gap: 4px; height: 100%; padding: 8px 8px 12px; border: 1px solid #b64c6814; border-radius: 18px; background: var(--panel); color: inherit; text-decoration: none; box-shadow: 0 4px 16px #65364908; -webkit-user-drag: none; transition: transform .35s cubic-bezier(.25, .8, .25, 1), box-shadow .35s ease, border-color .3s ease; }
+.cart-rec-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; border-radius: 12px; overflow: hidden; background: radial-gradient(120% 90% at 50% 30%, var(--rec-stops)); }
+.cart-rec-art img { width: 84%; height: 88%; object-fit: contain; filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--rec-ink) 16%, transparent)); transition: transform .45s cubic-bezier(.25, .8, .25, 1); pointer-events: none; }
+.cart-rec-name { padding: 0 4px; font: 500 15px/1.25 'Playfair Display', Georgia, serif; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-rec-price { padding: 0 4px; font-size: 13.5px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cart-rec.is-soon .cart-rec-price { justify-self: start; margin-left: 4px; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--rec-accent) 12%, transparent); color: var(--rec-accent); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
 .cart-rec:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
-/* "Ver mais": o último card leva à página Produtos */
-/* "Ver mais": pequeno e discreto no fim da fileira, um + num círculo fino, levando à página Produtos */
-.cart-rec-track > .cart-rec-more-item { flex: 0 0 132px; }
-.cart-rec-more { align-content: center; justify-items: center; gap: 4px; padding: 16px 10px; border: 0; background: transparent; box-shadow: none; text-align: center; }
-.cart-rec-more-mark { position: relative; width: 46px; height: 46px; margin-bottom: 8px; border: 1.5px solid color-mix(in srgb, var(--ink) 22%, transparent); border-radius: 50%; color: var(--ink); transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), background-color .3s ease, border-color .3s ease, color .3s ease; }
-.cart-rec-more-mark::before, .cart-rec-more-mark::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 1.5px; border-radius: 2px; background: currentColor; transform: translate(-50%, -50%); }
-.cart-rec-more-mark::after { transform: translate(-50%, -50%) rotate(90deg); }
-.cart-rec-more strong { font-size: 14px; font-weight: 650; }
-.cart-rec-more small { font-size: 12px; color: var(--muted); }
-/* setas finas sobre a fileira (só quando ela rola, no celular) */
-.cart-rec-rail { position: relative; }
-.cart-rec-arrow { position: absolute; top: 32%; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffd9; backdrop-filter: blur(8px); color: var(--ink); box-shadow: 0 6px 16px #6536491a; cursor: pointer; transition: transform .25s ease; }
+/* As setas, no meio da altura das fotos. A da direita (avançar; o carrossel dá a volta) tem um anel que se fecha no tempo até o
+   próximo card e uma setinha que chama para o lado enquanto o carrossel anda sozinho. */
+.cart-rec-arrow { position: absolute; top: calc(6px + (var(--rec-w) - 16px) / 2); z-index: 2; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffe6; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--ink); box-shadow: 0 8px 20px #6536491f; cursor: pointer; transform: translateY(-50%); transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease, background-color .3s ease, color .3s ease; }
 .cart-rec-arrow[hidden] { display: none; }
-.cart-rec-arrow svg { width: 16px; height: 16px; }
-.cart-rec-arrow.is-next { right: -6px; }
-.cart-rec-arrow.is-prev { left: -6px; }
-.cart-rec-arrow.is-prev svg { transform: rotate(180deg); }
-.cart-rec-arrow:active { transform: scale(.92); }
+.cart-rec-arrow > .icon { position: relative; z-index: 1; width: 18px; height: 18px; }
+.cart-rec-arrow.is-next { right: -8px; }
+.cart-rec-arrow.is-prev { left: -8px; }
+.cart-rec-arrow.is-prev > .icon { transform: rotate(180deg); }
+.cart-rec-arrow:active { transform: translateY(-50%) scale(.92); }
 .cart-rec-arrow:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+.cart-rec-ring { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); transform: rotate(-90deg); pointer-events: none; }
+.cart-rec-ring circle { fill: none; stroke: var(--rose); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 138.3; stroke-dashoffset: 138.3; opacity: 0; }
+.cart-rec-rail.is-playing .cart-rec-ring circle { opacity: 1; animation: rec-ring var(--rec-auto, 4200ms) linear forwards; }
+.cart-rec-rail.is-playing .cart-rec-arrow.is-next > .icon { animation: rec-nudge 1.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes rec-ring { to { stroke-dashoffset: 0; } }
+@keyframes rec-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+@media (prefers-reduced-motion: reduce) { .cart-rec-rail .cart-rec-ring circle, .cart-rec-rail .cart-rec-arrow > .icon { animation: none !important; } }
 /* Informações da compra: uma linha por assunto, com o ícone e um link para a política. */
 .cart-info { display: grid; gap: 28px; }
 .cart-info-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -137,11 +155,14 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   body[data-stage="cart"] .cart-layout { scroll-margin-bottom: 124px; }
   body[data-stage="cart"] .cart-layout :is(a, button, input) { scroll-margin-bottom: 124px; }
   .cart-checkout-bar { position: fixed; z-index: 100; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: minmax(116px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 16px; padding: 12px max(16px, calc((100% - 690px) / 2)); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--panel); box-shadow: 0 -6px 24px #6536490d; }
-  .cart-checkout-total { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 52px; color: var(--ink); text-decoration: none; border-radius: 6px; }
-  .cart-checkout-total > span { font-size: 12px; line-height: 1.3; color: var(--muted); }
-  .cart-checkout-total > span span { margin-left: 4px; color: var(--rose); }
+  .cart-checkout-total { display: grid; justify-items: start; align-content: center; min-width: 0; min-height: 52px; color: var(--ink); text-decoration: none; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+  .cart-total-label { font-size: 12px; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .cart-checkout-total strong { font-size: clamp(18px, 5vw, 22px); line-height: 1.4; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .cart-checkout-total small { color: var(--rose); font-size: 12px; line-height: 1.4; }
+  /* "Ver resumo": um botãozinho com a setinha para baixo; some enquanto o resumo está na tela (watchSummary) */
+  .cart-summary-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 3px 8px 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--rose) 11%, transparent); color: var(--rose); font-size: 12px; font-weight: 650; line-height: 1.35; white-space: nowrap; transition: opacity .3s ease, transform .3s cubic-bezier(.34, 1.56, .64, 1), background-color .25s ease; }
+  .cart-summary-chip svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; animation: chip-bob 1.8s ease-in-out infinite; }
+  .cart-checkout-total:active .cart-summary-chip { transform: scale(.95); background: color-mix(in srgb, var(--rose) 20%, transparent); }
+  .cart-checkout-bar.is-at-summary .cart-summary-chip { opacity: 0; transform: translateY(5px); }
   .cart-checkout-bar .cart-checkout { min-height: 52px; padding: 12px 14px; text-align: left; }
   .cart-more { max-width: 690px; margin-inline: auto; }
   .cart-info { grid-template-columns: minmax(0, 1fr); }
@@ -174,21 +195,22 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-order-summary { padding: 18px 16px; border-radius: 14px; }
   .cart-order-summary h2 { font-size: 23px; padding-bottom: 12px; }
   .cart-order-summary .grand-total { font-size: 24px; }
-  /* recomendações: uma fileira que desliza de lado, com a próxima peça aparecendo na borda */
-  .cart-rec-track { display: flex; gap: 12px; margin: 0 -16px; padding: 4px 16px 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; }
-  .cart-rec-track::-webkit-scrollbar { display: none; }
-  .cart-rec-track > li { flex: 0 0 min(68%, 250px); scroll-snap-align: start; }
-  .cart-rec-track > .cart-rec-more-item { flex: 0 0 116px; }
-  .cart-rec-name { font-size: 17px; }
+  /* recomendações: uns dois cards e meio na tela (o pedaço do próximo chama para o lado) */
+  .cart-rec-rail { --rec-w: min(40vw, 168px); --rec-gap: 10px; }
+  .cart-rec-arrow { width: 42px; height: 42px; }
+  .cart-rec-arrow.is-next { right: -4px; }
+  .cart-rec-arrow.is-prev { left: -4px; }
   .cart-info-list a { font-size: 13px; }
 }
 @media (hover: hover) {
   .cart-product:hover { border-color: #b64c6838; }
   .cart-edit-link:hover { color: #963b55; }
-  .cart-rec:hover { transform: translateY(-3px); box-shadow: 0 14px 30px #65364914; }
-  .cart-rec:hover .cart-rec-art img { transform: scale(1.05); }
+  .cart-rec:hover { transform: translateY(-3px); border-color: #b64c6826; box-shadow: 0 14px 30px #65364914; }
+  .cart-rec:hover .cart-rec-art img { transform: scale(1.06); }
+  .cart-rec-arrow:hover { transform: translateY(-50%) scale(1.06); box-shadow: 0 12px 26px #65364926; }
+  .cart-recs-all:hover .icon { transform: translateX(3px); }
+  .cart-rec-track:not(.is-dragging) { cursor: grab; }
   .cart-info-list a:hover { text-decoration-color: currentColor; }
-  .cart-rec-more:hover .cart-rec-more-mark { transform: rotate(90deg); border-color: var(--rose); background: var(--rose); color: #fff; }
 }
 /* The cart's CEP box: price the delivery before signing in (the same CEP goes on to the delivery step). */
 .cart-ship { margin: 4px 0 16px; }

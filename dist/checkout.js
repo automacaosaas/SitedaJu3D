@@ -14,7 +14,7 @@ import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} fro
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 
 import {refreshHeader} from './site-shell.js';
-import {renderCart, cartSummary, wireRecArrows, updateRecArrows, paymentBlock} from './cart-view.js';
+import {renderCart, cartSummary, wireRecArrows, updateRecArrows, wireSummaryLink, watchSummary, paymentBlock} from './cart-view.js';
 
 const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
@@ -65,6 +65,7 @@ function paintShipping() {
     if (!aside) return;
     const focused = document.activeElement?.id, typed = main.querySelector('#cart-cep')?.value;
     aside.outerHTML = cartSummary(purchaseItems(), cartOptions());
+    watchSummary(main);
     const input = main.querySelector('#cart-cep');
     if (input && typed !== undefined && focused === 'cart-cep') { input.value = typed; input.focus({preventScroll: true}); }
     else if (focused) main.querySelector('#' + focused)?.focus({preventScroll: true});
@@ -305,7 +306,7 @@ function render(focus = true) {
   main.innerHTML = stage === 'cart' ? renderCart(cart, cartOptions()) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
   if (barBefore !== null) riseBar(main, barBefore);
-  if (stage === 'cart') updateRecArrows(main);
+  if (stage === 'cart') { updateRecArrows(main); watchSummary(main); }
   if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
   ensureShipping();
   if (stage === 'delivery') setTimeout(autofillKnownCep, 0);
@@ -476,6 +477,7 @@ main.addEventListener('change', e => {
   if (option) { ship = {...ship, chosen: option}; paintShipping(); }
 });
 wireRecArrows(main);
+wireSummaryLink(main);
 if (live.mode !== 'off') loadPaymentMethods().then(methods => { if (!methods) return; payMethods = methods; const block = main.querySelector('[data-cart-pay]'); if (block) block.outerHTML = paymentBlock(methods); });
 main.addEventListener('click', e => {
   if (!real || !e.target.closest('[data-action="retry-shipping"]')) return;
