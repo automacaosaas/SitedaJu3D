@@ -83,9 +83,12 @@ function createTracking({store, env = process.env, now = () => Date.now(), fetch
       return store.orders.findById(order.id);
     }
     const last = events[0], delivery = events.find(e => e.state === 'entregue');
-    await store.orders.update(order.id, {trackingState: last.state, trackingEvents: events, trackingCheckedAt: at, ...(delivery && !order.deliveredAt ? {deliveredAt: new Date(delivery.at)} : {})});
+    await store.orders.update(order.id, {trackingState: last.state, trackingEvents: events, trackingLast: last, trackingCheckedAt: at, ...(delivery ? {deliveredAt: new Date(delivery.at)} : {})});
+    // Reopened by Ju after a delivery (orders.setStatus marks "reaberto:<time>"): only a delivery registered after that
+    // closes the order again.
+    const reopened = Math.max(0, ...String(order.trackingNotices || '').split(',').filter(n => n.startsWith('reaberto:')).map(n => parseInt(n.slice(9), 36) || 0));
     let delivered = false;
-    if (delivery && order.status === 'enviado') {
+    if (delivery && order.status === 'enviado' && Date.parse(delivery.at) > reopened) {
       delivered = await store.orders.transition(order.id, ['enviado'], {status: 'concluido', decidedAt: at});
       if (delivered) await store.orders.addEvent(order.id, 'status:concluido', 'entregue (Correios)', 'correios');
     }
@@ -139,6 +142,7 @@ function createTracking({store, env = process.env, now = () => Date.now(), fetch
   // saved line (the page never breaks because of the Correios).
   async function forOrder(order, {maxAge = FRESH} = {}) {
     if (!order?.trackingCode || !ready()) return order;
+    if (order.status === 'concluido' && order.deliveredAt) return order;   // delivered: the line will not change any more
     const checked = order.trackingCheckedAt ? new Date(order.trackingCheckedAt).getTime() : 0;
     if (checked && now() - checked < maxAge) return order;
     try { const [objeto] = await client.track([order.trackingCode]); return await apply(order, objeto || null); }

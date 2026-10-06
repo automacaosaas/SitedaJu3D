@@ -93,7 +93,8 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
   }
 
   // API Rastro (GET /srorastro/v1/objetos/{code} and ?codigosObjetos=…, up to 50): the events in the real shape, newest
-  // first, times in Brasília without a zone. The last digit of the code's number picks the story (setTracking overrides):
+  // first, times in Brasília without a zone. The 8th digit of the code's number picks the story (the 9th is the check
+  // digit; setTracking overrides):
   //   0 unknown to the Correios (mensagem, no events) · 1 posted · 2 in transit · 3 out for delivery · 4 delivered ·
   //   5 recipient away · 6 returned to the sender · 7 waiting at the agency · 8 and 9 in transit
   const tracked = new Map();
@@ -110,7 +111,7 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
   const local = ms => new Date(ms - 3 * 3600000).toISOString().slice(0, 19);   // "2026-10-05T14:32:00", Brasília
   function objectFor(code) {
     if (tracked.has(code)) return {codObjeto: code, eventos: tracked.get(code)};
-    const story = STORIES[code.slice(-3, -2)];
+    const story = STORIES[code.slice(-4, -3)];
     if (!story) return {codObjeto: code, mensagem: 'SRO-020: Objeto não encontrado na base de dados dos Correios.'};
     const start = Date.now() - story.length * 6 * 3600000;
     return {codObjeto: code, tipoPostal: {sigla: code.slice(0, 2)}, eventos: story.map((step, i) => ({...STEPS[step], dtHrCriado: local(start + i * 6 * 3600000)})).reverse()};

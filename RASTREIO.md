@@ -27,8 +27,11 @@ O que mudou no fluxo dos e-mails:
 
 - Ao abrir a aba Expedição, o cursor já está no campo do código do primeiro pedido.
 - Dá para digitar, colar ou **ler com o leitor de código de barras** da etiqueta. O leitor digita o código e aperta Enter.
-- Um código completo (2 letras, 9 números e 2 letras, como `AA123456789BR`) **confirma o envio sozinho**. Ninguém precisa
+- Um código completo (2 letras, 9 números e 2 letras, como `AA123456785BR`) **confirma o envio sozinho**. Ninguém precisa
   clicar em "Confirmar envio".
+- **Dígito verificador:** o 9º número confere os outros oito (padrão S10 da UPU, usado pelos Correios). Um número trocado
+  na digitação ou na leitura quase nunca passa: o campo avisa "Este código não confere" e o envio não é confirmado. O
+  servidor confere de novo (`validTracking` em `api/_lib/orders.js`).
 - Um aviso no painel diz se o e-mail foi para o cliente.
 
 ## 2. A consulta automática
@@ -84,6 +87,10 @@ não liberada no contrato): o pacote fica marcado como consultado e só é tenta
 - **Enviados:** cada pedido mostra uma faixa com o estado (cor por estado), o último evento, a cidade e a hora, e o botão
   **"Marcar como entregue"** para quando o rastreio não resolver sozinho (o painel pergunta antes).
 - **Concluídos:** "Entregue em …" quando a data veio dos Correios.
+- **Reabrir um pedido entregue** (o cliente diz que não recebeu, por exemplo): ele volta para Enviados com o rastreio, e a
+  entrega que os Correios já tinham registrado não o fecha de novo. Só uma entrega registrada **depois** da reabertura
+  leva o pedido a Concluídos outra vez, e aí o cliente recebe "Pedido entregue" de novo.
+- A lista do painel lê só o último evento de cada pedido (coluna `tracking_last`), nunca a linha inteira.
 
 ## 4. Em "Meus pedidos"
 
@@ -92,10 +99,10 @@ não liberada no contrato): o pacote fica marcado como consultado e só é tenta
   hora. O link para o site dos Correios continua.
 - `GET /api/account/tracking?ref=JU-…`: exige o cliente logado e só responde sobre pedidos dele, enviados ou entregues
   (os outros dão 404). Usa o que está salvo se a última consulta tem menos de 30 minutos; senão consulta os Correios na
-  hora. Com os Correios fora, mostra o que já estava salvo.
+  hora. Com os Correios fora, mostra o que já estava salvo. Pedido já entregue não consulta mais: a linha não muda.
 - Os estados aparecem em português, inglês e espanhol. A descrição dos eventos fica como os Correios escrevem.
 
-## 5. Banco de dados: migração `012_rastreio.sql`
+## 5. Banco de dados: migrações `012_rastreio.sql` e `013_rastreio_ultimo.sql`
 
 Colunas novas em `orders`:
 
@@ -105,26 +112,31 @@ Colunas novas em `orders`:
 - `delivered_at`;
 - `tracking_notices`.
 
-Também cria o índice `orders_tracking (status, tracking_checked_at)`. É aplicada sozinha quando o app liga. Como a `011`,
-foi escrita sem um MySQL local: na primeira subida, confira no log a linha `db: migração aplicada — 012_rastreio.sql`.
+Também cria o índice `orders_tracking (status, tracking_checked_at)`.
+
+A `013` acrescenta `tracking_last`: o último evento, que a lista do painel lê no lugar dos até 40 de `tracking_events`.
+Ficou numa migração separada porque a `012` pode já ter rodado no site de teste.
+
+As duas são aplicadas sozinhas quando o app liga. Como a `011`, foram escritas sem um MySQL local: na primeira subida,
+confira no log as linhas `db: migração aplicada — 012_rastreio.sql` e `… 013_rastreio_ultimo.sql`.
 
 ## 6. Testar
 
 **Local:** `node tools/dev-server.cjs --fake-correios`. O simulador responde a API Rastro e escolhe a história pelo
-**último dígito do número** do código:
+**8º número** do código (o 9º é o dígito verificador). Códigos de exemplo, todos com o dígito certo:
 
-| Dígito | História |
-|---|---|
-| 0 | código desconhecido |
-| 1 | postado |
-| 2, 8 e 9 | em trânsito |
-| 3 | saiu para entrega |
-| 4 | entregue |
-| 5 | destinatário ausente |
-| 6 | devolvido |
-| 7 | aguardando retirada |
+| 8º número | História | Código de exemplo |
+|---|---|---|
+| 0 | código desconhecido | `AA123456706BR` |
+| 1 | postado | `AA123456710BR` |
+| 2, 8 e 9 | em trânsito | `AA123456723BR` |
+| 3 | saiu para entrega | `AA123456737BR` |
+| 4 | entregue | `AA123456745BR` |
+| 5 | destinatário ausente | `AA123456754BR` |
+| 6 | devolvido | `AA123456768BR` |
+| 7 | aguardando retirada | `AA123456771BR` |
 
-Por exemplo, `AA123456784BR` é entregue na primeira volta, que no servidor local roda a cada 60 s.
+Por exemplo, `AA123456745BR` é entregue na primeira volta, que no servidor local roda a cada 60 s.
 
 **No site de teste (Hostinger), nesta ordem:**
 

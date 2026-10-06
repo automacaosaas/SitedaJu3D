@@ -29,17 +29,25 @@ const FROM = Object.freeze({
 });
 const DECIDED = ['confirmado', 'enviado', 'concluido', 'recusado'];   // the steps the buyer hears about by e-mail
 const INVOICED = ['confirmado', 'enviado', 'concluido'];   // the NF-e is issued when Ju confirms
-const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;                // a Correios object code: AA123456789BR
+const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;                // a Correios object code: AA123456785BR
+// The 9th digit checks the other eight (UPU S10, the Correios' standard): a mistyped or misread number almost never
+// passes. The panel checks it too (dist/admin.js), before a complete code confirms the shipment by itself.
+const S10 = [8, 6, 4, 2, 3, 5, 9, 7];
+function validTracking(code) {
+  if (!TRACKING.test(code)) return false;
+  const rest = 11 - S10.reduce((sum, weight, i) => sum + weight * Number(code[2 + i]), 0) % 11;
+  return Number(code[10]) === (rest === 10 ? 0 : rest === 11 ? 5 : rest);
+}
 const MONEY_BACK = ['refunded', 'requested']; // refund states that make a declined order final (the money is going back)
 const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extra});
 // Everything the automatic tracking saved (api/_lib/tracking.js): cleared when the code comes off or changes.
-const NO_TRACKING = Object.freeze({trackingState: null, trackingEvents: null, trackingCheckedAt: null, deliveredAt: null, trackingNotices: null});
+const NO_TRACKING = Object.freeze({trackingState: null, trackingEvents: null, trackingLast: null, trackingCheckedAt: null, deliveredAt: null, trackingNotices: null});
 const iso = value => value ? new Date(value).toISOString() : null;
-// What the panel and "Meus pedidos" show of the tracking: where the package stands and the last event (all of them with
-// `all`, for the timeline).
+// What the panel and "Meus pedidos" show of the tracking: where the package stands and the last event, kept apart
+// (trackingLast) so the panel's list never reads the whole line; every event with `all`, for the timeline.
 function trackingView(order, {all = false} = {}) {
-  const events = Array.isArray(order.trackingEvents) ? order.trackingEvents : [];
-  return {code: order.trackingCode || null, state: order.trackingState || null, last: events[0] || null, checkedAt: iso(order.trackingCheckedAt), deliveredAt: iso(order.deliveredAt), ...(all ? {events} : {})};
+  const events = all && Array.isArray(order.trackingEvents) ? order.trackingEvents : [];
+  return {code: order.trackingCode || null, state: order.trackingState || null, last: order.trackingLast || events[0] || null, checkedAt: iso(order.trackingCheckedAt), deliveredAt: iso(order.deliveredAt), ...(all ? {events} : {})};
 }
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
 // The Pix discount is not a column: the order keeps the list subtotal and the total charged, so it is what is missing.
@@ -195,11 +203,17 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     let code = null;
     if (status === 'enviado' && current.status !== 'concluido') {
       code = String(trackingCode || '').replace(/\s+/g, '').toUpperCase();
-      if (!TRACKING.test(code)) throw fail('invalid_request', {field: 'trackingCode'});
+      if (!validTracking(code)) throw fail('invalid_request', {field: 'trackingCode'});
       Object.assign(patch, {trackingCode: code, shippedAt: current.status === 'enviado' && current.shippedAt ? current.shippedAt : date()});
       if (code !== current.trackingCode) Object.assign(patch, NO_TRACKING);   // a new code: what was tracked for the old one goes
     }
     if (['pendente', 'confirmado', 'recusado'].includes(status)) Object.assign(patch, {trackingCode: null, shippedAt: null}, NO_TRACKING);
+    if (status === 'enviado' && current.status === 'concluido') {
+      // Reopened (the buyer says it never arrived, say): the tracking stays, but a delivery the Correios registered before
+      // now no longer closes it by itself (tracking.js), and a new delivery e-mails the buyer again.
+      const kept = String(current.trackingNotices || '').split(',').filter(n => n && n !== 'entregue' && !n.startsWith('reaberto:'));
+      patch.trackingNotices = [...kept, `reaberto:${Number(now()).toString(36)}`].join(',').slice(0, 255);
+    }
     const moved = await store.orders.transition(id, [current.status], patch);
     if (!moved) throw fail('invalid_transition');
     await store.orders.addEvent(id, `status:${status}`, code || clean || null, actor);
@@ -281,4 +295,4 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   return {open, applyPayment, notifyPaid, notifyPaidLater, notifyDecision, notifyTracking, refund, retryRefund, summary, customerView, adminView, setStatus, PAID, ADMIN_STATUSES};
 }
 
-module.exports = {createOrders, trackingView, PAID, ADMIN_STATUSES, FROM, INVOICED, TRACKING};
+module.exports = {createOrders, trackingView, validTracking, PAID, ADMIN_STATUSES, FROM, INVOICED, TRACKING};
