@@ -272,14 +272,14 @@ function orderCard(o) {
   // barcode scanner; or back, or Recusar); Enviados → the Correios' last event (the delivery moves the order by itself), and on
   // the side Marcar como entregue, fix the code or back; Concluídos and Recusados → Reabrir.
   const id = esc(o.id), code = o.trackingCode ? `<code translate="no">${esc(o.trackingCode)}</code>` : '';
-  const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456785BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button></form>`;
+  const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456785BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button><p class="admin-tracking-note" role="status"></p></form>`;
   const back = (to, label) => `<button type="button" class="btn-reopen" data-action="move" data-to="${to}" data-id="${id}">${label}</button>`;
   const steps = {
     pendente: () => `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="confirm" data-id="${id}"${moneyBack ? ' disabled' : ''}>Confirmar pedido</button><button type="button" class="btn-decline" data-action="decline" data-id="${id}">Recusar pedido</button></div>`,
     // The piece never leaves without its note: with NF-e on, the tracking code waits for the note to be authorized.
     confirmado: () => `<div class="admin-ship">${invoicingMode !== 'off' && o.invoice?.status !== 'autorizada'
       ? `<p class="admin-ship-locked" role="note"><strong>🔒 Envio bloqueado até a nota fiscal ser autorizada.</strong> A peça não pode sair sem a nota. ${!o.invoice ? 'Clique em Emitir nota fiscal, acima.' : o.invoice.status === 'erro' ? 'Resolva o problema da nota acima e clique em Tentar de novo.' : 'A nota sai sozinha; depois clique em Atualizar para liberar o rastreio.'}</p>`
-      : `<p class="admin-ship-hint">Postou nos Correios? Digite, cole ou leia com o leitor o código de rastreio: o pedido vai para Enviados e o cliente recebe o e-mail com o código.</p>${trackingForm('', 'Confirmar envio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
+      : `<p class="admin-ship-hint">Postou nos Correios? Digite, cole ou leia com o leitor o código de rastreio e clique em Confirmar envio: o pedido vai para Enviados e o cliente recebe o e-mail com o código.</p>${trackingForm('', 'Confirmar envio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
     enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p>${trackingStatus(o)}<details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary"><button type="button" class="btn-reopen" data-action="conclude" data-id="${id}">Marcar como entregue</button>${back('confirmado', 'Voltar para Expedição')}</div></div>`,
     concluido: () => `${o.tracking?.state ? trackingStatus(o) : ''}<div class="admin-order-actions"><span class="admin-decision-note">${o.tracking?.deliveredAt ? `Entregue em ${esc(formatWhen(o.tracking.deliveredAt))}` : `Concluído em ${esc(formatWhen(o.decidedAt))}`}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,
     recusado: () => `<div class="admin-order-actions"><span class="admin-decision-note">Recusado em ${esc(formatWhen(o.decidedAt))}${o.declineReason ? ' · ' + esc(o.declineReason) : ''}</span>${moneyBack ? '' : back('pendente', 'Reabrir')}</div>`
@@ -585,22 +585,31 @@ tools.addEventListener('click', async event => {
   await logout(); session = null; orders = []; revealed.clear(); resetCash(); resetIntl(); screen = 'login'; render();
 });
 
-// Expedição: a complete code in the tracking field (typed, pasted or read by a barcode scanner, which types it and presses
-// Enter) confirms the shipment by itself; a scanner's Enter gets there first, and the busy flag keeps it to one save. A
-// code whose check digit does not match never goes: the field says so at once.
-let scanTimer = 0;
+// Expedição: the code is typed, pasted or read by a barcode scanner (which types it and presses Enter), and nothing goes
+// until "Confirmar envio" is clicked. A complete code with the right check digit says so under the field and the button
+// stands out; the scanner's Enter goes to the button, not past it. A code whose check digit does not match says so at once.
+const expeditionField = target => target.closest?.('.admin-order.status-confirmado .admin-tracking input[name="trackingCode"]');
+const typedCode = field => field.value.replace(/\s+/g, '').toUpperCase();
 content.addEventListener('input', event => {
   if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
-  const scan = event.target.closest?.('.admin-order.status-confirmado .admin-tracking input[name="trackingCode"]');
+  const scan = expeditionField(event.target);
   if (scan) {
-    clearTimeout(scanTimer);
-    const typed = () => scan.value.replace(/\s+/g, '').toUpperCase();
+    const code = typedCode(scan), ok = trackingOk(code), note = scan.form.querySelector('.admin-tracking-note');
     scan.setCustomValidity('');
-    if (trackingOk(typed())) scanTimer = setTimeout(() => { if (!busy && scan.isConnected && trackingOk(typed())) scan.form.requestSubmit(); }, 250);
-    else if (TRACKING.test(typed())) { scan.setCustomValidity(trackingProblem(typed())); scan.reportValidity(); }
+    scan.form.classList.toggle('is-ready', ok);
+    if (note) note.textContent = ok ? `Código ${code} conferido. Clique em Confirmar envio: o pedido vai para Enviados e o cliente recebe o e-mail com o código.` : '';
+    if (!ok && TRACKING.test(code)) { scan.setCustomValidity(trackingProblem(code)); scan.reportValidity(); }
   }
   if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
   if (section === 'internacional' && screen === 'dashboard') handleIntlInput(event);
+});
+content.addEventListener('keydown', event => {
+  const scan = expeditionField(event.target);
+  if (!scan || event.key !== 'Enter') return;
+  event.preventDefault();
+  const problem = trackingProblem(typedCode(scan));
+  if (problem) { scan.setCustomValidity(problem); scan.reportValidity(); return; }
+  scan.form.querySelector('.btn-ship')?.focus();
 });
 
 // Back from Bling's authorization page (/admin.html?code=…&state=…): the code comes off the address at once and goes

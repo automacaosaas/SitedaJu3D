@@ -169,7 +169,7 @@ async function posted(store, code, over = {}) {
   const panel = read('dist/admin.js');
   const panelOk = new Function('TRACKING', `${/const trackingOk = [^\n]+/.exec(panel)[0]} return trackingOk;`)(/^[A-Z]{2}\d{9}[A-Z]{2}$/);
   for (let i = 0; i < 3000; i++) { const code = `AA${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}BR`; assert.equal(panelOk(code), validTracking(code), code); }
-  assert(panel.includes('if (trackingOk(typed())) scanTimer = setTimeout('), 'only a code that checks confirms the shipment by itself');
+  assert(panel.includes('ok = trackingOk(code)') && panel.includes("scan.form.classList.toggle('is-ready', ok)"), 'only a code that checks is offered to "Confirmar envio"');
   assert(panel.includes("'Este código não confere: algum número está trocado. Confira na etiqueta.'"));
 
   const w = world(), orders = createOrders({store: w.store, env: w.env, now: w.now}), tracking = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet});
@@ -257,7 +257,10 @@ async function posted(store, code, over = {}) {
   assert.match(read('api/admin/order-status.js'), /posted = order\.status === 'enviado' && before === 'confirmado'/, 'the e-mail when the code goes in');
   const panel = read('dist/admin.js');
   assert.match(panel, /confirmado: 'Expedição'/);
-  assert.match(panel, /scan\.form\.requestSubmit\(\)/, 'a complete code confirms the shipment by itself (barcode scanner)');
+  assert.doesNotMatch(panel, /requestSubmit\(\)/, 'a pasted or scanned code never ships by itself: only "Confirmar envio" does (Pedro, 06/10)');
+  assert.match(panel, /scan\.form\.querySelector\('\.btn-ship'\)\?\.focus\(\)/, "the scanner's Enter goes to the button, not past it");
+  assert.match(panel, /conferido\. Clique em Confirmar envio: o pedido vai para Enviados e o cliente recebe o e-mail com o código\./, 'a checked code says what the button will do');
+  assert.match(panel, /<p class="admin-tracking-note" role="status"><\/p><\/form>/);
   assert.match(panel, /\.admin-order\.status-confirmado \.admin-tracking input'\)\.focus\(/, 'the field is ready for the next code');
   assert.match(panel, />Marcar como entregue<\/button>/);
   assert.match(panel, /t\?\.checkedAt \? `A consulta aos Correios de \$\{esc\(formatWhen\(t\.checkedAt\)\)\} não deu certo/, 'a refused query is not shown as "not asked yet"');

@@ -27,8 +27,9 @@ O que mudou no fluxo dos e-mails:
 
 - Ao abrir a aba Expedição, o cursor já está no campo do código do primeiro pedido.
 - Dá para digitar, colar ou **ler com o leitor de código de barras** da etiqueta. O leitor digita o código e aperta Enter.
-- Um código completo (2 letras, 9 números e 2 letras, como `AA123456785BR`) **confirma o envio sozinho**. Ninguém precisa
-  clicar em "Confirmar envio".
+- O envio **só é confirmado no botão "Confirmar envio"** (pedido do Pedro, 06/10/2026). Com um código completo e conferido
+  (2 letras, 9 números e 2 letras, como `AA123456785BR`), aparece embaixo do campo "Código … conferido. Clique em Confirmar
+  envio…" e o botão fica em destaque; o Enter do leitor leva até o botão, sem enviar.
 - **Dígito verificador:** o 9º número confere os outros oito (padrão S10 da UPU, usado pelos Correios). Um número trocado
   na digitação ou na leitura quase nunca passa: o campo avisa "Este código não confere" e o envio não é confirmado. O
   servidor confere de novo (`validTracking` em `api/_lib/orders.js`).

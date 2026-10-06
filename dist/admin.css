@@ -349,6 +349,8 @@ dialog.cash-dialog .admin-error{margin:0}
 .admin-tracking input:focus-visible{outline:2px solid var(--b-solid);outline-offset:1px}
 .btn-ship{border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:700;color:#fff;background:var(--b-solid);cursor:pointer;white-space:nowrap}
 .btn-ship:hover{background:var(--b-solid-hover)}
+/* Expedição: a complete code is confirmed only by the button (admin.js); the note says it was checked and the button stands out. */
+.admin-tracking-note{grid-column:1/-1;margin:0;font-size:13px;line-height:1.45;color:#1f6b47}.admin-tracking-note:empty{display:none}.admin-tracking.is-ready .btn-ship{box-shadow:0 0 0 3px #bfe6cc}
 .admin-secondary{display:flex;flex-wrap:wrap;gap:8px}
 .btn-reopen.is-danger{color:var(--r-fg);border-color:#f0c4cd}.btn-reopen.is-danger:hover{background:var(--r-bg)}
 .admin-tracking-line{margin:0;font-size:14px;color:var(--v-fg);background:var(--v-bg);border-radius:12px;padding:10px 12px}
