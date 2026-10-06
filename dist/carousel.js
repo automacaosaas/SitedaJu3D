@@ -1,6 +1,6 @@
 // Vitrine principal: um produto por vez, apoiado na pilastra, com fundo e header temáticos.
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
-import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors} from './hero-motion.js';
@@ -56,7 +56,9 @@ function init() {
     `<div class="palette" style="${themeVars(theme)}">${soon ? `<a class="palette-button" href="#produto/${key}/3d" data-role="palette">${icon('cube')}<span>Ver em 3D</span><span class="sr-only"> ${product.title}</span></a>` : `<a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="sr-only"> ${product.title}</span></a>`}${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('eye')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
     const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
-    return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
+    // 768 ou 1254 px conforme a tela (products.js); as distantes guardam os dois endereços até chegar a vez delas.
+    const set = artSrcset(product.catalogImage || product.image), sources = set ? ` sizes="${HERO_SIZES}" ${near ? '' : 'data-'}srcset="${set}"` : '';
+    return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img${sources} ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
   }).join('');
 
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
@@ -97,6 +99,7 @@ function init() {
   // ── Pré-carregamento: anterior, atual e próximo ──────────────────────────────
   function load(index) {
     const img = images[mod(index, total)];
+    if (img.dataset.srcset) { img.srcset = img.dataset.srcset; delete img.dataset.srcset; }
     if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; prepareImage(img); }
   }
   const preloadAround = index => { load(index - 1); load(index); load(index + 1); };

@@ -30,6 +30,13 @@ for (const name of referenced) {
   const limit = budget[name] ?? (name.endsWith('.glb') ? 2500 : 300);
   assert(kb <= limit, `assets/${name} is ${Math.round(kb)} KB (budget ${limit} KB)`);
 }
+// The showcase photos also in 768 px (products.js ART_768; same framing, scaled): what phones and 1x/2x computers download.
+const {ART_768} = await import('../dist/products.js');
+for (const [big, small] of Object.entries(ART_768)) {
+  assert(referenced.has(big) && referenced.has(small), `${small} is the light version of a showcase photo in use`);
+  const kb = (await stat(new URL(`assets/${small}`, dist))).size / 1024;
+  assert(kb <= 80, `assets/${small} is ${Math.round(kb)} KB (budget 80 KB)`);
+}
 
 // 3D models are Meshopt-compressed; an uncompressed export is several times larger.
 for (const name of await readdir(new URL('assets/models/', dist))) {

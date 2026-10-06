@@ -28,6 +28,23 @@ export const FAMILIES = Object.freeze({
   lampada: Object.freeze({label:'Encaixe para lâmpada de fenda', tool:'Lâmpada de fenda', items:Object.freeze(['macacoscopio'])})
 });
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
+// Fotos da vitrine também em 768 px (mesmo recorte, reduzidas): a peça na vitrine aparece com 190 a 390 px de largura,
+// então no celular (até 3x) e no computador (1x e 2x) a de 768 basta; a de 1254 fica para telas grandes e muito densas.
+// artSrcset monta o srcset; artSmall é a leve, para miniaturas (mini-carrinho, carrinho), já no cache depois da vitrine.
+// HERO_SIZES, DEMO_SIZES e PHOTO_SIZES: a largura com que a foto aparece na vitrine, na demonstração (1,4 a 1,6 vez a da
+// vitrine) e na página da peça (medida em 06/10/2026). O index.html repete HERO_SIZES no pré-carregamento e na imagem de
+// reserva, para o navegador baixar um arquivo só.
+export const ART_768 = Object.freeze({
+  'product-borboletoscopio-cutout.webp': 'product-borboletoscopio-cutout-768.webp',
+  'product-dinossauroscopio-cutout.webp': 'product-dinossauroscopio-cutout-768.webp',
+  'product-aviaoscopia-cutout.webp': 'product-aviaoscopia-cutout-768.webp',
+  'product-macacoscopio-cutout.webp': 'product-macacoscopio-cutout-768.webp'
+});
+export const artSmall = file => ART_768[file] || file;
+export const artSrcset = file => ART_768[file] ? `assets/${ART_768[file]} 768w, assets/${file} 1254w` : '';
+export const HERO_SIZES = '(max-width: 600px) 56vw, (max-width: 1000px) 310px, (max-width: 1560px) 25vw, 390px';
+export const DEMO_SIZES = '(max-width: 600px) 84vw, (max-width: 900px) 500px, (max-width: 1560px) 35vw, 545px';
+export const PHOTO_SIZES = '(max-width: 899px) 72vw, (max-width: 1400px) 35vw, 460px';
 // Vitrine da home. `art` descreve o recorte catalogImage como fração do lado do quadrado
 // (h: altura visível · bottom: folga abaixo do produto · foot: largura da base), para assentar
 // cada peça na pilastra sem tratar produto por produto. `theme` colore o banner, o header e a seção
