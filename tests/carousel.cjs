@@ -247,5 +247,24 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     }
   }
 
+  // ── a peça guardada para a volta à home (logo, Início, carrinho) ──────────────────
+  // A vitrine guarda as cores de journeyColors; a página de cada peça já nasce com as mesmas (tools/build-product-pages.cjs).
+  for (const key of [...Object.keys(PRODUCTS), ...Object.keys(data.SOON)]) {
+    const {theme} = showcase(key), colors = motion.journeyColors(theme), [, mid] = stops(theme.bannerStops);
+    assert.deepEqual(Object.keys(colors).sort(), ['--theme-accent', '--theme-accent-strong', '--theme-muted', '--theme-soft', '--theme-text', '--theme-wash'], key + ': as seis cores que o journey.js leva');
+    assert.ok(Object.values(colors).every(value => /^#[0-9a-f]{6}$/i.test(value)), key + ': só cores que o journey.js aceita');
+    assert.equal(colors['--theme-wash'], mixColor(mid, '#ffffff', .3));
+    assert.equal(colors['--theme-accent-strong'], mixColor(theme.accentColor, '#000000', .2));
+  }
+  for (const key of Object.keys(PRODUCTS)) {
+    const tag = read(key + '.html').match(/<html lang="pt-BR" data-theme-product="([a-z]+)" data-theme-colors="([^"]+)">/);
+    assert.ok(tag && tag[1] === key, key + '.html: a página declara a própria peça');
+    assert.deepEqual(JSON.parse(tag[2].replace(/&quot;/g, '"')), motion.journeyColors(showcase(key).theme), key + '.html: as mesmas cores da vitrine');
+  }
+  assert.ok(js.includes("const FOCUS = 'ju:product-focus'") && read('catalog.js').includes("const FOCUS = 'ju:product-focus'"), 'vitrine e coleção falam pelo mesmo evento');
+  assert.ok(js.includes('window.juTheme?.save(key, colors)') && js.includes('if (key !== shared) { shared = key;'), 'a vitrine guarda a peça e só avisa a coleção quando ela muda');
+  assert.ok(js.includes("addEventListener('pageshow', e => { if (e.persisted) report(); });"), 'voltar à home restaurada guarda de novo a peça à vista');
+  assert.ok(/function settle\(next[^]*?if \(routed >= 0 && routed !== mod\(Math\.round\(target\), total\)\) history\.replaceState\(history\.state, '', location\.pathname \+ location\.search\);[^]*?setActive\(/.test(js), 'trocada a peça, o #produto/<peça> antigo sai do endereço já no início do movimento (Continuar escolhendo volta à peça certa)');
+
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

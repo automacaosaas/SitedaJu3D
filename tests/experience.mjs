@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source = await readFile(new URL('../dist/loading-ui.js',import.meta.url),'utf8');
+// The tab's visibility, as in a browser: a background tab draws nothing, so decode() waits for it to come back.
+globalThis.document = Object.assign(new EventTarget(),{hidden:false});
 const {imageReady} = await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function fakeImage({complete=false,width=0,decode=()=>Promise.resolve()}={}) {
   const img = new EventTarget(); Object.assign(img,{complete,naturalWidth:width,decode}); return img;
@@ -11,6 +13,15 @@ const image=fakeImage(); const ready=imageReady(image); image.naturalWidth=400; 
 const broken=fakeImage(); const failure=imageReady(broken); broken.dispatchEvent(new Event('error')); assert.equal(await failure,false);
 assert.equal(await imageReady(fakeImage(),5),false,'a stalled resource never blocks the page indefinitely');
 assert.equal(await imageReady(fakeImage({complete:true,width:400,decode:()=>Promise.reject(Error('decode'))})),true,'loaded fallback remains available');
+const stalled=()=>new Promise(()=>{});
+document.hidden=true;
+assert.equal(await imageReady(fakeImage({complete:true,width:400,decode:stalled}),50),true,'a page opened in a background tab does not wait for decode()');
+assert.equal(await imageReady(fakeImage({complete:true,decode:stalled}),50),false,'but a broken image is still broken');
+document.hidden=false;
+const leaving=imageReady(fakeImage({complete:true,width:400,decode:stalled}),50);
+document.hidden=true; document.dispatchEvent(new Event('visibilitychange'));
+assert.equal(await leaving,true,'switching to another tab mid-decode keeps the loaded image');
+document.hidden=false;
 const nav=await readFile(new URL('../dist/shopping-navigation.js',import.meta.url),'utf8');
 const {localDestination}=await import('data:text/javascript;base64,'+Buffer.from(nav).toString('base64'));
 const base='https://example.com/checkout.html';
@@ -20,4 +31,4 @@ assert.equal(localDestination('/checkout.html',base),null);
 assert.equal(localDestination('/index.html#produtos',base),'/index.html#produtos');
 assert.equal(localDestination('/produtos.html',base),'/produtos.html');
 assert.equal(localDestination('/',base),'/');
-console.log('PASS: cached/decoded/failed/stalled images and safe same-site cart destinations.');
+console.log('PASS: cached/decoded/failed/stalled images (also in a background tab) and safe same-site cart destinations.');

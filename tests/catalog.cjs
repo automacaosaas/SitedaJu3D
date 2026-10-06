@@ -6,12 +6,15 @@ const path = require('node:path');
 // Exercise the production gesture handlers without a browser or persisted cart.
 const source = fs.readFileSync(path.join(__dirname, '../dist/catalog.js'), 'utf8')
   .replace(/^import .*;\r?\n/gm, '');
+const sent = [];
 const context = vm.createContext({
-  PRODUCTS: {}, SOON: {}, document: {querySelectorAll: () => [], addEventListener() {}},
-  window: {addEventListener() {}},
+  PRODUCTS: {}, SOON: {}, ALIASES: {old: 'p2'}, document: {querySelectorAll: () => [], addEventListener() {}},
+  window: {addEventListener() {}}, location: {hash: ''},
+  CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
+  dispatchEvent: event => sent.push(event),
   matchMedia: () => ({matches:false}), setTimeout: fn => fn()
 });
-vm.runInContext(source + '\nglobalThis.Carousel = ProductCarousel;', context);
+vm.runInContext(source + '\nglobalThis.Carousel = ProductCarousel; globalThis.startAt = startAt;', context);
 function target() {
   const handlers = new Map(), captures = new Set();
   return {
@@ -31,7 +34,7 @@ function target() {
 }
 function carousel(length) {
   const rail = Object.create(context.Carousel.prototype);
-  rail.active = 0; rail.items = Array.from({length}); rail.stage = target();
+  rail.active = 0; rail.items = Array.from({length}, (_, i) => ({id: 'p' + i})); rail.stage = target();
   rail.track = target(); rail.dots = target(); rail.render = () => {};
   rail.previous = target(); rail.next = target();
   rail.host = {querySelector: selector => selector.endsWith('prev') ? rail.previous : rail.next};
@@ -70,4 +73,21 @@ assert.equal(rail.active, 0, 'vertical movement leaves carousel unchanged');
 rail.next.emit('click'); assert.equal(rail.active, 1);
 rail.stage.emit('keydown', {key:'ArrowLeft'}); assert.equal(rail.active, 0);
 assert.ok(rail.track.emit('dragstart').prevented, 'native image dragging is disabled');
-console.log('PASS: catalog loops (1/2/3/7 items), cancelled/small/vertical gestures, click suppression, capture transfer, arrows, keyboard and image drag.');
+// The home's collection and showcase (carousel.js) show the same piece: a move here tells the showcase, a move there is
+// followed here without echoing back, and the collection starts where the showcase starts.
+sent.length = 0;
+const synced = carousel(4);
+synced.next.emit('click');
+assert.deepEqual(sent.map(e => [e.type, e.detail.product, e.detail.source]), [['ju:product-focus', 'p1', 'collection']], 'a move in the collection tells the showcase');
+synced.follow('p3'); assert.equal(synced.active, 3, 'the collection follows the showcase');
+synced.follow('nope'); assert.equal(synced.active, 3, 'a piece outside this category is ignored');
+assert.equal(sent.length, 1, 'following does not echo back');
+const items = Array.from({length: 4}, (_, i) => ({id: 'p' + i}));
+context.window.juTheme = {product: () => 'p3'};
+assert.equal(context.startAt(items), 3, 'starts on the piece last seen');
+context.location.hash = '#produto/p1/encaixe'; assert.equal(context.startAt(items), 1, 'the address comes first');
+context.location.hash = '#produto/old'; assert.equal(context.startAt(items), 2, 'old names (ALIASES) still work');
+context.location.hash = '#produto/unknown'; assert.equal(context.startAt(items), 3, 'an unknown piece falls back to the last seen');
+context.location.hash = '#colecao'; context.window.juTheme = {product: () => ''}; assert.equal(context.startAt(items), 0, 'nothing seen yet: the first piece');
+delete context.window.juTheme; assert.equal(context.startAt(items), 0, 'works without journey.js');
+console.log('PASS: catalog loops (1/2/3/7 items), cancelled/small/vertical gestures, click suppression, capture transfer, arrows, keyboard, image drag and the piece shared with the showcase.');

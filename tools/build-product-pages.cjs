@@ -24,8 +24,8 @@ const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html'
 
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
-  const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js')]);
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners};
+  const [products, commerce, icons, grid, tour, motion] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js'), load('hero-motion.js')]);
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, journeyColors: motion.journeyColors};
 }
 
 function page(id, data, base) {
@@ -80,7 +80,10 @@ function page(id, data, base) {
         </div>
       </article>
     </main>`;
-  return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="product-landing">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;
+  // The piece's own colors from the first frame: journey.js applies them to the header, background and buttons and carries
+  // them on, so the logo, Início and the cart lead back to a showcase that opens on this piece.
+  const journey = `data-theme-product="${id}" data-theme-colors="${esc(JSON.stringify(data.journeyColors(theme)))}"`;
+  return `<!doctype html>\n<html lang="pt-BR" ${journey}>\n<head>\n${head}${preview}</head>\n<body class="product-landing">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;
 }
 
 // Escolha o seu: um banner por família de encaixe, cada um abrindo a
