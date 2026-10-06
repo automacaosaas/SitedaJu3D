@@ -111,6 +111,22 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(entry, /seen = sessionStorage\.getItem\('ju\.opened'\) === '1'; sessionStorage\.setItem\('ju\.opened', '1'\);/);
   assert.ok(entry.indexOf("if (seen) {") < entry.indexOf("root.classList.add('ju-opening')"), 'a later visit never hides the shop behind the opening');
   assert.match(entry, /window\.finishJuOpening = \(\) => \{\};/, 'the banner can still call it');
+  // 2026-10-06: back to the home (logo, Início) on a later visit, the HTML written in the page (the butterfly, larger than its
+  // stage, and the header without its bar) flashed before the piece the visitor was looking at. The page now waits hidden,
+  // over the piece's background colour, until the showcase draws the piece in front, 2.5 s at most.
+  const later = entry.slice(entry.indexOf('if (seen) {'), entry.indexOf("root.classList.add('ju-opening')"));
+  assert.match(later, /root\.classList\.add\('ju-returning'\);/, 'a later visit waits for the showcase');
+  assert.match(later, /window\.finishJuReturn = \(\) => \{/);
+  assert.match(later, /const safety = setTimeout\(\(\) => window\.finishJuReturn\(\), 2500\);/, 'never hidden for good, even if a script fails');
+  assert.match(later, /addEventListener\('pageshow', e => \{ if \(e\.persisted\) window\.finishJuReturn\(\); \}\)/, 'Back shows the page at once');
+  const experience = read('dist/experience.css');
+  assert.match(experience, /\.ju-returning \.home :is\(\.page, \.announce-bar\) \{ opacity:0; pointer-events:none; \}/, 'opacity: the showcase marks its pieces visibility:visible, which shows through a hidden parent');
+  assert.match(experience, /\.ju-returned \.home :is\(\.page, \.announce-bar\) \{ animation:ju-return \.24s ease-out both; \}/, 'the bar above the page comes in with it');
+  assert.match(experience, /\.ju-returned \.home :is\(\.page, \.announce-bar\) \{animation:none\}/, 'no fade with reduced motion');
+  assert.match(experience, /\.hero-fallback \{[^}]*max-height:100%;/, 'the picture written in the page fits its stage');
+  const showcase = read('dist/carousel.js');
+  assert.match(showcase, /Promise\.race\(\[drawn, new Promise\(r => setTimeout\(r, 600\)\)\]\)\.then\(\(\) => window\.finishJuReturn\?\.\(\)\);/, 'the showcase shows the page once the piece in front is drawn (600 ms at most)');
+  assert.ok(showcase.indexOf('window.finishJuReturn') > showcase.indexOf("region.querySelector('[data-hero-stage]').innerHTML ="), 'only after the showcase is built');
   // C6: one label for the action that opens the configurator
   for (const file of ['dist/catalog.js', 'dist/produtos.html', 'dist/hero-demo.js', 'dist/index.html', 'dist/carousel.js']) assert.doesNotMatch(read(file), /Personalize o seu|PERSONALIZE O SEU/, `${file}: "Personalizar o meu"`);
   assert.match(read('dist/catalog.js'), /class="product-customize" href="\$\{productHref\(id\)\}\/personalizar">Personalizar o meu</, 'the card button opens the configurator');

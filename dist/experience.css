@@ -19,9 +19,15 @@
 .page-opening .ju-loader img { width:112px; height:112px; }
 .page-opening p { font:13px/1.6 'DM Sans',sans-serif; margin:0; }
 .ju-opening .home .page { visibility:hidden; }
+/* Later visits: hidden until the showcase draws the piece in front (page-entry.js), then a short fade, the bar above the
+   page (announcement-bar.js) with it. Opacity, not visibility: the showcase marks its pieces visibility:visible, which
+   would show through a hidden parent. */
+.ju-returning .home :is(.page, .announce-bar) { opacity:0; pointer-events:none; }
+.ju-returned .home :is(.page, .announce-bar) { animation:ju-return .24s ease-out both; }
+@keyframes ju-return { from {opacity:0} to {opacity:1} }
 .ju-arrived .home .site-header { animation:ju-appear .42s both; }
 .ju-arrived .home .showcase { animation:ju-appear .55s .07s both; }
-.hero-fallback { display:block; width:min(100%,300px); height:auto; margin:auto; }
+.hero-fallback { display:block; width:auto; height:auto; max-width:min(100%,300px); max-height:100%; margin:auto; }
 .piece .image-unavailable { position:absolute; inset:20% 10%; display:grid; place-content:center; text-align:center; font:14px/1.5 'DM Sans',sans-serif; color:var(--theme-muted); }
 .ju-arrived .catalog-home { animation:ju-appear .55s .14s both; }
 .product-rail-art { position:relative; }
@@ -37,4 +43,4 @@
 .catalog-placeholder i:nth-child(3) { width:65%; }
 .image-unavailable { font-size:13px; color:var(--muted); text-align:center; padding:20px; }
 @keyframes ju-shimmer { to {background-position:-220% 0} }
-@media(prefers-reduced-motion:reduce) { .ju-loader > span { animation:none; clip-path:inset(40% 0 0); } .ju-arrived .home .site-header,.ju-arrived .home .showcase,.ju-arrived .catalog-home {animation:none} .page-opening {transition:none} .product-rail-card.is-loading .product-rail-art::after,.catalog-placeholder i {animation:none} }
+@media(prefers-reduced-motion:reduce) { .ju-loader > span { animation:none; clip-path:inset(40% 0 0); } .ju-arrived .home .site-header,.ju-arrived .home .showcase,.ju-arrived .catalog-home,.ju-returned .home :is(.page, .announce-bar) {animation:none} .page-opening {transition:none} .product-rail-card.is-loading .product-rail-art::after,.catalog-placeholder i {animation:none} }

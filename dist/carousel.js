@@ -74,7 +74,10 @@ function init() {
     if (ok) img.classList.add('is-loaded');
     else {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend','<span class="image-unavailable">Imagem indisponível.<br>Conheça as cores da peça.</span>');}
   }
-  Promise.all([ready[initial], Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 1600))])]).then(() => {
+  const drawn = Promise.all([ready[initial], Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 1600))])]);
+  // Volta à home (page-entry.js): a página aparece quando a peça da frente está pronta, ou 600 ms depois da estrutura.
+  Promise.race([drawn, new Promise(r => setTimeout(r, 600))]).then(() => window.finishJuReturn?.());
+  drawn.then(() => {
     stage.setAttribute('aria-busy', 'false');
     window.finishJuOpening?.();
     // Pré-monta a demonstração num momento ocioso (no máximo 1,5 s depois), para as imagens já estarem prontas no clique.

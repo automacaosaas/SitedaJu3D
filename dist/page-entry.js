@@ -1,5 +1,8 @@
 // One entry state keeps the header, pedestal and product from appearing separately.
-// The opening screen shows only on the first visit of the browser session (audit A5): later visits show the shop at once.
+// The opening screen shows only on the first visit of the browser session (audit A5). Later visits skip it, but the page
+// still waits, hidden over the piece's own background colour (journey.js), until the showcase has drawn the piece in
+// front (carousel.js calls finishJuReturn): the HTML written in the page (the butterfly, larger than its stage, and the
+// header without its bar) never flashes before the piece the visitor was looking at. At most 2.5 s, even if a script fails.
 (() => {
   const root = document.documentElement;
   let seen = false;
@@ -7,6 +10,17 @@
   if (seen) {
     window.finishJuOpening = () => {};
     document.addEventListener('DOMContentLoaded', () => document.querySelector('.page-opening')?.remove(), {once:true});
+    root.classList.add('ju-returning');
+    let shown = false;
+    window.finishJuReturn = () => {
+      if (shown) return;
+      shown = true;
+      clearTimeout(safety);
+      root.classList.replace('ju-returning', 'ju-returned');
+      setTimeout(() => root.classList.remove('ju-returned'), 400);
+    };
+    const safety = setTimeout(() => window.finishJuReturn(), 2500);
+    window.addEventListener('pageshow', e => { if (e.persisted) window.finishJuReturn(); });
     return;
   }
   root.classList.add('ju-opening');
