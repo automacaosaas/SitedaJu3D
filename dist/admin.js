@@ -145,7 +145,7 @@ function nfeLine(o) {
   if (!nfe && invoicingMode !== 'off' && INVOICED.includes(o.status)) {
     // Confirmed with no note at all: before NF-e issuing was on, or reopened from Recusados. The piece cannot leave without
     // one, so the panel offers to issue it here.
-    return `<p class="admin-invoice is-error"><strong>Nota fiscal não emitida.</strong> Este pedido foi confirmado sem nota. <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Emitir nota fiscal</button></p>`;
+    return `<div class="admin-invoice is-error admin-invoice-missing"><p><strong>Nota fiscal não emitida.</strong> Este pedido foi confirmado sem nota, e a peça não pode sair sem ela.</p><button type="button" class="btn-issue" data-action="retry-invoice" data-id="${esc(o.id)}">Emitir nota fiscal</button></div>`;
   }
   if (!nfe) return invoicingMode !== 'off' && o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você confirmar o pedido.</p>' : '';
   const test = nfe.environment !== 'producao' ? ' <span class="admin-tag source-test">homologação</span>' : '';

@@ -190,6 +190,9 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* NF-e line on each order: issued (green), being issued (yellow), problem (red, with a retry button). */
 .admin-invoice{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5}.admin-invoice a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}.admin-invoice.is-ok{background:var(--g-bg);color:var(--g-fg)}.admin-invoice.is-waiting{background:var(--y-bg);color:var(--y-fg)}.admin-invoice.is-error{background:var(--r-bg);color:var(--r-fg)}.admin-invoice .admin-tag{margin-left:4px}
+/* A confirmed order with no note: the way to issue it is a real button, not a quiet link (the piece cannot leave without it). */
+.admin-invoice-missing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px}.admin-invoice-missing p{margin:0}
+.btn-issue{border:0;border-radius:999px;padding:10px 16px;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:var(--r-solid);cursor:pointer;white-space:nowrap}.btn-issue:hover{background:var(--r-solid-hover)}.btn-issue:focus-visible{outline:2px solid var(--r-solid);outline-offset:2px}
 
 /* Two parts of the panel, Pedidos and Fluxo de caixa: one switch at the top, always in the same place. */
 .admin-sections{display:inline-flex;gap:4px;padding:4px;margin:0 0 26px;background:var(--panel);border:1px solid var(--line);border-radius:999px}
