@@ -1,5 +1,5 @@
 import {icon} from './icons.js';
-import {mountLanguagePicker} from './i18n.js';
+import {mountLanguagePicker, languageReady} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, refreshSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
@@ -135,7 +135,8 @@ window.addEventListener('storage', e => { if (e.key === CART_KEY) refreshHeader(
 window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
-window.dispatchEvent(new Event('ju:header-ready'));
+// The header shows once the page is in its language (at once in Portuguese; English and Spanish wait for the dictionary).
+languageReady.then(() => window.dispatchEvent(new Event('ju:header-ready')));
 
 // "Voltar à vitrine" leans a few pixels toward the cursor (journey.css reads --mx/--my); mouse only, never with reduced motion.
 if (matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

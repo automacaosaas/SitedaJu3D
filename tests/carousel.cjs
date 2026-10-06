@@ -266,5 +266,9 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("addEventListener('pageshow', e => { if (e.persisted) report(); });"), 'voltar à home restaurada guarda de novo a peça à vista');
   assert.ok(/function settle\(next[^]*?if \(routed >= 0 && routed !== mod\(Math\.round\(target\), total\)\) history\.replaceState\(history\.state, '', location\.pathname \+ location\.search\);[^]*?setActive\(/.test(js), 'trocada a peça, o #produto/<peça> antigo sai do endereço já no início do movimento (Continuar escolhendo volta à peça certa)');
 
+  // ── a demonstração pré-montada no ocioso só com conexão boa; em 3G/2G ou economia de dados, ao primeiro sinal de interesse ──
+  assert.ok(js.includes("roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''))"), 'economia de dados e 3G/2G não pré-carregam a demonstração');
+  assert.ok(js.includes("if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});"), 'mouse, foco ou toque na vitrine preparam a demonstração antes do clique');
+
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

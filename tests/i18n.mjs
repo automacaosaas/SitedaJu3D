@@ -98,6 +98,15 @@ assert(/\.language-button \.language-globe\{display:none\}/.test(theme), 'deskto
 assert(/@media\(max-width:800px\)\{\.language-button\{[^}]*\}\.language-button \.language-globe\{display:block\}/.test(theme), 'phones show the globe with the initials');
 assert.equal((theme.match(/\.language-picker\{position:relative/g) || []).length, 1, 'picker base rule defined once');
 
+// ── the dictionary only for English and Spanish (Portuguese, the source, never downloads it) ──
+assert(!/^import [^\n]*i18n-core/m.test(i18n) && /loading \?\?= import\('\.\/i18n-core\.js'\)/.test(i18n), 'i18n.js loads the dictionary on demand, not at import');
+assert(/if \(language !== 'pt-BR'\) \{ await loadCore\(\)\.catch\(\(\) => \{\}\); apply\(\); \} else syncPickers\(\);/.test(i18n), 'a Portuguese page is not walked nor watched');
+assert(/if \(language !== 'pt-BR'\) await loadCore\(\)\.catch\(\(\) => \{\}\);\n  apply\(\);/.test(i18n), 'choosing English or Spanish loads it first, then translates');
+assert(/return locale === 'pt-BR' \|\| !core \? value : core\.translate\(value, locale\);/.test(i18n), 'translate() before the dictionary arrives leaves the text as it is');
+assert(/languageReady\.then\(\(\) => window\.dispatchEvent\(new Event\('ju:header-ready'\)\)\);/.test(shell), 'the header waits for the language (English and Spanish never flash Portuguese)');
+const journey = read('dist/journey.js');
+assert(/\/\^\(en\|es\)\$\/\.test\(localStorage\.getItem\('ju\.language'\)/.test(journey) && /\['i18n-core\.js', 'translations\.js'\]/.test(journey) && /link\.rel = 'modulepreload'/.test(journey), 'English or Spanish chosen before: the dictionary starts downloading with the page');
+
 // ── the merge-conflict regression that shipped in theme.css ──────────
 for (const file of ['dist/theme.css', 'dist/i18n.js', 'dist/account.js', 'dist/site-shell.js', 'dist/translations.js', 'dist/account.css', 'dist/conta.html']) {
   assert(!/^(<<<<<<< |=======$|>>>>>>> )/m.test(read(file)), `${file} contains merge-conflict markers`);

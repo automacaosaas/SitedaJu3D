@@ -82,8 +82,13 @@ function init() {
   drawn.then(() => {
     stage.setAttribute('aria-busy', 'false');
     window.finishJuOpening?.();
-    // Pré-monta a demonstração num momento ocioso (no máximo 1,5 s depois), para as imagens já estarem prontas no clique.
-    if (window.requestIdleCallback) requestIdleCallback(() => demo.prepare(active), {timeout: 1500}); else setTimeout(() => demo.prepare(active), 300);
+    // Pré-monta a demonstração (as imagens do equipamento, ~130 KB) num momento ocioso, no máximo 1,5 s depois, para estarem
+    // prontas no clique. Em 3G/2G ou com economia de dados ligada, só ao primeiro sinal de interesse na vitrine (mouse por
+    // cima, foco, toque), ainda antes do clique: quem não abre a demonstração não paga por ela.
+    const net = navigator.connection, roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''));
+    const early = () => demo.prepare(active);
+    if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});
+    else if (window.requestIdleCallback) requestIdleCallback(early, {timeout: 1500}); else setTimeout(early, 300);
     demoFromRoute();   // chegou da página Produtos por "Ver encaixado"
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
