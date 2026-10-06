@@ -142,6 +142,11 @@ function invoiceLine(o) {
 let invoicingMode = 'off';
 function nfeLine(o) {
   const nfe = o.invoice;
+  if (!nfe && invoicingMode !== 'off' && INVOICED.includes(o.status)) {
+    // Confirmed with no note at all: before NF-e issuing was on, or reopened from Recusados. The piece cannot leave without
+    // one, so the panel offers to issue it here.
+    return `<p class="admin-invoice is-error"><strong>Nota fiscal não emitida.</strong> Este pedido foi confirmado sem nota. <button type="button" class="admin-reveal" data-action="retry-invoice" data-id="${esc(o.id)}">Emitir nota fiscal</button></p>`;
+  }
   if (!nfe) return invoicingMode !== 'off' && o.status === 'pendente' ? '<p class="admin-invoice is-waiting">Nota fiscal: sai quando você confirmar o pedido.</p>' : '';
   const test = nfe.environment !== 'producao' ? ' <span class="admin-tag source-test">homologação</span>' : '';
   if (nfe.status === 'autorizada') {
@@ -255,7 +260,7 @@ function orderCard(o) {
     pendente: () => `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="confirm" data-id="${id}"${moneyBack ? ' disabled' : ''}>Confirmar pedido</button><button type="button" class="btn-decline" data-action="decline" data-id="${id}">Recusar pedido</button></div>`,
     // The piece never leaves without its note: with NF-e on, the tracking code waits for the note to be authorized.
     confirmado: () => `<div class="admin-ship">${invoicingMode !== 'off' && o.invoice?.status !== 'autorizada'
-      ? `<p class="admin-ship-locked" role="note"><strong>🔒 Envio bloqueado até a nota fiscal ser autorizada.</strong> A peça não pode sair sem a nota. ${o.invoice?.status === 'erro' ? 'Resolva o problema da nota acima e clique em Tentar de novo.' : 'A nota sai sozinha; depois clique em Atualizar para liberar o rastreio.'}</p>`
+      ? `<p class="admin-ship-locked" role="note"><strong>🔒 Envio bloqueado até a nota fiscal ser autorizada.</strong> A peça não pode sair sem a nota. ${!o.invoice ? 'Clique em Emitir nota fiscal, acima.' : o.invoice.status === 'erro' ? 'Resolva o problema da nota acima e clique em Tentar de novo.' : 'A nota sai sozinha; depois clique em Atualizar para liberar o rastreio.'}</p>`
       : `<p class="admin-ship-hint">Postou nos Correios? Digite o código de rastreio: o pedido vai para Enviados.</p>${trackingForm('', 'Salvar rastreio')}`}<div class="admin-secondary">${back('pendente', 'Voltar para Pendentes')}<button type="button" class="btn-reopen is-danger" data-action="decline" data-id="${id}">Recusar pedido</button></div></div>`,
     enviado: () => `<div class="admin-ship"><p class="admin-tracking-line">Rastreio ${code} · postado em ${esc(formatDay(o.shippedAt))}</p><div class="admin-order-actions"><button type="button" class="btn-complete" data-action="conclude" data-id="${id}">Concluir pedido</button></div><details class="admin-fix"><summary>Corrigir o código de rastreio</summary>${trackingForm(o.trackingCode || '', 'Salvar o código certo')}</details><div class="admin-secondary">${back('confirmado', 'Voltar para Pronto para envio')}</div></div>`,
     concluido: () => `<div class="admin-order-actions"><span class="admin-decision-note">Concluído em ${esc(formatWhen(o.decidedAt))}${code ? ` · rastreio ${code}` : ''}</span>${back('enviado', 'Reabrir')}</div>`,

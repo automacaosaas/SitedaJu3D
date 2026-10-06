@@ -493,6 +493,16 @@ const second = await place({name: 'Bia Costa', email: 'bia@example.com'});
   assert.equal((await noteOf(order)).status, 'autorizada');
   const shipped = await call(confirm, {body: {id: order.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju});
   assert.equal(shipped.statusCode, 200); assert.equal(shipped.json().order.status, 'enviado', 'with the note authorized, it goes');
+  // Confirmed with no note at all (before NF-e issuing was on, or reopened from Recusados): the shipping waits, and
+  // "Emitir nota fiscal" (the same retry endpoint) issues it, so the order is never stuck.
+  const bare = await place({status: 'confirmado'});
+  assert.equal(await noteOf(bare), null, 'no note');
+  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju})).json().error, 'invoice_pending');
+  const issued = (await call(orderInvoice.create({env: ENV, store, now, fetchImpl: network, outbox}), {body: {id: bare.id}, cookie: ju})).json();
+  assert.equal(issued.order.invoice.status, 'autorizada', '"Emitir nota fiscal" issues it');
+  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju})).statusCode, 200, 'then it ships');
+  const panelSource = (await import('node:fs')).readFileSync(new URL('../dist/admin.js', import.meta.url), 'utf8');
+  assert(panelSource.includes('Nota fiscal não emitida.') && panelSource.includes('Emitir nota fiscal'), 'the panel offers to issue it');
   // With NF-e issuing off, nothing changes.
   const offStore = createMemoryStore(), offEnv = {APP_ENV: 'preview', SITE_URL: 'https://site.test', AUTH_SECRET: 's'.repeat(40), MAIL_TRANSPORT: 'console'};
   const {order: plain} = await offStore.orders.create({...(await store.orders.findById(order.id)), id: crypto.randomUUID(), reference: 'JU-OFF0000001', status: 'confirmado'});
