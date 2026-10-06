@@ -242,10 +242,17 @@
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }
-  #product-dialog .modal-actions { gap: 10px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
-  #product-dialog .pdp-price strong { font-size: 23px; }
+  /* A compra, mais baixa (06/10/2026, "reduzir essa seção"): preço, Pix e "3x" numa linha só (o "3x" à direita, em duas linhas
+     curtas), a oferta do 2.º avião logo embaixo e os botões com 44 px de altura (o mínimo para o dedo). */
+  #product-dialog .modal-actions { gap: 8px; padding: 10px 16px max(10px, env(safe-area-inset-bottom)); }
+  #product-dialog .pdp-price { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; }
+  #product-dialog .pdp-price p { grid-column: 1; grid-row: 1; flex-wrap: nowrap; gap: 8px; }
+  #product-dialog .pdp-price strong { font-size: 22px; line-height: 1.15; }
+  #product-dialog .pdp-pix { padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+  #product-dialog .pdp-price > small:not(.pdp-offer) { grid-column: 2; grid-row: 1; justify-self: end; max-width: 98px; line-height: 1.25; text-align: right; }
+  #product-dialog .pdp-price .pdp-offer { grid-column: 1 / -1; margin: 0; }
   #product-dialog .purchase-actions { gap: 8px; }
-  #product-dialog .purchase-actions .primary { min-height: 50px; padding: 0 8px; gap: 6px; font-size: 13px; white-space: nowrap; }
+  #product-dialog .purchase-actions .primary { min-height: 44px; padding: 0 8px; gap: 6px; border-radius: 12px; font-size: 13px; white-space: nowrap; }
   #product-dialog .purchase-actions .primary .icon { width: 18px; height: 18px; }
   .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #14231b24; transform: translateY(100%); }
 }
