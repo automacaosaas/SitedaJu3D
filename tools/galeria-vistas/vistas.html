@@ -1,16 +1,16 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Fotos da galeria</title>
-<!-- Aberta por gerar.cjs: as fotos reais da galeria (dist/assets/vistas), recortadas das fontes de design/vistas/ como manda
-     design/vistas/fotos.json (foto ou quadro de vídeo, e o recorte), todas no mesmo quadro 4:5 (o padrão de dist/gallery.js).
-     Peça ainda sem fotos reais: só a foto da vitrine, no mesmo quadro. -->
+<!-- Aberta por gerar.cjs: as fotos da galeria (dist/assets/vistas), todas no mesmo quadro 4:5 (o padrão de dist/gallery.js), das
+     fontes de design/vistas/ como manda design/vistas/fotos.json: renders do modelo 3D ("fundo": "render", tools/render-vistas) ou
+     fotos (foto ou quadro de vídeo, e o recorte). Peça sem nenhuma: só a foto da vitrine, no mesmo quadro. -->
 <script type="module">
 import {PRODUCTS,SOON} from '/dist/products.js';
 import {viewsOf} from '/dist/gallery.js';
 const q=new URLSearchParams(location.search),keys=q.get('pecas')?.split(',')||[...Object.keys(PRODUCTS),...Object.keys(SOON)];
 // O quadro de toda foto (4:5) e a miniatura. Nas vistas inteiras, a peça ocupa 80% da altura (ou 88% da largura, a que vier antes), no
 // meio, com o pé a 8% da borda de baixo — todas as peças e vistas do mesmo tamanho, como numa loja.
-const FRAME=[960,1200],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
+const FRAME=[1200,1500],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
 const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
 // um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá
 const videos=new Map();
@@ -46,23 +46,45 @@ function denoise(canvas,sigma=10){const W=canvas.width,H=canvas.height,g=context
 // dele e encosta na borda (a abertura entre as pernas também, que é fundo de verdade), e tudo abaixo de "chao" (y da fonte onde a peça
 // toca o chão; abaixo, só o reflexo). Na beirada, a transparência vem da distância à cor do fundo contra a da peça logo ao lado, e a
 // cor é tirada da mistura com o fundo. O recorte [x, y, …] diz onde o canvas está na fonte.
-function matte(canvas,[x,y,w,h],floor,bgHex){
+function matte(canvas,[x,y,w,h],floor,bgHex,opts={}){
   const W=canvas.width,H=canvas.height,k=W/w,g=context(canvas),img=g.getImageData(0,0,W,H),px=img.data;
   const B0=[1,3,5].map(i=>parseInt(bgHex.slice(i,i+2),16)),light=B0[0]+B0[1]+B0[2]>384;
   // fundo escuro: o ruído da foto vai longe (até 40); fundo claro: a peça creme fica perto dele, então a tolerância é menor
   const orig=new Uint8ClampedArray(px),d=i=>Math.max(Math.abs(orig[i]-B0[0]),Math.abs(orig[i+1]-B0[1]),Math.abs(orig[i+2]-B0[2]));
-  const LOW=light?7:40,FLOOR=light?3:8,HIGH=light?30:72,bg=new Uint8Array(W*H),stack=[];
-  const floorRow=floor==null?H:Math.max(0,Math.round((floor-y)*k));
-  for(let r=floorRow;r<H;r++)for(let c=0;c<W;c++)bg[r*W+c]=1;
+  const LOW=opts.limiar??(light?7:40),FLOOR=light?3:8,HIGH=light?30:72,bg=new Uint8Array(W*H),stack=[];
+  // o chão: uma altura (y da fonte) ou, com a peça em perspectiva, uma reta por dois pontos da fonte [[xa, ya], [xb, yb]]
+  const floorAt=c=>{if(floor==null)return H;if(!Array.isArray(floor))return Math.max(0,Math.round((floor-y)*k));
+    const [[xa,ya],[xb,yb]]=floor,sx=x+c/k;return Math.max(0,Math.min(H,Math.round((ya+(sx-xa)*(yb-ya)/(xb-xa)-y)*k)));};
+  const floorCol=Array.from({length:W},(_,c)=>floorAt(c));
+  for(let c=0;c<W;c++)for(let r=floorCol[c];r<H;r++)bg[r*W+c]=1;
   const seed=(c,r)=>{const n=r*W+c;if(!bg[n]&&d(n*4)<LOW){bg[n]=1;stack.push(n);}};
-  for(let c=0;c<W;c++){seed(c,0);seed(c,Math.min(H-1,floorRow-1));}for(let r=0;r<Math.min(H,floorRow);r++){seed(0,r);seed(W-1,r);}
-  while(stack.length){const n=stack.pop(),c=n%W,r=(n-c)/W;if(c>0)seed(c-1,r);if(c<W-1)seed(c+1,r);if(r>0)seed(c,r-1);if(r<floorRow-1)seed(c,r+1);}
+  for(let c=0;c<W;c++){seed(c,0);if(floorCol[c]>0)seed(c,Math.min(H-1,floorCol[c]-1));}for(let r=0;r<H;r++){if(r<floorCol[0])seed(0,r);if(r<floorCol[W-1])seed(W-1,r);}
+  while(stack.length){const n=stack.pop(),c=n%W,r=(n-c)/W;if(c>0)seed(c-1,r);if(c<W-1)seed(c+1,r);if(r>0)seed(c,r-1);if(r<H-1)seed(c,r+1);}
   // fundo claro: as aberturas vazadas (as 16 do avião) também são fundo, mesmo cercadas pela peça — manchas da cor do fundo com área de
-  // um furo para cima (no fundo preto não: lá o escuro cercado é a parede de dentro da peça)
-  if(light){const seen=new Uint8Array(W*H),minArea=.0003*W*H;
+  // um furo para cima. No fundo preto, só com "buracos" (a fração da área): o vão entre as pernas do dino visto de lado é o fundo preto
+  // cercado pela peça e pelo chão; manchas pretas menores (os olhos) ficam
+  if(light||opts.buracos){const seen=new Uint8Array(W*H),minArea=light?.0003*W*H:opts.buracos*W*H;
     for(let n0=0;n0<W*H;n0++){if(bg[n0]||seen[n0]||d(n0*4)>=LOW)continue;const comp=[n0];seen[n0]=1;
       for(let q=0;q<comp.length;q++){const n=comp[q],c=n%W,r=(n-c)/W;for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&!seen[m]&&!bg[m]&&d(m*4)<LOW){seen[m]=1;comp.push(m);}}
       if(comp.length>=minArea)for(const n of comp)bg[n]=1;}}
+  // "matte": "cobertura" — para a peça com sombras escuras encostando no fundo preto (a parede de dentro da abertura da borboleta, que
+  // escurece até o preto): pela distância à cor, essa sombra virava meio transparente (um borrão cinza na página, com a borda serrilhada).
+  // Aqui a transparência vem só da forma: a máscara do fundo é alisada (gaussiana de 1,3 pixel, que tira os dentes) e a beirada fica
+  // 1 pixel para dentro, com 1,5 pixel de transição (o fio escuro da mistura com o fundo sai); a sombra fica sólida e só a beirada tira a
+  // mistura com o fundo.
+  if(opts.modo==='cobertura'){
+    const m=new Float32Array(W*H),t=new Float32Array(W*H),K=[.0216,.0945,.2295,.3088,.2295,.0945,.0216];for(let n=0;n<W*H;n++)m[n]=bg[n]?0:1;
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-3;j<=3;j++)v+=K[j+3]*m[r*W+Math.min(W-1,Math.max(0,c+j))];t[r*W+c]=v;}
+    for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-3;j<=3;j++)v+=K[j+3]*t[Math.min(H-1,Math.max(0,r+j))*W+c];m[r*W+c]=v;}
+    // ilhas soltas (um pedaço de reflexo no chão, longe da peça) saem: só fica o que está ligado a uma área de pelo menos 2% da maior
+    const lab=new Int32Array(W*H).fill(-1),sizes=[];
+    for(let n0=0;n0<W*H;n0++){if(lab[n0]>=0||m[n0]<=.6)continue;const id=sizes.length,q=[n0];lab[n0]=id;
+      for(let p=0;p<q.length;p++){const n=q[p],c=n%W,r=(n-c)/W;for(const o of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(o>=0&&lab[o]<0&&m[o]>.6){lab[o]=id;q.push(o);}}
+      sizes.push(q.length);}
+    const big=Math.max(0,...sizes);for(let n=0;n<W*H;n++)if(lab[n]>=0&&sizes[lab[n]]<.02*big)m[n]=0;
+    for(let n=0;n<W*H;n++){const i=n*4,a=Math.min(1,Math.max(0,(m[n]-.6)/.32));if(a<=0){px[i+3]=0;continue;}
+      if(a<1)for(let j=0;j<3;j++)px[i+j]=Math.min(255,Math.max(0,Math.round((orig[i+j]-(1-a)*B0[j])/a)));px[i+3]=Math.round(a*255);}
+    g.putImageData(img,0,0);return canvas;}
   // beirada: até B pixels do fundo (1,5 pixel da fonte)
   const B=Math.max(2,Math.ceil(1.5*k)),R=B+2,dist=new Uint8Array(W*H).fill(255),queue=[];
   for(let n=0;n<W*H;n++)if(bg[n]){dist[n]=0;queue.push(n);}
@@ -123,12 +145,17 @@ try{
     const p=PRODUCTS[key]||SOON[key];
     for(const v of viewsOf(key)){
       const spec=fotos[key]?.[v.id];let big;
-      if(spec){
+      if(spec?.fundo==='render'){
+        // render do modelo 3D (tools/render-vistas): já vem no quadro padrão, com fundo transparente; só ganha a sombra no chão
+        const img=await image(`/design/vistas/${spec.fonte}`);if(img.naturalWidth*FRAME[1]!==img.naturalHeight*FRAME[0])throw new Error(`${key}-${v.id}: o render precisa ser 4:5`);
+        big=resample(img,[0,0,img.naturalWidth,img.naturalHeight],...FRAME);if(!spec.detalhe)ground(big);window.info[`${key}-${v.id}`]=`${spec.fonte} · render`;
+      }else if(spec){
         if(spec.fundo!=='recortar'&&!spec.detalhe)throw new Error(`${key}-${v.id}: a vista inteira precisa de "fundo": "recortar" (fica no quadro padrão)`);
         const rect=[...spec.recorte];if(spec.detalhe&&Math.abs(rect[2]/rect[3]-FRAME[0]/FRAME[1])>.01)throw new Error(`${key}-${v.id}: o recorte do detalhe precisa ser 4:5`);
         const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));
-        const source=cache.get(id),bg=background(source);if(rect[0]==='auto')rect[0]=Math.round(centerX(source,bg)-rect[2]/2);
-        const crop=denoise(cut(source,rect,bg));if(spec.fundo==='recortar')matte(crop,rect,spec.chao,bg);
+        // "cor_fundo": quando a peça encosta nas bordas (o detalhe de perto), a cor do fundo vem dita, não da mediana das bordas
+        const source=cache.get(id),bg=spec.cor_fundo||background(source);if(rect[0]==='auto')rect[0]=Math.round(centerX(source,bg)-rect[2]/2);
+        const crop=denoise(cut(source,rect,bg));if(spec.fundo==='recortar')matte(crop,rect,spec.chao,bg,{limiar:spec.limiar,modo:spec.matte,buracos:spec.buracos});
         big=spec.detalhe?resample(crop,[0,0,rect[2],rect[3]],...FRAME):place(crop);
         // ampliação desta foto (pixels do quadro por pixel da fonte): quanto mais ampliada, mais largo o realce
         const zoom=spec.detalhe?FRAME[1]/rect[3]:big.scale;

@@ -82,15 +82,18 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
-- **Página do produto, aba Foto (04/10/2026):** galeria de fotos reais da peça (nem o 3D nem imagens geradas): miniaturas à esquerda
-  no computador, arrastar de lado no celular; o 3D continua na aba ao lado, e escolher uma cor leva a ele. **Padrão: 4 fotos por peça**,
-  nesta ordem — frente, três quartos, costas e um detalhe de perto (o rosto, a cabine) —, todas 4:5 (960 x 1200), recortadas do fundo,
-  com a peça do mesmo tamanho e no mesmo lugar e uma sombra leve no chão; o detalhe enche o quadro, como o zoom das lojas
-  (`STANDARD`/`GALLERY` em `dist/gallery.js`; cada peça só diz o nome do detalhe dela). As fontes (fotos e vídeos do Luiz) ficam em
-  `design/vistas/`, com o recorte de cada foto em `design/vistas/fotos.json`; o que pedir de foto para uma peça nova está em
-  `design/vistas/PADRAO.md`. `node tools/galeria-vistas/gerar.cjs` grava em `dist/assets/vistas/` (tira o chuvisco da compressão,
-  amplia com Lanczos e realça); depois, suba `VIEWS_VERSION`. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine, no mesmo
-  quadro. Peça nova (unicórnio, girafa): entra em `GALLERY` e em `fotos.json` quando estiver à venda.
+- **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
+  continua na aba ao lado, e escolher uma cor leva a ele. **Só FOTOS REAIS** (06/10/2026: nem render do 3D nem imagem gerada): as fotos do
+  Luiz em três vistas (`design/vistas/*-3-vistas.webp`), **4 por peça** — frente, três quartos, costas e um detalhe de perto —, todas 4:5
+  (1200 x 1500), recortadas do fundo (preto ou claro, sem o reflexo do chão), com a peça do mesmo tamanho e uma sombra leve no chão
+  (`STANDARD`/`GALLERY` em `dist/gallery.js`; recortes em `design/vistas/fotos.json`; `node tools/galeria-vistas/gerar.cjs`; depois,
+  suba `VIEWS_VERSION`; peça nova: `design/vistas/PADRAO.md`). O macaco, sem fotos reais, mostra só a da vitrine. Com os arquivos
+  originais das fotos (mandados como Documento), a galeria fica mais nítida. `tools/render-vistas` (renders do 3D) ficou só como
+  ferramenta; não entra na galeria.
+- **Dinossauro 3D (05/10/2026):** o modelo do Meshy (`Meshy_AI__1005212758_model-edit.glb`, só a forma), com os 2 espinhos da peça
+  nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;
+  details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
+  olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
@@ -101,7 +104,13 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Prazo de produção:** 3 a 5 dias úteis.
 - **Cartão:** texto "3x sem juros"; a loja configura isso no Mercado Pago depois (hoje a tabela de parcelas ainda mostra juros em 2x e 3x).
 - **Frete:** Correios com contrato próprio, PAC marcado por padrão (SEDEX também); PAC grátis a partir de R$ 500.
-- **Preços** R$ 129 / 139 / 159: aguardando confirmação; desde 05/10, sem o aviso de "ilustrativo" no site (pedido do dono).
+- **Preços confirmados (05/10/2026):** Borboletoscópio R$ 265, Dinossauroscópio R$ 265, Aviãoscopia R$ 285 — e o 2.º avião (e os
+  seguintes) na mesma compra sai por R$ 215 (`extraPrices` em `dist/commerce-config.js` = `extraPrice` em `api/_lib/catalog.js`; o
+  servidor divide a linha em dois preços exatos para o Mercado Pago e a nota, e o site mostra "Levando 2, o segundo sai por R$ 215,00").
+  Sem os avisos de "ilustrativo".
+- **Textos (05/10/2026, pedidos do Luiz):** borboleta e dino "feitos para encaixe no retinoscópio da marca Welch Allyn"; avião "para
+  régua de esquiascopia", "feito para encaixe na régua Luneau" (**falta pôr as medidas, que o Luiz vai passar**). Peças da lâmpada de
+  fenda: o macaco se chama **MonkeyLamp**; a girafa e o unicórnio, quando entrarem, **GiraffeLamp** e **UnicornLamp**.
 - **Nota fiscal:** Bling, em toda venda (pessoa física e jurídica), emitida quando a Ju marca "concluído" no painel. Empresa ME no
   Simples Nacional, MG. A conta do Bling deve estar em homologação no primeiro teste (o site pausa se detectar produção).
 - Sem faixa de cookies e sem analytics por enquanto (analytics conflita com a Política de Privacidade atual).
@@ -116,8 +125,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   homologação: próximo número (11, série 1), CFOP de cada caso, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
 - **C. Atendimento.** Quando o Pedro passar e-mail e WhatsApp: `api/_lib/legal.js` (e-mail e telefone) e `dist/commerce-config.js`
   (`whatsapp`), depois `node tools/sync-legal.cjs`. Com o número, o "Fale com a Ju" aparece sozinho no menu do celular.
-- **D. Preços.** Os selos "ilustrativos" já saíram (05/10, pedido do dono). Falta só trocar os valores quando forem confirmados
-  (`dist/commerce-config.js` e `api/_lib/catalog.js`, que precisam bater).
+- **D. Preços.** Feito em 05/10/2026 (valores acima).
 
 ## Pendências por responsável
 

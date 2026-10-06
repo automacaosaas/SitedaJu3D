@@ -29,21 +29,21 @@ const {translate} = await site('i18n-core.js');
   const cart = normalizeCart([{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaoscopia', quantity: 1}]);
   const server = catalog.applyPixDiscount(catalog.priceOrder(cart.map(({productId, quantity, selection}) => ({productId, quantity, selection}))));
   const page = pixTotals(cart, catalog.SHIPPING_CENTS);
-  assert.deepEqual(page, {subtotal: 41700, shipping: 1800, discount: 2085, total: 41415}, 'pieces −5%, delivery untouched');
+  assert.deepEqual(page, {subtotal: 81500, shipping: 1800, discount: 4075, total: 79225}, 'pieces −5%, delivery untouched');
   assert.equal(page.total, server.total, 'the page shows what Mercado Pago will charge');
   assert.equal(page.discount, server.discount); assert.equal(pixDiscount(cart), server.discount);
-  assert.deepEqual(totals(cart, 1800), {subtotal: 41700, shipping: 1800, total: 43500}, 'card: full price');
+  assert.deepEqual(totals(cart, 1800), {subtotal: 81500, shipping: 1800, total: 83300}, 'card: full price');
   assert.deepEqual(pixTotals([], 2201), {subtotal: 0, shipping: 0, discount: 0, total: 0});
 
   // the demonstration follows the same rule
-  assert.equal(createDemoOrder(cart, 'pix', Date.now(), 1800).amounts.total, 41415);
-  assert.equal(createDemoOrder(cart, 'card', Date.now(), 1800).amounts.total, 43500);
+  assert.equal(createDemoOrder(cart, 'pix', Date.now(), 1800).amounts.total, 79225);
+  assert.equal(createDemoOrder(cart, 'card', Date.now(), 1800).amounts.total, 83300);
 }
 
 // ── where the Pix price shows ─────────────────────────────────────────
 {
   const cart = normalizeCart([{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaoscopia', quantity: 1}]);
-  assert.match(cartSummary(cart, {}), /<div class="pix-hint"><dt>No Pix <small>\(5% off\)<\/small><\/dt><dd>R\$\s?414,15<\/dd><\/div>/, 'cart: the Pix total under the total');
+  assert.match(cartSummary(cart, {}), /<div class="pix-hint"><dt>No Pix <small>\(5% off\)<\/small><\/dt><dd>R\$\s?792,25<\/dd><\/div>/, 'cart: the Pix total under the total');
 
   // product cards: the showcase carousel (catalog.js) and the Produtos grid (pre-rendered in produtos.html) carry the Pix price
   const page = read('dist/produtos.html'), script = read('dist/catalog.js');
@@ -61,7 +61,7 @@ const {translate} = await site('i18n-core.js');
   const bar = read('dist/announcement-bar.js');
   assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
   assert.doesNotMatch(bar, /até 12x no cartão/);
-  assert.match(read('dist/index.html'), /<small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</, 'and the product page');
+  assert.match(read('dist/index.html'), /<small>ou 3x sem juros no cartão<\/small><small class="pdp-offer" id="product-offer" hidden><\/small>/, 'and the product page (prices confirmed on 05/10/2026: no "valores ilustrativos"; the second-airplane offer under it)');
   assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: 12\}/, 'the Brick offers only the method chosen');
 }
 

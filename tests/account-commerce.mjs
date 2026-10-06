@@ -20,7 +20,7 @@ let cart=putItem([],'borboletoscopio',{body:'pink',details:'yellow'});
 cart=putItem(cart,'aviaoscopia',{body:'blue',details:'red',engines:'yellow'});
 const selected=new Set([cart[0].id]);
 const chosen=selectedItems(cart,selected);
-assert.equal(chosen.length,1); assert.equal(totals(chosen).total,14700);
+assert.equal(chosen.length,1); assert.equal(totals(chosen).total,28300);
 assert.equal(selectedItems(cart,new Set()).length,0);
 assert.deepEqual(removePurchased(cart,chosen),[cart[1]],'unselected products survive checkout');
 assert.equal(removePurchased([{...cart[0],quantity:3}],chosen)[0].quantity,2,'extra units added during payment survive');
@@ -28,7 +28,7 @@ const changed={...cart[0],selection:{body:'mint',details:'yellow'}};
 assert.deepEqual(removePurchased([changed],chosen),[changed],'changed colors are not removed by an old order');
 assert.equal(cart.length,2,'filtering and reconciliation do not mutate the cart');
 saveDemoOrder({id:'DEMO-TEST',method:'card',items:chosen,amounts:totals(chosen),email:'not-saved@example.com'});
-assert.equal(readDemoOrders()[0].total,14700,'order history includes delivery');
+assert.equal(readDemoOrders()[0].total,28300,'order history includes delivery');
 assert.equal(JSON.stringify(readDemoOrders()).includes('not-saved@example.com'),false,'delivery PII is not saved');
 
 // ── The account adapter against the real API ──────────────────────────────────────────────────────────────────

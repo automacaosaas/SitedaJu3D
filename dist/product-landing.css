@@ -148,6 +148,7 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-views button[aria-pressed="false"]:hover { background: #ffffffd9; }
   .pl-acc summary:hover strong { color: var(--pl-accent); }
 }
+.pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: var(--theme-accent, #1f7a4d); }
 @media (max-width: 860px) {
   .pl-main { padding: 0 16px; margin-top: 8px; }
   .pl { grid-template-columns: minmax(0, 1fr); gap: 22px; }

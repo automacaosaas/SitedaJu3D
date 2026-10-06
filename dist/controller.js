@@ -37,7 +37,9 @@ function fillProduct(key){
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
   gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
-  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
+  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;
+    // o 2.º da mesma peça mais barato (COMMERCE.extraPrices: hoje, o avião)
+    const extra=COMMERCE.extraPrices?.[key],offer=$('#product-offer');offer.hidden=!extra;offer.textContent=extra?`Levando 2, o segundo sai por ${money(extra)}`:'';}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }

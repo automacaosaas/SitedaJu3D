@@ -50,6 +50,20 @@ export function putItem(items, productId, selection, thumbnail = null, editId = 
 // shippingCents: the delivery to add (the fixed example fee unless the checkout passes the real one, from the Correios quote).
 // What paying with Pix saves: the discount is taken per unit, exactly as the server does it.
 // The same amounts paid with Pix (the demonstration uses it): the pieces with the Pix discount, the delivery unchanged.
+// Preço por quantidade: cada linha vira os pedaços que o servidor cobra (api/_lib/catalog.js priceOrder faz igual): a primeira unidade
+// de cada peça, na ordem do carrinho, tem o preço cheio; as seguintes, o de COMMERCE.extraPrices, se houver. [{item, quantity, unitCents}]
+export function priceSegments(items) {
+  const seen = {}, out = [];
+  for (const i of items) {
+    const extra = COMMERCE.extraPrices?.[i.productId], before = seen[i.productId] || 0;seen[i.productId] = before + i.quantity;
+    const full = extra == null ? i.quantity : Math.max(0, Math.min(i.quantity, 1 - before));
+    if (full) out.push({item: i, quantity: full, unitCents: i.unitPrice});
+    if (i.quantity > full) out.push({item: i, quantity: i.quantity - full, unitCents: extra});
+  }
+  return out;
+}
+// o que uma linha custa dentro do carrinho todo (o 2.º avião pode estar nela)
+export const lineCents = (items, item) => priceSegments(items).filter(s => s.item === item).reduce((sum, s) => sum + s.unitCents * s.quantity, 0);
 export function pixTotals(items, shippingCents = COMMERCE.shippingCents) { const base = totals(items, shippingCents), discount = pixDiscount(items); return {...base, discount, total: base.total - discount}; }
-export function pixDiscount(items, bps = COMMERCE.pixDiscountBps) { return items.reduce((sum, i) => sum + Math.round(i.unitPrice * bps / 10000) * i.quantity, 0); }
-export function totals(items, shippingCents = COMMERCE.shippingCents) { const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0); const shipping = items.length ? shippingCents : 0; return {subtotal, shipping, total: subtotal + shipping}; }
+export function pixDiscount(items, bps = COMMERCE.pixDiscountBps) { return priceSegments(items).reduce((sum, s) => sum + Math.round(s.unitCents * bps / 10000) * s.quantity, 0); }
+export function totals(items, shippingCents = COMMERCE.shippingCents) { const subtotal = priceSegments(items).reduce((sum, s) => sum + s.unitCents * s.quantity, 0); const shipping = items.length ? shippingCents : 0; return {subtotal, shipping, total: subtotal + shipping}; }
