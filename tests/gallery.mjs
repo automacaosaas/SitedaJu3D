@@ -73,8 +73,8 @@ assert(dialog.includes('<div class="pdp-palette-row"><div id="palette" role="rad
 assert(css.includes('.gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }'));
 assert(css.includes('.gallery-rail button { flex: none; width: 64px; height: 80px;') && gallery.includes('img.width=960;img.height=1200;') && gallery.includes('img.width=160;img.height=200;'), 'miniaturas e fotos no formato 4:5');
 assert(!/\.image-area img \{[^}]*mask-image: radial-gradient/.test(css), 'sem a máscara da foto antiga');
-// Celular menos carregado: a dica da parte, as combinações e Detalhes/Cores/Entrega/Trocas saem da tela; ficam no (i) do topo.
-assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-facts, #product-dialog \.part-hint \{ display: none; \}/.test(css) && dialog.includes('id="pdp-info"'), 'no celular, as informações ficam só no (i)');
+// Celular menos carregado: a dica da parte e as combinações saem da tela (Detalhes/Cores/Entrega/Trocas ficam só no (i) do topo, em todo tamanho).
+assert(/@media \(max-width: 600px\) \{[\s\S]*  #product-dialog \.part-hint \{ display: none; \}/.test(css) && dialog.includes('id="pdp-info"'), 'no celular, sem a dica da parte');
 assert(controller.includes("const more=$('.pdp-more'),moreHome=more.parentElement,phone=matchMedia('(max-width: 600px)');") && controller.includes("$('#pdp-panel-1').prepend(more)"), 'no celular, combinações e o link das cores vão para a aba Cores do (i)');
 assert(css.includes('#product-dialog[data-mode=preview] .pdp-sheet .pdp-more { display: none; }'), 'a novidade sem venda não mostra combinações no (i)');
 

@@ -22,8 +22,9 @@ assert(js.includes("cents-Math.round(cents*COMMERCE.pixDiscountBps/10000)") && j
 assert(dialog.includes('id="palette" role="radiogroup"') && js.includes("b.setAttribute('role','radio')") && js.includes("b.tabIndex=on?0:-1") && /ArrowLeft','ArrowRight','ArrowUp','ArrowDown'/.test(js));
 // Combinações prontas.
 for (const [id, name] of [['original', 'Original'], ['pastel', 'Pastel'], ['vibrante', 'Vibrante'], ['surpresa', 'Surpreenda-me']]) assert(js.includes(`{id:'${id}',name:'${name}'`), name);
-// Painel com abas: quatro atalhos, setas/Home/End nas abas, Esc fecha primeiro o painel e devolve o foco.
-assert.equal((dialog.match(/data-sheet="\d"/g) || []).length, 4);
+// Painel com abas, aberto pelo (i) do topo (Detalhes, Cores, Entrega e Trocas não se repetem embaixo das cores, pedido de 05/10/2026):
+// setas/Home/End nas abas, Esc fecha primeiro o painel e devolve o foco.
+assert(dialog.includes('id="pdp-info"') && !dialog.includes('pdp-facts') && !/data-sheet=/.test(dialog), 'as informações ficam só no (i)');
 assert.equal((dialog.match(/role="tab"/g) || []).length, 4);
 assert(js.includes("if(!sheet.hidden)closeSheet();else closeProduct();") && js.includes('sheetOpener?.focus'));
 assert(js.includes("dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){e.preventDefault();closeSheet();}});"), 'Esc fecha o painel mesmo sem um clique antes (o navegador nem sempre deixa segurar o cancel)');
@@ -39,6 +40,10 @@ assert(html.includes('<link rel="stylesheet" href="product-page.css">'));
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
 assert(js.includes("dialog.dataset.mode=soon?'preview':'compact'") && js.includes("if(!PRODUCTS[key]&&!(SOON[key]&&step==='3d'))") && js.includes('if(!PRODUCTS[key])return null;'), 'novidade: modo só para ver, pela rota /3d');
 assert(dialog.includes('id="fixed-colors"') && dialog.includes('<p class="pdp-soon-bar">'), 'novidade: as cores fixas e o aviso no lugar da compra');
-assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-facts, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade: sem escolha de cor, preço nem compra');
+assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade: sem escolha de cor, preço nem compra');
 
+// Pedido de 05/10/2026: a barra do 3D do outro lado (à direita; no celular, numa linha no alto, ao lado do Foto | 3D) e, no celular, a
+// área da peça menor: as cores ficam sempre à vista e a peça fica com o que sobra da tela.
+assert(css.includes('#product-dialog .viewer-tools { top: 50%; bottom: auto; right: 14px; left: auto;') && /@media \(max-width: 600px\) \{[\s\S]*#product-dialog \.viewer-tools \{ top: 12px; right: 12px; left: auto; transform: none; flex-direction: row;/.test(css), 'a barra do 3D à direita');
+assert(/@media \(max-width: 600px\) \{[\s\S]*#product-dialog\[open\] \{ grid-template-rows: auto minmax\(190px, 1fr\) minmax\(0, auto\) auto;/.test(css), 'no celular, as cores à vista e a peça com o resto da tela');
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
