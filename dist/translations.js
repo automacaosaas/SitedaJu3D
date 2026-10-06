@@ -852,6 +852,7 @@ vista|view|vista
 Frente|Front|Frente
 Três quartos|Three-quarter|Tres cuartos
 Costas|Back|Parte trasera
+Lado|Side|Lado
 Três quartos de trás|Three-quarter back|Tres cuartos trasero
 De cima|From above|Desde arriba
 Rostinho de perto|Face up close|Carita de cerca

@@ -17,13 +17,17 @@ const rascunho = args.includes('--rascunho');
 // O detalhe de perto de cada peça: [altura do centro, altura do quadro], em frações da altura da peça (o rosto, a cabine). Com folga
 // embaixo: no celular a foto de perto enche uma área quase quadrada presa no alto, e o quinto de baixo do quadro fica de fora.
 const DETALHE = {borboletoscopio: [.72, .52], dinossauroscopio: [.78, .50], aviaoscopia: [.78, .50], macacoscopio: [.74, .50]};
+// O perfil: as peças planas (borboleta, avião) a 60° e para o outro lado do três quartos, porque de perfil puro viram uma tira fina;
+// as outras de perfil mesmo (90°)
+const LADO = {borboletoscopio: 60, aviaoscopia: 60};
 const SO = opt('vistas')?.split(',');
+// Posições bem diferentes entre si (06/10/2026: "de outras posições variadas"): o giro e a altura da câmera mudam de uma para outra
 const VISTAS = key => [
-  {id: 'frente', giro: 0},
-  {id: 'tres-quartos', giro: -35},
-  {id: 'tres-quartos-costas', giro: 145},
-  {id: 'costas', giro: 180},
-  {id: 'de-cima', giro: -25, elev: 35},
+  {id: 'frente', giro: 0, elev: 6},
+  {id: 'tres-quartos', giro: -35, elev: 12},
+  {id: 'lado', giro: LADO[key] ?? -90, elev: 3},
+  {id: 'tres-quartos-costas', giro: 150, elev: 22},
+  {id: 'de-cima', giro: -30, elev: 55},
   {id: 'detalhe', giro: 12, elev: 8, detalhe: DETALHE[key]}
 ].filter(v => !SO || SO.includes(v.id));
 

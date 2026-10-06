@@ -1,35 +1,54 @@
 {
-  "_como": "Fotos da galeria da aba Foto, no padrão de 6 por peça (dist/gallery.js): frente, três quartos, três quartos de trás, costas, de cima e um detalhe de perto, todas 4:5. Desde 05/10/2026 são renders do modelo 3D de cada peça (\"fundo\": \"render\"): node tools/render-vistas/renderizar.cjs grava em renders/ (Cycles, luz de estúdio, cores da vitrine, fundo transparente, a peça já no quadro padrão; o detalhe é uma câmera de perto). node tools/galeria-vistas/gerar.cjs leva para dist/assets/vistas/, com a sombra leve no chão nas vistas inteiras. Para usar uma foto no lugar de um render: a fonte nesta pasta, o instante do vídeo em segundos (t) e o recorte [x, y, largura, altura] (x \"auto\": centralizado na peça), com \"fundo\": \"recortar\" (tira o fundo liso; \"chao\": y onde a peça toca o chão) — veja PADRAO.md.",
-  "_fontes": "renders/: tools/render-vistas (05/10/2026). dinossauroscopio-girando.mp4 e *-3-vistas.webp: as fotos do Luiz de 04/10/2026, que vieram comprimidas pelo WhatsApp (as fotos da galeria até 05/10).",
+  "_como": "Fotos da galeria da aba Foto, no padrão de 6 por peça (dist/gallery.js): frente, três quartos, lado, três quartos de trás, de cima e um detalhe de perto, todas 4:5. Desde 05/10/2026 são renders do modelo 3D de cada peça (\"fundo\": \"render\"): node tools/render-vistas/renderizar.cjs grava em renders/ (Cycles, luz de estúdio, cores da vitrine, fundo transparente, a peça já no quadro padrão; o detalhe é uma câmera de perto). node tools/galeria-vistas/gerar.cjs leva para dist/assets/vistas/, com a sombra leve no chão nas vistas inteiras. Para usar uma foto no lugar de um render: a fonte nesta pasta, o instante do vídeo em segundos (t) e o recorte [x, y, largura, altura] (x \"auto\": centralizado na peça), com \"fundo\": \"recortar\" (tira o fundo liso; \"chao\": y onde a peça toca o chão) — veja PADRAO.md.",
+  "_fontes": "renders/: tools/render-vistas (05-06/10/2026). borboletoscopio-*.png: as imagens da borboleta que a Ju mandou em 06/10/2026 (768 x 512, fundo preto; \"chao\" em reta onde a peça está em perspectiva). dinossauroscopio-girando.mp4 e *-3-vistas.webp: as fotos do Luiz de 04/10/2026 (vieram comprimidas pelo WhatsApp).",
   "borboletoscopio": {
-    "frente": {"fonte": "renders/borboletoscopio-frente.webp", "fundo": "render"},
-    "tres-quartos": {"fonte": "renders/borboletoscopio-tres-quartos.webp", "fundo": "render"},
-    "tres-quartos-costas": {"fonte": "renders/borboletoscopio-tres-quartos-costas.webp", "fundo": "render"},
-    "costas": {"fonte": "renders/borboletoscopio-costas.webp", "fundo": "render"},
-    "de-cima": {"fonte": "renders/borboletoscopio-de-cima.webp", "fundo": "render"},
-    "detalhe": {"fonte": "renders/borboletoscopio-detalhe.webp", "fundo": "render", "detalhe": true}
+    "frente": {
+      "fonte": "borboletoscopio-frente.png",
+      "recorte": [2, 4, 764, 508],
+      "fundo": "recortar",
+      "chao": 497
+    },
+    "tres-quartos": {
+      "fonte": "borboletoscopio-tres-quartos.png",
+      "recorte": [2, 0, 764, 512],
+      "fundo": "recortar",
+      "chao": [[252, 487], [472, 508]]
+    },
+    "costas": {
+      "fonte": "borboletoscopio-costas.png",
+      "recorte": [2, 0, 764, 512],
+      "fundo": "recortar",
+      "chao": 505
+    },
+    "detalhe": {
+      "fonte": "borboletoscopio-detalhe.png",
+      "recorte": [184, 40, 378, 472],
+      "fundo": "recortar",
+      "cor_fundo": "#000000",
+      "detalhe": true
+    }
   },
   "dinossauroscopio": {
     "frente": {"fonte": "renders/dinossauroscopio-frente.webp", "fundo": "render"},
     "tres-quartos": {"fonte": "renders/dinossauroscopio-tres-quartos.webp", "fundo": "render"},
+    "lado": {"fonte": "renders/dinossauroscopio-lado.webp", "fundo": "render"},
     "tres-quartos-costas": {"fonte": "renders/dinossauroscopio-tres-quartos-costas.webp", "fundo": "render"},
-    "costas": {"fonte": "renders/dinossauroscopio-costas.webp", "fundo": "render"},
     "de-cima": {"fonte": "renders/dinossauroscopio-de-cima.webp", "fundo": "render"},
     "detalhe": {"fonte": "renders/dinossauroscopio-detalhe.webp", "fundo": "render", "detalhe": true}
   },
   "aviaoscopia": {
     "frente": {"fonte": "renders/aviaoscopia-frente.webp", "fundo": "render"},
     "tres-quartos": {"fonte": "renders/aviaoscopia-tres-quartos.webp", "fundo": "render"},
+    "lado": {"fonte": "renders/aviaoscopia-lado.webp", "fundo": "render"},
     "tres-quartos-costas": {"fonte": "renders/aviaoscopia-tres-quartos-costas.webp", "fundo": "render"},
-    "costas": {"fonte": "renders/aviaoscopia-costas.webp", "fundo": "render"},
     "de-cima": {"fonte": "renders/aviaoscopia-de-cima.webp", "fundo": "render"},
     "detalhe": {"fonte": "renders/aviaoscopia-detalhe.webp", "fundo": "render", "detalhe": true}
   },
   "macacoscopio": {
     "frente": {"fonte": "renders/macacoscopio-frente.webp", "fundo": "render"},
     "tres-quartos": {"fonte": "renders/macacoscopio-tres-quartos.webp", "fundo": "render"},
+    "lado": {"fonte": "renders/macacoscopio-lado.webp", "fundo": "render"},
     "tres-quartos-costas": {"fonte": "renders/macacoscopio-tres-quartos-costas.webp", "fundo": "render"},
-    "costas": {"fonte": "renders/macacoscopio-costas.webp", "fundo": "render"},
     "de-cima": {"fonte": "renders/macacoscopio-de-cima.webp", "fundo": "render"},
     "detalhe": {"fonte": "renders/macacoscopio-detalhe.webp", "fundo": "render", "detalhe": true}
   }
