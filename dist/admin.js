@@ -92,6 +92,8 @@ stepDialog.addEventListener('click', event => {
 // screen: loading | login | code | dashboard | offline
 let screen = 'loading', session = null, busy = false, feedback = '', setup = null, orders = [];
 let tab = 'pendente';
+// "Data do pedido": one day ("YYYY-MM-DD", the day it was paid, as on each card) or '' for every day.
+let dayFilter = '';
 // Parts of the panel: Pedidos, Fluxo de caixa (admin-cash.js) and Envio internacional (admin-international.js). "#caixa" and
 // "#internacional" in the address keep them on reload.
 let section = location.hash === '#caixa' ? 'caixa' : location.hash === '#internacional' ? 'internacional' : 'pedidos';
@@ -287,13 +289,19 @@ function orderCard(o) {
   </article>`;
 }
 
-function ordersView(list) {
+function ordersView(all) {
+  // A day picked in "Data do pedido": the tabs and the list show only that day's orders (the totals above stay whole).
+  const list = dayFilter ? ordersForDay(all, dayFilter) : all;
+  const dayLabel = dayFilter ? new Date(`${dayFilter}T12:00:00`).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
+  const filterHtml = `<div class="admin-day-filter"><label><span>Data do pedido</span><input type="date" value="${esc(dayFilter)}" max="${dayKey(new Date())}" data-day-filter aria-describedby="admin-day-filter-note"></label>
+    ${dayFilter ? '<button type="button" class="btn-reopen" data-action="clear-day">Ver todas as datas</button>' : ''}
+    <p id="admin-day-filter-note" class="admin-day-filter-note">${dayFilter ? `Mostrando só os pedidos de <strong>${esc(dayLabel)}</strong>.` : 'Do mais recente para o mais antigo. Escolha uma data para ver só os pedidos daquele dia.'}</p></div>`;
   const counts = Object.fromEntries(STATUSES.map(s => [s, list.filter(o => o.status === s).length]));
   const tabsHtml = STATUSES.map(s => `<button type="button" data-tab="${s}" aria-pressed="${tab === s}">${STATUS_LABEL[s]}<span>${counts[s]}</span></button>`).join('');
   const shown = listByStatus(list, tab);
   const empty = {pendente: 'Nenhum pedido pendente por aqui. Assim que um pedido for pago, ele aparece nesta lista.', confirmado: 'Nenhum pedido pronto para envio. Os pedidos confirmados ficam aqui até você digitar o código de rastreio.', enviado: 'Nenhum pedido enviado esperando para ser concluído.', concluido: 'Nenhum pedido concluído ainda.', recusado: 'Nenhum pedido recusado.'}[tab];
-  const body = shown.length ? `<div class="admin-orders">${shown.map(orderCard).join('')}</div>` : `<p class="admin-empty">${empty}</p>`;
-  return `<div class="admin-tabs">${tabsHtml}</div>${body}`;
+  const body = shown.length ? `<div class="admin-orders">${shown.map(orderCard).join('')}</div>` : `<p class="admin-empty">${dayFilter ? `Nenhum pedido em ${esc(STATUS_LABEL[tab])} no dia ${esc(dayLabel)}.` : empty}</p>`;
+  return `${filterHtml}<div class="admin-tabs">${tabsHtml}</div>${body}`;
 }
 
 function chartView(list) {
@@ -509,6 +517,7 @@ content.addEventListener('click', event => {
 
   const tabBtn = event.target.closest('[data-tab]');
   if (tabBtn) { tab = tabBtn.dataset.tab; render(false); return; }
+  if (event.target.closest('[data-action="clear-day"]')) { dayFilter = ''; render(false); content.querySelector('[data-day-filter]')?.focus(); return; }
 
   const calBtn = event.target.closest('[data-cal]');
   if (calBtn) { let {year, month} = calendar; month += calBtn.dataset.cal === 'next' ? 1 : -1; if (month < 0) { month = 11; year--; } if (month > 11) { month = 0; year++; } calendar = {year, month}; render(false); return; }
@@ -568,6 +577,14 @@ content.addEventListener('input', event => {
   if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
   if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
   if (section === 'internacional' && screen === 'dashboard') handleIntlInput(event);
+});
+// "Data do pedido": on "change" (a whole date picked, or cleared), never while a date is half typed.
+content.addEventListener('change', event => {
+  const picker = event.target.closest('[data-day-filter]');
+  if (!picker) return;
+  dayFilter = /^\d{4}-\d{2}-\d{2}$/.test(picker.value) ? picker.value : '';
+  render(false);
+  content.querySelector('[data-day-filter]')?.focus();
 });
 
 // Back from Bling's authorization page (/admin.html?code=…&state=…): the code comes off the address at once and goes

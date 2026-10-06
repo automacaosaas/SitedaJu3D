@@ -1,17 +1,14 @@
 // Order helpers for the admin panel: grouping, sorting and totals over the list that comes from /api/admin/orders.
 // Orders live in the database; nothing here is stored in the browser.
 export const STATUSES = Object.freeze(['pendente', 'confirmado', 'enviado', 'concluido', 'recusado']);
-// The steps still to work through, oldest first; Concluídos and Recusados are history, newest first.
-const QUEUES = ['pendente', 'confirmado', 'enviado'];
 
 // Local calendar day the order was paid on, e.g. "2026-09-22" — used to group orders for the chart and the calendar.
 export const dayKey = value => { const d = new Date(value); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const paidTime = order => Date.parse(order.paidAt || order.createdAt) || 0;
 
-// Pending is a queue to work through — oldest first. Completed/declined is history — most recent first.
+// Every tab, the most recent order on top (05/10/2026, asked by the team: the newest first, down to the oldest).
 export function listByStatus(list, status) {
-  const filtered = list.filter(o => o.status === status);
-  return QUEUES.includes(status) ? filtered.sort((a, b) => paidTime(a) - paidTime(b)) : filtered.sort((a, b) => paidTime(b) - paidTime(a));
+  return list.filter(o => o.status === status).sort((a, b) => paidTime(b) - paidTime(a));
 }
 
 // Replaces one order in the list (after a status change), keeping the others as they are.

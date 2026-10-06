@@ -408,3 +408,12 @@ dialog.cash-dialog .admin-error{margin:0}
 .intl-steps{margin:0;padding-left:20px;display:grid;gap:10px;font-size:13px;line-height:1.55}
 .intl-steps a{color:var(--rose);text-decoration:underline;text-underline-offset:3px}
 @media(max-width:860px){.intl-grid{grid-template-columns:1fr}}
+
+/* "Data do pedido": the day filter above the tabs (the list is newest first). */
+.admin-day-filter{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;margin:0 0 14px}
+.admin-day-filter label{display:grid;gap:6px}
+.admin-day-filter label span{font-size:12px;font-weight:600;color:var(--muted)}
+.admin-day-filter input{padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;font:inherit;color:var(--ink);min-height:44px}
+.admin-day-filter input:focus-visible{outline:2px solid var(--rose);outline-offset:1px}
+.admin-day-filter-note{flex-basis:100%;margin:0;font-size:12.5px;color:var(--muted)}
+.admin-day-filter-note strong{color:var(--ink)}
