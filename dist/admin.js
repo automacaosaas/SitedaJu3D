@@ -113,6 +113,8 @@ function trackingStatus(o) {
   // No event yet (the Correios do not know the code): what that means and what to check, instead of the badge again.
   const line = last ? [last.description, placeText(last.place), when].filter(Boolean).join(' · ')
     : t.state === 'nao_encontrado' ? `Consultado em ${formatWhen(t.checkedAt)}. O código costuma aparecer algumas horas depois da postagem; se não aparecer até o dia seguinte, confira se foi digitado certo.` : '';
+  // A code the Correios registered before this purchase (tracking.js): another package's, so nothing was concluded or sent.
+  if (t.oldCode) return `<p class="admin-track is-problema"><span class="admin-track-state">Código de outro pacote?</span><span>${esc(line)}</span><small>Os Correios registram este código antes desta compra: parece de um pacote antigo. O pedido não foi concluído e o cliente não recebeu aviso do rastreio. Confira na etiqueta e use "Corrigir o código de rastreio": o código certo vai por e-mail ao cliente.</small></p>`;
   return `<p class="admin-track is-${esc(t.state)}"><span class="admin-track-state">${esc(TRACK_STATE[t.state] || t.state)}</span><span>${esc(line)}</span>${last?.detail ? `<small>${esc(last.detail)}</small>` : ''}</p>`;
 }
 const INVOICED = ['confirmado', 'enviado', 'concluido'];
@@ -494,7 +496,7 @@ content.addEventListener('submit', event => {
     const problem = trackingProblem(code);
     if (problem) { input.setCustomValidity(problem); input.reportValidity(); input.addEventListener('input', () => input.setCustomValidity(''), {once: true}); return; }
     const order = orders.find(o => o.id === event.target.dataset.id);
-    if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Envio confirmado: o pedido foi para Enviados.', {trackingCode: code, quiet: order.status === 'enviado'});
+    if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Envio confirmado: o pedido foi para Enviados.', {trackingCode: code, quiet: order.status === 'enviado' && !order.tracking?.oldCode});
     return;
   }
   if (event.target.id === 'admin-login-form') run('Conferindo seu acesso…', async () => {

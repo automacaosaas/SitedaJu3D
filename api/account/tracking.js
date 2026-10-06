@@ -16,5 +16,5 @@ module.exports = endpoint({methods: ['GET'], async handle(context) {
   const order = await context.store.orders.findByReference(reference);
   if (!order || order.customerId !== customer.id || !['enviado', 'concluido'].includes(order.status) || !order.trackingCode) throw Object.assign(new Error('not_found'), {code: 'not_found'});
   const current = await createTracking({store: context.store, env: context.env, now: context.now, fetchImpl: context.fetchImpl, outbox: context.outbox}).forOrder(order);
-  return {body: {reference, status: current.status, tracking: trackingView(current, {all: true})}};
+  return {body: {reference, status: current.status, tracking: trackingView(current, {all: true, buyer: true})}};
 }});

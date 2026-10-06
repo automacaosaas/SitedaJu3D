@@ -44,10 +44,14 @@ const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extr
 const NO_TRACKING = Object.freeze({trackingState: null, trackingEvents: null, trackingLast: null, trackingCheckedAt: null, deliveredAt: null, trackingNotices: null});
 const iso = value => value ? new Date(value).toISOString() : null;
 // What the panel and "Meus pedidos" show of the tracking: where the package stands and the last event, kept apart
-// (trackingLast) so the panel's list never reads the whole line; every event with `all`, for the timeline.
-function trackingView(order, {all = false} = {}) {
+// (trackingLast) so the panel's list never reads the whole line; every event with `all`, for the timeline. A code the
+// tracking found to be another, older package's (oldCode, tracking.js): the panel sees its line and a warning, the buyer
+// (`buyer`) sees nothing of it.
+function trackingView(order, {all = false, buyer = false} = {}) {
+  const oldCode = String(order.trackingNotices || '').split(',').includes('antigo');
+  if (buyer && oldCode) return {code: order.trackingCode || null, state: null, last: null, checkedAt: null, deliveredAt: null, ...(all ? {events: []} : {})};
   const events = all && Array.isArray(order.trackingEvents) ? order.trackingEvents : [];
-  return {code: order.trackingCode || null, state: order.trackingState || null, last: order.trackingLast || events[0] || null, checkedAt: iso(order.trackingCheckedAt), deliveredAt: iso(order.deliveredAt), ...(all ? {events} : {})};
+  return {code: order.trackingCode || null, state: order.trackingState || null, last: order.trackingLast || events[0] || null, checkedAt: iso(order.trackingCheckedAt), deliveredAt: iso(order.deliveredAt), ...(oldCode ? {oldCode} : {}), ...(all ? {events} : {})};
 }
 // pix | debit | card (credit). Debit is kept apart so the e-mails and the panel name it correctly.
 // The Pix discount is not a column: the order keeps the list subtotal and the total charged, so it is what is missing.
@@ -165,7 +169,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
       createdAt: new Date(order.createdAt).toISOString(), paidAt: order.paidAt ? new Date(order.paidAt).toISOString() : null,
       subtotalCents: order.subtotalCents, shippingCents: order.shippingCents, discountCents: discountOf(order), totalCents: order.totalCents, test: order.source !== 'live', refunded: order.refundState === 'refunded',
       trackingCode: ['enviado', 'concluido'].includes(order.status) ? order.trackingCode || null : null,
-      tracking: ['enviado', 'concluido'].includes(order.status) && order.trackingCode ? trackingView(order) : null,
+      tracking: ['enviado', 'concluido'].includes(order.status) && order.trackingCode ? trackingView(order, {buyer: true}) : null,
       items: order.items.map(i => ({productId: i.productId, title: i.title, quantity: i.quantity, unitCents: i.unitCents, selection: i.selection}))
     };
   }

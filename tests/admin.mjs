@@ -334,17 +334,25 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.match(sent[3].key, /^order-enviado-[0-9a-f-]{36}-\d+$/);
   const corrected = await move({id: en.id, status: 'enviado', trackingCode: 'AA987654326BR'});
   assert.equal(corrected.json().mailed, false); assert.equal(sent.length, 4, 'a corrected code e-mails nobody');
+  // 2026-10-06: ...except one replacing a code the tracking found to be another package's ("antigo"): the buyer got a
+  // wrong code, so the right one goes.
+  await store.orders.update(en.id, {trackingNotices: 'antigo'});
+  advance(60000);
+  const replaced = await move({id: en.id, status: 'enviado', trackingCode: 'AA123456785BR'});
+  assert.equal(replaced.json().mailed, true); assert.equal(sent.length, 5, 'the right code replaces another package\'s: e-mailed');
+  assert(sent[4].body.html.includes('AA123456785BR') && sent[4].key !== sent[3].key);
+  assert.equal(replaced.json().order.tracking.oldCode, undefined, 'the new code starts clean');
   const concluded = await move({id: en.id, status: 'concluido'});
-  assert.equal(concluded.json().mailed, true); assert.equal(sent.length, 5);
-  assert.equal(sent[4].body.subject, '[TESTE] Order delivered · JU-DECIDE0002 · Ju, imprime pra mim?', 'concluded = delivered');
+  assert.equal(concluded.json().mailed, true); assert.equal(sent.length, 6);
+  assert.equal(sent[5].body.subject, '[TESTE] Order delivered · JU-DECIDE0002 · Ju, imprime pra mim?', 'concluded = delivered');
   await move({id: en.id, status: 'enviado'}); await move({id: en.id, status: 'confirmado'});
-  assert.equal(sent.length, 5, 'going back e-mails nobody, not even a second "confirmed"');
+  assert.equal(sent.length, 6, 'going back e-mails nobody, not even a second "confirmed"');
 
   // Without an e-mail service nothing is sent and nothing breaks (the route still saves the status and says mailed: false).
   const {createOrders} = require('../api/_lib/orders');
   const noMail = createOrders({store, env: ENV, now});
   assert.equal(await noMail.notifyDecision({...pt, status: 'confirmado'}, {fetchImpl}), false, 'no e-mail service: nothing sent, nothing thrown');
-  assert.equal(sent.length, 5);
+  assert.equal(sent.length, 6);
 }
 
 // ── automatic refund: declining returns the whole amount through Mercado Pago (Orders API), once ──

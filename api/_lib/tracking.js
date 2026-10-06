@@ -20,6 +20,7 @@ const INTERVAL = 10 * 60000;      // a round every 10 minutes in the server
 const ROUND = 200;                // packages per round, in batches of 50
 const MAX_EVENTS = 40;
 const STALE = 10 * 60000;         // a round still running after this no longer holds the next one
+const BEFORE_PURCHASE = 6 * 3600000;   // a package is posted days after the purchase: events from before it are another one's
 const STATES = ['postado', 'em_transito', 'saiu_para_entrega', 'aguardando_retirada', 'entregue', 'problema', 'devolvido', 'nao_encontrado'];
 
 // One Correios event → where the package stands. The codes first (BDE/BDI/BDR "baixa" with type 01: delivered; OEC: out for
@@ -50,11 +51,17 @@ const placeOf = unit => {
   const address = unit?.endereco || {}, city = String(address.cidade || '').trim(), uf = String(address.uf || '').trim().toUpperCase();
   return city || uf ? {city: city.slice(0, 60), uf: uf.slice(0, 2)} : null;
 };
+// The detail of an event, unless it is not about the package: the Correios put their satisfaction survey there on
+// deliveries ("Queremos te ouvir!… https://survey3.medallia.com/…"), which neither Ju nor the buyer should see as tracking.
+const detailOf = value => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text && !/https?:\/\/|www\.|queremos te ouvir/i.test(text) ? text.slice(0, 160) : null;
+};
 // The events of one package, newest first, in a small shape of our own (no Correios ids, nothing personal).
 function eventsOf(objeto) {
   return (Array.isArray(objeto?.eventos) ? objeto.eventos : []).map(e => ({
     code: String(e.codigo || '').slice(0, 4), type: String(e.tipo || '').slice(0, 3), state: classify(e),
-    description: String(e.descricao || '').replace(/\s+/g, ' ').trim().slice(0, 120), detail: String(e.detalhe || '').replace(/\s+/g, ' ').trim().slice(0, 160) || null,
+    description: String(e.descricao || '').replace(/\s+/g, ' ').trim().slice(0, 120), detail: detailOf(e.detalhe),
     at: timeOf(e.dtHrCriado), place: placeOf(e.unidade), to: placeOf(e.unidadeDestino)
   })).filter(e => e.at && e.description).sort((a, b) => b.at.localeCompare(a.at)).slice(0, MAX_EVENTS);
 }
@@ -83,6 +90,14 @@ function createTracking({store, env = process.env, now = () => Date.now(), fetch
       return store.orders.findById(order.id);
     }
     const last = events[0], delivery = events.find(e => e.state === 'entregue');
+    // A code from another, older package (pasted by mistake): the Correios registered it before this order was paid. Its
+    // line is kept, and the panel says so ("antigo"), but it never closes the order nor tells anyone anything.
+    const bought = new Date(order.paidAt || order.createdAt).getTime();
+    if (Number.isFinite(bought) && events.some(e => Date.parse(e.at) < bought - BEFORE_PURCHASE)) {
+      const notices = new Set(String(order.trackingNotices || '').split(',').filter(Boolean)).add('antigo');
+      await store.orders.update(order.id, {trackingState: last.state, trackingEvents: events, trackingLast: last, trackingCheckedAt: at, trackingNotices: [...notices].join(',').slice(0, 255)});
+      return store.orders.findById(order.id);
+    }
     await store.orders.update(order.id, {trackingState: last.state, trackingEvents: events, trackingLast: last, trackingCheckedAt: at, ...(delivery ? {deliveredAt: new Date(delivery.at)} : {})});
     // Reopened by Ju after a delivery (orders.setStatus marks "reaberto:<time>"): only a delivery registered after that
     // closes the order again.

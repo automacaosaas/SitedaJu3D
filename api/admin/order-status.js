@@ -19,7 +19,7 @@ const {nfeSettings} = require('../_lib/fiscal');
 module.exports = adminEndpoint({methods: ['POST'], async handle({body, store, env, now, admin, auth, ip, fetchImpl, outbox, waitUntil}) {
   const id = String(body.id || '');
   if (!/^[0-9a-f-]{36}$/.test(id)) throw Object.assign(new Error('invalid_request'), {code: 'invalid_request', field: 'id'});
-  const orders = createOrders({store, env, now}), before = (await store.orders.findById(id))?.status;
+  const orders = createOrders({store, env, now}), previous = await store.orders.findById(id), before = previous?.status;
   // The piece never leaves without its note: with NF-e issuing on, "Enviado" (the tracking code) waits for the note to be
   // authorized (409 invoice_pending).
   if (String(body.status || '') === 'enviado' && before === 'confirmado' && nfeSettings(env).mode !== 'off' && (await store.invoices.findByOrder(id))?.status !== 'autorizada') {
@@ -32,9 +32,11 @@ module.exports = adminEndpoint({methods: ['POST'], async handle({body, store, en
     await auth.audit(admin.id, 'order_refund', `${order.reference} → ${order.refundState}`, ip);
   }
   // The buyer hears about the steps forward only: confirmed (from Pendentes), posted (the tracking code going in, from
-  // Expedição), delivered and declined. Going back, and a corrected tracking code, e-mail nobody.
+  // Expedição), delivered and declined. Going back, and a corrected tracking code, e-mail nobody, except a code that
+  // replaces one the tracking found to be another package's: the buyer got a wrong code, so the right one goes.
   const confirmed = order.status === 'confirmado' && before === 'pendente', posted = order.status === 'enviado' && before === 'confirmado';
-  const mailed = confirmed || posted || ['concluido', 'recusado'].includes(order.status) ? await orders.notifyDecision(order, {fetchImpl, outbox}) : false;
+  const replaced = order.status === 'enviado' && before === 'enviado' && order.trackingCode !== previous?.trackingCode && String(previous?.trackingNotices || '').split(',').includes('antigo');
+  const mailed = confirmed || posted || replaced || ['concluido', 'recusado'].includes(order.status) ? await orders.notifyDecision(order, {fetchImpl, outbox}) : false;
   const invoicing = createInvoicing({store, env, now, fetchImpl, outbox});
   let invoice = await store.invoices.findByOrder(order.id);
   if (confirmed) invoice = await invoicing.issueWithin(order, {actor: admin.email}, {waitUntil}) || invoice;
