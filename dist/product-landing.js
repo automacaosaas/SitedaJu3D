@@ -66,6 +66,41 @@ function setup(root, key) {
     status.textContent = 'A prévia 3D não abriu neste navegador; a foto mostra as cores originais.';
   }
   views.addEventListener('click', event => { const b = event.target.closest('[data-pl-view]'); if (b && b.dataset.plView !== view) setView(b.dataset.plView); });
+
+  // ── as fotos (06/10/2026): embaixo da peça, a da vitrine e as fotos reais (gallery.js) em miniaturas; a escolhida troca a grande
+  // com um esmaecimento (com o mouse, basta passar por cima), e no celular a foto grande também passa de lado com o dedo. ──
+  const thumbs = q('[data-pl-thumbs]'), photo = q('.pl-photo');
+  if (thumbs) {
+    const buttons = [...thumbs.querySelectorAll('button')];
+    let current = 0, swap = 0, startX = null;
+    thumbs.hidden = false;
+    const show = i => {
+      i = (i + buttons.length) % buttons.length;
+      if (view !== 'photo') setView('photo');
+      if (i === current) return;
+      current = i; const b = buttons[i], id = ++swap;
+      buttons.forEach((x, j) => x.setAttribute('aria-pressed', String(j === i)));
+      b.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: reduced.matches ? 'auto' : 'smooth'});
+      const next = new Image(); next.src = b.dataset.src;
+      photo.classList.add('is-swapping');
+      Promise.all([(next.decode?.() || Promise.resolve()).catch(() => {}), new Promise(done => setTimeout(done, reduced.matches ? 0 : 180))]).then(() => {
+        if (id !== swap) return;
+        photo.src = b.dataset.src; photo.alt = b.dataset.alt;
+        stage.classList.toggle('is-real', !('main' in b.dataset));
+        requestAnimationFrame(() => photo.classList.remove('is-swapping'));
+      });
+    };
+    thumbs.addEventListener('click', event => { const b = event.target.closest('button'); if (b) show(buttons.indexOf(b)); });
+    thumbs.addEventListener('pointerover', event => { const b = event.target.closest('button'); if (b && event.pointerType === 'mouse') show(buttons.indexOf(b)); });
+    thumbs.addEventListener('keydown', event => { const step = {ArrowLeft: -1, ArrowRight: 1}[event.key]; if (!step) return; event.preventDefault(); show(current + step); buttons[current].focus(); });
+    stage.addEventListener('pointerdown', event => { if (view === 'photo' && event.pointerType !== 'mouse') startX = [event.clientX, event.clientY]; });
+    stage.addEventListener('pointerup', event => {
+      if (!startX) return;
+      const dx = event.clientX - startX[0], dy = event.clientY - startX[1]; startX = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) show(current + (dx < 0 ? 1 : -1));
+    });
+    stage.addEventListener('pointercancel', () => { startX = null; });
+  }
   new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; if (viewer?.active) viewer.setAuto(spinning && onScreen); }).observe(stage);
   window.addEventListener('pagehide', () => viewer?.hide());
   window.addEventListener('pageshow', event => { if (event.persisted && view === '3d') setView('3d'); });

@@ -25,12 +25,12 @@ const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html'
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
   const [products, commerce, icons, grid, tour] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js')]);
-  const contact = await load('contact-link.js');
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, splitContact: contact.splitContact, contactMail: contact.contactMail};
+  const contact = await load('contact-link.js'), gallery = await load('gallery.js');
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, splitContact: contact.splitContact, contactMail: contact.contactMail, staticViews: gallery.staticViews, hasGallery: gallery.hasGallery};
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, defaults, color, showcase, icon, splitContact, contactMail} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
   // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
   const [before, phrase, after] = splitContact(product.description);
@@ -65,6 +65,8 @@ function page(id, data, base) {
       <article class="pl" style="${style}" data-pl="${id}">
         <div class="pl-stage">
           <div class="pl-art" data-pl-stage data-view="photo"><img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}" alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"><div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
+${hasGallery(id) ? `
+          <div class="pl-thumbs" role="group" aria-label="Fotos da peça" data-pl-thumbs hidden>${[{src: `assets/${product.catalogImage || product.image}`, thumb: `assets/card-preview-${id}.webp`, name: 'Cores originais', alt: `${product.title} nas cores originais`, main: true}, ...staticViews(id).map(v => ({...v, alt: `${product.title} — ${v.name}`}))].map((v, i) => `<button type="button" aria-pressed="${i === 0}" aria-label="${esc(v.name)}" data-src="${esc(v.src)}" data-alt="${esc(v.alt)}"${v.main ? ' data-main' : ''}><img src="${esc(v.thumb)}" alt="" width="${v.main ? 384 : 160}" height="${v.main ? 384 : 200}" loading="lazy" decoding="async" draggable="false"></button>`).join('')}</div>` : ''}
           <div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden><button type="button" data-pl-view="photo" aria-pressed="true">Foto</button><button type="button" data-pl-view="3d" aria-pressed="false">${icon('cube')}<span>Girar em 360°</span></button></div>
         </div>
         <div class="pl-info">
