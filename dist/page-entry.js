@@ -5,6 +5,21 @@
 // header without its bar) never flashes before the piece the visitor was looking at. At most 2.5 s, even if a script fails.
 (() => {
   const root = document.documentElement;
+  // The showcase's first photo, asked for at once: the piece the home opens on (the one in the address, or the one the
+  // visitor was looking at, journey.js), the butterfly when there is none. Not a fixed preload in the HTML, which always
+  // fetched the butterfly, also for a visitor coming back to another piece. The same srcset and sizes as the showcase
+  // (products.js HERO_SIZES), so this is the very file carousel.js asks for. The picture written in the page (lazy, and
+  // hidden while the page waits, experience.css) never fetches another one.
+  const PIECES = ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia', 'macacoscopio'];
+  const HERO_SIZES = '(max-width: 600px) 56vw, (max-width: 1000px) 310px, (max-width: 1560px) 25vw, 390px';
+  const routed = (location.hash.match(/^#produto\/([\w-]+)/) || [])[1], saved = window.juTheme?.product();
+  const piece = [routed, saved].find(key => PIECES.includes(key)) || PIECES[0], file = `assets/product-${piece}-cutout`;
+  const preload = document.createElement('link');
+  preload.rel = 'preload'; preload.as = 'image'; preload.href = `${file}.webp`;
+  preload.setAttribute('imagesrcset', `${file}-768.webp 768w, ${file}.webp 1254w`);
+  preload.setAttribute('imagesizes', HERO_SIZES);
+  preload.setAttribute('fetchpriority', 'high');
+  document.head.append(preload);
   let seen = false;
   try { seen = sessionStorage.getItem('ju.opened') === '1'; sessionStorage.setItem('ju.opened', '1'); } catch {}
   if (seen) {

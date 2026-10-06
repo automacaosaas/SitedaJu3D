@@ -9,6 +9,35 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
+- **Atualização de 06/10/2026: o site de teste roda a `teste/rastreio-vitrine`**, a junção feita pelo Pedro de todas as
+  branches abaixo (zip a cada junção; 44 suítes passam). Nenhuma delas está na `main` ainda.
+  - **Rastreio (`rastreio/correios`, `RASTREIO.md`):**
+    - a API Rastro está liberada no contrato da Ju; o teste ponta a ponta com um pacote real deu certo;
+    - a API exige o idioma `pt-BR` (sem ele, erro SRO-018);
+    - o código de rastreio só vale com o dígito verificador certo (padrão S10), no painel e no servidor;
+    - na Expedição, o envio só sai no clique em "Confirmar envio" (o código conferido mostra um aviso verde);
+    - um código de pacote antigo, com eventos de antes do pagamento, não conclui o pedido nem avisa ninguém, e o painel mostra
+      "Código de outro pacote?";
+    - a pesquisa de satisfação dos Correios sai do detalhe dos eventos;
+    - reabrir um pedido entregue não o fecha de novo com a entrega antiga;
+    - migração `013_rastreio_ultimo.sql` (o painel lê só o último evento).
+  - **Vitrine:**
+    - a volta à home pela logo não pisca mais a borboleta nem o cabeçalho pela metade (`vitrine/sem-piscar`, PR #14);
+    - a home volta na peça que a pessoa estava vendo (`vitrine/lembrar-peca`, do Pedro);
+    - foto da borboleta em 135 KB (`vitrine/borboleta-leve`);
+    - as quatro fotos da vitrine têm versão de 768 px, escolhida por `srcset` (celular e computador 1x/2x baixam só ela;
+      `vitrine/foto-celular`);
+    - o pré-carregamento é da peça em que a home abre, não mais sempre da borboleta (`vitrine/preload-peca`). Números em
+      `PERFORMANCE-QA.md`.
+  - **Do Pedro:**
+    - "Meus pedidos" em cards, com etapas, filtros e "Rastrear pacote" (`conta/meus-pedidos`). **Não mexer em
+      `dist/account.js` e `dist/account.css` até ela entrar na `main`;**
+    - botão para remover os dados de pessoa jurídica (`conta/remover-pj`);
+    - o dicionário de traduções só carrega em inglês e espanhol, e a demonstração não é pré-carregada em conexão fraca
+      (`otimizacao/carregamento`).
+  - **Para o lançamento:**
+    - a tarefa do cron-job.org (sem ela, com o app dormindo na Hostinger, o rastreio só roda quando alguém abre o painel);
+    - verificar o domínio no Resend (os e-mails do rastreio ainda só chegam ao e-mail de teste).
 - **Atualização de 05/10/2026 (noite): branch `rastreio/correios`**, feita sobre a `bling/resiliencia` (`285ea15`). Traz o
   rastreio automático pelos Correios (API Rastro, mesmo contrato do frete) e a aba "Pronto para envio" virou **Expedição**,
   com o campo do código pronto para o leitor de código de barras. O e-mail com o código sai quando o código entra; o pedido
