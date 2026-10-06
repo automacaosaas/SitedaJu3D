@@ -8,10 +8,15 @@ const ASSETS={
   borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
   // O dinossauro do Meshy (05/10/2026), com os 2 espinhos da peça nova: corpo e detalhes coloríveis, olhos, dentes e brilho fixos
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshy-1',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-meshopt1',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
   // O macaco do Meshy com as cores fixas do macaco em cinco materiais, sem textura (VITRINE-AVIAO-MACACO-QA.md)
-  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)
+  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
+  // Girafa e unicórnio (novidades no molde do macaco): até chegar o 3D de cada um, o do macaco (troque pelo .glb deles e suba o ?v=)
+  girafoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
+  unicornioscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)
 };
+// The file each piece loads (tests read the same one).
+export const modelURL=key=>ASSETS[key];
 // Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).
 export const PRESENTATION_SCALE={borboletoscopio:1.25};

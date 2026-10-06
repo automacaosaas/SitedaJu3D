@@ -109,7 +109,6 @@ const tabs=[...sheet.querySelectorAll('[role="tab"]')],panels=[...sheet.querySel
 function showTab(n,focus=false){tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===n));tab.tabIndex=i===n?0:-1;});panels.forEach((panel,i)=>{panel.hidden=i!==n;});if(focus)tabs[n].focus();}
 function openSheet(n,opener){sheetOpener=opener;showTab(n);sheet.hidden=false;dialog.classList.add('sheet-open');requestAnimationFrame(()=>{sheet.classList.add('is-open');tabs[n].focus({preventScroll:true});});}
 function closeSheet(restoreFocus=true){if(sheet.hidden)return;sheet.classList.remove('is-open');dialog.classList.remove('sheet-open');sheet.hidden=true;if(restoreFocus)sheetOpener?.focus({preventScroll:true});sheetOpener=null;}
-document.querySelectorAll('[data-sheet]').forEach(b=>{b.insertAdjacentHTML('afterbegin',icon(b.dataset.icon));b.addEventListener('click',()=>openSheet(Number(b.dataset.sheet),b));});
 tabs.forEach((tab,i)=>tab.addEventListener('click',()=>showTab(i)));
 sheet.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();showTab(e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length,true);});
 $('.pdp-sheet-close').addEventListener('click',()=>closeSheet());

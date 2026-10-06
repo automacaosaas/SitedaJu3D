@@ -94,6 +94,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;
   details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
   olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
+- **Girafa e unicórnio (06/10/2026):** já são novidades na vitrine (GiraffeLamp e UnicornLamp, `SOON` em `products.js`; o macaco agora é MonkeyLamp), no molde do
+  macaco e com as cores de cada bicho; as imagens e o 3D ainda são os do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`).
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
@@ -109,7 +111,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   servidor divide a linha em dois preços exatos para o Mercado Pago e a nota, e o site mostra "Levando 2, o segundo sai por R$ 215,00").
   Sem os avisos de "ilustrativo".
 - **Textos (05/10/2026, pedidos do Luiz):** borboleta e dino "feitos para encaixe no retinoscópio da marca Welch Allyn"; avião "para
-  régua de esquiascopia", "feito para encaixe na régua Luneau" (**falta pôr as medidas, que o Luiz vai passar**). Peças da lâmpada de
+  régua de esquiascopia", "compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato" (o "entre em contato" abre o e-mail da Ju). Peças da lâmpada de
   fenda: o macaco se chama **MonkeyLamp**; a girafa e o unicórnio, quando entrarem, **GiraffeLamp** e **UnicornLamp**.
 - **Nota fiscal:** Bling, em toda venda (pessoa física e jurídica), emitida quando a Ju marca "concluído" no painel. Empresa ME no
   Simples Nacional, MG. A conta do Bling deve estar em homologação no primeiro teste (o site pausa se detectar produção).

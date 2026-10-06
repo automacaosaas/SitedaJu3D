@@ -95,8 +95,19 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
    assert.equal(materialAt(sx*.30,.14),'body','No yellow leaks onto the fuselage beside it');
    assert.equal(materialAt(sx*.385,.03),'body','The wing below the turbine stays blue');
    // Regular, upright five-pointed wing stars: red along the five tip directions (90, 162, 234, 306 and 18 degrees), blue between them.
-   for(const a of [90,162,234,306,18])assert.equal(materialAt(sx*.4465+.055*Math.cos(a*Math.PI/180),-.1286+.055*Math.sin(a*Math.PI/180)),'details',`Star tip at ${a} deg`);
-   for(const a of [54,126,198,270,342])assert.equal(materialAt(sx*.4465+.055*Math.cos(a*Math.PI/180),-.1286+.055*Math.sin(a*Math.PI/180)),'body',`Gap between star tips at ${a} deg`);
+   const star=[sx*.4467,-.1131],at=(a,r)=>[star[0]+r*Math.cos(a*Math.PI/180),star[1]+r*Math.sin(a*Math.PI/180)];
+   for(const a of [90,162,234,306,18])assert.equal(materialAt(...at(a,.055)),'details',`Star tip at ${a} deg`);
+   for(const a of [54,126,198,270,342])assert.equal(materialAt(...at(a,.055)),'body',`Gap between star tips at ${a} deg`);
+   // Each star sits in the star-shaped recess of its wing (tools/render-aviao-macaco/estrelas.cjs): it was 1.8 mm below it and rested on
+   // the wing, leaving the top of the empty recess showing above it like a shadow. Just past each tip (outer radius 9.9 mm, + 0.6 mm) the
+   // ray meets the wing, not the recess floor 2.5 mm deeper; and the star stands proud of the wing by its share above the recess floor.
+   const wing=[];
+   for(const a of [90,162,234,306,18]){
+    const near=front(...at(a,.0815+.6/122)).point.z,far=front(...at(a,.0815+3/122)).point.z;wing.push(far);
+    assert.ok(near>far-.6/122,`No empty recess beyond the star tip at ${a} deg (${((near-far)*122).toFixed(2)} mm)`);
+   }
+   const proud=(front(...star).point.z-wing.reduce((s,z)=>s+z,0)/wing.length)*122;
+   assert.ok(proud>1&&proud<2.5,`The star rests in its recess, ${proud.toFixed(2)} mm proud of the wing`);
    assert.equal(materialAt(sx*.08,.66),'fixed','The cockpit windows keep their own colour');
   }
   assert.equal(materialAt(0,.66),'body','The frame between the windows is the body');

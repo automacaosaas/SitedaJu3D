@@ -12,12 +12,16 @@ export const PRODUCT_CATEGORIES = Object.freeze({
 export const PRODUCTS = {
   borboletoscopio:{number:'01',category:'oftalmologia',title:'Borboletoscópio',subtitle:'Capa para retinoscópio',image:'borboletoscopio.webp',catalogImage:'product-borboletoscopio-cutout.webp',description:'Uma borboleta para levar cor e imaginação à consulta. Impressa em 3D e feita para encaixe no retinoscópio da marca Welch Allyn.',parts:[{id:'body',name:'Corpo',hint:'Contorno, asas e antenas',default:'mint'},{id:'details',name:'Detalhes das asas',hint:'Parte interna e bolinhas',default:'yellow'}],fixed:'O rostinho e os olhos mantêm as cores originais.'},
   dinossauroscopio:{number:'02',category:'oftalmologia',title:'Dinossauroscópio',subtitle:'Capa para retinoscópio',image:'dinossauroscopio.webp',catalogImage:'product-dinossauroscopio-cutout.webp',description:'Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, feita para encaixe no retinoscópio da marca Welch Allyn.',parts:[{id:'body',name:'Corpo',hint:'Cabeça e corpo do dinossauro',default:'moss'},{id:'details',name:'Crista e bolinhas',hint:'A mesma cor nas duas partes',default:'cream'}],fixed:'Os olhos permanecem pretos e os dentes, brancos.'},
-  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de esquiascopia',image:'aviaoscopia.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. Feito para encaixe na régua Luneau: as duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
+  aviaoscopia:{number:'03',category:'oftalmologia',title:'Aviãoscopia',subtitle:'Avião magnético para régua de esquiascopia',image:'aviaoscopia.webp',catalogImage:'product-aviaoscopia-cutout.webp',description:'Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato.',parts:[{id:'body',name:'Corpo',hint:'Fuselagem, asas e cauda',default:'blue'},{id:'details',name:'Estrelas e topo',hint:'A mesma cor nos dois detalhes',default:'red'},{id:'engines',name:'Motores',hint:'As duas peças sobre as asas',default:'yellow'}],fixed:'As janelas da cabine mantêm a cor original.'}
 };
 // Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
 // Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
 export const SOON = {
-  macacoscopio:{number:'04',category:'oftalmologia',title:'MonkeyLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]}
+  macacoscopio:{number:'04',category:'oftalmologia',title:'MonkeyLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]},
+  // Girafa e unicórnio (06/10/2026): duas abas iguais à do macaco, com as cores de cada bicho no banner, no header e nos pontinhos. Até
+  // chegarem a foto e o 3D deles, as imagens (arquivos com o nome de cada um) e o 3D são os do macaco; é só trocar os arquivos.
+  girafoscopio:{number:'05',category:'oftalmologia',title:'GiraffeLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-girafoscopio-cutout.webp',catalogImage:'product-girafoscopio-cutout.webp',description:'Uma girafinha para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'ochre',name:'Amarelo-ocre',hex:'#e3a83a'},{id:'brown',name:'Marrom',hex:'#8b4f24'},{id:'cream',name:'Creme',hex:'#f3e2b8'}]},
+  unicornioscopio:{number:'06',category:'oftalmologia',title:'UnicornLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-unicornioscopio-cutout.webp',catalogImage:'product-unicornioscopio-cutout.webp',description:'Um unicórnio para acompanhar o olhar dos pequenos. Em breve.',parts:[],soon:true,colors:[{id:'white',name:'Branco',hex:'#f4f1ed'},{id:'pink',name:'Rosa Ju',hex:'#ee8eaa'},{id:'lilac',name:'Lilás',hex:'#ab91d1'},{id:'gold',name:'Dourado',hex:'#e2b84a'}]}
 };
 // Famílias de encaixe: o equipamento que cada peça veste. Ordenam a seção "O 3D nas suas consultas" da home, os banners
 // da página Escolha o seu (escolha.html) e o filtro da página Produtos (produtos.html?encaixe=<família>). Peça nova entra
@@ -117,6 +121,19 @@ export const SHOWCASE = {
     }
   }
 };
+// Girafa e unicórnio: o enquadramento e a demonstração do macaco (as imagens provisórias são as dele), com o nome e o tema de cada um.
+// Quando chegar a foto de um deles, ajuste `art` (node tools/render-aviao-macaco/art.cjs) e as medidas da demonstração.
+for (const [key, alt, theme, demo] of [
+  ['girafoscopio', 'GiraffeLamp sobre uma pilastra branca',
+    {bannerStops:'#fff6df 0%,#fbe4b0 52%,#f4d08a 100%', headerBackground:'#fbe9c0', textColor:'#2e1c07', mutedColor:'#5c3a10', accentColor:'#87430c'},
+    {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'GiraffeLamp encaixado na lâmpada de fenda.'}],
+  ['unicornioscopio', 'UnicornLamp sobre uma pilastra branca',
+    {bannerStops:'#fcf6fe 0%,#f1e3f8 52%,#e5d1f1 100%', headerBackground:'#f4e9fa', textColor:'#291532', mutedColor:'#5a3d6a', accentColor:'#87397a'},
+    {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'UnicornLamp encaixado na lâmpada de fenda.'}]
+]) {
+  const monkey = SHOWCASE.macacoscopio, title = SOON[key].title;
+  SHOWCASE[key] = {art:{...monkey.art, alt}, theme, demo:{...monkey.demo, ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
+}
 export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}
 export function defaults(key){return Object.fromEntries(PRODUCTS[key].parts.map(part=>[part.id,part.default]));}
 export function color(id){return PALETTE.find(c=>c.id===id)||PALETTE[0];}

@@ -6,7 +6,7 @@ registerHooks({resolve(specifier,context,next){return next(specifier==='three'?n
 const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
 const {PRODUCTS,PALETTE,SOON}=await import('../dist/products.js');
-const {createAssetModel,PRESENTATION_SCALE}=await import('../dist/asset-models.js');
+const {createAssetModel,PRESENTATION_SCALE,modelURL}=await import('../dist/asset-models.js');
 // The native renderer decodes images in browser checks; no image shim affects geometry.
 const originalParse=GLTFLoader.prototype.parseAsync;
 GLTFLoader.prototype.parseAsync=function(...args){this.register(()=>({name:'node-test-no-textures',loadTexture(){return Promise.resolve(null);}}));return originalParse.apply(this,args);};
@@ -54,8 +54,9 @@ try{
   model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
  }
  // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
+ // (the giraffe and the unicorn load the monkey's model until theirs arrive: the file comes from asset-models.js)
  for(const key of Object.keys(SOON)){
-  const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
+  const raw=await readFile(modelURL(key));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
   // The loader reads embedded images through a blob: fetch, which the site's CSP (connect-src) blocks: colours go in the materials.
   assert.equal(json.textures?.length||0,0,`${key}: fixed colours in the materials, no texture`);

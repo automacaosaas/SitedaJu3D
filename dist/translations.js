@@ -17,6 +17,12 @@ Lâmpada de fenda|Slit lamp|Lámpara de hendidura
 MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.
 MonkeyLamp, capa de macaco marrom com uma banana, sobre uma pilastra branca|MonkeyLamp, a brown monkey cover holding a banana, on a white pedestal|MonkeyLamp, funda de mono marrón con una banana, sobre un pedestal blanco
 Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
+Uma girafinha para acompanhar o olhar dos pequenos. Em breve.|A little giraffe to keep the little ones company. Coming soon.|Una jirafita para acompañar la mirada de los pequeños. Próximamente.
+Um unicórnio para acompanhar o olhar dos pequenos. Em breve.|A unicorn to keep the little ones company. Coming soon.|Un unicornio para acompañar la mirada de los pequeños. Próximamente.
+GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
+UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.
+GiraffeLamp sobre uma pilastra branca|GiraffeLamp on a white pedestal|GiraffeLamp sobre un pedestal blanco
+UnicornLamp sobre uma pilastra branca|UnicornLamp on a white pedestal|UnicornLamp sobre un pedestal blanco
 Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
@@ -398,7 +404,7 @@ As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre la
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
 Uma borboleta para levar cor e imaginação à consulta. Impressa em 3D e feita para encaixe no retinoscópio da marca Welch Allyn.|A butterfly to bring color and imagination to every appointment. 3D printed and made to fit Welch Allyn retinoscopes.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D y hecha para encajar en el retinoscopio de la marca Welch Allyn.
 Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, feita para encaixe no retinoscópio da marca Welch Allyn.|A friendly dinosaur for every glance. A 3D-printed cover made to fit Welch Allyn retinoscopes.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D, hecha para encajar en el retinoscopio de la marca Welch Allyn.
-Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. Feito para encaixe na régua Luneau: as duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. Made to fit the Luneau rack: the two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Hecho para encajar en la regla Luneau: las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements, get in touch.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas, ponte en contacto.
 Use uma senha com 8 a 128 caracteres.|Use a password with 8 to 128 characters.|Usa una contraseña de 8 a 128 caracteres.
 Aguarde 30 segundos antes de solicitar outro código.|Wait 30 seconds before requesting another code.|Espera 30 segundos antes de solicitar otro código.
 Preencha seu nome e um e-mail válido.|Enter your name and a valid email.|Introduce tu nombre y un correo válido.
@@ -759,8 +765,15 @@ Cores da peça|The piece's colors|Colores de la pieza
 Ainda não está à venda. Gire a peça e veja cada detalhe.|Not on sale yet. Turn the piece and see every detail.|Aún no está a la venta. Gira la pieza y mira cada detalle.
 Arraste para girar e ver cada detalhe.|Drag to rotate and see every detail.|Arrastra para girar y ver cada detalle.
 Ver o MonkeyLamp encaixado|See the MonkeyLamp fitted|Ver el MonkeyLamp encajado
+Ver o GiraffeLamp em 3D|See the GiraffeLamp in 3D|Ver el GiraffeLamp en 3D
+Ver o GiraffeLamp encaixado|See the GiraffeLamp fitted|Ver el GiraffeLamp encajado
+Ver o UnicornLamp em 3D|See the UnicornLamp in 3D|Ver el UnicornLamp en 3D
+Ver o UnicornLamp encaixado|See the UnicornLamp fitted|Ver el UnicornLamp encajado
 Marrom|Brown|Marrón
 Bege|Beige|Beige
+Amarelo-ocre|Ochre yellow|Amarillo ocre
+Creme|Cream|Crema
+Dourado|Gold|Dorado
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original

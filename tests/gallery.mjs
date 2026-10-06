@@ -20,7 +20,7 @@ for (const part of ['class="gallery-rail" role="group" aria-label="Escolher a vi
 // Só FOTOS REAIS (06/10/2026: "tem que ser as fotos reais" — nem render nem imagem gerada): as do Luiz em três vistas, 4 por peça, nesta
 // ordem; cada peça só diz o nome do detalhe dela. O macaco, sem fotos reais, mostra só a da vitrine.
 const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
-assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'macacoscopio']);
+assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'girafoscopio', 'macacoscopio', 'unicornioscopio']);
 const standardIds = ['frente', 'tres-quartos', 'costas', 'detalhe'];
 assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, costas e um detalhe de perto');
 assert.deepEqual(Object.keys(GALLERY).sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'], 'as três peças com fotos reais');
@@ -38,7 +38,7 @@ for (const key of Object.keys(GALLERY)) {
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(`../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
-assert(!hasGallery('macacoscopio') && viewsOf('macacoscopio').map(v => v.id).join() === 'frente', 'o macaco, sem fotos reais: só a foto da vitrine');
+for (const key of ['macacoscopio', 'girafoscopio', 'unicornioscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
 // Uma foto (1200 x 1500) e uma miniatura (160 x 200) de cada vista: o mesmo quadro 4:5 em todas.
 let total = 0;
@@ -76,8 +76,8 @@ assert(dialog.includes('<div class="pdp-palette-row"><div id="palette" role="rad
 assert(css.includes('.gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }'));
 assert(css.includes('.gallery-rail button { flex: none; width: 64px; height: 80px;') && gallery.includes('img.width=1200;img.height=1500;') && gallery.includes('img.width=160;img.height=200;'), 'miniaturas e fotos no formato 4:5');
 assert(!/\.image-area img \{[^}]*mask-image: radial-gradient/.test(css), 'sem a máscara da foto antiga');
-// Celular menos carregado: a dica da parte, as combinações e Detalhes/Cores/Entrega/Trocas saem da tela; ficam no (i) do topo.
-assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-facts, #product-dialog \.part-hint \{ display: none; \}/.test(css) && dialog.includes('id="pdp-info"'), 'no celular, as informações ficam só no (i)');
+// Celular menos carregado: a dica da parte e as combinações saem da tela (Detalhes/Cores/Entrega/Trocas ficam só no (i) do topo, em todo tamanho).
+assert(/@media \(max-width: 600px\) \{[\s\S]*  #product-dialog \.part-hint \{ display: none; \}/.test(css) && dialog.includes('id="pdp-info"'), 'no celular, sem a dica da parte');
 assert(controller.includes("const more=$('.pdp-more'),moreHome=more.parentElement,phone=matchMedia('(max-width: 600px)');") && controller.includes("$('#pdp-panel-1').prepend(more)"), 'no celular, combinações e o link das cores vão para a aba Cores do (i)');
 assert(css.includes('#product-dialog[data-mode=preview] .pdp-sheet .pdp-more { display: none; }'), 'a novidade sem venda não mostra combinações no (i)');
 
