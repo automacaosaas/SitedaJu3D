@@ -80,7 +80,9 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     let response;
     const bearer = await currentToken();
     try {
-      response = await fetchImpl(`${BASE}${path}?${new URLSearchParams(params)}`, {headers: {Authorization: `Bearer ${bearer}`, Accept: 'application/json'}, ...signal()});
+      // The language goes explicitly: without it Node's fetch sends "Accept-Language: *", which the price and time APIs
+      // ignore but the API Rastro refuses (400 "SRO-018: Permitido apenas os valores pt-BR, en e es-ES para o idioma").
+      response = await fetchImpl(`${BASE}${path}?${new URLSearchParams(params)}`, {headers: {Authorization: `Bearer ${bearer}`, Accept: 'application/json', 'Accept-Language': 'pt-BR'}, ...signal()});
     } catch { throw fail('correios_unavailable'); }
     if (response.status === 401 || response.status === 403) {
       // An expired or revoked token looks the same as a service the contract does not include: renew once, then ask again.

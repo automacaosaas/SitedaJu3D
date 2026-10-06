@@ -119,6 +119,8 @@ function createFakeCorreios({user = 'fake-user', code = 'fake-code', card = '006
   function rastro(codes, init) {
     const bearer = /^Bearer (.+)$/.exec(init.headers?.Authorization || '');
     if (!bearer || !tokens.has(bearer[1])) return refused(403, 'Token inválido ou expirado');
+    // Like the real API Rastro: the language must be one of these three (Node's fetch alone sends "*", refused).
+    if (!['pt-BR', 'en', 'es-ES'].includes(init.headers?.['Accept-Language'])) return refused(400, 'SRO-018: Permitido apenas os valores pt-BR(Português), en(Inglês) e es-ES(Espanhol) para o idioma');
     if (!codes.length || codes.length > 50) return refused(400, 'SRO-001: informe de 1 a 50 objetos');
     return reply(200, {versao: '3.5.38', quantidade: codes.length, objetos: codes.map(code => objectFor(code.toUpperCase())), resultado: 'Todos os Eventos'});
   }

@@ -60,6 +60,10 @@ assert.equal(timeOf(''), null);
   await client.track(['AA123456710BR', 'AA123456723BR', 'AA123456710BR']);
   const batch = fake.calls.findLast(c => c.path === '/srorastro/v1/objetos');
   assert(batch && batch.params.resultado === 'T', 'a batch: codigosObjetos repeated');
+  // The real API Rastro answered 400 "SRO-018" to Node's own "Accept-Language: *" (site de teste, 06/10): the client says pt-BR.
+  const sent = [], spied = createCorreios({env: fake.creds, fetchImpl: (url, init) => { sent.push(init?.headers || {}); return fake.fetchImpl(url, init); }});
+  await spied.track(['AA123456745BR']);
+  assert(sent.some(h => /^Bearer /.test(h.Authorization || '')) && sent.filter(h => /^Bearer /.test(h.Authorization || '')).every(h => h['Accept-Language'] === 'pt-BR'), 'every authenticated call says pt-BR');
   await assert.rejects(client.track(Array.from({length: 51}, (_, i) => `AA${String(100000000 + i)}BR`)), {code: 'correios_rejected'}, 'never more than 50');
 }
 
@@ -256,6 +260,7 @@ async function posted(store, code, over = {}) {
   assert.match(panel, /scan\.form\.requestSubmit\(\)/, 'a complete code confirms the shipment by itself (barcode scanner)');
   assert.match(panel, /\.admin-order\.status-confirmado \.admin-tracking input'\)\.focus\(/, 'the field is ready for the next code');
   assert.match(panel, />Marcar como entregue<\/button>/);
+  assert.match(panel, /t\?\.checkedAt \? `A consulta aos Correios de \$\{esc\(formatWhen\(t\.checkedAt\)\)\} não deu certo/, 'a refused query is not shown as "not asked yet"');
   const account = read('dist/account.js');
   assert.match(account, /data-track="\$\{ref\}" aria-expanded="false"/); assert.match(account, /await loadTracking\(track\.dataset\.track\)/);
   const {translate} = await import(new URL('../dist/i18n-core.js', import.meta.url).href);

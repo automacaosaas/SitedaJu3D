@@ -107,7 +107,8 @@ const TRACK_STATE = {postado: 'Postado', em_transito: 'Em trânsito', saiu_para_
 const placeText = p => p ? [p.city.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()), p.uf].filter(Boolean).join('/') : '';
 function trackingStatus(o) {
   const t = o.tracking;
-  if (!t || !t.state) return `<p class="admin-track is-waiting">${o.status === 'enviado' ? 'Os Correios ainda não foram consultados: o rastreio aparece aqui em algumas horas.' : ''}</p>`;
+  // Asked but without an answer to keep (the Correios refused the query): said as it is, not as "not asked yet".
+  if (!t || !t.state) return `<p class="admin-track is-waiting">${o.status !== 'enviado' ? '' : t?.checkedAt ? `A consulta aos Correios de ${esc(formatWhen(t.checkedAt))} não deu certo; o site tenta de novo sozinho em algumas horas. O motivo fica no log do servidor (linha "rastreio:").` : 'Os Correios ainda não foram consultados: o rastreio aparece aqui em algumas horas.'}</p>`;
   const last = t.last, when = last ? formatWhen(last.at) : '';
   const line = last ? [last.description, placeText(last.place), when].filter(Boolean).join(' · ') : TRACK_STATE[t.state];
   return `<p class="admin-track is-${esc(t.state)}"><span class="admin-track-state">${esc(TRACK_STATE[t.state] || t.state)}</span><span>${esc(line)}</span>${last?.detail ? `<small>${esc(last.detail)}</small>` : ''}</p>`;
