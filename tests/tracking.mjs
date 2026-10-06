@@ -50,9 +50,9 @@ assert.equal(timeOf(''), null);
 // ── the Correios client: one code, a batch (up to 50) ─────────────────
 {
   const fake = createFakeCorreios(), client = createCorreios({env: fake.creds, fetchImpl: fake.fetchImpl});
-  await client.track(['aa123456784br']);
-  assert(fake.calls.some(c => c.path === '/srorastro/v1/objetos/AA123456784BR' && c.params.resultado === 'T'), 'one code: its own address, every event');
-  await client.track(['AA123456781BR', 'AA123456782BR', 'AA123456781BR']);
+  await client.track(['aa123456745br']);
+  assert(fake.calls.some(c => c.path === '/srorastro/v1/objetos/AA123456745BR' && c.params.resultado === 'T'), 'one code: its own address, every event');
+  await client.track(['AA123456710BR', 'AA123456723BR', 'AA123456710BR']);
   const batch = fake.calls.findLast(c => c.path === '/srorastro/v1/objetos');
   assert(batch && batch.params.resultado === 'T', 'a batch: codigosObjetos repeated');
   await assert.rejects(client.track(Array.from({length: 51}, (_, i) => `AA${String(100000000 + i)}BR`)), {code: 'correios_rejected'}, 'never more than 50');
@@ -83,9 +83,9 @@ async function posted(store, code, over = {}) {
 {
   const w = world(), tracking = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet});
   const ids = {
-    unknown: await posted(w.store, 'AA123456780BR'), transit: await posted(w.store, 'AA123456782BR'), out: await posted(w.store, 'AA123456783BR'),
-    delivered: await posted(w.store, 'AA123456784BR'), away: await posted(w.store, 'AA123456785BR'), back: await posted(w.store, 'AA123456786BR'),
-    old: await posted(w.store, 'AA123456784XX'.replace('XX', 'BR').replace('84', '74'), {shippedAt: new Date(Date.parse('2026-07-01T12:00:00Z'))})
+    unknown: await posted(w.store, 'AA123456706BR'), transit: await posted(w.store, 'AA123456723BR'), out: await posted(w.store, 'AA123456737BR'),
+    delivered: await posted(w.store, 'AA123456745BR'), away: await posted(w.store, 'AA123456754BR'), back: await posted(w.store, 'AA123456768BR'),
+    old: await posted(w.store, 'AA123456771BR', {shippedAt: new Date(Date.parse('2026-07-01T12:00:00Z'))})
   };
   const done = await tracking.runOnce();
   assert.deepEqual(done, {checked: 6, delivered: 1, failed: 0}, 'every package due, the 60-day-old one left out');
@@ -99,11 +99,11 @@ async function posted(store, code, over = {}) {
   assert((await w.store.orders.events(ids.delivered)).some(e => e.kind === 'status:concluido' && e.actor === 'correios'), 'recorded in the history');
   assert.equal((await get('old')).trackingCheckedAt ?? null, null, 'a code posted more than 60 days ago is no longer looked up');
   const subjects = w.mails.map(m => `${m.to[0]} · ${m.subject}`);
-  assert(subjects.includes('ana@example.com · [TESTE] Pedido entregue · JU-R123456784 · Ju, imprime pra mim?'), 'the buyer hears about the delivery');
-  assert(subjects.includes('ana@example.com · [TESTE] Seu pedido saiu para entrega · JU-R123456783 · Ju, imprime pra mim?'), 'and that it is out for delivery');
-  assert(subjects.some(s => s.startsWith('ju@site.test · [TESTE] O pacote do pedido JU-R123456785 precisa de atenção')), 'Ju hears about a recipient away');
-  assert(subjects.some(s => s.startsWith('ju@site.test · [TESTE] O pacote do pedido JU-R123456786 está voltando')), 'and about a return');
-  const away = w.mails.find(m => m.subject.includes('JU-R123456785'));
+  assert(subjects.includes('ana@example.com · [TESTE] Pedido entregue · JU-R123456745 · Ju, imprime pra mim?'), 'the buyer hears about the delivery');
+  assert(subjects.includes('ana@example.com · [TESTE] Seu pedido saiu para entrega · JU-R123456737 · Ju, imprime pra mim?'), 'and that it is out for delivery');
+  assert(subjects.some(s => s.startsWith('ju@site.test · [TESTE] O pacote do pedido JU-R123456754 precisa de atenção')), 'Ju hears about a recipient away');
+  assert(subjects.some(s => s.startsWith('ju@site.test · [TESTE] O pacote do pedido JU-R123456768 está voltando')), 'and about a return');
+  const away = w.mails.find(m => m.subject.includes('JU-R123456754'));
   assert(away.html.includes('ENTREGA · AVISO DO SITE') && away.text.includes('Carteiro não atendido') && away.text.includes('Destinatário ausente'), 'what the Correios said, in the e-mail');
   assert.equal(w.mails.length, 4);
   assert.equal(w.mails.find(m => m.subject.includes('saiu para entrega')).key, `order-saiu-${ids.out}-${Date.parse('2026-10-04T12:00:00Z')}`);
@@ -117,7 +117,7 @@ async function posted(store, code, over = {}) {
 
   // the views
   const admin = createOrders({store: w.store, env: w.env}).adminView(delivered);
-  assert.deepEqual([admin.tracking.state, admin.tracking.last.state, admin.tracking.code], ['entregue', 'entregue', 'AA123456784BR']);
+  assert.deepEqual([admin.tracking.state, admin.tracking.last.state, admin.tracking.code], ['entregue', 'entregue', 'AA123456745BR']);
   assert(!('events' in admin.tracking), 'the panel gets the last event only');
   const buyer = createOrders({store: w.store, env: w.env}).customerView(delivered);
   assert.equal(buyer.tracking.state, 'entregue');
@@ -127,7 +127,7 @@ async function posted(store, code, over = {}) {
 // ── the Correios down, refusing, and Ju's panel round ─────────────────
 {
   const w = world({down: true}), tracking = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet});
-  const id = await posted(w.store, 'AA123456784BR');
+  const id = await posted(w.store, 'AA123456745BR');
   assert.deepEqual(await tracking.runOnce(), {checked: 0, delivered: 0, failed: 1});
   assert.equal((await w.store.orders.findById(id)).trackingCheckedAt ?? null, null, 'down: tried again at the next round');
   const refusing = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: async () => ({ok: false, status: 403, json: async () => ({msgs: ['API não liberada para o contrato']})}), log: quiet});
@@ -139,16 +139,71 @@ async function posted(store, code, over = {}) {
 // ── the tracking e-mail when the code goes in, the code changing ──────
 {
   const w = world(), orders = createOrders({store: w.store, env: w.env, now: w.now});
-  const id = await posted(w.store, 'AA123456783BR', {status: 'confirmado', trackingCode: null, shippedAt: null});
-  const shipped = await orders.setStatus(id, 'enviado', {trackingCode: 'AA123456783BR', actor: 'ju'});
+  const id = await posted(w.store, 'AA123456737BR', {status: 'confirmado', trackingCode: null, shippedAt: null});
+  const shipped = await orders.setStatus(id, 'enviado', {trackingCode: 'AA123456737BR', actor: 'ju'});
   assert.equal(await orders.notifyDecision(shipped, {fetchImpl: w.fetchImpl}), true);
-  assert.equal(w.mails.at(-1).subject, '[TESTE] Pedido enviado · JU-R123456783 · Ju, imprime pra mim?', 'the code goes in: "pedido enviado"');
+  assert.equal(w.mails.at(-1).subject, '[TESTE] Pedido enviado · JU-R123456737 · Ju, imprime pra mim?', 'the code goes in: "pedido enviado"');
   await createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet}).runOnce();
   assert.equal((await w.store.orders.findById(id)).trackingState, 'saiu_para_entrega');
-  const fixed = await orders.setStatus(id, 'enviado', {trackingCode: 'AA123456782BR', actor: 'ju'});
+  const fixed = await orders.setStatus(id, 'enviado', {trackingCode: 'AA123456723BR', actor: 'ju'});
   assert.deepEqual([fixed.trackingState, fixed.trackingEvents, fixed.trackingNotices], [null, null, null], 'a new code: what was tracked for the old one goes');
   const back = await orders.setStatus(id, 'confirmado', {actor: 'ju'});
   assert.deepEqual([back.trackingCode, back.trackingState, back.trackingCheckedAt], [null, null, null], 'back to Expedição: no code, no tracking');
+}
+
+// ── 2026-10-05, the review: the check digit, a reopened delivery, the panel's list, a delivered order ──
+{
+  const {validTracking} = require('../api/_lib/orders');
+  // UPU S10: the 9th digit checks the eight before it (RA473124829GB is the standard's own example)
+  for (const code of ['RA473124829GB', 'AA123456785BR', 'AA123456706BR', 'AA123456710BR', 'AA987654326BR']) assert(validTracking(code), code);
+  for (const code of ['AA123456789BR', 'AA123456758BR', 'AA132456785BR', 'AA12345678BR']) assert(!validTracking(code), code);   // a wrong digit, two swapped, one missing
+  const panel = read('dist/admin.js');
+  const panelOk = new Function('TRACKING', `${/const trackingOk = [^\n]+/.exec(panel)[0]} return trackingOk;`)(/^[A-Z]{2}\d{9}[A-Z]{2}$/);
+  for (let i = 0; i < 3000; i++) { const code = `AA${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}BR`; assert.equal(panelOk(code), validTracking(code), code); }
+  assert(panel.includes('if (trackingOk(typed())) scanTimer = setTimeout('), 'only a code that checks confirms the shipment by itself');
+  assert(panel.includes("'Este código não confere: algum número está trocado. Confira na etiqueta.'"));
+
+  const w = world(), orders = createOrders({store: w.store, env: w.env, now: w.now}), tracking = createTracking({store: w.store, env: w.env, now: w.now, fetchImpl: w.fetchImpl, log: quiet});
+  const waiting = await posted(w.store, 'AA123456737BR', {status: 'confirmado', trackingCode: null, shippedAt: null});
+  await assert.rejects(orders.setStatus(waiting, 'enviado', {trackingCode: 'AA123456738BR', actor: 'ju'}), {code: 'invalid_request'}, 'the server never ships a code that does not check');
+
+  // delivered (times from this test's clock, not the simulator's)
+  const local = ms => new Date(ms - 3 * 3600000).toISOString().slice(0, 19);
+  const step = (codigo, descricao, ms) => ({codigo, tipo: '01', descricao, dtHrCriado: local(ms), unidade: {endereco: {cidade: 'SAO PAULO', uf: 'SP'}}});
+  const first = w.now() - 3600000, line = [step('OEC', 'Objeto saiu para entrega ao destinatário', first - 3 * 3600000), step('PO', 'Objeto postado', first - 30 * 3600000)];
+  w.fake.setTracking('AA123456745BR', [step('BDE', 'Objeto entregue ao destinatário', first), ...line]);
+  const id = await posted(w.store, 'AA123456745BR');
+  await tracking.runOnce();
+  assert.equal((await w.store.orders.findById(id)).status, 'concluido');
+  const rastro = () => w.fake.calls.filter(c => c.path.startsWith('/srorastro')).length, asked = rastro();
+  w.advance(86400000);
+  await tracking.forOrder(await w.store.orders.findById(id));
+  assert.equal(rastro(), asked, 'delivered: "Acompanhar entrega" shows the saved line, the Correios are not asked again');
+
+  // the panel's list: the last event only (tracking_last), never the whole line
+  const [listed] = await w.store.orders.listForAdmin({statuses: ['concluido']});
+  assert.equal(listed.trackingEvents, null);
+  assert.equal(orders.adminView(listed).tracking.last.description, 'Objeto entregue ao destinatário');
+  const selected = /const ADMIN_ORDER_SELECT = \[([^\]]+)\]/.exec(read('api/_lib/store-mysql.js'))[1];
+  assert(selected.includes("'tracking_last'") && !selected.includes("'tracking_events'"), 'MySQL: the list reads tracking_last, not tracking_events');
+  assert(read('db/migrations/013_rastreio_ultimo.sql').includes('ADD COLUMN tracking_last TEXT NULL'));
+
+  // reopened: the old delivery does not close it again; a new one does, and the buyer hears about it again
+  const reopened = await orders.setStatus(id, 'enviado', {actor: 'ju'});
+  assert.deepEqual([reopened.status, reopened.trackingState], ['enviado', 'entregue'], 'the tracking stays');
+  assert.match(reopened.trackingNotices, /^reaberto:[0-9a-z]+$/, 'the delivery notice goes, the reopening time stays');
+  w.advance(EVERY + 60000);
+  await tracking.runOnce();
+  assert.equal((await w.store.orders.findById(id)).status, 'enviado', 'a delivery from before the reopening does not close it again');
+  assert.equal(w.mails.filter(m => m.subject.includes('Pedido entregue')).length, 1);
+  w.advance(EVERY + 60000);
+  const again = w.now() - 60000;
+  w.fake.setTracking('AA123456745BR', [step('BDE', 'Objeto entregue ao destinatário', again), step('OEC', 'Objeto saiu para entrega ao destinatário', again - 3 * 3600000), step('BDE', 'Objeto entregue ao destinatário', first), ...line]);
+  await tracking.runOnce();
+  const closed = await w.store.orders.findById(id);
+  assert.equal(closed.status, 'concluido', 'a delivery after the reopening closes it again');
+  assert.equal(new Date(closed.deliveredAt).getTime(), Math.floor(again / 1000) * 1000, 'on the new day');
+  assert.equal(w.mails.filter(m => m.subject.includes('Pedido entregue')).length, 2, 'and the buyer hears about it again');
 }
 
 // ── "Meus pedidos": the timeline endpoint, only the buyer's own posted orders ──
@@ -162,24 +217,24 @@ async function posted(store, code, over = {}) {
     return {customer, cookie: `__Host-ju_session=${token}`};
   };
   const ana = await signIn('ana@example.com'), bia = await signIn('bia@example.com');
-  await posted(w.store, 'AA123456783BR', {customerId: ana.customer.id});
-  await posted(w.store, 'AA123456782BR', {customerId: ana.customer.id, reference: 'JU-RCONFIRM1', status: 'confirmado', trackingCode: null, shippedAt: null});
+  await posted(w.store, 'AA123456737BR', {customerId: ana.customer.id});
+  await posted(w.store, 'AA123456723BR', {customerId: ana.customer.id, reference: 'JU-RCONFIRM1', status: 'confirmado', trackingCode: null, shippedAt: null});
   const ask = async (ref, cookie = '') => {
     const res = {statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, end(d) { this.body = d || ''; }, json() { return JSON.parse(this.body); }};
     await handler({method: 'GET', headers: cookie ? {cookie} : {}, url: `/api/account/tracking?ref=${ref}`, socket: {}}, res);
     return res;
   };
-  assert.equal((await ask('JU-R123456783')).statusCode, 401, 'signed out');
-  assert.equal((await ask('JU-R123456783', bia.cookie)).statusCode, 404, 'another buyer\'s order');
+  assert.equal((await ask('JU-R123456737')).statusCode, 401, 'signed out');
+  assert.equal((await ask('JU-R123456737', bia.cookie)).statusCode, 404, 'another buyer\'s order');
   assert.equal((await ask('JU-RCONFIRM1', ana.cookie)).statusCode, 404, 'an order not posted yet');
   assert.equal((await ask('nada', ana.cookie)).statusCode, 400);
-  const first = await ask('JU-R123456783', ana.cookie);
+  const first = await ask('JU-R123456737', ana.cookie);
   assert.equal(first.statusCode, 200);
   const {tracking} = first.json();
-  assert.deepEqual([tracking.code, tracking.state, tracking.events.length], ['AA123456783BR', 'saiu_para_entrega', 3], 'asked the Correios now (nothing saved yet)');
+  assert.deepEqual([tracking.code, tracking.state, tracking.events.length], ['AA123456737BR', 'saiu_para_entrega', 3], 'asked the Correios now (nothing saved yet)');
   assert.deepEqual(tracking.events.map(e => e.state), ['saiu_para_entrega', 'em_transito', 'postado'], 'the whole line, newest first');
   const calls = w.fake.calls.filter(c => c.path.startsWith('/srorastro')).length;
-  await ask('JU-R123456783', ana.cookie);
+  await ask('JU-R123456737', ana.cookie);
   assert.equal(w.fake.calls.filter(c => c.path.startsWith('/srorastro')).length, calls, 'within half an hour: the saved line, no new call');
   assert(w.mails.some(m => m.subject.includes('saiu para entrega')), 'a look from "Meus pedidos" counts like the round (the notice goes once)');
 }
@@ -202,4 +257,4 @@ async function posted(store, code, over = {}) {
   for (const text of ['Acompanhar entrega', 'Ocultar entrega', 'Pedido entregue', 'Saiu para entrega', 'Entrega não realizada', 'Devolvido ao remetente']) for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${lang}: ${text}`);
 }
 
-console.log('PASS: rastreio — the Correios events (codes, words, Brasília time), one code or a batch, the round (Concluídos on delivery, one e-mail per notice, Ju warned once per problem, unknown codes, 60 days, down and refused), the e-mail when the code goes in, the code changing or coming off, the timeline endpoint and the wiring.');
+console.log('PASS: rastreio — the Correios events (codes, words, Brasília time), one code or a batch, the round (Concluídos on delivery, one e-mail per notice, Ju warned once per problem, unknown codes, 60 days, down and refused), the e-mail when the code goes in, the code changing or coming off, the check digit (UPU S10, panel and server), a reopened delivery, the list in the panel with the last event only, a delivered order not asked again, the timeline endpoint and the wiring.');

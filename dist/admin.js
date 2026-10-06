@@ -114,6 +114,10 @@ function trackingStatus(o) {
 }
 const INVOICED = ['confirmado', 'enviado', 'concluido'];
 const TRACKING = /^[A-Z]{2}\d{9}[A-Z]{2}$/;
+// The 9th digit checks the other eight (UPU S10, the Correios' standard; the server checks it too, api/_lib/orders.js):
+// a mistyped or misread code is stopped here instead of e-mailing the buyer a wrong one.
+const trackingOk = code => { if (!TRACKING.test(code)) return false; const rest = 11 - [8, 6, 4, 2, 3, 5, 9, 7].reduce((sum, weight, i) => sum + weight * Number(code[2 + i]), 0) % 11; return Number(code[10]) === (rest === 10 ? 0 : rest === 11 ? 5 : rest); };
+const trackingProblem = code => !TRACKING.test(code) ? 'São 2 letras, 9 números e 2 letras, como AA123456785BR.' : trackingOk(code) ? '' : 'Este código não confere: algum número está trocado. Confira na etiqueta.';
 const formatDay = iso => iso ? new Date(iso).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'}) : '';
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
@@ -265,7 +269,7 @@ function orderCard(o) {
   // barcode scanner; or back, or Recusar); Enviados → the Correios' last event (the delivery moves the order by itself), and on
   // the side Marcar como entregue, fix the code or back; Concluídos and Recusados → Reabrir.
   const id = esc(o.id), code = o.trackingCode ? `<code translate="no">${esc(o.trackingCode)}</code>` : '';
-  const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456789BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button></form>`;
+  const trackingForm = (value, label) => `<form class="admin-tracking" data-id="${id}" novalidate><label><span>Código de rastreio dos Correios</span><input name="trackingCode" value="${esc(value)}" placeholder="AA123456785BR" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" required></label><button type="submit" class="btn-ship">${label}</button></form>`;
   const back = (to, label) => `<button type="button" class="btn-reopen" data-action="move" data-to="${to}" data-id="${id}">${label}</button>`;
   const steps = {
     pendente: () => `<div class="admin-order-actions"><button type="button" class="btn-complete" data-action="confirm" data-id="${id}"${moneyBack ? ' disabled' : ''}>Confirmar pedido</button><button type="button" class="btn-decline" data-action="decline" data-id="${id}">Recusar pedido</button></div>`,
@@ -470,7 +474,7 @@ async function move(id, status, reason, done, {trackingCode, quiet = false} = {}
       if (error.code === 'unauthorized') { signedOut(); return; }
       if (error.code === 'refunded') throw new Error('Este pedido já teve o valor estornado e não pode mais ser reaberto.');
       if (error.code === 'invalid_transition') { await openDashboard().catch(() => {}); throw new Error('Este pedido já tinha mudado de etapa. A lista foi atualizada.'); }
-      if (error.code === 'invalid_request' && status === 'enviado') throw new Error('Código de rastreio inválido: são 2 letras, 9 números e 2 letras, como AA123456789BR.');
+      if (error.code === 'invalid_request' && status === 'enviado') throw new Error('Código de rastreio inválido: confira as letras e os números na etiqueta (como AA123456785BR).');
       if (error.code === 'invoice_pending') { await openDashboard().catch(() => {}); throw new Error('A nota fiscal deste pedido ainda não foi autorizada: a peça não pode sair sem a nota. O envio é liberado assim que ela sair.'); }
       throw new Error('Não foi possível salvar agora. Tente novamente.');
     }
@@ -484,7 +488,8 @@ content.addEventListener('submit', event => {
   // The tracking code of an order (Expedição, or a correction in Enviados).
   if (event.target.classList.contains('admin-tracking')) {
     const input = event.target.elements.trackingCode, code = String(data.trackingCode || '').replace(/\s+/g, '').toUpperCase();
-    if (!TRACKING.test(code)) { input.setCustomValidity('São 2 letras, 9 números e 2 letras, como AA123456789BR.'); input.reportValidity(); input.addEventListener('input', () => input.setCustomValidity(''), {once: true}); return; }
+    const problem = trackingProblem(code);
+    if (problem) { input.setCustomValidity(problem); input.reportValidity(); input.addEventListener('input', () => input.setCustomValidity(''), {once: true}); return; }
     const order = orders.find(o => o.id === event.target.dataset.id);
     if (order) move(order.id, 'enviado', '', order.status === 'enviado' ? 'Código de rastreio corrigido.' : 'Envio confirmado: o pedido foi para Enviados.', {trackingCode: code, quiet: order.status === 'enviado'});
     return;
@@ -578,15 +583,18 @@ tools.addEventListener('click', async event => {
 });
 
 // Expedição: a complete code in the tracking field (typed, pasted or read by a barcode scanner, which types it and presses
-// Enter) confirms the shipment by itself; a scanner's Enter gets there first, and the busy flag keeps it to one save.
+// Enter) confirms the shipment by itself; a scanner's Enter gets there first, and the busy flag keeps it to one save. A
+// code whose check digit does not match never goes: the field says so at once.
 let scanTimer = 0;
 content.addEventListener('input', event => {
   if (event.target.closest('#admin-login-form, #admin-code-form')) feedback = '';
   const scan = event.target.closest?.('.admin-order.status-confirmado .admin-tracking input[name="trackingCode"]');
   if (scan) {
     clearTimeout(scanTimer);
-    const complete = () => TRACKING.test(scan.value.replace(/\s+/g, '').toUpperCase());
-    if (complete()) scanTimer = setTimeout(() => { if (!busy && scan.isConnected && complete()) scan.form.requestSubmit(); }, 250);
+    const typed = () => scan.value.replace(/\s+/g, '').toUpperCase();
+    scan.setCustomValidity('');
+    if (trackingOk(typed())) scanTimer = setTimeout(() => { if (!busy && scan.isConnected && trackingOk(typed())) scan.form.requestSubmit(); }, 250);
+    else if (TRACKING.test(typed())) { scan.setCustomValidity(trackingProblem(typed())); scan.reportValidity(); }
   }
   if (section === 'caixa' && screen === 'dashboard') handleCashInput(event);
   if (section === 'internacional' && screen === 'dashboard') handleIntlInput(event);

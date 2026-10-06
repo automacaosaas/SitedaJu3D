@@ -190,21 +190,21 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal((await move({id: paid.id, status: 'confirmado'})).json().order.status, 'confirmado');
   assert.equal((await move({id: paid.id, status: 'enviado'})).json().field, 'trackingCode', 'Enviados needs the tracking code');
   assert.equal((await move({id: paid.id, status: 'enviado', trackingCode: 'AB12345BR'})).json().field, 'trackingCode', 'a real one: 2 letters, 9 digits, 2 letters');
-  const shipped = (await move({id: paid.id, status: 'enviado', trackingCode: ' aa 123456789 br '})).json().order;
-  assert.deepEqual([shipped.status, shipped.trackingCode], ['enviado', 'AA123456789BR'], 'spaces and lower case are fine'); assert(shipped.shippedAt);
-  const fixed = (await move({id: paid.id, status: 'enviado', trackingCode: 'AA987654321BR'})).json().order;
-  assert.deepEqual([fixed.trackingCode, fixed.shippedAt], ['AA987654321BR', shipped.shippedAt], 'a corrected code keeps the day it was posted');
+  const shipped = (await move({id: paid.id, status: 'enviado', trackingCode: ' aa 123456785 br '})).json().order;
+  assert.deepEqual([shipped.status, shipped.trackingCode], ['enviado', 'AA123456785BR'], 'spaces and lower case are fine'); assert(shipped.shippedAt);
+  const fixed = (await move({id: paid.id, status: 'enviado', trackingCode: 'AA987654326BR'})).json().order;
+  assert.deepEqual([fixed.trackingCode, fixed.shippedAt], ['AA987654326BR', shipped.shippedAt], 'a corrected code keeps the day it was posted');
   assert.equal((await move({id: paid.id, status: 'recusado'})).statusCode, 409, 'a posted order is not declined');
   const done = (await move({id: paid.id, status: 'concluido'})).json().order;
-  assert.deepEqual([done.status, done.trackingCode], ['concluido', 'AA987654321BR']);
-  assert.equal((await move({id: paid.id, status: 'enviado'})).json().order.trackingCode, 'AA987654321BR', 'reopening a concluded order keeps the code');
+  assert.deepEqual([done.status, done.trackingCode], ['concluido', 'AA987654326BR']);
+  assert.equal((await move({id: paid.id, status: 'enviado'})).json().order.trackingCode, 'AA987654326BR', 'reopening a concluded order keeps the code');
   const back = (await move({id: paid.id, status: 'confirmado'})).json().order;
   assert.deepEqual([back.status, back.trackingCode, back.shippedAt], ['confirmado', null, null], 'back to Expedição: the code comes off');
   const events = (await store.orders.events(paid.id)).map(e => [e.kind, e.actor]);
   // Here Mercado Pago is not configured, so the automatic refund of the decline is recorded as failed (and the order can be reopened).
   assert.deepEqual(events.map(e => e[0]), ['status:recusado', 'refund_failed', 'status:pendente', 'status:confirmado', 'status:enviado', 'status:enviado', 'status:concluido', 'status:enviado', 'status:confirmado'], 'each change is recorded');
   assert(events.every(e => e[1] === 'ju@site.test'), 'with who made it');
-  assert.equal((await store.orders.events(paid.id)).find(e => e.kind === 'status:enviado').detail, 'AA123456789BR', 'the code in the order history');
+  assert.equal((await store.orders.events(paid.id)).find(e => e.kind === 'status:enviado').detail, 'AA123456785BR', 'the code in the order history');
   assert.equal((await store.adminAudit.list()).filter(a => a.action === 'order_status').length, 8);
 
   // Full CPF for the invoice: on request, paid orders only, every view recorded.
@@ -268,8 +268,8 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(await client.changeStatus('x', 'concluido', '', {fetchImpl: fake([[200, {ok: true, order: {id: 'x'}, mailed: true, refund: 'refunded'}]]).fetchImpl}), {order: {id: 'x'}, mailed: true, refund: 'refunded'}, 'the panel learns whether the buyer was e-mailed and refunded');
   assert.deepEqual(JSON.parse(moved.calls[0].init.body), {id: 'x', status: 'concluido', reason: ''});
   const tracked = fake([[200, {ok: true, order: {id: 'x', status: 'enviado'}}]]);
-  await client.changeStatus('x', 'enviado', '', {trackingCode: 'AA123456789BR', fetchImpl: tracked.fetchImpl});
-  assert.deepEqual(JSON.parse(tracked.calls[0].init.body), {id: 'x', status: 'enviado', reason: '', trackingCode: 'AA123456789BR'}, 'the tracking code goes with the status');
+  await client.changeStatus('x', 'enviado', '', {trackingCode: 'AA123456785BR', fetchImpl: tracked.fetchImpl});
+  assert.deepEqual(JSON.parse(tracked.calls[0].init.body), {id: 'x', status: 'enviado', reason: '', trackingCode: 'AA123456785BR'}, 'the tracking code goes with the status');
 
   // The vendored QR generator draws a valid symbol for an otpauth link (finder pattern in the corner).
   const qr = qrcode(0, 'M'); qr.addData(totp.otpauthUrl({secret: totp.newSecret(), account: 'powershop.bras@gmail.com'})); qr.make();
@@ -326,13 +326,13 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.match(sent[0].key, /^order-confirmado-[0-9a-f-]{36}-\d+$/);
   // 2026-10-05 (rastreio): the tracking code going in e-mails the buyer, with the code and a button to "Meus pedidos";
   // a corrected code e-mails nobody; concluding means delivered (normally the Correios tracking does it) and says so.
-  const posted = await move({id: en.id, status: 'enviado', trackingCode: 'AA123456789BR'});
+  const posted = await move({id: en.id, status: 'enviado', trackingCode: 'AA123456785BR'});
   assert.equal(posted.json().mailed, true); assert.equal(sent.length, 4);
   assert.equal(sent[3].body.subject, '[TESTE] Order shipped · JU-DECIDE0002 · Ju, imprime pra mim?', 'in the buyer\'s language');
-  assert(sent[3].body.html.includes('AA123456789BR') && sent[3].body.html.includes(`href="${SITE}/conta.html#pedidos"`) && sent[3].body.html.includes('Track the delivery'), 'the code and the button to "Meus pedidos"');
+  assert(sent[3].body.html.includes('AA123456785BR') && sent[3].body.html.includes(`href="${SITE}/conta.html#pedidos"`) && sent[3].body.html.includes('Track the delivery'), 'the code and the button to "Meus pedidos"');
   assert(sent[3].body.text.includes(`Track the delivery: ${SITE}/conta.html#pedidos`));
   assert.match(sent[3].key, /^order-enviado-[0-9a-f-]{36}-\d+$/);
-  const corrected = await move({id: en.id, status: 'enviado', trackingCode: 'AA987654321BR'});
+  const corrected = await move({id: en.id, status: 'enviado', trackingCode: 'AA987654326BR'});
   assert.equal(corrected.json().mailed, false); assert.equal(sent.length, 4, 'a corrected code e-mails nobody');
   const concluded = await move({id: en.id, status: 'concluido'});
   assert.equal(concluded.json().mailed, true); assert.equal(sent.length, 5);
@@ -445,9 +445,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
 {
   const {createOrders} = require('../api/_lib/orders');
   const view = createOrders({store: createMemoryStore(), env: ENV}).customerView;
-  const order = {reference: 'JU-RASTREIO1', status: 'confirmado', createdAt: new Date(clock), items: [], trackingCode: 'AA123456789BR'};
+  const order = {reference: 'JU-RASTREIO1', status: 'confirmado', createdAt: new Date(clock), items: [], trackingCode: 'AA123456785BR'};
   assert.equal(view(order).trackingCode, null, 'not before it is posted');
-  for (const status of ['enviado', 'concluido']) assert.equal(view({...order, status}).trackingCode, 'AA123456789BR', status);
+  for (const status of ['enviado', 'concluido']) assert.equal(view({...order, status}).trackingCode, 'AA123456785BR', status);
   const account = require('node:fs').readFileSync(path.join(root, 'dist/account.js'), 'utf8');
   assert.match(account, /pendente: 'Pagamento confirmado', confirmado: 'Pedido confirmado · preparando o envio', enviado: 'Pedido enviado', concluido: 'Pedido entregue'/);
   assert(account.includes('<strong translate="no">${esc(o.trackingCode)}</strong>'), 'the code, to copy into the Correios page');

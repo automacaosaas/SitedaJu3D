@@ -11,7 +11,7 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 - **O caminho de um pedido**, uma aba para cada etapa:
   1. **Pendentes:** pago, esperando a Ju. **Confirmar pedido** (pede confirmação) ou **Recusar pedido**.
   2. **Pronto para envio:** ao confirmar, a nota fiscal sai na hora pelo Bling e o cliente recebe o e-mail de pedido confirmado
-     e o da nota (PDF e XML). Quando a Ju postar nos Correios, digita o **código de rastreio** (AA123456789BR) no pedido.
+     e o da nota (PDF e XML). Quando a Ju postar nos Correios, digita o **código de rastreio** (AA123456785BR) no pedido.
   3. **Enviados:** o pedido com o rastreio. Dá para corrigir o código. **Concluir pedido** (pede confirmação) manda ao cliente o
      e-mail "Pedido enviado" com o código e um botão que abre **Meus pedidos** no site, onde o código também aparece.
   4. **Concluídos** e **Recusados** (motivo opcional, visto só pela equipe; o motivo nunca vai no e-mail).

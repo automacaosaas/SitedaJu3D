@@ -483,7 +483,7 @@ const second = await place({name: 'Bia Costa', email: 'bia@example.com'});
   fake.fail('rede');
   const order = await place();
   assert.equal((await call(confirm, {body: {id: order.id, status: 'confirmado'}, cookie: ju})).json().order.invoice.status, 'fila');
-  const blocked = await call(confirm, {body: {id: order.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju});
+  const blocked = await call(confirm, {body: {id: order.id, status: 'enviado', trackingCode: 'AA123456785BR'}, cookie: ju});
   assert.equal(blocked.statusCode, 409); assert.equal(blocked.json().error, 'invoice_pending');
   assert.equal((await store.orders.findById(order.id)).status, 'confirmado', 'still Pronto para envio');
   fake.fail(null);
@@ -491,16 +491,16 @@ const second = await place({name: 'Bia Costa', email: 'bia@example.com'});
   clock += QUEUE.retry[0];
   await queue.runOnce();
   assert.equal((await noteOf(order)).status, 'autorizada');
-  const shipped = await call(confirm, {body: {id: order.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju});
+  const shipped = await call(confirm, {body: {id: order.id, status: 'enviado', trackingCode: 'AA123456785BR'}, cookie: ju});
   assert.equal(shipped.statusCode, 200); assert.equal(shipped.json().order.status, 'enviado', 'with the note authorized, it goes');
   // Confirmed with no note at all (before NF-e issuing was on, or reopened from Recusados): the shipping waits, and
   // "Emitir nota fiscal" (the same retry endpoint) issues it, so the order is never stuck.
   const bare = await place({status: 'confirmado'});
   assert.equal(await noteOf(bare), null, 'no note');
-  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju})).json().error, 'invoice_pending');
+  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456785BR'}, cookie: ju})).json().error, 'invoice_pending');
   const issued = (await call(orderInvoice.create({env: ENV, store, now, fetchImpl: network, outbox}), {body: {id: bare.id}, cookie: ju})).json();
   assert.equal(issued.order.invoice.status, 'autorizada', '"Emitir nota fiscal" issues it');
-  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: ju})).statusCode, 200, 'then it ships');
+  assert.equal((await call(confirm, {body: {id: bare.id, status: 'enviado', trackingCode: 'AA123456785BR'}, cookie: ju})).statusCode, 200, 'then it ships');
   const panelSource = (await import('node:fs')).readFileSync(new URL('../dist/admin.js', import.meta.url), 'utf8');
   assert(panelSource.includes('Nota fiscal não emitida.') && panelSource.includes('Emitir nota fiscal'), 'the panel offers to issue it');
   // With NF-e issuing off, nothing changes.
@@ -509,7 +509,7 @@ const second = await place({name: 'Bia Costa', email: 'bia@example.com'});
   const offAdmin = crypto.randomUUID(), raw = token();
   await offStore.admins.create({id: offAdmin, email: 'ju@site.test', passwordHash: 'x', totpEnabledAt: new Date(clock)});
   await offStore.adminSessions.create({tokenHash: sha(raw), adminId: offAdmin, mfaAt: new Date(clock), expiresAt: new Date(clock + 3600e3)});
-  const free = await call(orderStatus.create({env: offEnv, store: offStore, now, outbox}), {body: {id: plain.id, status: 'enviado', trackingCode: 'AA123456789BR'}, cookie: `__Host-ju_admin=${raw}`});
+  const free = await call(orderStatus.create({env: offEnv, store: offStore, now, outbox}), {body: {id: plain.id, status: 'enviado', trackingCode: 'AA123456785BR'}, cookie: `__Host-ju_admin=${raw}`});
   assert.equal(free.statusCode, 200, 'no NF-e issuing: shipping as before');
 }
 

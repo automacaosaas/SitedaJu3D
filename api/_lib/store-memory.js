@@ -60,7 +60,8 @@ function createMemoryStore() {
       // Painel: one page of orders, newest first (ties by id), starting right below `before` ({createdAt, id}).
       async listForAdmin({statuses, limit = 100, before = null}) {
         const cap = Math.min(Math.max(Math.floor(Number(limit)) || 100, 1), 500), below = o => !before || o.createdAt < before.createdAt || (+o.createdAt === +before.createdAt && o.id < before.id);
-        return copy([...orders.values()].filter(o => statuses.includes(o.status) && below(o)).sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, cap));
+        // like the MySQL store's column list: the tracking's last event, not the whole line
+        return copy([...orders.values()].filter(o => statuses.includes(o.status) && below(o)).sort((a, b) => b.createdAt - a.createdAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, cap)).map(o => ({...o, trackingEvents: null}));
       },
       // Rastreio: the posted packages due for a look at the Correios (never looked at first, then the oldest look).
       async listForTracking({statuses, checkedBefore, shippedAfter, limit = 50}) {
