@@ -17,29 +17,28 @@ assert(!dialog.includes('id="dialog-image"') && !controller.includes('#dialog-im
 assert(dialog.includes('<div class="image-area gallery" role="region" aria-roledescription="galeria" aria-label="Vistas da peça">'));
 for (const part of ['class="gallery-rail" role="group" aria-label="Escolher a vista"', 'class="gallery-track" tabindex="0"', 'data-step="-1" aria-label="Vista anterior"', 'data-step="1" aria-label="Próxima vista"', 'class="gallery-dots" role="group" aria-label="Escolher a vista"']) assert(dialog.includes(part), part);
 
-// O padrão: 6 fotos por peça, nesta ordem, renders do modelo 3D; peça com as imagens dela (a borboleta, 06/10/2026) diz quais tem
-// (`views`), sempre da frente ao detalhe de perto. Cada vista com a fonte em fotos.json.
+// Só FOTOS REAIS (06/10/2026: "tem que ser as fotos reais" — nem render nem imagem gerada): as do Luiz em três vistas, 4 por peça, nesta
+// ordem; cada peça só diz o nome do detalhe dela. O macaco, sem fotos reais, mostra só a da vitrine.
 const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
 assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'macacoscopio']);
-const standardIds = ['frente', 'tres-quartos', 'lado', 'tres-quartos-costas', 'de-cima', 'detalhe'];
-assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, lado, três quartos de trás, de cima e um detalhe de perto');
-for (const key of keys) {
-  assert(hasGallery(key), `${key} tem galeria`);
-  // renders (ou imagens recortadas do fundo delas) com fundo transparente: ficam direto no fundo da página
-  const own = GALLERY[key].views;
-  if (own) assert(Object.values(fotos[key]).every(f => f.fundo === 'recortar'), `${key}: as imagens da peça, recortadas do fundo`);
-  else assert(Object.values(fotos[key]).every(f => f.fundo === 'render' && f.fonte === `renders/${key}-${Object.keys(fotos[key]).find(id => fotos[key][id] === f)}.webp`), `${key}: renders`);
+const standardIds = ['frente', 'tres-quartos', 'costas', 'detalhe'];
+assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, costas e um detalhe de perto');
+assert.deepEqual(Object.keys(GALLERY).sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'], 'as três peças com fotos reais');
+for (const key of Object.keys(GALLERY)) {
+  // recortadas do fundo delas (preto ou claro), com transparência: ficam direto no fundo da página; a fonte é a foto do Luiz
+  assert(Object.values(fotos[key]).every(f => f.fundo === 'recortar' && f.fonte === `${key}-3-vistas.webp`), `${key}: as fotos reais, recortadas`);
+  assert(!/render/.test(JSON.stringify(fotos[key])), `${key}: nada de render`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), Object.keys(fotos[key]).filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
-  for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo preto (com transparência)`); }
+  for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo (com transparência)`); }
   const ids = viewsOf(key).map(v => v.id);
-  assert.deepEqual(ids, own || standardIds, `${key}: as fotos dela (o padrão, se não disser)`);
-  assert(ids[0] === 'frente' && ids.at(-1) === 'detalhe' && ids.length >= 4, `${key}: da frente ao detalhe de perto, pelo menos 4`);
-  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_')), ids, `${key}: fotos.json com as mesmas fotos, na ordem`);
+  assert.deepEqual(ids, standardIds, `${key}: as 4 fotos do padrão`);
+  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_')), standardIds, `${key}: fotos.json com as 4 fotos, na ordem`);
   assert(/ de perto$/.test(viewsOf(key).at(-1).name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
+  const [, , w, h] = fotos[key].detalhe.recorte; assert(Math.abs(w / h - .8) < .01, `${key}: o recorte do detalhe é 4:5, como o quadro`);
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(`../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
-assert.deepEqual(GALLERY.borboletoscopio.views, ['frente', 'tres-quartos', 'costas', 'detalhe'], 'a borboleta com as 4 imagens que a Ju mandou');
+assert(!hasGallery('macacoscopio') && viewsOf('macacoscopio').map(v => v.id).join() === 'frente', 'o macaco, sem fotos reais: só a foto da vitrine');
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
 // Uma foto (1200 x 1500) e uma miniatura (160 x 200) de cada vista: o mesmo quadro 4:5 em todas.
 let total = 0;
@@ -90,4 +89,4 @@ assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video
 // Tradução: nota, rótulos e texto alternativo das fotos.
 assert(i18n.includes('(Frente|Três quartos|Lado|Três quartos de trás|Costas|De cima|.+ de perto)'));
 
-console.log(`PASS: photo gallery — the 6-photo standard, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), rendered from the 3D models on the page background, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);
+console.log(`PASS: photo gallery — 4 real photos per piece, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the real photos onto the page background, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);

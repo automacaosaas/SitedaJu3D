@@ -1,22 +1,20 @@
 // Galeria de fotos da aba Foto, no jeito das lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto escolhida
-// grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. As fotos saem de design/vistas por tools/galeria-vistas
-// (renders do modelo 3D, tools/render-vistas, ou as imagens da peça que a Ju manda), todas no mesmo formato (4:5, 1200 x 1500), com a
-// peça do mesmo tamanho; o 3D que gira continua na aba ao lado.
-// O padrão (STANDARD): 6 fotos de posições bem diferentes — frente, três quartos, lado, três quartos de trás, de cima e um detalhe de
-// perto (que enche o quadro, como o zoom das lojas). Peça com as imagens dela diz quais tem (`views`, na mesma ordem: hoje a borboleta,
-// 06/10/2026: frente, três quartos, costas e o rostinho). Cada peça diz qual é o detalhe dela. Peça sem fotos nem modelo: a da vitrine.
-export const STANDARD=[['frente','Frente'],['tres-quartos','Três quartos'],['lado','Lado'],['tres-quartos-costas','Três quartos de trás'],['de-cima','De cima'],['detalhe','Detalhe de perto']];
-const NAMES={...Object.fromEntries(STANDARD),costas:'Costas'};
+// grande; no celular e no tablet, arrastar de lado, com os pontinhos embaixo. São as FOTOS REAIS da peça (06/10/2026: "tem que ser as
+// fotos reais" — nem render nem imagem gerada), as do Luiz em três vistas (design/vistas/*-3-vistas.webp), recortadas do fundo e levadas
+// para dist/assets/vistas por tools/galeria-vistas, todas no mesmo formato (4:5, 1200 x 1500) e com a peça do mesmo tamanho; o 3D que gira
+// continua na aba ao lado.
+// O padrão: 4 fotos — frente, três quartos, costas e um detalhe de perto (que enche o quadro, como o zoom das lojas). Cada peça diz qual é
+// o detalhe dela. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine.
+export const STANDARD=[['frente','Frente'],['tres-quartos','Três quartos'],['costas','Costas'],['detalhe','Detalhe de perto']];
 export const GALLERY={
-  borboletoscopio:{detalhe:'Rostinho de perto',views:['frente','tres-quartos','costas','detalhe']},
+  borboletoscopio:{detalhe:'Rostinho de perto'},
   dinossauroscopio:{detalhe:'Rosto de perto'},
-  aviaoscopia:{detalhe:'Cabine de perto'},
-  macacoscopio:{detalhe:'Rosto de perto'}
+  aviaoscopia:{detalhe:'Cabine de perto'}
 };
-export const viewsOf=key=>GALLERY[key]?(GALLERY[key].views||STANDARD.map(([id])=>id)).map(id=>({id,name:id==='detalhe'?GALLERY[key].detalhe:NAMES[id],zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
+export const viewsOf=key=>GALLERY[key]?STANDARD.map(([id,name])=>({id,name:id==='detalhe'?GALLERY[key].detalhe:name,zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const hasGallery=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='10';
+export const VIEWS_VERSION='11';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){
