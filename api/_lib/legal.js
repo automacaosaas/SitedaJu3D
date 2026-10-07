@@ -17,7 +17,7 @@ const COMPANY = {
   legalName: 'JU IMPRIME PARA MIM LTDA',
   cnpj: '67.771.044/0001-96',
   address: 'Rua Presidente Castelo Branco, 61, Nossa Senhora de Lourdes, Ouro Preto/MG, CEP 35404-450',
-  email: PENDING('e-mail de atendimento'),
+  email: 'juimprimepramim@gmail.com',   // confirmado pelo dono em 06/10/2026
   phone: PENDING('telefone ou WhatsApp'),
   hours: 'Segunda a sexta, das 9h às 18h',
   website: 'https://juimprimepramim.com.br'
