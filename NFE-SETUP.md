@@ -181,8 +181,8 @@ Empresa no Simples Nacional que **fabrica** o que vende: por isso os CFOPs são 
 - **Informações complementares** (texto da contadora, 01/10/2026): "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO
   SIMPLES NACIONAL. NAO GERA DIREITO A CREDITO FISCAL DE IPI. Pedido nº: JU-…". Quem escreve é o site, com o número
   do pedido da loja; o campo "Informações complementares" da natureza no Bling fica **vazio** para não repetir
-  (confirmado pela contadora em 06/10/2026). O texto vai sem acentos ("NAO", "CREDITO"). Falta ela confirmar se é
-  "ME OU EPP" (como está) ou "ME EPP" (como no documento dela), e se pode ficar sem acentos.
+  (confirmado pela contadora em 06/10/2026). "ME OU EPP" confirmado por ela em 05/10/2026 ("Pode"). O texto vai sem
+  acentos ("NAO", "CREDITO"); falta ela confirmar se pode ficar assim.
 - Não usados: 5102, 6102 e 6108 são de revenda; o CSOSN 101 exige informar a alíquota do crédito, e o contador não
   pediu isso.
 
@@ -227,13 +227,14 @@ padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastr
      - o "Total aproximado de tributos" das duas naturezas usa a **tabela IBPT**;
      - o campo "Informações complementares" da natureza fica vazio;
      - empresa sem inscrição estadual vai como **não contribuinte** (CFOP 6107);
-     - a linha do DIFAL zerado continua nas vendas para pessoa física de outro estado.
+     - a linha do DIFAL zerado continua nas vendas para pessoa física de outro estado;
+     - o texto das informações complementares fica "ME OU EPP" (respondido em 05/10/2026).
 
-     O site já faz os três últimos itens; os dois primeiros são configurados no Bling.
+     O site já faz os quatro últimos itens; os dois primeiros são configurados no Bling.
    - **Falta:**
      - revisar os DANFEs de homologação: nº 13 (MG, 5101), nº 14 (SP, pessoa física, 6107, com a linha do DIFAL) e
        nº 17 (RS, contribuinte, 6101);
-     - confirmar "ME OU EPP" ou "ME EPP" no texto, e se pode ficar sem acentos.
+     - confirmar se o texto pode ficar sem acentos ("NAO", "CREDITO"), como está.
 
 CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
 inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não
