@@ -3,6 +3,8 @@ import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money,installmentLabel} from './commerce-config.js';
 import {icon} from './icons.js';
 import {staticViews,createGallery} from './gallery.js';
+import {fillDescription} from './contact-link.js';
+import {setupPurchaseSheet} from './purchase-sheet.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
@@ -34,10 +36,12 @@ function announce(message){$('#color-announcement').textContent=message;}
 function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],price=COMMERCE.prices[key];
   $('#dialog-number').textContent=soon?'Novidade · em breve':'Ateliê de cores';
-  $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
+  $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;fillDescription($('#dialog-description'),p.description,p.title);
   gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
-  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#product-installments').textContent=`ou ${installmentLabel(price)} sem juros no cartão`;}
+  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#product-installments').textContent=`ou ${installmentLabel(price)} sem juros no cartão`;
+    // o 2.º da mesma peça mais barato (COMMERCE.extraPrices: hoje, o avião)
+    const extra=COMMERCE.extraPrices?.[key],offer=$('#product-offer');offer.hidden=!extra;offer.textContent=extra?`Levando 2, o segundo sai por ${money(extra)}`:'';}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }
@@ -142,3 +146,4 @@ $('#surprise').addEventListener('click',()=>{const preset=PRESETS.find(p=>p.id==
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);renderControls();setView('model');}});
+setupPurchaseSheet(dialog);

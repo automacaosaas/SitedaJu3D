@@ -1,6 +1,6 @@
-import {PRODUCTS, color, showcase, artSmall} from './products.js';
+import {PRODUCTS, SOON, color, showcase, artSmall} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
-import {totals, pixDiscount} from './cart-store.js';
+import {totals, pixDiscount, lineCents} from './cart-store.js';
 import {icon} from './icons.js';
 import {freeShippingBar} from './free-shipping.js';
 import {formatDays, shippingMessage} from './shipping-client.js';
@@ -17,13 +17,13 @@ function swatches(item) {
   }).join('')}</ul></div>`;
 }
 
-function itemCard(item) {
+function itemCard(item, cart) {
   const product = PRODUCTS[item.productId];
   return `<article class="cart-product" aria-label="${esc(item.title)}">
     <div class="cart-product-art"><img src="assets/${esc(artSmall(product.catalogImage || product.image))}" width="1024" height="1024" alt="${esc(item.title)} — imagem nas cores originais">${editButton(item, true)}</div>
     <div class="cart-product-info"><h2>${esc(item.title)}</h2><p class="item-type">${esc(product.subtitle)}</p>${swatches(item)}${editButton(item)}</div>
     <div class="cart-product-controls"><div class="quantity-control" role="group" aria-label="Quantidade de ${esc(item.title)}"><button type="button" data-action="minus" data-id="${esc(item.id)}" aria-label="Diminuir quantidade de ${esc(item.title)}" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><output aria-label="Quantidade de ${esc(item.title)}">${item.quantity}</output><button type="button" data-action="plus" data-id="${esc(item.id)}" aria-label="Aumentar quantidade de ${esc(item.title)}" ${item.quantity >= 99 ? 'disabled' : ''}>+</button></div><button type="button" class="trash-button" data-action="remove" data-id="${esc(item.id)}" aria-label="Remover ${esc(item.title)}">${icon('trash')}</button></div>
-    <strong class="cart-product-price" aria-label="Preço de ${item.quantity} ${esc(item.title)}">${money(item.unitPrice * item.quantity)}</strong>
+    <strong class="cart-product-price" aria-label="Preço de ${item.quantity} ${esc(item.title)}">${money(lineCents(cart, item))}</strong>
   </article>`;
 }
 
@@ -51,42 +51,169 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
     <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div>${delivery}<div class="grand-total"><dt>Total${withoutDelivery ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(amount.total)}</dd></div>${chosen.length ? `<div class="pix-hint"><dt>No Pix <small>(5% off)</small></dt><dd>${money(amount.total - pixDiscount(chosen))}</dd></div>` : ''}</dl>
     ${realShipping && chosen.length ? shippingEstimate(estimate || {}) : ''}
     <div class="cart-checkout-bar" role="group" aria-label="Resumo da compra e finalização">
-      <a class="cart-checkout-total" href="#cart-summary-title"><span>Total <span aria-hidden="true">⌃</span></span><strong>${money(amount.total)}</strong><small>${!chosen.length ? 'Selecione uma peça' : withoutDelivery ? 'Sem frete · ver resumo' : 'Ver resumo'}</small></a>
+      <a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total</span><strong>${money(amount.total)}</strong>${!chosen.length ? '<small class="cart-total-note">Selecione uma peça</small>' : withoutDelivery ? '<small class="cart-total-note">sem frete</small>' : ''}</a>${chosen.length ? '<a class="cart-summary-balloon" href="#cart-summary-title">Ver resumo<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>' : ''}
       <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
     </div>
     ${!chosen.length ? '<p class="cart-selection-help">Selecione uma peça para continuar.</p>' : ''}
   </aside>`;
 }
 
-// Depois do resumo: até 3 das outras peças da loja (as que ainda não estão no carrinho), cada uma levando à página dela, e
-// no fim "Ver mais", para a página Produtos. No celular é uma fileira que desliza, com setas finas (wireRecArrows).
+// "Você também pode gostar" (06/10/2026, pedido do Luiz): cards pequenos, lado a lado num carrossel, só com a foto, o nome e o
+// preço; as peças que ainda não estão no carrinho e, depois, as novidades (com "Em breve" no lugar do preço). O carrossel passa
+// um card por vez sozinho (wireRecArrows) e a seta da direita mostra, num anel, quanto falta para o próximo; "Ver todas" leva à
+// página Produtos. Os cards se repetem uma vez no fim (cópias escondidas do leitor de tela e do Tab): o carrossel dá a volta sem
+// rebobinar, e anda também no computador, onde os originais cabem na largura.
 function recommendations(cart) {
-  const inCart = new Set(cart.map(item => item.productId)), ids = Object.keys(PRODUCTS).filter(id => !inCart.has(id)).slice(0, 3);
-  if (!ids.length) return '';
-  const more = `<li class="cart-rec-more-item"><a class="cart-rec cart-rec-more" href="produtos.html"><span class="cart-rec-more-mark" aria-hidden="true"></span><strong>Ver mais</strong><small>Todas as peças</small></a></li>`;
-  const arrow = (step, label) => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-label="${label}" hidden>${icon('arrow')}</button>`;
-  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><div class="cart-rec-rail">${arrow(-1, 'Peças anteriores')}<ul class="cart-rec-track" data-rec-track>${ids.map(id => {
-    const product = PRODUCTS[id], {theme} = showcase(id);
-    return `<li><a class="cart-rec" href="${id}.html" style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></span><span class="cart-rec-copy"><span class="cart-rec-name">${esc(product.title)}</span><span class="cart-rec-sub">${esc(product.subtitle)}</span><strong class="cart-rec-price">${money(COMMERCE.prices[id])}</strong></span></a></li>`;
-  }).join('')}${more}</ul>${arrow(1, 'Mais peças')}</div></section>`;
+  const inCart = new Set(cart.map(item => item.productId));
+  const items = [...Object.keys(PRODUCTS).filter(id => !inCart.has(id)).map(id => ({id, href: `${id}.html`, title: PRODUCTS[id].title, price: money(COMMERCE.prices[id])})),
+    ...Object.keys(SOON).map(id => ({id, href: `index.html#produto/${id}/3d`, title: SOON[id].title}))];
+  if (!items.length) return '';
+  const arrow = step => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-label="${step < 0 ? 'Peças anteriores' : 'Mais peças'}"${step < 0 ? ' hidden' : ''}>${step > 0 ? '<svg class="cart-rec-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"></circle></svg>' : ''}${icon('arrow')}</button>`;
+  const card = ({id, href, title, price}, clone) => {
+    const {theme} = showcase(id);
+    return `<li${clone ? ' aria-hidden="true"' : ''}><a class="cart-rec${price ? '' : ' is-soon'}${clone ? ' is-clone' : ''}" href="${href}"${clone ? ' tabindex="-1"' : ''} style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-preview-${id}.webp" alt="" width="384" height="384" loading="lazy" decoding="async" draggable="false"></span><span class="cart-rec-name">${esc(title)}</span><span class="cart-rec-price">${price || 'Em breve'}</span></a></li>`;
+  };
+  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><div class="cart-recs-head"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><a class="cart-recs-all" href="produtos.html">Ver todas ${icon('arrow')}</a></div><div class="cart-rec-rail" aria-roledescription="carrossel">${arrow(-1)}<ul class="cart-rec-track" data-rec-track>${items.map(item => card(item, false)).join('')}${items.map(item => card(item, true)).join('')}</ul>${arrow(1)}</div></section>`;
 }
 
-// As setas da fileira: avançam um card e somem quando não há mais para onde ir (no computador, sem rolagem, não aparecem).
+// A seta de avançar aparece sempre que a fileira rola (ela dá a volta); a de voltar, depois que a fileira andou.
 export function updateRecArrows(root) {
   const track = root.querySelector('[data-rec-track]');
   if (!track) return;
-  const max = track.scrollWidth - track.clientWidth - 2;
-  root.querySelectorAll('[data-rec-step]').forEach(button => { button.hidden = max <= 0 || (Number(button.dataset.recStep) < 0 ? track.scrollLeft <= 2 : track.scrollLeft >= max); });
+  const max = track.scrollWidth - track.clientWidth - 2, rail = track.closest('.cart-rec-rail');
+  rail.classList.toggle('can-scroll', max > 0);
+  rail.classList.toggle('at-start', track.scrollLeft <= 2);
+  const prev = root.querySelector('[data-rec-step="-1"]'), next = root.querySelector('[data-rec-step="1"]');
+  if (prev) prev.hidden = max <= 0 || track.scrollLeft <= 2;
+  if (next) next.hidden = max <= 0;
 }
+
+// O carrossel: um card por vez a cada AUTO_MS, em volta (depois do último vem o primeiro, das cópias, e a fileira volta uma volta
+// inteira sem ninguém ver). Para enquanto o mouse está em cima, o foco
+// está dentro, a pessoa acabou de mexer (toque, arraste, rolagem: 6 s), a fileira está fora da tela ou a aba escondida; com
+// "reduzir movimento", não anda sozinho. No computador, a fileira também se arrasta com o mouse (e assenta no card mais perto).
+const AUTO_MS = 4200;
 export function wireRecArrows(root) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let timer = 0, settle = 0, hover = false, focus = false, heldUntil = 0, autoUntil = 0, drag = null;
+  const track = () => root.querySelector('[data-rec-track]');
+  const step = t => { const li = t.querySelector('li'); return li ? li.getBoundingClientRect().width + (parseFloat(getComputedStyle(t).columnGap) || 12) : 200; };
+  const hold = (ms = 6000) => { heldUntil = Date.now() + ms; schedule(); };
+  const lap = t => t.querySelectorAll('li:not([aria-hidden])').length * step(t);       // a largura de uma volta
+  const jump = (t, left) => { t.classList.add('is-dragging'); t.scrollLeft = left; void t.offsetWidth; t.classList.remove('is-dragging'); };
+  function wrap(t = track()) { if (t && t.scrollLeft >= lap(t) - 1) { autoUntil = Date.now() + 200; jump(t, t.scrollLeft - lap(t)); } }
+  function go(direction, t = track()) {
+    if (!t) return;
+    const behavior = reduce.matches ? 'auto' : 'smooth';
+    autoUntil = Date.now() + 900;
+    if (direction < 0 && t.scrollLeft < step(t) / 2) jump(t, t.scrollLeft + lap(t));
+    t.scrollTo({left: Math.round(t.scrollLeft / step(t) + direction) * step(t), behavior});
+    setTimeout(() => wrap(t), reduce.matches ? 0 : 700);
+  }
+  function playing(t) {
+    if (!t || reduce.matches || hover || focus || drag || document.hidden || Date.now() < heldUntil || t.scrollWidth - t.clientWidth <= 4) return false;
+    const box = t.getBoundingClientRect();
+    return box.bottom > 0 && box.top < innerHeight;
+  }
+  function schedule() {
+    clearTimeout(timer);
+    const t = track(), rail = t?.closest('.cart-rec-rail');
+    if (!rail) return;
+    const on = playing(t);
+    // o anel da seta recomeça a cada card (a animação dele dura AUTO_MS)
+    if (on !== rail.classList.contains('is-playing') || on) { rail.classList.remove('is-playing'); if (on) { void rail.offsetWidth; rail.classList.add('is-playing'); } }
+    rail.style.setProperty('--rec-auto', `${AUTO_MS}ms`);
+    timer = setTimeout(() => { if (playing(track())) go(1); schedule(); }, on ? AUTO_MS : 800);
+  }
   root.addEventListener('click', event => {
-    const button = event.target.closest('[data-rec-step]'), track = root.querySelector('[data-rec-track]');
-    if (!button || !track) return;
-    const step = (track.querySelector('li')?.offsetWidth || 240) + 12;
-    track.scrollBy({left: Number(button.dataset.recStep) * step, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+    const button = event.target.closest('[data-rec-step]');
+    if (drag?.moved) { event.preventDefault(); event.stopPropagation(); drag = null; return; }
+    if (!button) return;
+    go(Number(button.dataset.recStep)); hold();
+  }, true);
+  root.addEventListener('scroll', event => {
+    if (!event.target.matches?.('[data-rec-track]')) return;
+    updateRecArrows(root);
+    if (Date.now() > autoUntil && !drag) hold();          // a pessoa rolou: espera ela terminar
+    clearTimeout(settle); settle = setTimeout(() => wrap(), 160);
+  }, true);
+  root.addEventListener('pointerover', event => { if (event.pointerType === 'mouse' && event.target.closest('.cart-rec-rail')) { hover = true; schedule(); } });
+  root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && event.target.closest('.cart-rec-rail') && !event.relatedTarget?.closest?.('.cart-rec-rail')) { hover = false; schedule(); } });
+  root.addEventListener('focusin', event => { if (event.target.closest('.cart-rec-rail')) { focus = true; schedule(); } });
+  root.addEventListener('focusout', event => { if (event.target.closest('.cart-rec-rail') && !event.relatedTarget?.closest?.('.cart-rec-rail')) { focus = false; schedule(); } });
+  root.addEventListener('touchstart', event => { if (event.target.closest('.cart-rec-rail')) hold(); }, {passive: true});
+  // arrastar com o mouse
+  root.addEventListener('pointerdown', event => {
+    const t = event.target.closest('[data-rec-track]');
+    if (!t || event.pointerType !== 'mouse' || event.button !== 0) return;
+    drag = {t, x: event.clientX, left: t.scrollLeft, moved: false, id: event.pointerId};
   });
-  root.addEventListener('scroll', event => { if (event.target.matches?.('[data-rec-track]')) updateRecArrows(root); }, true);
-  window.addEventListener('resize', () => updateRecArrows(root), {passive: true});
+  addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    const dx = event.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; drag.t.classList.add('is-dragging'); }
+    if (drag.moved) drag.t.scrollLeft = drag.left - dx;
+  });
+  addEventListener('pointerup', () => {
+    if (!drag) return;
+    const {t, moved} = drag;
+    if (!moved) { drag = null; return; }
+    t.classList.remove('is-dragging');
+    autoUntil = Date.now() + 900;
+    t.scrollTo({left: Math.round(t.scrollLeft / step(t)) * step(t), behavior: reduce.matches ? 'auto' : 'smooth'});
+    setTimeout(() => { drag = null; hold(); }, 0);   // o clique que vem logo depois do arraste não abre o card
+  });
+  document.addEventListener('visibilitychange', schedule);
+  addEventListener('scroll', () => { if (!root.querySelector('.cart-rec-rail.is-playing')) schedule(); }, {passive: true});
+  addEventListener('resize', () => updateRecArrows(root), {passive: true});
+  schedule();
+}
+
+// "Ver resumo" na barra de baixo do celular: a página desce até o resumo numa rolagem suave (e não num pulo), e o resumo acende
+// um instante para o olho achar onde chegou. Enquanto o resumo está na tela, o botão "Ver resumo" da barra sai (já está lá).
+function scrollToY(y) {
+  const start = scrollY, distance = y - start, ms = Math.min(900, Math.max(420, Math.abs(distance) * .6)), t0 = performance.now();
+  const ease = p => p < .5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
+  let stop = false; const cancel = () => { stop = true; };
+  addEventListener('wheel', cancel, {once: true, passive: true}); addEventListener('touchstart', cancel, {once: true, passive: true});
+  return new Promise(done => {
+    const frame = now => {
+      const p = Math.min(1, (now - t0) / ms);
+      if (stop) return done();
+      scrollTo(0, start + distance * ease(p));
+      if (p < 1) requestAnimationFrame(frame); else { removeEventListener('wheel', cancel); removeEventListener('touchstart', cancel); done(); }
+    };
+    requestAnimationFrame(frame);
+  });
+}
+export function wireSummaryLink(root) {
+  root.addEventListener('click', async event => {
+    const link = event.target.closest('.cart-checkout-total, .cart-summary-balloon');
+    if (!link) return;
+    const summary = root.querySelector('.cart-order-summary');
+    if (!summary) return;
+    event.preventDefault();
+    // o balão sobe e some, como se puxasse a página junto
+    const balloon = root.querySelector('.cart-summary-balloon');
+    if (balloon && !matchMedia('(prefers-reduced-motion: reduce)').matches) balloon.animate([{transform: 'none', opacity: 1}, {transform: 'translateY(-22px) scale(.94)', opacity: 0}], {duration: 380, easing: 'cubic-bezier(.4, 0, .2, 1)'});
+    const header = document.querySelector('.header.site-header.is-floating')?.getBoundingClientRect().height || 0;
+    const y = summary.getBoundingClientRect().top + scrollY - header - 16;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) scrollTo(0, y); else await scrollToY(y);
+    summary.classList.remove('is-spotlight'); void summary.offsetWidth; summary.classList.add('is-spotlight');
+    summary.querySelector('h2')?.focus({preventScroll: true});
+  });
+}
+let summaryWatch = null;
+export function watchSummary(root) {
+  summaryWatch?.disconnect();
+  const summary = root.querySelector('.cart-order-summary'), bar = root.querySelector('.cart-checkout-bar');
+  if (!summary || !bar || !('IntersectionObserver' in window)) return;
+  // a setinha do balão aponta para onde está o resumo: para baixo enquanto ele está mais abaixo, para cima depois que a pessoa passou dele
+  summaryWatch = new IntersectionObserver(([entry]) => {
+    bar.classList.toggle('is-at-summary', entry.isIntersecting);
+    if (!entry.isIntersecting) bar.classList.toggle('summary-above', entry.boundingClientRect.top < 0);
+  }, {threshold: .35});
+  summaryWatch.observe(summary.querySelector('.amounts') || summary);
 }
 
 // Os meios de pagamento aceitos, em três grupos (Pix, crédito, débito): a lista da conta do Mercado Pago (methods, de
@@ -121,6 +248,6 @@ export function renderCart(cart, options = {}) {
   const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
   if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart, options)}`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
-    <div class="cart-products">${cart.map(item => itemCard(item)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
+    <div class="cart-products">${cart.map(item => itemCard(item, cart)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
     </section>${cartSummary(chosen, options)}</div>${extras(cart, options)}`;
 }

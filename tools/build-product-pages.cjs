@@ -25,12 +25,16 @@ const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html'
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
   const [products, commerce, icons, grid, tour, motion] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js'), load('hero-motion.js')]);
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, journeyColors: motion.journeyColors};
+  const contact = await load('contact-link.js'), gallery = await load('gallery.js');
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, journeyColors: motion.journeyColors, splitContact: contact.splitContact, contactMail: contact.contactMail, staticViews: gallery.staticViews, hasGallery: gallery.hasGallery};
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
+  // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
+  const [before, phrase, after] = splitContact(product.description);
+  const description = phrase ? `${esc(before)}<a class="contact-mail" href="${esc(contactMail(`Dúvida sobre o ${product.title}`))}">${phrase}</a>${esc(after)}` : esc(product.description);
   const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}.html`;
   const lines = base.replace(/\r\n/g, '\n');
   const head = lines.slice(lines.indexOf('<head>\n') + 7, lines.indexOf('  <!-- og -->'))
@@ -60,7 +64,9 @@ function page(id, data, base) {
       <nav class="pl-crumbs" aria-label="Você está em"><a href="produtos.html">Produtos</a><span aria-hidden="true">/</span><span aria-current="page">${esc(product.title)}</span></nav>
       <article class="pl" style="${style}" data-pl="${id}">
         <div class="pl-stage">
-          <div class="pl-art" data-pl-stage data-view="photo"><img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}"${data.artSrcset(product.catalogImage || product.image) ? ` srcset="${esc(data.artSrcset(product.catalogImage || product.image))}" sizes="${esc(data.PHOTO_SIZES)}"` : ''} alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high"><div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
+          <div class="pl-art${hasGallery(id) ? ' is-real' : ''}" data-pl-stage data-view="photo">${hasGallery(id) ? `<img class="pl-photo" src="${esc(staticViews(id)[0].src)}" alt="${esc(product.title)} — ${esc(staticViews(id)[0].name)}" width="1200" height="1500" fetchpriority="high">` : `<img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}"${data.artSrcset(product.catalogImage || product.image) ? ` srcset="${esc(data.artSrcset(product.catalogImage || product.image))}" sizes="${esc(data.PHOTO_SIZES)}"` : ''} alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high">`}<div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
+${hasGallery(id) ? `
+          <div class="pl-thumbs" role="group" aria-label="Fotos da peça" data-pl-thumbs hidden>${staticViews(id).map(v => ({...v, alt: `${product.title} — ${v.name}`})).map((v, i) => `<button type="button" aria-pressed="${i === 0}" aria-label="${esc(v.name)}" data-src="${esc(v.src)}" data-alt="${esc(v.alt)}"${v.main ? ' data-main' : ''}><img src="${esc(v.thumb)}" alt="" width="${v.main ? 384 : 160}" height="${v.main ? 384 : 200}" loading="lazy" decoding="async" draggable="false"></button>`).join('')}</div>` : ''}
           <div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden><button type="button" data-pl-view="photo" aria-pressed="true">Foto</button><button type="button" data-pl-view="3d" aria-pressed="false">${icon('cube')}<span>Girar em 360°</span></button></div>
         </div>
         <div class="pl-info">
@@ -68,7 +74,8 @@ function page(id, data, base) {
           <h1>${esc(product.title)}</h1>
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>
-          <p class="pl-installments">ou ${nbsp(installmentLabel(price))} sem juros no cartão</p>
+          <p class="pl-installments">ou ${nbsp(installmentLabel(price))} sem juros no cartão</p>${COMMERCE.extraPrices?.[id] ? `
+          <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : ''}
           <div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
           <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>
           <div class="pl-facts">
@@ -76,7 +83,7 @@ function page(id, data, base) {
             ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho. <a href="envio.html#frete">Ver envio e prazos</a>')}
             ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
           </div>
-          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${esc(product.description)}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
+          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${description}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
         </div>
       </article>
     </main>`;

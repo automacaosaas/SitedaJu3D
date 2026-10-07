@@ -32,7 +32,7 @@ const dynamic = [
   [/^Cores fixas: (.+)\.$/, (t, colors) => `Fixed colors: ${list(t, colors)}.`, (t, colors) => `Colores fijos: ${list(t, colors)}.`],
   // galeria de fotos da página do produto (gallery.js): os rótulos das vistas e o texto alternativo das imagens
   [/^(.+), (\d+) de (\d+)$/, (t, view, n, total) => `${t(view)}, ${n} of ${total}`, (t, view, n, total) => `${t(view)}, ${n} de ${total}`],
-  [/^(.+) — (Frente|Três quartos|Costas|.+ de perto)$/, (t, name, view) => `${name} — ${t(view)}`, (t, name, view) => `${name} — ${t(view)}`],
+  [/^(.+) — (Frente|Três quartos|Lado|Três quartos de trás|Costas|De cima|.+ de perto)$/, (t, name, view) => `${name} — ${t(view)}`, (t, name, view) => `${name} — ${t(view)}`],
   [/^(.+), (\d+) de (\d+)\.$/, '$1, $2 of $3.', '$1, $2 de $3.'],
   [/^Pedido (.+)$/, 'Order $1', 'Pedido $1'],
   [/^PEDIDO (.+)$/, 'ORDER $1', 'PEDIDO $1'],
@@ -60,6 +60,7 @@ const dynamic = [
   [/^(.+) sobre uma pilastra branca — imagem de apresentação$/, '$1 on a white pedestal — presentation image', '$1 sobre un pedestal blanco — imagen de presentación'],
   [/^(.+) sobre pilastra branca$/, '$1 on a white pedestal', '$1 sobre un pedestal blanco'],
   [/^Prévia 3D ilustrativa de (.+)$/, 'Illustrative 3D preview of $1', 'Vista previa 3D ilustrativa de $1'],
+  [/^Levando 2, o segundo sai por (.+)$/, 'Buy 2 and the second one is $1', 'Llevando 2, el segundo sale por $1'],
   [/^Preço de (.+)$/, 'Price for $1', 'Precio de $1'],
   [/^para o frete grátis \((.+)\)\.$/, 'more for free shipping ($1).', 'para el envío gratis ($1).'],
   [/^(Pix · )?(\(?)(\d+)% de desconto nas peças(\)?)$/, '$1$2$3% off the items$4', '$1$2$3% de descuento en las piezas$4'],

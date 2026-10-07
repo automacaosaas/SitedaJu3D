@@ -21,8 +21,8 @@ Uma girafinha para acompanhar o olhar dos pequenos. Em breve.|A little giraffe t
 Um unicórnio para acompanhar o olhar dos pequenos. Em breve.|A unicorn to keep the little ones company. Coming soon.|Un unicornio para acompañar la mirada de los pequeños. Próximamente.
 GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
 UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.
-GiraffeLamp sobre uma pilastra branca|GiraffeLamp on a white pedestal|GiraffeLamp sobre un pedestal blanco
-UnicornLamp sobre uma pilastra branca|UnicornLamp on a white pedestal|UnicornLamp sobre un pedestal blanco
+GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca|GiraffeLamp, a yellow giraffe cover with brown spots, on a white pedestal|GiraffeLamp, funda de jirafa amarilla con manchas marrones, sobre un pedestal blanco
+UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca|UnicornLamp, a white unicorn cover with a mane, a rainbow and stars, on a white pedestal|UnicornLamp, funda de unicornio blanca con crin, arcoíris y estrellas, sobre un pedestal blanco
 Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
@@ -149,7 +149,7 @@ Sensoriais|Sensory|Sensoriales
 Categoria|Category|Categoría
 Cores|Colors|Colores
 Capa para retinoscópio|Retinoscope cover|Funda para retinoscopio
-Avião magnético para régua de grau|Magnetic airplane for lens rack|Avión magnético para regla de lentes
+Avião magnético para régua de esquiascopia|Magnetic airplane for a skiascopy rack|Avión magnético para regla de esquiascopia
 Preço ilustrativo|Sample price|Precio ilustrativo
 Personalize o seu|Customize yours|Personaliza el tuyo
 PERSONALIZE O SEU!|CUSTOMIZE YOURS!|¡PERSONALIZA EL TUYO!
@@ -402,9 +402,11 @@ Motores|Engines|Motores
 As janelas da cabine mantêm a cor original.|The cabin windows keep their original color.|Las ventanas de la cabina mantienen su color original.
 As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre las alas
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
-Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.|A butterfly to bring color and imagination to every appointment. 3D printed, with an open slot for the retinoscope.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D, con el espacio para encajar el retinoscopio libre.
-Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.|A friendly dinosaur for every glance. A 3D-printed cover with an opening for the retinoscope.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D con abertura para encajar el retinoscopio.
-Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the lens rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements, get in touch.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de lentes, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas, ponte en contacto.
+Uma borboleta para levar cor e imaginação à consulta. Impressa em 3D e feita para encaixe no retinoscópio da marca Welch Allyn.|A butterfly to bring color and imagination to every appointment. 3D printed and made to fit Welch Allyn retinoscopes.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D y hecha para encajar en el retinoscopio de la marca Welch Allyn.
+Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, feita para encaixe no retinoscópio da marca Welch Allyn.|A friendly dinosaur for every glance. A 3D-printed cover made to fit Welch Allyn retinoscopes.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D, hecha para encajar en el retinoscopio de la marca Welch Allyn.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements, get in touch.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas, ponte en contacto.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas,|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements,|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas,
+entre em contato|get in touch|ponte en contacto
 Use uma senha com 8 a 128 caracteres.|Use a password with 8 to 128 characters.|Usa una contraseña de 8 a 128 caracteres.
 Aguarde 30 segundos antes de solicitar outro código.|Wait 30 seconds before requesting another code.|Espera 30 segundos antes de solicitar otro código.
 Preencha seu nome e um e-mail válido.|Enter your name and a valid email.|Introduce tu nombre y un correo válido.
@@ -774,6 +776,8 @@ Bege|Beige|Beige
 Amarelo-ocre|Ochre yellow|Amarillo ocre
 Creme|Cream|Crema
 Dourado|Gold|Dorado
+Roxo|Purple|Morado
+Azul-lavanda|Lavender blue|Azul lavanda
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original
@@ -792,7 +796,6 @@ Informações da peça|Piece information|Información de la pieza
 Mais sobre a peça|More about this piece|Más sobre la pieza
 Cor da parte|Part color|Color de la parte
 Combinações prontas|Ready-made combinations|Combinaciones listas
-valores ilustrativos nesta prévia|illustrative prices in this preview|precios ilustrativos en esta vista previa
 Cada peça é feita sob encomenda: a produção leva|Each piece is made to order: production takes|Cada pieza se hace por encargo: la producción tarda
 O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são calculados pelo CEP no carrinho.|Shipping is by Correios, all over Brazil. The shipping cost and delivery time are calculated by postal code in the cart.|El envío es por Correios, a todo Brasil. El costo y el plazo de entrega se calculan por código postal en el carrito.
 Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
@@ -858,6 +861,11 @@ Desistência em até 7 dias|Cancel within 7 days|Desistimiento hasta 7 días
 Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in the chosen colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en los colores elegidos. La producción empieza después de confirmarse el pago.
 Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
 Ver mais|See more|Ver más
+Ver todas|See all|Ver todas
+sem frete|without shipping|sin envío
+Recolher o resumo da compra|Collapse the purchase summary|Contraer el resumen de compra
+Abrir o resumo da compra|Open the purchase summary|Abrir el resumen de compra
+Fotos da peça|Photos of the piece|Fotos de la pieza
 Todas as peças|All pieces|Todas las piezas
 Peças anteriores|Previous pieces|Piezas anteriores
 Mais peças|More pieces|Más piezas
@@ -930,6 +938,9 @@ vista|view|vista
 Frente|Front|Frente
 Três quartos|Three-quarter|Tres cuartos
 Costas|Back|Parte trasera
+Lado|Side|Lado
+Três quartos de trás|Three-quarter back|Tres cuartos trasero
+De cima|From above|Desde arriba
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca

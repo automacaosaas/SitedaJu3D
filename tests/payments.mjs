@@ -103,14 +103,20 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
 // ── prices come from the server, and only real carts pass ─────────────
 {
   const priced = catalog.priceOrder([{productId: 'borboletoscopio', quantity: 2, selection: {body: 'pink'}, unitPrice: 1, unitCents: 1, price: 1, total: 1}]);
-  assert.equal(priced.lines[0].unitCents, 12900, 'a price sent by the browser is ignored');
-  assert.equal(priced.subtotal, 25800); assert.equal(priced.shipping, 1800); assert.equal(priced.total, 27600);
+  assert.equal(priced.lines[0].unitCents, 26500, 'a price sent by the browser is ignored');
+  assert.equal(priced.subtotal, 53000); assert.equal(priced.shipping, 1800); assert.equal(priced.total, 54800);
+  // the second airplane (and the next ones) in the same order costs R$ 215: the line that holds the first is split in two
+  const planes = catalog.priceOrder([{productId: 'aviaoscopia', quantity: 2, selection: {body: 'blue'}}, {productId: 'borboletoscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1, selection: {body: 'red'}}]);
+  assert.deepEqual(planes.lines.map(l => [l.productId, l.quantity, l.unitCents, l.selection.body]), [['aviaoscopia', 1, 28500, 'blue'], ['aviaoscopia', 1, 21500, 'blue'], ['borboletoscopio', 1, 26500, 'mint'], ['aviaoscopia', 1, 21500, 'red']]);
+  assert.equal(planes.subtotal, 28500 + 2 * 21500 + 26500);
+  assert.deepEqual(catalog.applyPixDiscount(planes).lines.map(l => l.chargeUnitCents), [27075, 20425, 25175, 20425], 'Pix: 5% off each real unit price');
+  for (const id of Object.keys(catalog.PRODUCTS)) assert.equal(catalog.PRODUCTS[id].extraPrice, COMMERCE.extraPrices[id], `${id}: the site shows the same quantity price`);
   assert.deepEqual(priced.lines[0].selection, {body: 'pink', details: 'yellow'}, 'missing part falls back to the default color');
   assert.deepEqual(catalog.priceOrder([{productId: 'aviaoscopia', quantity: 1, selection: {body: 'neon', details: '__proto__', engines: 'red'}}]).lines[0].selection, {body: 'blue', details: 'red', engines: 'red'}, 'unknown colors fall back to the default');
   for (const bad of [null, [], 'x', {}, [null], [{productId: 'toString', quantity: 1}], [{productId: 'nao-existe', quantity: 1}], [{productId: 'aviaoscopia', quantity: 0}], [{productId: 'aviaoscopia', quantity: 100}], [{productId: 'aviaoscopia', quantity: 1.5}], [{productId: 'aviaoscopia', quantity: '2'}], Array(61).fill({productId: 'aviaoscopia', quantity: 1})]) {
     assert.throws(() => catalog.priceOrder(bad), /invalid_items/, JSON.stringify(bad)?.slice(0, 60));
   }
-  assert.equal(catalog.priceOrder([{productId: 'aviaoscopia', quantity: Number('3')}]).subtotal, 47700);
+  assert.equal(catalog.priceOrder([{productId: 'aviaoscopia', quantity: Number('3')}]).subtotal, 28500 + 2 * 21500, 'three airplanes: the 2nd and 3rd at R$ 215');
   assert.equal(catalog.amount(12900), '129.00'); assert.equal(catalog.amount(5), '0.05'); assert.equal(catalog.fromAmount('129.00'), 12900); assert.equal(catalog.fromAmount('0.1'), 10);
   assert.equal(catalog.encodeSelection('aviaoscopia', {body: 'blue', details: 'red', engines: 'yellow'}), 'body=blue;details=red;engines=yellow');
   assert(catalog.encodeSelection('aviaoscopia', {body: 'blue', details: 'red', engines: 'yellow'}).length <= 100, 'fits the 100-character item description');
@@ -178,25 +184,25 @@ const priced = catalog.priceOrder(ITEMS);
 {
   // Pix discount: per unit, on the pieces only; card keeps the list price.
   const pix = catalog.applyPixDiscount(priced);
-  assert.deepEqual(pix.lines.map(l => [l.unitCents, l.chargeUnitCents]), [[12900, 12255], [15900, 15105]]);
-  assert.equal(pix.subtotal, priced.subtotal, 'the subtotal keeps the list price'); assert.equal(pix.discount, 2085); assert.equal(pix.shipping, 1800);
-  assert.equal(pix.total, 41415); assert.equal(priced.total, 43500, 'the priced order itself is not changed');
-  for (const [id, cents] of [['borboletoscopio', 645], ['dinossauroscopio', 695], ['aviaoscopia', 795]]) assert.equal(catalog.pixUnitDiscount(catalog.PRODUCTS[id].price), cents, id);
+  assert.deepEqual(pix.lines.map(l => [l.unitCents, l.chargeUnitCents]), [[26500, 25175], [28500, 27075]]);
+  assert.equal(pix.subtotal, priced.subtotal, 'the subtotal keeps the list price'); assert.equal(pix.discount, 4075); assert.equal(pix.shipping, 1800);
+  assert.equal(pix.total, 79225); assert.equal(priced.total, 83300, 'the priced order itself is not changed');
+  for (const [id, cents] of [['borboletoscopio', 1325], ['dinossauroscopio', 1325], ['aviaoscopia', 1425]]) assert.equal(catalog.pixUnitDiscount(catalog.PRODUCTS[id].price), cents, id);
   const free = catalog.applyPixDiscount({...priced, shipping: 0, total: priced.subtotal});
-  assert.equal(free.total, 41700 - 2085, 'with free delivery the total is only the discounted pieces');
+  assert.equal(free.total, 81500 - 4075, 'with free delivery the total is only the discounted pieces');
   const payload = mp.buildOrderPayload({priced: pix, reference: 'JU-PIX', customer: {name: 'Ana Souza', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140071', street: 's', number: '1', district: 'd', city: 'c', state: 'MG'}, notes: '', lang: 'pt-BR', payment: {methodId: 'pix', type: 'bank_transfer'}});
-  assert.equal(payload.total_amount, '414.15');
-  assert.equal(payload.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'items add up to the discounted total');
+  assert.equal(payload.total_amount, '792.25');
+  assert.equal(payload.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 79225, 'items add up to the discounted total');
 }
 const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-0123456789', customer: {name: 'Ana Souza Lima', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140-071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''}, notes: 'Escrever Ana', lang: 'en', payment});
 {
   const pix = payloadFor(mp.paymentFromBrick(BRICK_PIX));
   assert.equal(pix.type, 'online'); assert.equal(pix.processing_mode, 'automatic'); assert.equal(pix.external_reference, 'JU-0123456789');
-  assert.equal(pix.total_amount, '435.00', '2 x 129 + 159 + 18 delivery'); assert.equal(pix.transactions.payments[0].amount, pix.total_amount);
+  assert.equal(pix.total_amount, '833.00', '2 x 265 + 285 + 18 delivery'); assert.equal(pix.transactions.payments[0].amount, pix.total_amount);
   assert.deepEqual(pix.transactions.payments[0].payment_method, {id: 'pix', type: 'bank_transfer'}); assert.equal(pix.transactions.payments[0].expiration_time, 'PT1H');
   const itemsTotal = pix.items.reduce((sum, item) => sum + Math.round(Number(item.unit_price) * 100) * item.quantity, 0);
-  assert.equal(itemsTotal, 43500, 'the items (delivery included) add up to the total charged');
-  assert.deepEqual(pix.items[0], {title: 'Borboletoscópio', unit_price: '129.00', quantity: 2, description: 'body=pink;details=lilac', external_code: 'borboletoscopio'});
+  assert.equal(itemsTotal, 83300, 'the items (delivery included) add up to the total charged');
+  assert.deepEqual(pix.items[0], {title: 'Borboletoscópio', unit_price: '265.00', quantity: 2, description: 'body=pink;details=lilac', external_code: 'borboletoscopio'});
   assert.deepEqual(pix.items.at(-1), {title: 'Frete', unit_price: '18.00', quantity: 1, description: 'Entrega', external_code: 'shipping'});
   assert.deepEqual(pix.payer, {email: 'ana@example.com', first_name: 'Ana', last_name: 'Souza Lima', entity_type: 'individual', phone: {area_code: '31', number: '999991234'}});
   assert.deepEqual(pix.shipment.address, {zip_code: '30140071', street_name: 'Rua da Bahia', street_number: '1200', neighborhood: 'Centro', city: 'Belo Horizonte', state: 'MG'}, 'empty complement is left out');
@@ -216,7 +222,7 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   const net = fakeNetwork();
   const make = async payment => (await net.fetchImpl('https://api.mercadopago.com/v1/orders', {method: 'POST', headers: {'X-Idempotency-Key': crypto.randomUUID()}, body: JSON.stringify(payloadFor(mp.paymentFromBrick(payment)))})).json();
   const pix = mp.normalizeOrder(await make(BRICK_PIX));
-  assert.equal(pix.state, 'pending_pix'); assert.equal(pix.pix.qrCode, '000201PIXCODE'); assert.equal(pix.pix.qrCodeBase64, 'iVBORw0KGgo='); assert.equal(pix.pix.ticketUrl, 'https://mp.test/ticket'); assert.equal(pix.total, 43500);
+  assert.equal(pix.state, 'pending_pix'); assert.equal(pix.pix.qrCode, '000201PIXCODE'); assert.equal(pix.pix.qrCodeBase64, 'iVBORw0KGgo='); assert.equal(pix.pix.ticketUrl, 'https://mp.test/ticket'); assert.equal(pix.total, 83300);
   assert.equal(mp.normalizeOrder(await make(brickCard())).state, 'approved'); assert.equal(mp.normalizeOrder(await make(brickCard('CONT' + 'c'.repeat(28)))).state, 'in_review'); assert.equal(mp.normalizeOrder(await make(brickCard('REJE' + 'r'.repeat(28)))).state, 'refused');
   assert.equal(mp.normalizeOrder({status: 'expired'}).state, 'expired'); assert.equal(mp.normalizeOrder({status: 'processed', status_detail: 'accredited', transactions: {payments: [{status: 'expired'}]}}).state, 'approved', 'the order status wins');
   assert.equal(mp.normalizeOrder({status: 'action_required', status_detail: 'waiting_capture'}).state, 'in_review', 'anything unknown is never treated as paid');
@@ -224,8 +230,8 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   assert.equal(mp.normalizeOrder({}).state, 'in_review'); assert.equal(mp.normalizeOrder(null).state, 'in_review');
   assert(!JSON.stringify(mp.normalizeOrder(await make(brickCard()))).includes('aaaaaaaa'), 'the card token is not echoed to the browser');
   const paid = mp.summarizeOrder(await make(brickCard()));
-  assert.equal(paid.paid, true); assert.equal(paid.lang, 'en'); assert.equal(paid.notes, 'Escrever Ana'); assert.equal(paid.shipping, 1800); assert.equal(paid.total, 43500);
-  assert.deepEqual(paid.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), [['borboletoscopio', 2, 12900, {body: 'pink', details: 'lilac'}], ['aviaoscopia', 1, 15900, {body: 'black', details: 'red', engines: 'yellow'}]], 'the whole order is rebuilt from Mercado Pago alone');
+  assert.equal(paid.paid, true); assert.equal(paid.lang, 'en'); assert.equal(paid.notes, 'Escrever Ana'); assert.equal(paid.shipping, 1800); assert.equal(paid.total, 83300);
+  assert.deepEqual(paid.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), [['borboletoscopio', 2, 26500, {body: 'pink', details: 'lilac'}], ['aviaoscopia', 1, 28500, {body: 'black', details: 'red', engines: 'yellow'}]], 'the whole order is rebuilt from Mercado Pago alone');
   assert.equal(paid.customer.name, 'Ana Souza Lima'); assert.equal(paid.customer.phone, '31999991234'); assert.equal(paid.address.cep, '30140071'); assert.equal(paid.method.installments, 3);
   assert.equal(mp.summarizeOrder(await make(BRICK_PIX)).paid, false);
   const swapped = await make(brickCard()); swapped.payer.email = 'test@testuser.com'; assert.equal(mp.summarizeOrder(swapped).customer.email, 'ana@example.com', 'the address stored in the order wins over the payer address Mercado Pago holds');
@@ -304,9 +310,9 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const sent = net.mpCalls.at(-1);
     assert.equal(sent.method, 'POST'); assert.equal(sent.url, 'https://api.mercadopago.com/v1/orders');
     assert.equal(sent.headers.Authorization, `Bearer ${ENV.MP_ACCESS_TOKEN}`); assert.equal(sent.headers['X-Idempotency-Key'], body.attempt);
-    assert.equal(sent.body.total_amount, '414.15', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the pieces, 417.00 − 20.85 + 18.00 delivery)');
-    assert.deepEqual(sent.body.items.map(i => [i.external_code, i.unit_price, i.quantity]), [['borboletoscopio', '122.55', 2], ['aviaoscopia', '151.05', 1], ['shipping', '18.00', 1]], 'Pix items carry the discounted unit price; delivery is not discounted');
-    assert.equal(sent.body.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'the items add up to the Pix total');
+    assert.equal(sent.body.total_amount, '792.25', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the pieces, 815.00 − 40.75 + 18.00 delivery)');
+    assert.deepEqual(sent.body.items.map(i => [i.external_code, i.unit_price, i.quantity]), [['borboletoscopio', '251.75', 2], ['aviaoscopia', '270.75', 1], ['shipping', '18.00', 1]], 'Pix items carry the discounted unit price; delivery is not discounted');
+    assert.equal(sent.body.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 79225, 'the items add up to the Pix total');
     assert.equal(sent.body.payer.email, 'ana@example.com', 'the payer is the account'); assert.equal(sent.body.payer.first_name, 'Ana'); assert.equal(sent.body.payer.last_name, 'Souza Lima');
     assert.deepEqual(sent.body.payer.identification, {type: 'CPF', number: ana.cpf}, 'Pix carries the CPF from the identification (better approval and fraud checks)');
     assert.equal(sent.body.shipment.address.state, 'MG'); assert.equal(sent.body.shipment.address.zip_code, '30140071');
@@ -316,7 +322,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     // The order is in our database before and after Mercado Pago answers.
     const saved = await store.orders.findByReference(answer.reference);
     assert.equal(saved.customerId, ana.id); assert.equal(saved.status, 'aguardando_pagamento'); assert.equal(saved.paymentState, 'pending_pix'); assert.equal(saved.mpOrderId, answer.id); assert.equal(saved.method, 'pix');
-    assert.equal(saved.subtotalCents, 41700, 'the subtotal stays at list price'); assert.equal(saved.totalCents, 41415, 'the total is what Pix charges'); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
+    assert.equal(saved.subtotalCents, 81500, 'the subtotal stays at list price'); assert.equal(saved.totalCents, 79225, 'the total is what Pix charges'); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 26500], ['aviaoscopia', 1, 28500]]);
     assert.deepEqual(saved.items[0].selection, {body: 'pink', details: 'lilac'}, 'the colors of each part are recorded');
     assert.equal(saved.shipTo.recipient, 'Ana Souza Lima'); assert.equal(saved.buyer.name, 'Ana Souza Lima'); assert.equal(saved.buyer.email, 'ana@example.com');
     assert.equal(saved.termsVersion, TERMS_VERSION, 'the order records which Termos the buyer accepted'); assert.ok(saved.termsAcceptedAt);
@@ -467,8 +473,8 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const {net, store, buyer, handler, create} = await build();
     const card = (await call(create, {body: request({payment: brickCard()}), ...as(buyer)})).json(), pix = (await call(create, {body: request(), ...as(buyer)})).json(); await settled();
     assert.equal(net.mails.length, 2, 'the approved card already told Ju and the buyer');
-    assert.equal((await store.orders.findByMpId(card.id)).totalCents, 43500, 'card pays the list price (no Pix discount)');
-    assert.equal((await store.orders.findByMpId(pix.id)).totalCents, 41415, 'Pix pays 5% less on the pieces');
+    assert.equal((await store.orders.findByMpId(card.id)).totalCents, 83300, 'card pays the list price (no Pix discount)');
+    assert.equal((await store.orders.findByMpId(pix.id)).totalCents, 79225, 'Pix pays 5% less on the pieces');
     assert(!net.mails.at(-1).html.includes('Pix (5%)'), 'no discount line on a card receipt');
     assert.equal((await call(handler, {method: 'GET', origin: ''})).statusCode, 405);
     assert.equal((await notify(handler, pix.id, {signature: 'ts=1,v1=' + '0'.repeat(64)})).statusCode, 401, 'wrong signature');
@@ -480,7 +486,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(first.statusCode, 200); assert.deepEqual(first.json(), {ok: true, paid: true, sent: {owner: true, customer: true}});
     assert.equal(net.mails.length, 2, 'a notice about an order already recorded as paid sends nothing new');
     const [owner, customer] = [net.mails.find(m => m.to[0] === 'ju@site.test'), net.mails.find(m => m.to[0] === 'ana@example.com')];
-    assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('435,00'));
+    assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('833,00'));
     assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa Ju') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
     assert(owner.html.includes('Rua da Bahia, 1200') && owner.html.includes('30140-071') && owner.html.includes('wa.me/5531999991234') && owner.html.includes('ana@example.com'), 'and where to send it and how to reach the customer');
     assert(owner.html.includes('NOTA FISCAL') && owner.html.includes(`CPF ${maskCpf(buyer.cpf)}`) && !owner.html.includes(buyer.cpf) && !owner.text.includes(buyer.cpf), 'invoice data for Ju, CPF masked (the full number stays in the panel)');

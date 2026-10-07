@@ -52,7 +52,7 @@ const {cartSummary} = await site('cart-view.js');
 {
   const items = [{id: 'a', productId: 'borboletoscopio', title: 'Borboletoscópio', selection: {body: 'pink', details: 'lilac'}, quantity: 1, unitPrice: 12900}];
   const before = cartSummary(items, {realShipping: true, freeShipping: {fromCents: 50000, label: 'PAC'}, estimate: {status: 'idle'}});
-  assert.match(before, /calculada pelo CEP/); assert.match(before, /Sem frete · ver resumo/); assert.match(before, /id="cart-ship-form"/); assert.match(before, /Faltam <strong>R\$\s?371,00/);
+  assert.match(before, /calculada pelo CEP/); assert.match(before, /<small class="cart-total-note">sem frete<\/small>/); assert.match(before, /class="cart-summary-balloon"/); assert.match(before, /id="cart-ship-form"/); assert.match(before, /Faltam <strong>R\$\s?371,00/);
   const quoted = cartSummary(items, {realShipping: true, estimate: {status: 'ready', cep: '01001000', options: [{service: 'pac', label: 'PAC', priceCents: 2201, free: false, days: {min: 9, max: 11}}], chosen: {service: 'pac', label: 'PAC', priceCents: 2201, free: false}}});
   assert.match(quoted, /Entrega <small>\(PAC\)<\/small><\/dt><dd>R\$\s?22,01/); assert.match(quoted, /R\$\s?151,01/, 'total with the delivery'); assert.match(quoted, /value="01001-000"/, 'the CEP stays in the box, formatted');
   assert.doesNotMatch(quoted, /Sem frete/);

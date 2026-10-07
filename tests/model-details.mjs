@@ -30,18 +30,21 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   return probe(x,height)-around.reduce((s,v)=>s+v,0)/around.length;
  };
  if(key==='borboletoscopio'){
+  // 2026-10-06: the head of the print file (BORBOLETA COMPLETO.3mf, tools/modelo-borboleta/trocar_cabeca.py) on the site's body, in the
+  // colors of the real piece: big round black eyes with a PINK shine, thin black eyebrows, a black smile arc (along the shallow groove)
+  // and small pink oval cheeks (inside their raised rim) on a cream face.
   for(const sx of [-1,1]){
-   assert.equal(materialAt(sx*.083,.549),'eyes','Round pupils remain visible');
-   assert.equal(materialAt(sx*.083,.601),'face','The former long black eye tip is face colored');
-   // Eyes a little larger than the approved .0285 x .0305 (about +15%), still round.
-   assert.equal(materialAt(sx*(.083+.031),.549),'eyes','Eye width grew a little');
-   assert.equal(materialAt(sx*(.083+.036),.549),'face','Eye width stays modest');
-   assert.equal(materialAt(sx*.083,.549+.033),'eyes','Eye height grew a little');
-   assert.equal(materialAt(sx*.083,.549+.038),'face','Eye height stays modest');
-   // A thin arched eyebrow above each eye, in the same fixed black as the pupils and the smile.
-   for(const [x,y] of [[.084,.6065],[.068,.6045],[.100,.6045]])assert.equal(materialAt(sx*x,y),'eyes','Eyebrow stroke');
-   assert.equal(materialAt(sx*.084,.6105),'face','The eyebrow is thin (above it)');
-   assert.equal(materialAt(sx*.084,.6025),'face','The eyebrow is thin (below it), apart from the eye');
+   assert.equal(materialAt(sx*.095,.53),'eyes','Big round eye');
+   assert.equal(materialAt(sx*.069,.556),'cheeks','The shine of each eye is pink, like the real piece');
+   assert.equal(materialAt(sx*.15,.53),'face','Face beside the eye');
+   assert.equal(materialAt(sx*.08,.596),'face','Face between the eye and the eyebrow');
+   assert.equal(materialAt(sx*.083,.614),'eyes','Thin black eyebrow');
+   assert.equal(materialAt(sx*.083,.626),'face','The eyebrow is thin (above it)');
+   assert.equal(materialAt(sx*.03,.446),'eyes','Black smile arc');
+   assert.equal(materialAt(sx*.104,.458),'cheeks','Small pink oval cheek');
+   assert.notEqual(materialAt(sx*.15,.458),'cheeks','The cheek stays inside its rim, off the edge of the face');
+   assert.equal(materialAt(0,.425),'face','Cream under the smile (no band below it)');
+   assert.equal(materialAt(sx*.04,.47),'face','Cream above the smile (only the arc is black)');
    assert.equal(materialAt(sx*.464,.063),'details','Front wing dots remain yellow');
    assert.equal(materialAt(sx*.463,.062,true),'details','Back wing dots remain yellow');
    // The small dots are real, discreet domes on both faces (not flat painted circles).
@@ -54,42 +57,39 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   }
  }
  if(key==='dinossauroscopio'){
+  // The Meshy model (05/10/2026, tools/modelo-dino/meshy/preparar_meshy.py), with the new piece's two-spike crest. Body and details are
+  // painted by the site; black eyes and eyebrows, white teeth and a white oval shine on each eye are fixed. No texture (the site's CSP).
   for(const sx of [-1,1]){
-   assert.equal(materialAt(sx*.144,.548),'eyes','Eyes stay aligned at the same height');
-   // Intermediate size: larger than the .038 x .0395 version, smaller than the old .048 x .057 eyes.
-   assert.equal(materialAt(sx*(.144+.040),.548),'eyes','Eye width grew from the too-small version');
-   assert.equal(materialAt(sx*(.144+.052),.548),'body','Eye width stays below the exaggerated original');
-   assert.equal(materialAt(sx*.144,.548+.042),'eyes','Eye height grew from the too-small version');
-   assert.equal(materialAt(sx*.144,.548+.054),'body','Eye height stays below the exaggerated original');
-   assert.ok(relief(sx*.144,.548,.08)>.01,'Eyes are rounded domes set into the head');
-   // Then enlarged a little more on request (about +10%, to .0495 x .0517), still under the original height.
-   assert.equal(materialAt(sx*(.144+.047),.548),'eyes','Eyes a little larger (width)');
-   assert.equal(materialAt(sx*.144,.548+.049),'eyes','Eyes a little larger (height)');
-   // A thin, clearly arched and raised eyebrow above each eye (surprised/happy), fixed black like the eyes.
-   for(const [x,y] of [[.144,.646],[.124,.6376],[.164,.6376]])assert.equal(materialAt(sx*x,y),'eyes','Eyebrow stroke');
-   assert.equal(materialAt(sx*.124,.646),'body','The ends drop well below the top: a real arch');
-   assert.equal(materialAt(sx*.144,.652),'body','The eyebrow is thin (above it)');
-   assert.equal(materialAt(sx*.144,.6395),'body','The eyebrow is thin (below it), apart from the eye');
-   // Four triangular teeth hang from the real mouth line (z = .35 + .75 x^2), evenly spaced.
-   for(const [x,y] of [[.046,.335],[.050,.305],[.135,.345],[.144,.325]])assert.equal(materialAt(sx*x,y),'teeth','Tooth body and tip on the mouth line');
-   assert.equal(materialAt(sx*.0905,.345),'body','Even gap between the inner and outer teeth');
-   assert.equal(materialAt(sx*.046,.3535),'body','Teeth start right under the mouth groove, not above it');
-   assert.ok(relief(sx*.046,.322,.02)>.0015,'Teeth are raised from the face');
+   assert.equal(materialAt(sx*.18,.57),'eyes','Black eye');
+   // The shine is the raised oval on the upper outer part of each eye, the same (mirrored) on both.
+   for(const [x,y] of [[.2133,.614],[.225,.624],[.203,.606]])assert.equal(materialAt(sx*x,y),'highlight',`White oval shine (${sx*x}, ${y})`);
+   assert.equal(materialAt(sx*.265,.59),'body','The eye ends at its groove (outer side)');
+   assert.equal(materialAt(sx*.17,.69),'body','Head between the eye and the eyebrow');
+   assert.equal(materialAt(sx*.169,.733),'eyes','Black eyebrow');
+   assert.equal(materialAt(sx*.169,.76),'body','The eyebrow is thin (above it)');
+   // Four teeth hanging from the mouth line, two on each side, with the head between them.
+   for(const [x,y] of [[.056,.335],[.19,.35]])assert.equal(materialAt(sx*x,y),'teeth',`Tooth at ${sx*x}`);
+   assert.equal(materialAt(sx*.12,.35),'body','Gap between the inner and outer teeth');
+   for(const [x,y] of [[.04,.46],[.12,.45]])assert.equal(materialAt(sx*x,y),'body','Nostrils and cheeks keep the body color');
+   // Five raised dots on the outer side of each foot, in the details color.
+   assert.equal(side(-.827,-.043,sx<0).name,'details','Foot dot');
+   assert.equal(side(-.75,-.06,sx<0).name,'body','Foot between the dots');
   }
-  assert.equal(materialAt(0,.338),'body','Even gap between the two front teeth');
-  assert.equal(materialAt(0,.738),'body','No crest color rectangle on the forehead');
-  // Complete crest in profile: every spike is painted from its root (top spike, back wedge).
-  // Two spikes since 04/10/2026, like the new piece: the lower one, at the nape, touched the user's nose and was lowered into the
-  // crest strip that closes the back of the head (tools/modelo-dino/crista.cjs).
+  for(const y of [.36,.40])assert.equal(materialAt(0,y),'body','Even gap between the two front teeth, and the lip above them');
+  assert.equal(materialAt(0,.70),'body','Plain forehead');
+  // Two crest spikes like the new piece: one on top of the head and one behind it, nothing at the nape (it touched the user's nose).
   for(const fromLeft of [false,true]){
-   for(const [h,d] of [[.83,-.08],[.68,-.23],[.60,-.30]])assert.equal(side(h,d,fromLeft).name,'details','Crest painted along the top and back of the head');
-   ray.set(new T.Vector3(fromLeft?-2:2,.45,-.36),new T.Vector3(fromLeft?1:-1,0,0));
-   assert.equal(ray.intersectObject(scene,true).length,0,'No lower spike at the nape any more');
-   assert.equal(side(.45,-.28,fromLeft).name,'details','The crest strip still runs down the nape');
-   assert.equal(side(.55,-.10,fromLeft).name,'body','The head itself keeps the body color');
+   assert.equal(side(.88,-.108,fromLeft).name,'details','Top spike');
+   assert.equal(side(.69,-.313,fromLeft).name,'details','Back spike');
+   assert.equal(side(.6,-.05,fromLeft).name,'body','The head itself keeps the body color');
   }
-  let teeth=0;scene.traverse(o=>{if(o.material?.name==='teeth'){teeth++;assert.equal(o.material.color.getHexString(),'ffffff','Teeth stay white');}});
+  assert.equal(back(0,.69).name,'details','Back spike seen from behind');
+  assert.equal(back(0,.45).name,'body','No third spike at the nape');
+  assert.equal(hitFrom([0,2,.1],[0,-1,0]).name,'body','Top of the head in front of the spike');
+  const names=new Set();let teeth=0;
+  scene.traverse(o=>{if(!o.isMesh)return;names.add(o.material.name);if(o.material.name==='teeth'){teeth++;assert.equal(o.material.color.getHexString(),'ffffff','Teeth stay white');}});
   assert.ok(teeth>0);
+  assert.deepEqual([...names].sort(),['body','details','eyes','highlight','teeth'],'Five plain materials');
  }
  if(key==='aviaoscopia'){
   // The real CAD (STL of 21/08/2026, tools/render-aviao-macaco/export-glb.cjs), 1 GLB unit = 122 mm, centred on the airplane.

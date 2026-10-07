@@ -47,3 +47,13 @@
 }
 @keyframes cart-spin { 55% { transform: rotate(300deg) scale(1.18); } 100% { transform: rotate(360deg) scale(1); } }
 @keyframes cart-press { 30% { transform: scale(.9); } 70% { transform: scale(1.06); } }
+
+/* "Ver catálogo completo" (06/10/2026): um botão de contorno no meio, embaixo do carrossel, com a seta para a direita (é uma página
+   do site, não um link de fora: sai o ↗) que anda um pouco no hover; no celular, largo. A cor vem do tema (carousel.css). */
+.catalog-home .catalog-footer{display:flex;justify-content:center;margin-top:28px}
+.catalog-home .catalog-all{gap:10px;min-height:48px;padding:0 22px 0 26px;border:1.5px solid currentColor;border-radius:999px;font-size:15px;font-weight:650;letter-spacing:.01em;text-decoration:none;transition:background-color .3s ease,transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease}
+.catalog-home .catalog-all .icon{width:18px;height:18px;transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.catalog-home .catalog-all:active{transform:scale(.97)}
+.catalog-home .catalog-all:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+@media(hover:hover){.catalog-home .catalog-all:hover{background:color-mix(in srgb,currentColor 9%,transparent);transform:translateY(-1px);box-shadow:0 10px 24px color-mix(in srgb,currentColor 16%,transparent)}.catalog-home .catalog-all:hover .icon{transform:translateX(4px)}}
+@media(max-width:600px){.catalog-home .catalog-all{width:100%;max-width:340px;justify-content:center}}

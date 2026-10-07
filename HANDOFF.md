@@ -120,17 +120,35 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
-- **Página do produto, aba Foto (04/10/2026):** galeria de fotos reais da peça (nem o 3D nem imagens geradas): miniaturas à esquerda
-  no computador, arrastar de lado no celular; o 3D continua na aba ao lado, e escolher uma cor leva a ele. **Padrão: 4 fotos por peça**,
-  nesta ordem — frente, três quartos, costas e um detalhe de perto (o rosto, a cabine) —, todas 4:5 (960 x 1200), recortadas do fundo,
-  com a peça do mesmo tamanho e no mesmo lugar e uma sombra leve no chão; o detalhe enche o quadro, como o zoom das lojas
-  (`STANDARD`/`GALLERY` em `dist/gallery.js`; cada peça só diz o nome do detalhe dela). As fontes (fotos e vídeos do Luiz) ficam em
-  `design/vistas/`, com o recorte de cada foto em `design/vistas/fotos.json`; o que pedir de foto para uma peça nova está em
-  `design/vistas/PADRAO.md`. `node tools/galeria-vistas/gerar.cjs` grava em `dist/assets/vistas/` (tira o chuvisco da compressão,
-  amplia com Lanczos e realça); depois, suba `VIEWS_VERSION`. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine, no mesmo
-  quadro. Peça nova (unicórnio, girafa): entra em `GALLERY` e em `fotos.json` quando estiver à venda.
+- **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
+  continua na aba ao lado, e escolher uma cor leva a ele. **Só FOTOS REAIS** (06/10/2026: nem render do 3D nem imagem gerada): as fotos do
+  Luiz em três vistas (`design/vistas/*-3-vistas.webp`), **4 por peça** — frente, três quartos, costas e um detalhe de perto —, todas 4:5
+  (1200 x 1500), recortadas do fundo (preto ou claro, sem o reflexo do chão), com a peça do mesmo tamanho e uma sombra leve no chão
+  (`STANDARD`/`GALLERY` em `dist/gallery.js`; recortes em `design/vistas/fotos.json`; `node tools/galeria-vistas/gerar.cjs`; depois,
+  suba `VIEWS_VERSION`; peça nova: `design/vistas/PADRAO.md`). O macaco, sem fotos reais, mostra só a da vitrine. Com os arquivos
+  originais das fotos (mandados como Documento), a galeria fica mais nítida. `tools/render-vistas` (renders do 3D) ficou só como
+  ferramenta; não entra na galeria.
+- **Borboleta 3D, rosto (06/10/2026):** a cabeça do arquivo de impressão do Luiz (`BORBOLETA COMPLETO.3mf`, Bambu Studio) no corpo do
+  site: `tools/modelo-borboleta/trocar_cabeca.py` tira a cabeça antiga e põe a do 3MF no centro dela (mesma largura); olhos e
+  sobrancelhas vêm da pintura do arquivo, o sorriso (arco em relevo) e as bochechas (ovais em volta do relevo) ganham as cores da peça real
+  (preto e rosa), rosto creme. Acerto de 06/10 à noite: o brilho de cada olho é rosa, o sorriso é a faixa sobre o arco do sulco (o
+  círculo ajustado no fundo dele) e as bochechas ficam dentro da borda em relevo, como na peça real. Materiais: body, details, face, eyes, cheeks.
+- **Fotos reais, recorte liso (06/10/2026):** `smoothEdge` em `tools/galeria-vistas/vistas.html` alisa o contorno no quadro final
+  (gaussiana e novo corte com antisserrilhado; a cor da beirada vem de dentro da peça). Na página de cada peça, só as fotos reais
+  (a foto da vitrine, de outra cor, saiu das miniaturas e da foto grande). Depois `tools/modelo-novidades/reduzir-comprimir.cjs`.
+- **Dinossauro 3D (05/10/2026):** o modelo do Meshy (`Meshy_AI__1005212758_model-edit.glb`, só a forma), com os 2 espinhos da peça
+  nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;
+  details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada
+  olho). Depois, a compressão Meshopt de sempre e `?v=` em `dist/asset-models.js`. `tools/modelo-dino/crista.cjs` era do modelo anterior.
 - **Girafa e unicórnio (06/10/2026):** já são novidades na vitrine (GiraffeLamp e UnicornLamp, `SOON` em `products.js`; o macaco agora é MonkeyLamp), no molde do
-  macaco e com as cores de cada bicho; as imagens e o 3D ainda são os do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`).
+  macaco e com as cores de cada bicho. Sem foto real ainda, as imagens (vitrine, card, miniatura do card e a vista da galeria) são
+  renders do 3D de cada um (`tools/render-vistas/render.py` com `ocupa`/`base` da vitrine e dos cards); no "Ver encaixado", a lâmpada
+  encolhe na proporção do tubo de cada um (`fit` em `products.js`). Quando chegar a foto: troque os arquivos e meça `art` de novo. **3D de cada um (06/10/2026):**
+  os modelos do Rodin (`rodin-v2_-0 (10).glb`, girafa; `(11)`, unicórnio) com as cores fixas em materiais, sem textura, por
+  `tools/modelo-novidades/preparar_novidade.py` (Blender 5.2): a cor de cada face vem da textura e segue o relevo (lateral, pé, entalhes);
+  por dentro, liso, na cor do corpo (some o borrado das bolinhas da girafa); o miolo das orelhas é a concha; as 5 estrelas do unicórnio
+  refeitas regulares, em pé e iguais, longe das nuvens. Depois `tools/modelo-novidades/reduzir-comprimir.cjs` (metade dos triângulos
+  com a borda de cada cor travada + Meshopt; ~1 MB cada) e o `?v=` em `dist/asset-models.js`. As cores fixas da vitrine são as do modelo.
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
@@ -141,7 +159,13 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Prazo de produção:** 3 a 5 dias úteis.
 - **Cartão:** texto "3x sem juros"; a loja configura isso no Mercado Pago depois (hoje a tabela de parcelas ainda mostra juros em 2x e 3x).
 - **Frete:** Correios com contrato próprio, PAC marcado por padrão (SEDEX também); PAC grátis a partir de R$ 500.
-- **Preços** R$ 129 / 139 / 159: aguardando confirmação; desde 05/10, sem o aviso de "ilustrativo" no site (pedido do dono).
+- **Preços confirmados (05/10/2026):** Borboletoscópio R$ 265, Dinossauroscópio R$ 265, Aviãoscopia R$ 285 — e o 2.º avião (e os
+  seguintes) na mesma compra sai por R$ 215 (`extraPrices` em `dist/commerce-config.js` = `extraPrice` em `api/_lib/catalog.js`; o
+  servidor divide a linha em dois preços exatos para o Mercado Pago e a nota, e o site mostra "Levando 2, o segundo sai por R$ 215,00").
+  Sem os avisos de "ilustrativo".
+- **Textos (05/10/2026, pedidos do Luiz):** borboleta e dino "feitos para encaixe no retinoscópio da marca Welch Allyn"; avião "para
+  régua de esquiascopia", "compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato" (o "entre em contato" abre o e-mail da Ju). Peças da lâmpada de
+  fenda: o macaco se chama **MonkeyLamp**; a girafa e o unicórnio, quando entrarem, **GiraffeLamp** e **UnicornLamp**.
 - **Nota fiscal:** Bling, em toda venda (pessoa física e jurídica), emitida quando a Ju marca "concluído" no painel. Empresa ME no
   Simples Nacional, MG. A conta do Bling deve estar em homologação no primeiro teste (o site pausa se detectar produção).
 - Sem faixa de cookies e sem analytics por enquanto (analytics conflita com a Política de Privacidade atual).
@@ -157,8 +181,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **C. Atendimento.** Quando o Pedro passar e-mail, telefone, WhatsApp e horário: tudo em `api/_lib/legal.js` (`COMPANY.email`,
   `COMPANY.phone`, `COMPANY.hours` e `WHATSAPP`, só números com 55 e DDD), depois `node tools/sync-legal.cjs` (atualiza as páginas e o
   `dist/company.js`, de onde os scripts leem). Com o número, o botão do WhatsApp aparece no Contato, no menu do celular e na confirmação.
-- **D. Preços.** Os selos "ilustrativos" já saíram (05/10, pedido do dono). Falta só trocar os valores quando forem confirmados
-  (`dist/commerce-config.js` e `api/_lib/catalog.js`, que precisam bater).
+- **D. Preços.** Feito em 05/10/2026 (valores acima; `dist/commerce-config.js` e `api/_lib/catalog.js` batem, `tests/payments.mjs` confere).
 
 ## Pendências por responsável
 

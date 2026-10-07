@@ -42,7 +42,9 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(page, /<ul class="pl-dots" data-pl-dots aria-label="Cores originais">/);
   assert(page.indexOf('class="pl-dots"') < page.indexOf('class="pl-info"'), `${id}: the dots are on the picture`);
   assert.doesNotMatch(page, /class="pl-colors"|valores ilustrativos/, `${id}: no colors block above the actions, no "valores ilustrativos"`);
-  assert.match(page, /<section class="pl-about"><h2>Sobre a peça<\/h2><p class="pl-desc">[^<]+<\/p><p class="pl-note"><span>Cores originais:<\/span> /);
+  assert.match(page, /<section class="pl-about"><h2>Sobre a peça<\/h2><p class="pl-desc">(?:[^<]+|<a class="contact-mail" href="mailto:juimprimepramim@gmail\.com\?subject=[^"]+">entre em contato<\/a>)+<\/p><p class="pl-note"><span>Cores originais:<\/span> /);
+  // 2026-10-06: "entre em contato" na descrição (hoje, só a do avião) abre o e-mail da Ju
+  assert.equal(page.includes('class="contact-mail"'), product.description.includes('entre em contato'), `${id}: o link do e-mail onde a descrição diz "entre em contato"`);
   if (product.fixed) assert(page.includes(`<p class="pl-note"><span>Observação:</span> ${product.fixed}</p>`), `${id}: the fixed colors as a note in "Sobre a peça"`);
   assert.match(page, /<a class="pl-customize" href="[^"]+" data-pl-customize><svg[^>]*>[^]*?<\/svg><span>Personalizar o meu<\/span><\/a>/);
   assert(page.includes(read('dist/icons.js').match(/palette: '([^']+)'/)[1].slice(0, 60)), `${id}: the palette on "Personalizar o meu"`);

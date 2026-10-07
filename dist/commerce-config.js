@@ -8,7 +8,12 @@ export const COMMERCE = Object.freeze({
   // The card (decision of 01/10/2026): up to 3 installments without interest, up to 12 on credit. "Sem juros" is a setting
   // of the Mercado Pago account (the shop pays the fee); the site only shows it and offers at most `maxInstallments`.
   interestFreeInstallments: 3, maxInstallments: 12,
-  prices: Object.freeze({borboletoscopio: 12900, dinossauroscopio: 13900, aviaoscopia: 15900})
+  // o e-mail da Ju: o "entre em contato" das descrições abre ele (contact-link.js)
+  contactEmail: 'juimprimepramim@gmail.com',
+  // Preços confirmados em 05/10/2026. extraPrices: o preço de cada unidade a partir da segunda da mesma peça na mesma compra (o 2.º
+  // avião sai por R$ 215). O servidor tem a mesma tabela (api/_lib/catalog.js); tests/payments.mjs falha se as duas se separarem.
+  prices: Object.freeze({borboletoscopio: 26500, dinossauroscopio: 26500, aviaoscopia: 28500}),
+  extraPrices: Object.freeze({aviaoscopia: 21500})
 });
 export const money = cents => new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(cents / 100);
 // "3x de R$ 43,00": the amount split into the interest-free installments, with nothing added (rounded down to the cent, as

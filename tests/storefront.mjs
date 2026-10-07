@@ -79,7 +79,20 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(page, /cart-reassurance|accepted-methods|Compra segura/);
   assert(page.indexOf('</aside>') < page.indexOf('<div class="cart-more">'), 'the extras come after the order summary');
   assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html'], 'recommends only what is not in the cart');
-  assert.match(page, /<a class="cart-rec cart-rec-more" href="produtos\.html">[^]*<strong>Ver mais<\/strong>[^]*<\/ul><button type="button" class="cart-rec-arrow is-next" data-rec-step="1" aria-label="Mais peças" hidden>/, 'the last card is "Ver mais" (Produtos), with the thin arrows of the rail');
+  // 2026-10-06: small cards (photo, name, price) side by side in a carousel; after the pieces, the novelties ("Em breve");
+  // "Ver todas" next to the title; the next arrow carries the countdown ring of the autoplay
+  assert.deepEqual([...page.matchAll(/<a class="cart-rec is-soon" href="([^"]+)"/g)].map(m => m[1]), Object.keys(SOON).map(id => `index.html#produto/${id}/3d`), 'then the novelties, to see in 3D');
+  assert.match(page, /<span class="cart-rec-name">Dinossauroscópio<\/span><span class="cart-rec-price">R\$\s?265,00<\/span><\/a>/, 'only the photo, the name and the price');
+  assert.match(page, /<span class="cart-rec-price">Em breve<\/span>/);
+  assert.doesNotMatch(page, /cart-rec-sub|cart-rec-more/, 'no subtitle, no "Ver mais" card');
+  assert.match(page, /<a class="cart-recs-all" href="produtos\.html">Ver todas/);
+  assert.match(page, /<\/ul><button type="button" class="cart-rec-arrow is-next" data-rec-step="1" aria-label="Mais peças"><svg class="cart-rec-ring"/);
+  assert.match(read('dist/cart-view.js'), /const AUTO_MS = 4200;/);
+  assert.match(read('dist/cart-page.css'), /\.cart-rec-track \{ display: flex; flex-wrap: nowrap;/, 'side by side (on phones it wrapped into a column)');
+  // "Ver resumo" (bar at the bottom on phones): a smooth scroll to the summary, which lights up for a moment
+  assert.match(page, /<a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total<\/span><strong>[^<]+<\/strong><\/a><a class="cart-summary-balloon" href="#cart-summary-title">Ver resumo<svg/, '"Ver resumo" is a balloon above the bar');
+  assert.match(read('dist/checkout.js'), /wireSummaryLink\(main\);/);
+  assert.match(read('dist/cart-page.css'), /\.cart-order-summary\.is-spotlight \{ animation: summary-spot/);
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
     [['envio.html#frete', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['envio.html#prazo', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
   assert.match(page, /começa depois da confirmação do pagamento\./);
@@ -152,10 +165,13 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
   assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');
   for (const file of ['dist/mini-cart.js', 'dist/cart-view.js']) assert.match(read(file), /artSmall\(/, `${file}: the light photo for the small pictures`);
+  const {hasGallery} = await import('../dist/gallery.js');
   for (const id of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) {
     const photo = /<img class="pl-photo"[^>]*>/.exec(read(`dist/${id}.html`))[0];
-    assert.ok(photo.includes(`srcset="${artSrcset(`product-${id}-cutout.webp`)}"`) && photo.includes(`sizes="${PHOTO_SIZES}"`), `${id}.html: the photo picks its size`);
+    if (hasGallery(id)) assert.match(photo, new RegExp(`src="assets/vistas/${id}-frente\\.webp`), `${id}.html: opens on the real-photo gallery`);
+    else assert.ok(photo.includes(`srcset="${artSrcset(`product-${id}-cutout.webp`)}"`) && photo.includes(`sizes="${PHOTO_SIZES}"`), `${id}.html: the photo picks its size`);
   }
+  assert.match(read('tools/build-product-pages.cjs'), /data\.artSrcset\(product\.catalogImage \|\| product\.image\) \? ` srcset=/, 'a piece without gallery photos keeps the srcset');
   assert.equal(Object.keys(ART_768).length, 4);
   // C6: one label for the action that opens the configurator
   for (const file of ['dist/catalog.js', 'dist/produtos.html', 'dist/hero-demo.js', 'dist/index.html', 'dist/carousel.js']) assert.doesNotMatch(read(file), /Personalize o seu|PERSONALIZE O SEU/, `${file}: "Personalizar o meu"`);

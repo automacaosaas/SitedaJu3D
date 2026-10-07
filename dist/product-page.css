@@ -142,6 +142,8 @@
 #product-dialog .pdp-price strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; color: var(--pd-text); font-variant-numeric: tabular-nums; }
 .pdp-pix { padding: 4px 11px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; }
 #product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--pd-muted); text-align: left; }
+#product-dialog .pdp-price .pdp-offer { display: block; margin-top: 2px; color: var(--pd-accent); font-weight: 650; }
+#product-dialog .pdp-price .pdp-offer[hidden] { display: none; }
 #product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
 #product-dialog #purchase-panel { display: grid; gap: 8px; }
 #product-dialog .purchase-status:empty { display: none; }
@@ -240,14 +242,21 @@
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }
-  #product-dialog .modal-actions { gap: 10px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); }
-  #product-dialog .pdp-price strong { font-size: 23px; }
+  /* A compra, mais baixa (06/10/2026, "reduzir essa seção"): preço, Pix e "3x" numa linha só (o "3x" à direita, em duas linhas
+     curtas), a oferta do 2.º avião logo embaixo e os botões com 44 px de altura (o mínimo para o dedo). */
+  #product-dialog .modal-actions { gap: 8px; padding: 16px 16px max(10px, env(safe-area-inset-bottom)); }
+  #product-dialog .pdp-price { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; }
+  #product-dialog .pdp-price p { grid-column: 1; grid-row: 1; flex-wrap: nowrap; gap: 8px; }
+  #product-dialog .pdp-price strong { font-size: 22px; line-height: 1.15; }
+  #product-dialog .pdp-pix { padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+  #product-dialog .pdp-price > small:not(.pdp-offer) { grid-column: 2; grid-row: 1; justify-self: end; max-width: 98px; line-height: 1.25; text-align: right; }
+  #product-dialog .pdp-price .pdp-offer { grid-column: 1 / -1; margin: 0; }
   #product-dialog .purchase-actions { gap: 8px; }
-  #product-dialog .purchase-actions .primary { min-height: 50px; padding: 0 8px; gap: 6px; font-size: 13px; white-space: nowrap; }
+  #product-dialog .purchase-actions .primary { min-height: 44px; padding: 0 8px; gap: 6px; border-radius: 12px; font-size: 13px; white-space: nowrap; }
   #product-dialog .purchase-actions .primary .icon { width: 18px; height: 18px; }
   .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #14231b24; transform: translateY(100%); }
 }
-@media (max-width: 374px) { #product-dialog #add-to-cart .icon { display: none; } }
+@media (max-width: 374px) { #product-dialog .modal-actions:not(.is-compact) #add-to-cart .icon, #product-dialog[data-cart-edit] #add-to-cart .icon { display: none; } }
 @media (max-width: 374px) { #product-dialog .viewer-tools button { min-width: 32px; padding: 0 7px; } }
 @media (max-width: 600px) and (max-height: 700px) {
   #product-dialog .pdp-heading .detail-subtitle { display: none; }
@@ -258,3 +267,37 @@
   .pdp-sheet, #product-dialog .swatch i { transition: none; }
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
+/* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */
+#dialog-description .contact-mail { color: var(--pd-accent, var(--rose)); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+
+/* O resumo da compra recolhe e abre (06/10/2026, pedido do Luiz: "a linha que a pessoa possa diminuir o resumo"; vale para o site
+   todo). Uma alça no topo (puxar para baixo ou tocar) recolhe o resumo numa linha só: o preço, o carrinho (só o ícone; o nome continua
+   para o leitor de tela) e "Comprar agora". No celular começa recolhido, com a linha pulsando até a pessoa personalizar ou trocar
+   Foto/3D (purchase-sheet.js). Sem balão aqui: o "Ver resumo" fica só no carrinho. */
+#product-dialog .pdp-grip { position: absolute; top: -12px; left: 50%; z-index: 3; display: grid; place-items: center; width: 72px; height: 24px; padding: 0; border: 0; background: transparent; cursor: grab; transform: translateX(-50%); touch-action: none; }
+#product-dialog .pdp-grip i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #c7d2cc; box-shadow: 0 0 0 3px #fff; transition: width .3s var(--pd-ease), background-color .25s ease; }
+#product-dialog .pdp-grip:hover i, #product-dialog .pdp-grip:focus-visible i { width: 52px; background: var(--pd-accent); }
+#product-dialog .pdp-grip:focus-visible { outline: none; }
+#product-dialog .pdp-grip:active { cursor: grabbing; }
+#product-dialog[data-mode=preview] .pdp-grip { display: none; }
+/* a linha chamando: pulsa e sobe um pouco, como quem diz "puxe" */
+#product-dialog .pdp-grip.is-calling i { animation: pdp-grip-call 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
+#product-dialog .pdp-grip.is-calling::after { content: ''; position: absolute; left: 50%; top: 50%; width: 40px; height: 5px; border-radius: 3px; background: var(--pd-accent); transform: translate(-50%, -50%); animation: pdp-grip-ring 1.6s cubic-bezier(.2, .6, .35, 1) infinite; pointer-events: none; }
+@keyframes pdp-grip-call { 0%, 100% { transform: translateY(0); width: 40px; background: #c7d2cc; } 45% { transform: translateY(-4px); width: 54px; background: var(--pd-accent); } }
+@keyframes pdp-grip-ring { 0% { opacity: .35; transform: translate(-50%, -50%) scale(1); } 70%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9, 3.2); } }
+#product-dialog .modal-actions.is-moving { overflow: clip; }
+#product-dialog .modal-actions.is-compact { grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; }
+#product-dialog .modal-actions.is-compact > .pdp-soon-bar { grid-column: 1 / -1; }
+#product-dialog .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }
+#product-dialog .modal-actions.is-compact .purchase-status { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+#product-dialog .modal-actions.is-compact .pdp-price { grid-column: 1; min-width: 0; }
+#product-dialog .modal-actions.is-compact .pdp-price p { flex-wrap: nowrap; }
+#product-dialog .modal-actions.is-compact .pdp-price strong { font-size: 22px; line-height: 1.15; white-space: nowrap; }
+#product-dialog .modal-actions.is-compact :is(.pdp-pix, .pdp-price > small, .purchase-free-ship) { display: none; }
+#product-dialog .modal-actions.is-compact .pdp-price .pdp-offer { display: none; }
+#product-dialog .modal-actions.is-compact .purchase-actions .primary { min-height: 48px; padding: 0 18px; border-radius: 14px; white-space: nowrap; }
+#product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart { width: 48px; padding: 0; }
+#product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#product-dialog[data-cart-edit] .modal-actions.is-compact #add-to-cart { grid-column: 2 / -1; }
+@media (max-width: 374px) { #product-dialog .modal-actions.is-compact #buy-now { padding: 0 10px; font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-grip.is-calling i, #product-dialog .pdp-grip.is-calling::after { animation: none; } }

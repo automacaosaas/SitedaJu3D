@@ -96,8 +96,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   const quote = await call(h['international-quote'], {body: {country: 'MX', items: lines}, cookie});
   assert.equal(quote.statusCode, 200);
   const data = quote.json();
-  assert.equal(data.piecesCents, 12900 * 2 + 15900, 'the pieces at the shop\'s prices');
-  assert.deepEqual(data.customs.items.map(i => [i.description, i.quantity, i.unitCents]), [['3D printed plastic cover for ophthalmic retinoscope', 2, 12900], ['3D printed plastic fixation target for skiascopy rack', 1, 15900]]);
+  const price = id => require('../api/_lib/catalog').PRODUCTS[id].price;   // the server catalog (prices of 05/10/2026)
+  assert.equal(data.piecesCents, price('borboletoscopio') * 2 + price('aviaoscopia'), 'the pieces at the shop\'s prices');
+  assert.deepEqual(data.customs.items.map(i => [i.description, i.quantity, i.unitCents]), [['3D printed plastic cover for ophthalmic retinoscope', 2, price('borboletoscopio')], ['3D printed plastic fixation target for skiascopy rack', 1, price('aviaoscopia')]]);
   assert.equal(data.customs.hsCode, '392690'); assert.equal(data.customs.dueLimitUsd, 1000);
   assert.deepEqual(data.options.map(o => o.code), ['45128', '45110']); assert.equal(data.refused[0].code, '45209');
   assert.equal((await call(h['international-quote'], {body: {country: 'BR', items: lines}, cookie})).json().error, 'invalid_country');

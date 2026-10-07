@@ -23,6 +23,20 @@
 .pl-drag { position: absolute; left: 50%; bottom: 18px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #ffffffc7; backdrop-filter: blur(8px); box-shadow: 0 4px 16px #2a1c2212; transform: translate(-50%, 8px); font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--pl-ink); opacity: 0; pointer-events: none; transition: opacity .4s ease, transform .4s var(--pl-ease); }
 .pl-drag svg { width: 18px; height: 18px; color: var(--pl-accent); }
 .pl-art[data-view="3d"].is-3d-ready:not(.is-touched) .pl-drag { opacity: 1; transform: translate(-50%, 0); transition-delay: .6s; }
+/* as fotos da peça em miniaturas embaixo dela (06/10/2026): a da vitrine e as fotos reais; a escolhida troca a grande num esmaecimento
+   rápido. Na foto da vitrine, uma sombra macia no chão: a peça pousa no quadrado em vez de flutuar. */
+.pl-thumbs { display: flex; justify-content: center; gap: 8px; width: 100%; max-width: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.pl-thumbs[hidden] { display: none; }
+.pl-thumbs::-webkit-scrollbar { display: none; }
+.pl-thumbs button { flex: 0 1 58px; min-width: 44px; aspect-ratio: 4 / 5; padding: 0; border: 1.5px solid #2a1c2214; border-radius: 12px; background: radial-gradient(85% 85% at 50% 40%, var(--pl-stops)); overflow: hidden; cursor: pointer; opacity: .72; transition: opacity .25s ease, border-color .25s ease, transform .3s var(--pl-spring), box-shadow .25s ease; }
+.pl-thumbs img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.pl-thumbs button[data-main] img { padding: 5px; }
+.pl-thumbs button[aria-pressed="true"] { opacity: 1; border-color: var(--pl-accent); box-shadow: 0 6px 14px color-mix(in srgb, var(--pl-accent) 22%, transparent); }
+.pl-thumbs button:focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 2px; }
+.pl-photo.is-swapping { opacity: 0; transform: scale(.97); transition-duration: .18s, .22s; }
+.pl-art[data-view="photo"] { touch-action: pan-y; }
+.pl-art::after { content: ''; position: absolute; left: 24%; right: 24%; bottom: 8.5%; height: 4.5%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, #2a1c222b, transparent); pointer-events: none; transition: opacity .4s ease; }
+.pl-art:is([data-view="3d"], .is-real)::after { opacity: 0; }
 .pl-views { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #2a1c2214; border-radius: 999px; background: #ffffff9e; backdrop-filter: blur(10px); }
 .pl-views[hidden] { display: none; }
 .pl-views button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: transparent; color: var(--pl-ink); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; transition: background .3s var(--pl-ease), color .3s var(--pl-ease); }
@@ -146,8 +160,10 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-customize:hover svg { animation: pl-tilt .6s var(--pl-spring); }
   .pl-swatch:hover { transform: scale(1.1); }
   .pl-views button[aria-pressed="false"]:hover { background: #ffffffd9; }
+  .pl-thumbs button:hover { opacity: 1; transform: translateY(-2px); }
   .pl-acc summary:hover strong { color: var(--pl-accent); }
 }
+.pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: var(--theme-accent, #1f7a4d); }
 @media (max-width: 860px) {
   .pl-main { padding: 0 16px; margin-top: 8px; }
   .pl { grid-template-columns: minmax(0, 1fr); gap: 22px; }
@@ -163,9 +179,13 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl.is-pinned .pl-art { box-shadow: 0 10px 26px #2a1c221f; }
   .pl-drag { bottom: 12px; }
   .pl.is-customizing .pl-views { display: none; }
+  .pl.is-customizing .pl-thumbs { display: none; }
   .pl-swatch { width: 42px; height: 42px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pl *, .pl *::before, .pl *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; transition-delay: 0s !important; }
   .pl-customize[aria-expanded="true"]::before { animation: none; }
 }
+/* "entre em contato" na descrição: abre o e-mail da Ju */
+.pl-desc .contact-mail { color: var(--pl-accent); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+@media (max-width: 360px) { .pl-thumbs { gap: 5px; } .pl-thumbs button { min-width: 40px; } }
