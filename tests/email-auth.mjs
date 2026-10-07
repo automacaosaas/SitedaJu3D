@@ -161,7 +161,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   const healthRes = makeRes(); await health.create({env: onlyKey})({}, healthRes);
   const {uptime, ...healthBody} = healthRes.json();
   assert(Number.isInteger(uptime) && uptime >= 0, 'seconds the process has been up');
-  assert.deepEqual(healthBody, {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
+  assert.deepEqual(healthBody, {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', social: {google: false, apple: false}, shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
 }
 
 // limiter
@@ -178,7 +178,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   // Production without a database or data keys: accounts are off and the keys are reported missing (never shown).
   const {uptime: up, ...prodHealth} = res.json();
   assert(Number.isInteger(up));
-  assert.deepEqual(prodHealth, {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
+  assert.deepEqual(prodHealth, {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', social: {google: false, apple: false}, shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
   const off = makeRes(); await health.create({env: {}})({}, off);
   assert.equal(off.json().mail, 'off');
@@ -196,7 +196,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert(/auth\.adopt\(token\)/.test(account) && /history\.replaceState\(null, '', location\.pathname \+ location\.search \+ '#verificar'\)/.test(account), 'the e-mail link is adopted and its secrets leave the address bar');
   assert(/mountLanguagePicker\(document\.querySelector\('\.account-tools'\)\)/.test(account), 'language picker in the account header');
   assert(/createBusyDialog/.test(account) && !/openProgress/.test(account), 'one loading UI: the shared busy dialog');
-  assert(/await refreshSession\(\);\nroute\(\);/.test(account), 'the page asks the server who is signed in before choosing a screen');
+  assert(/\[providers\] = await Promise\.all\(\[loadProviders\(\), refreshSession\(\)\]\);\n(?:.*\n)*?route\(\);\n?$/.test(account), 'the page asks the server who is signed in (and which sign-in buttons exist) before choosing a screen');
   assert(/identificationForm\(/.test(account) && /saveProfile\(data\)/.test(account), '"Meus dados" uses the shared identification form');
   assert(/checkout: 'checkout\.html#identificacao'/.test(account), 'signing in from the checkout returns to identification');
   assert(!/de teste(…|!)/.test(account), 'no "test account" wording in the real flow');

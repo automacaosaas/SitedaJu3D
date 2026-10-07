@@ -4,7 +4,7 @@
 const QUEUED = ['fila', 'processando', 'autorizada'];   // the NF-e queue: to send, to check, or the buyer's e-mail to send again
 
 function createMemoryStore() {
-  const customers = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
+  const customers = new Map(), identities = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
   const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map(), cashEntries = new Map(), bills = new Map(), integrationLog = [];
   let eventSerial = 0, auditSerial = 0, logSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
@@ -18,7 +18,7 @@ function createMemoryStore() {
       async findByCpfIndex(index) { return copy([...customers.values()].find(c => c.cpfIndex && key(c.cpfIndex) === key(index)) || null); },
       async create(data) {
         if ([...customers.values()].some(c => c.email === data.email)) throw Object.assign(new Error('duplicate email'), {code: 'account_exists'});
-        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, termsVersion: null, termsAcceptedAt: null, createdAt: new Date(), ...data};
+        const row = {emailVerifiedAt: null, displayName: '', firstName: null, lastName: null, passwordHash: null, cpfEnc: null, cpfIndex: null, phoneEnc: null, companyCnpj: null, companyName: null, companyIe: null, marketingOptIn: false, marketingConsentAt: null, termsVersion: null, termsAcceptedAt: null, avatarUrl: null, createdAt: new Date(), ...data};
         customers.set(row.id, row);
         return copy(row);
       },
@@ -34,11 +34,30 @@ function createMemoryStore() {
         const row = customers.get(id);
         if (!row) return false;
         customers.delete(id);
+        for (const [k, i] of identities) if (i.customerId === id) identities.delete(k);
         for (const [k, s] of sessions) if (s.customerId === id) sessions.delete(k);
         for (const [k, c] of challenges) if (c.email === row.email) challenges.delete(k);
         for (const o of orders.values()) if (o.customerId === id) o.customerId = null;
         return true;
       }
+    },
+    // Google / Apple sign-in: one row per provider account (the provider and its own id), pointing at a customer.
+    identities: {
+      async find(provider, subject) { return copy(identities.get(`${provider}|${subject}`) || null); },
+      async create(data) {
+        const id = `${data.provider}|${data.subject}`;
+        if (identities.has(id)) throw Object.assign(new Error('duplicate identity'), {code: 'identity_exists'});
+        const row = {email: null, privateEmail: false, createdAt: new Date(), lastLoginAt: null, ...data};
+        identities.set(id, row);
+        return copy(row);
+      },
+      async touch(provider, subject, {at, email = null}) {
+        const row = identities.get(`${provider}|${subject}`);
+        if (row) Object.assign(row, {lastLoginAt: at}, email ? {email} : {});
+        return Boolean(row);
+      },
+      async remove(provider, subject) { return identities.delete(`${provider}|${subject}`); },
+      async listByCustomer(customerId) { return copy([...identities.values()].filter(i => i.customerId === customerId).sort((a, b) => a.createdAt - b.createdAt)); }
     },
     orders: {
       // Same reference (a retried payment attempt) returns the existing order instead of a second one.

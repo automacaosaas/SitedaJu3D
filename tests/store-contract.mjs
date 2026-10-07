@@ -38,6 +38,24 @@ async function contract(store, label) {
   await store.sessions.revokeAllFor(id, at);
   assert.ok((await store.sessions.find(tokenHash)).revokedAt, `${label}: revoke all`);
 
+  // Google / Apple identities: one row per provider account, several per customer, gone with the customer.
+  const subject = `sub-${id.slice(0, 8)}`;
+  assert.equal(await store.identities.find('google', subject), null);
+  const identity = await store.identities.create({provider: 'google', subject, customerId: id, email, privateEmail: false, createdAt: at, lastLoginAt: at});
+  assert.deepEqual([identity.provider, identity.subject, identity.customerId, identity.email, identity.privateEmail], ['google', subject, id, email, false], `${label}: identity row`);
+  await assert.rejects(store.identities.create({provider: 'google', subject, customerId: other}), e => e.code === 'identity_exists', `${label}: one row per provider account`);
+  await store.identities.create({provider: 'apple', subject, customerId: id, email: `x${id.slice(0, 6)}@privaterelay.appleid.com`, privateEmail: true, createdAt: new Date(at.getTime() + 1000)});
+  assert.deepEqual((await store.identities.listByCustomer(id)).map(i => [i.provider, i.privateEmail]), [['google', false], ['apple', true]], `${label}: both providers, oldest first`);
+  const lastSeen = new Date(at.getTime() + 5000);
+  assert.equal(await store.identities.touch('google', subject, {at: lastSeen, email: null}), true);
+  const touched = await store.identities.find('google', subject);
+  assert.equal(new Date(touched.lastLoginAt).getTime(), lastSeen.getTime(), `${label}: last sign-in`);
+  assert.equal(touched.email, email, `${label}: touch without an e-mail keeps the one saved`);
+  assert.equal(await store.identities.remove('apple', subject), true);
+  assert.equal(await store.identities.find('apple', subject), null);
+  const withPhoto = await store.customers.update(id, {avatarUrl: 'https://lh3.googleusercontent.com/a/x=s96-c'});
+  assert.equal(withPhoto.avatarUrl, 'https://lh3.googleusercontent.com/a/x=s96-c', `${label}: profile photo`);
+
   const challengeId = crypto.randomUUID(), codeHash = crypto.randomBytes(32);
   await store.challenges.create({id: challengeId, email, purpose: 'access', codeHash, expiresAt});
   assert.equal((await store.challenges.recordAttempt(challengeId)), 1);
@@ -131,6 +149,7 @@ async function contract(store, label) {
   assert.equal(await store.customers.findById(id), null);
   assert.equal(await store.sessions.find(sessionHash), null, `${label}: sessions go with the account`);
   assert.equal(await store.challenges.find(challengeId), null, `${label}: codes for the address go too`);
+  assert.equal(await store.identities.find('google', subject), null, `${label}: the Google / Apple links go too`);
   const kept = await store.orders.findById(orderId);
   assert.equal(kept.customerId, null, `${label}: the order stays without the account link`);
   assert.equal(kept.items.length, 2);

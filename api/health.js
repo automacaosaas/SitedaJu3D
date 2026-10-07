@@ -9,6 +9,7 @@ const {keys} = require('./_lib/fields');
 const mp = require('./_lib/mercadopago');
 const admin = require('./_lib/admin-auth');
 const legal = require('./_lib/legal');
+const social = require('./_lib/social');
 const fiscal = require('./_lib/fiscal');
 const {createBling} = require('./_lib/bling');
 const shipping = require('./_lib/shipping');
@@ -36,6 +37,7 @@ function createHandler({env = process.env} = {}) {
       admin: await admin.status(storeFor(env), env),
       shipping: shipping.forEnv(env).status().mode,   // off (no Correios credentials) · pending (shop data incomplete) · correios
       legal: legal.pending() ? 'pending' : 'ok',   // store details still marked [PREENCHER] in api/_lib/legal.js
+      social: social.enabled(env),   // "Continuar com o Google / com a Apple": which providers have their credentials (SOCIAL-LOGIN.md)
       nfe: nfe.mode, fiscal: fiscal.missing(fiscal.FISCAL, {provider: nfe.provider}).length ? 'pending' : 'ok',   // NF-e issuing (off, test, live) and the tax data of api/_lib/fiscal.js
       bling: await blingState(env, nfe),   // off, not_configured (app variables missing), disconnected, connected, paused or unstable (the notes wait in the queue)
       // Seconds since this server process started (a host that stops the app when idle shows it starting over) and the

@@ -8,6 +8,7 @@
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
 //   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
 //   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
+//   node tools/dev-server.cjs --fake-social → "Continuar com o Google / com a Apple" against a local simulator (tools/fake-oauth.cjs)
 // Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -71,6 +72,13 @@ async function main() {
   if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
   // --fake-bling: the NF-e goes through a simulated Bling, with example tax data; its authorization page is local.
   const fakeBling = process.argv.includes('--fake-bling') ? createFakeBling() : null;
+  // Google / Apple sign-in: with --fake-social, test credentials and a simulator of both providers on this server.
+  let fakeSocial = null;
+  if (process.argv.includes('--fake-social')) {
+    const {createFakeOAuth, fakeCredentials} = require('./fake-oauth.cjs');
+    Object.assign(env, fakeCredentials(`${env.SITE_URL}/__fake-oauth`));
+    fakeSocial = createFakeOAuth({base: env.SOCIAL_FAKE_URL, env});
+  }
   if (fakeBling) Object.assign(env, {NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', BLING_CLIENT_ID: fakeBling.clientId, BLING_CLIENT_SECRET: fakeBling.clientSecret, BLING_AUTHORIZE_URL: `http://localhost:${PORT}/__fake-bling/authorize`});
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
@@ -135,6 +143,11 @@ async function main() {
   };
   for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
+  routes['/api/auth/providers'] = require('../api/auth/providers').create({env});
+  for (const provider of ['google', 'apple']) {
+    routes[`/api/auth/${provider}/start`] = require(`../api/auth/${provider}/start`).create({env});
+    routes[`/api/auth/${provider}/callback`] = require(`../api/auth/${provider}/callback`).create({env, fetchImpl: fakeSocial ? fakeSocial.fetchImpl : loggedFetch});
+  }
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
   // the delivery timeline asks the Correios (the simulator with --fake-correios)
   routes['/api/account/tracking'] = require('../api/account/tracking').create({env, outbox, fetchImpl: routed});
@@ -173,6 +186,7 @@ async function main() {
       if (fakeBling && url.pathname === '/__fake-bling/corrigir') { const ok = fakeBling.correct(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({corrigida: ok})); }
       // Puts the simulated Bling down (or back): ?modo=rede|lento|erro|limite|queda|gateway|corpo, or nothing for normal;
       // &vezes=N for the next N calls only; &so=POST%20/nfe for those calls only. Shows the queue and the panel's notice.
+      if (fakeSocial && url.pathname.startsWith('/__fake-oauth/') && await fakeSocial.handle(req, res, url)) return;
       if (fakeBling && url.pathname === '/__fake-bling/falha') {
         const mode = url.searchParams.get('modo') || null, times = Number(url.searchParams.get('vezes')) || null;
         if (mode && !['rede', 'lento', 'erro', 'limite', 'queda', 'gateway', 'corpo'].includes(mode)) { res.statusCode = 400; return res.end('modo: rede, lento, erro, limite, queda, gateway ou corpo'); }
@@ -203,6 +217,8 @@ async function main() {
     const real = env.MAIL_TRANSPORT !== 'console';
     console.log(`Pagamentos: ${fakeMp ? `SIMULADOS (Mercado Pago e Brick de mentira). Para "pagar" um Pix aberto: http://localhost:${PORT}/__fake-mp/pay?id=<código do pedido>` : env.MP_ACCESS_TOKEN ? 'Mercado Pago de TESTE (credenciais informadas)' : 'desligados (o checkout usa a demonstração)'}`);
     console.log(`Painel da Ju: http://localhost:${PORT}/admin.html  (e-mail ${env.ADMIN_EMAIL} · senha ${env.ADMIN_PASSWORD})`);
+    const socialOn = require('../api/_lib/social').enabled(env);
+    console.log(`Entrar com Google / Apple: ${fakeSocial ? 'SIMULADOS (tela de teste em /__fake-oauth)' : [socialOn.google && 'Google', socialOn.apple && 'Apple'].filter(Boolean).join(' e ') || 'desligados (sem credenciais)'}`);
     console.log(`\nSite + API em http://localhost:${PORT}  (e-mails: ${real ? 'enviados de verdade pelo Resend' : 'gravados em ' + outboxDir})`);
     if (real) console.log(`Abra http://localhost:${PORT}/conta.html, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
   });

@@ -347,3 +347,31 @@
   .order-card, .order-track-toggle, .order-steps::after, .order-collapse, .order-collapse[data-open="true"] { transition: none; }
   .order-card:hover, .order-track-toggle:hover { transform: none; }
 }
+
+/* ── "Continuar com o Google / com a Apple" (account.js socialBlock) ────────────────────────────────────────────────
+   After the brands' guidelines: Google's button is white with the "G" in its four colours, a #747775 outline and Roboto
+   Medium in #1F1F1F; Apple's is black with its logo and title in white, in the system font. Both the same size and
+   weight, full width, under the e-mail form, after a divider ("ou entre com"). */
+.social-login { margin: 22px 0 6px; }
+.social-divider { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 12px; letter-spacing: .4px; color: var(--auth-muted); }
+.social-divider::before, .social-divider::after { content: ''; flex: 1; height: 1px; background: var(--auth-line); }
+.social-buttons { display: grid; gap: 10px; }
+.social-button { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 14px; font-size: 15px; line-height: 1; text-decoration: none; transition: background-color .2s, box-shadow .2s, opacity .2s; }
+.social-button .social-logo { flex: none; width: 20px; height: 20px; }
+.social-google { background: #fff; color: #1f1f1f; border: 1px solid #747775; font-family: 'Roboto', 'DM Sans', Arial, sans-serif; font-weight: 500; }
+.social-google:hover { background: #f8f9fa; box-shadow: 0 1px 3px #3c40434d; }
+.social-apple { background: #000; color: #fff; border: 1px solid #000; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 500; }
+.social-apple .social-logo { width: 17px; height: 20px; margin-top: -3px; }
+.social-apple:hover { background: #1d1d1f; }
+.social-button:focus-visible { outline: 2px solid var(--auth-rose); outline-offset: 3px; }
+.social-button.is-going { opacity: .6; pointer-events: none; }
+.social-button.is-going::after { content: ''; position: absolute; right: 16px; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: auth-spin .8s linear infinite; }
+.social-terms { margin-top: 12px; }
+
+/* The photo of a Google account, beside the name. */
+.profile-summary { position: relative; }
+.profile-avatar { float: right; width: 64px; height: 64px; margin: -4px -4px 8px 12px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 14px #4f223622; }
+
+/* The welcome after a first sign-in with Google or Apple: only the missing fields. */
+.id-compact .id-grid { grid-template-columns: 1fr; }
+@media (prefers-reduced-motion: reduce) { .social-button.is-going::after { animation: none; } }

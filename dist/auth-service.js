@@ -22,8 +22,26 @@ const MESSAGES = {
   data_keys_missing: 'As contas estão indisponíveis no momento. Tente novamente mais tarde.',
   unauthorized: 'Sua sessão terminou. Entre de novo para continuar.',
   cpf_in_use: 'Este CPF já está ligado a outra conta.',
-  forbidden: 'Não foi possível confirmar este pedido. Recarregue a página e tente de novo.'
+  forbidden: 'Não foi possível confirmar este pedido. Recarregue a página e tente de novo.',
+  // "Continuar com o Google / com a Apple": the server sends these back in the address (conta.html#entrar?erro=…).
+  social_unavailable: 'Este jeito de entrar ainda não está disponível. Entre com o seu e-mail.',
+  social_cancelled: 'A entrada foi cancelada. Tudo bem: escolha outro jeito de entrar.',
+  social_expired: 'O acesso demorou demais ou foi aberto em outra janela. Tente de novo.',
+  social_failed: 'Não foi possível entrar agora. Tente de novo ou use o seu e-mail.',
+  social_email_unverified: 'Não conseguimos confirmar o e-mail dessa conta. Entre com o código enviado ao seu e-mail.'
 };
+export const socialMessage = code => MESSAGES[code] || MESSAGES.social_failed;
+// The sign-in with a provider is a full-page round trip through the server (api/auth/<provider>/start); `next` brings the
+// buyer back to the checkout or to "Meus pedidos" afterwards.
+export const socialStartUrl = (provider, next = '') => `/api/auth/${provider}/start${next ? `?next=${encodeURIComponent(next)}` : ''}`;
+// Which providers are configured on the server (their buttons show only then). Asked once per page.
+let providers = null;
+export function loadProviders(fetchImpl = (...args) => fetch(...args)) {
+  providers ??= fetchImpl('/api/auth/providers', {credentials: 'same-origin', cache: 'no-store'})
+    .then(response => response.ok ? response.json() : {}).then(data => ({google: data?.google === true, apple: data?.apple === true}))
+    .catch(() => ({google: false, apple: false}));
+  return providers;
+}
 const FIELDS = {
   name: 'Informe seu nome (até 100 caracteres).', password: 'Use uma senha com 8 a 128 caracteres.',
   firstName: 'Informe seu nome.', lastName: 'Informe seu sobrenome.', cpf: 'Confira o CPF.', phone: 'Informe um telefone com DDD.',
@@ -48,7 +66,7 @@ export function createClient({fetchImpl = (...args) => fetch(...args), language 
   let cached = null, pending = null;
   try { cached = readCache(); } catch {}
   function remember(user) {
-    cached = user ? {name: user.name, email: user.email, marketingOptIn: user.marketingOptIn === true, hasPassword: user.hasPassword === true, profileComplete: user.profileComplete === true} : null;
+    cached = user ? {name: user.name, email: user.email, marketingOptIn: user.marketingOptIn === true, hasPassword: user.hasPassword === true, profileComplete: user.profileComplete === true, ...(typeof user.avatar === 'string' && user.avatar.startsWith('https://lh3.googleusercontent.com/') ? {avatar: user.avatar} : {})} : null;
     try { if (cached) sessionStorage.setItem(SESSION_KEY, JSON.stringify(cached)); else sessionStorage.removeItem(SESSION_KEY); } catch {}
     return cached;
   }
