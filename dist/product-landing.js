@@ -67,7 +67,7 @@ function setup(root, key) {
   }
   views.addEventListener('click', event => { const b = event.target.closest('[data-pl-view]'); if (b && b.dataset.plView !== view) setView(b.dataset.plView); });
 
-  // ── as fotos (06/10/2026): embaixo da peça, a da vitrine e as fotos reais (gallery.js) em miniaturas; a escolhida troca a grande
+  // ── as fotos (06/10/2026): embaixo da peça, as fotos reais (gallery.js) em miniaturas (a da vitrine, de outra cor, saiu); a escolhida troca a grande
   // com um esmaecimento (com o mouse, basta passar por cima), e no celular a foto grande também passa de lado com o dedo. ──
   const thumbs = q('[data-pl-thumbs]'), photo = q('.pl-photo');
   if (thumbs) {

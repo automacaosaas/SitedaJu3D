@@ -93,7 +93,11 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Borboleta 3D, rosto (06/10/2026):** a cabeça do arquivo de impressão do Luiz (`BORBOLETA COMPLETO.3mf`, Bambu Studio) no corpo do
   site: `tools/modelo-borboleta/trocar_cabeca.py` tira a cabeça antiga e põe a do 3MF no centro dela (mesma largura); olhos e
   sobrancelhas vêm da pintura do arquivo, o sorriso (arco em relevo) e as bochechas (ovais em volta do relevo) ganham as cores da peça real
-  (preto e rosa), rosto creme. Materiais: body, details, face, eyes, cheeks. Depois `tools/modelo-novidades/reduzir-comprimir.cjs`.
+  (preto e rosa), rosto creme. Acerto de 06/10 à noite: o brilho de cada olho é rosa, o sorriso é a faixa sobre o arco do sulco (o
+  círculo ajustado no fundo dele) e as bochechas ficam dentro da borda em relevo, como na peça real. Materiais: body, details, face, eyes, cheeks.
+- **Fotos reais, recorte liso (06/10/2026):** `smoothEdge` em `tools/galeria-vistas/vistas.html` alisa o contorno no quadro final
+  (gaussiana e novo corte com antisserrilhado; a cor da beirada vem de dentro da peça). Na página de cada peça, só as fotos reais
+  (a foto da vitrine, de outra cor, saiu das miniaturas e da foto grande). Depois `tools/modelo-novidades/reduzir-comprimir.cjs`.
 - **Dinossauro 3D (05/10/2026):** o modelo do Meshy (`Meshy_AI__1005212758_model-edit.glb`, só a forma), com os 2 espinhos da peça
   nova, pintado por `tools/modelo-dino/meshy/preparar_meshy.py` (Blender 5.2): cada parte é o relevo cercado pelo sulco dele — body;
   details (os 2 espinhos e as 5 bolinhas de cada pé); eyes (olhos e sobrancelhas); teeth (4 dentes); highlight (o brilho oval de cada

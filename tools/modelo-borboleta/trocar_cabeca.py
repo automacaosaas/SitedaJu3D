@@ -1,7 +1,7 @@
 """Borboletoscópio: o corpo e as gotas do modelo do site com a cabeça do arquivo de impressão (06/10/2026, pedido do Luiz: "lapidar
 rosto da borboleta no 3D; ver se consegue melhorar as cores"). A cabeça vem de `BORBOLETA COMPLETO.3mf` (Bambu Studio): a forma
 exata da peça impressa, com os olhos e as sobrancelhas pintados no 2.º filamento; o sorriso e as bochechas são relevo, e ganham as
-cores da peça real (foto do Luiz): sorriso preto, bochechas rosadas, rosto creme. O brilho de cada olho (sem pintura) fica creme.
+cores da peça real (foto do Luiz): sorriso preto, bochechas rosadas, rosto creme, o brilho de cada olho rosa.
 (Montar a peça inteira do 3MF, tools/modelo-borboleta/montar_3mf.py, deixa as gotas das asas como encaixes vazios: elas são
 impressas à parte, e ao enchê-los a malha dobra. O corpo do site, com as gotas em relevo, fica.)
 
@@ -86,27 +86,53 @@ def parts(mask):
         if rf != rg: parent[max(rf, rg)] = min(rf, rg)
     idx = np.where(mask)[0]; roots = np.array([find(i) for i in idx])
     return sorted((idx[roots == r] for r in np.unique(roots)), key=len, reverse=True)
-# o sorriso: só o arco (as regiões grandes do relevo no meio, abaixo dos olhos; um pontinho solto não entra)
-smile = np.zeros(n, bool)
-for p in parts(~painted & front & (np.abs(x) < 5.6) & (z > -8.8) & (z < -3.6) & (hrel > .12)):
-    if len(p) >= 200: smile[p] = True
-# as bochechas: um oval liso em volta do relevo de cada uma (a mancha da textura saía quadrada), um pouco maior que ele
+# O rosto como na peça real (foto do Luiz; 06/10/2026, "conserte a cara da borboleta"). No arquivo de impressão (mapa do relevo):
+# - o sorriso é um sulco raso em arco (no arquivo de impressão quase não tem profundidade): o arco é o círculo que passa pelo fundo do
+#   sulco (as faces mais fundas da região da boca, em fatias de x), e preta é uma faixa de 1 mm sobre ele (como na foto), com as pontas arredondadas
+smile_zone = (np.abs(x) < 6.5) & (z > -8.2) & (z < -3.2) & ~painted & front
+pts = []
+for x0 in np.arange(-5.2, 5.21, .4):
+    m = smile_zone & (np.abs(x - x0) < .2)
+    if m.sum() > 20: i = np.where(m)[0][np.argmin(hrel[m])]; pts.append((x[i], z[i]))
+pts = np.array(pts)
+for it in range(3):          # círculo pelos pontos (mínimos quadrados), tirando os que ficam longe dele
+    M_ = np.column_stack([pts[:, 0], pts[:, 1], np.ones(len(pts))]); D, E_, F_ = np.linalg.lstsq(M_, -(pts[:, 0] ** 2 + pts[:, 1] ** 2), rcond=None)[0]
+    cx, cz = -D / 2, -E_ / 2; R = np.sqrt(cx * cx + cz * cz - F_); res = np.abs(np.hypot(pts[:, 0] - cx, pts[:, 1] - cz) - R)
+    keep = res < max(.25, 2.5 * np.median(res))
+    if keep.all(): break
+    pts = pts[keep]
+xa, xb = pts[:, 0].min(), pts[:, 0].max()
+ends = [(xa, cz - np.sqrt(max(R * R - (xa - cx) ** 2, 0))), (xb, cz - np.sqrt(max(R * R - (xb - cx) ** 2, 0)))]
+on_arc = (np.abs(np.hypot(x - cx, z - cz) - R) < .5) & (x >= xa) & (x <= xb) & (z < cz)
+caps = np.zeros(n, bool)
+for ex, ez in ends: caps |= np.hypot(x - ex, z - ez) < .5
+smile = smile_zone & (on_arc | caps)
+print('SORRISO arco: centro (%.2f, %.2f) mm, raio %.2f mm, de x %.1f a %.1f; %d pontos, desvio %.3f mm' % (cx, cz, R, xa, xb, len(pts), np.median(res)), flush=True)
+# - o brilho de cada olho: o círculo sem pintura cercado pelo preto do olho; na peça real ele é rosa
+shine = np.zeros(n, bool)
+nbr = [[] for _ in range(n)]
+for f, g in Ph2: nbr[f].append(g); nbr[g].append(f)
+for p in parts(~painted & (z > -2) & (np.abs(x) > 1.5) & (np.abs(x) < 11) & (Ch[:, 1] - ctr[1] / s < 0)):
+    if len(p) > 3000: continue
+    ps = set(p.tolist())
+    if all(painted[m] for f in p for m in nbr[f] if m not in ps): shine[p] = True
+# - as bochechas: o oval com a borda em relevo de cada lado; rosa até a borda (antes um oval 30% maior saía da beirada do rosto)
 cheeks = np.zeros(n, bool)
 for side in (-1, 1):
-    zone = ~painted & front & (side * x > 5.8) & (side * x < 11) & (z > -7.8) & (z < -3.2) & (hrel > .12)
-    ps = parts(zone)
+    zone = ~painted & front & (side * x > 5.8) & (side * x < 11.5) & (z > -8) & (z < -3)
+    ps = parts(zone & (hrel > .25))
     if not ps: continue
-    p = ps[0]; cxz = np.array([x[p].mean(), z[p].mean()]); rx = max(np.ptp(x[p]) / 2 * 1.3, 1.9); rz = max(np.ptp(z[p]) / 2 * 1.3, 1.4)
-    cheeks |= ~painted & ~smile & front & (((x - cxz[0]) / rx) ** 2 + ((z - cxz[1]) / rz) ** 2 < 1)
-    print('BOCHECHA centro (%.1f, %.1f) mm, raios %.1f x %.1f mm' % (*cxz, rx, rz), flush=True)
-print('ROSTO olhos e sobrancelhas %d, sorriso %d, bochechas %d faces' % (int(painted.sum()), int(smile.sum()), int(cheeks.sum())), flush=True)
+    p = ps[0]; cxz = np.array([(x[p].min() + x[p].max()) / 2, (z[p].min() + z[p].max()) / 2]); rx, rz = np.ptp(x[p]) / 2, np.ptp(z[p]) / 2
+    cheeks |= zone & (((x - cxz[0]) / rx) ** 2 + ((z - cxz[1]) / rz) ** 2 < 1)
+    print('BOCHECHA centro (%.1f, %.1f) mm, oval %.1f x %.1f mm' % (*cxz, 2 * rx, 2 * rz), flush=True)
+print('ROSTO olhos e sobrancelhas %d, brilho rosa %d, sorriso %d, bochechas %d faces' % (int(painted.sum()), int(shine.sum()), int(smile.sum()), int(cheeks.sum())), flush=True)
 
 def lin(h): c = np.array([int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]); return tuple(np.where(c <= .04045, c / 12.92, ((c + .055) / 1.055) ** 2.4)) + (1,)
 def mat(name, hexc, rough):
     mt = bpy.data.materials.get(name) or bpy.data.materials.new(name); mt.use_nodes = True; bs = mt.node_tree.nodes.get('Principled BSDF')
     bs.inputs['Base Color'].default_value = lin(hexc); bs.inputs['Roughness'].default_value = rough; bs.inputs['Metallic'].default_value = 0; return mt
-hm.materials.append(mat('face', '#f4d6a6', .42)); hm.materials.append(mat('eyes', '#1d1a1d', .28)); hm.materials.append(mat('cheeks', '#f08b9c', .42))
-cls = np.zeros(n, np.int32); cls[painted | smile] = 1; cls[cheeks] = 2
+hm.materials.append(mat('face', '#f7e1b0', .42)); hm.materials.append(mat('eyes', '#1d1a1d', .28)); hm.materials.append(mat('cheeks', '#f2a0ac', .42))
+cls = np.zeros(n, np.int32); cls[painted | smile] = 1; cls[cheeks | shine] = 2
 hm.polygons.foreach_set('material_index', cls); hm.update()
 for p in hm.polygons: p.use_smooth = True
 bpy.ops.object.select_all(action='DESELECT'); head.select_set(True); bpy.context.view_layer.objects.active = head

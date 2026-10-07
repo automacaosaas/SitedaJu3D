@@ -272,20 +272,19 @@
 
 /* O resumo da compra recolhe e abre (06/10/2026, pedido do Luiz: "a linha que a pessoa possa diminuir o resumo"; vale para o site
    todo). Uma alça no topo (puxar para baixo ou tocar) recolhe o resumo numa linha só: o preço, o carrinho (só o ícone; o nome continua
-   para o leitor de tela) e "Comprar agora". Recolhido, um balãozinho "Ver resumo" chama para abrir de novo (purchase-sheet.js). */
+   para o leitor de tela) e "Comprar agora". No celular começa recolhido, com a linha pulsando até a pessoa personalizar ou trocar
+   Foto/3D (purchase-sheet.js). Sem balão aqui: o "Ver resumo" fica só no carrinho. */
 #product-dialog .pdp-grip { position: absolute; top: -12px; left: 50%; z-index: 3; display: grid; place-items: center; width: 72px; height: 24px; padding: 0; border: 0; background: transparent; cursor: grab; transform: translateX(-50%); touch-action: none; }
 #product-dialog .pdp-grip i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #c7d2cc; box-shadow: 0 0 0 3px #fff; transition: width .3s var(--pd-ease), background-color .25s ease; }
 #product-dialog .pdp-grip:hover i, #product-dialog .pdp-grip:focus-visible i { width: 52px; background: var(--pd-accent); }
 #product-dialog .pdp-grip:focus-visible { outline: none; }
 #product-dialog .pdp-grip:active { cursor: grabbing; }
-#product-dialog[data-mode=preview] :is(.pdp-grip, .pdp-balloon) { display: none; }
-#product-dialog .pdp-balloon { position: absolute; left: 14px; bottom: calc(100% + 12px); z-index: 3; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--pd-text); color: #fff; font: inherit; font-size: 13px; font-weight: 650; box-shadow: 0 10px 22px #14231b33; cursor: pointer; animation: pdp-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, pdp-balloon-bob 2.4s 1s ease-in-out infinite; }
-#product-dialog .pdp-balloon::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--pd-text); border-bottom: 0; }
-#product-dialog .pdp-balloon svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#product-dialog .pdp-balloon[hidden] { display: none; }
-#product-dialog .pdp-balloon:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 3px; }
-@keyframes pdp-balloon-in { from { opacity: 0; transform: translateY(8px) scale(.9); } }
-@keyframes pdp-balloon-bob { 50% { transform: translateY(-3px); } }
+#product-dialog[data-mode=preview] .pdp-grip { display: none; }
+/* a linha chamando: pulsa e sobe um pouco, como quem diz "puxe" */
+#product-dialog .pdp-grip.is-calling i { animation: pdp-grip-call 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
+#product-dialog .pdp-grip.is-calling::after { content: ''; position: absolute; left: 50%; top: 50%; width: 40px; height: 5px; border-radius: 3px; background: var(--pd-accent); transform: translate(-50%, -50%); animation: pdp-grip-ring 1.6s cubic-bezier(.2, .6, .35, 1) infinite; pointer-events: none; }
+@keyframes pdp-grip-call { 0%, 100% { transform: translateY(0); width: 40px; background: #c7d2cc; } 45% { transform: translateY(-4px); width: 54px; background: var(--pd-accent); } }
+@keyframes pdp-grip-ring { 0% { opacity: .35; transform: translate(-50%, -50%) scale(1); } 70%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9, 3.2); } }
 #product-dialog .modal-actions.is-moving { overflow: clip; }
 #product-dialog .modal-actions.is-compact { grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; }
 #product-dialog .modal-actions.is-compact > .pdp-soon-bar { grid-column: 1 / -1; }
@@ -301,4 +300,4 @@
 #product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 #product-dialog[data-cart-edit] .modal-actions.is-compact #add-to-cart { grid-column: 2 / -1; }
 @media (max-width: 374px) { #product-dialog .modal-actions.is-compact #buy-now { padding: 0 10px; font-size: 13px; } }
-@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-balloon { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-grip.is-calling i, #product-dialog .pdp-grip.is-calling::after { animation: none; } }

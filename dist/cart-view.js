@@ -208,7 +208,11 @@ export function watchSummary(root) {
   summaryWatch?.disconnect();
   const summary = root.querySelector('.cart-order-summary'), bar = root.querySelector('.cart-checkout-bar');
   if (!summary || !bar || !('IntersectionObserver' in window)) return;
-  summaryWatch = new IntersectionObserver(([entry]) => bar.classList.toggle('is-at-summary', entry.isIntersecting), {threshold: .35});
+  // a setinha do balão aponta para onde está o resumo: para baixo enquanto ele está mais abaixo, para cima depois que a pessoa passou dele
+  summaryWatch = new IntersectionObserver(([entry]) => {
+    bar.classList.toggle('is-at-summary', entry.isIntersecting);
+    if (!entry.isIntersecting) bar.classList.toggle('summary-above', entry.boundingClientRect.top < 0);
+  }, {threshold: .35});
   summaryWatch.observe(summary.querySelector('.amounts') || summary);
 }
 

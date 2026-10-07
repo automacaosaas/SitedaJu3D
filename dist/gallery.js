@@ -14,7 +14,7 @@ export const GALLERY={
 export const viewsOf=key=>GALLERY[key]?STANDARD.map(([id,name])=>({id,name:id==='detalhe'?GALLERY[key].detalhe:name,zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const hasGallery=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='12';
+export const VIEWS_VERSION='13';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){

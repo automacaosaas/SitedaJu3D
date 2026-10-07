@@ -30,19 +30,21 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
   return probe(x,height)-around.reduce((s,v)=>s+v,0)/around.length;
  };
  if(key==='borboletoscopio'){
-  // 2026-10-06: the head of the print file (BORBOLETA COMPLETO.3mf, tools/modelo-borboleta/trocar_cabeca.py) on the site's body: big
-  // round black eyes with a cream shine, thin black eyebrows, a black smile arc and pink oval cheeks on a cream face.
+  // 2026-10-06: the head of the print file (BORBOLETA COMPLETO.3mf, tools/modelo-borboleta/trocar_cabeca.py) on the site's body, in the
+  // colors of the real piece: big round black eyes with a PINK shine, thin black eyebrows, a black smile arc (along the shallow groove)
+  // and small pink oval cheeks (inside their raised rim) on a cream face.
   for(const sx of [-1,1]){
-   assert.equal(materialAt(sx*.10,.53),'eyes','Big round eye');
-   assert.equal(materialAt(sx*.069,.554),'face','The shine of each eye (unpainted in the print file) is cream');
-   assert.equal(materialAt(sx*.13,.54),'face','Face beside the eye');
+   assert.equal(materialAt(sx*.095,.53),'eyes','Big round eye');
+   assert.equal(materialAt(sx*.069,.556),'cheeks','The shine of each eye is pink, like the real piece');
+   assert.equal(materialAt(sx*.15,.53),'face','Face beside the eye');
    assert.equal(materialAt(sx*.08,.596),'face','Face between the eye and the eyebrow');
-   assert.equal(materialAt(sx*.078,.614),'eyes','Thin black eyebrow');
-   assert.equal(materialAt(sx*.078,.626),'face','The eyebrow is thin (above it)');
-   assert.ok([-.003,0,.003].some(dx=>materialAt(sx*.042+dx,.446)==='eyes'),'Black smile arc');
-   assert.equal(materialAt(sx*.12,.458),'cheeks','Pink oval cheek');
-   assert.equal(materialAt(sx*.17,.458)!=='cheeks',true,'The cheek is an oval, not the whole side of the face');
-   assert.equal(materialAt(0,.425),'face','Cream under the smile');
+   assert.equal(materialAt(sx*.083,.614),'eyes','Thin black eyebrow');
+   assert.equal(materialAt(sx*.083,.626),'face','The eyebrow is thin (above it)');
+   assert.equal(materialAt(sx*.03,.446),'eyes','Black smile arc');
+   assert.equal(materialAt(sx*.104,.458),'cheeks','Small pink oval cheek');
+   assert.notEqual(materialAt(sx*.15,.458),'cheeks','The cheek stays inside its rim, off the edge of the face');
+   assert.equal(materialAt(0,.425),'face','Cream under the smile (no band below it)');
+   assert.equal(materialAt(sx*.04,.47),'face','Cream above the smile (only the arc is black)');
    assert.equal(materialAt(sx*.464,.063),'details','Front wing dots remain yellow');
    assert.equal(materialAt(sx*.463,.062,true),'details','Back wing dots remain yellow');
    // The small dots are real, discreet domes on both faces (not flat painted circles).

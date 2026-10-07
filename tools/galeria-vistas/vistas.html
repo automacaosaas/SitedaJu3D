@@ -118,6 +118,27 @@ function place(canvas){const {w,h,px}=pixels(canvas);let x0=w,y0=h,x1=-1,y1=-1;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(px[(y*w+x)*4+3]>24){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
   const [W,H]=FRAME,k=Math.min(TALL*H/(y1-y0+1),WIDE*W/(x1-x0+1)),sw=W/k,sh=H/k;
   const out=resample(canvas,[(x0+x1+1)/2-sw/2,y1+1-(1-BASE)*sh,sw,sh],W,H);out.scale=k;return out;}
+// Contorno liso (06/10/2026: "parece que foi recortado por uma criança"). A foto do Luiz é comprimida, e o recorte dela sai serrilhado e
+// ondulado. Aqui, no quadro final: a transparência é alisada (gaussiana de `sigma` pixels, que tira os dentes e as ondinhas menores que
+// ela) e cortada de novo no meio, com 1,5 pixel de transição (borda suave, sem degrau), um pouco para dentro (sem o fio do fundo); a cor
+// da beirada vem de dentro da peça (espalhada para fora a partir do que é sólido), sem a mistura com o fundo.
+function smoothEdge(canvas,sigma){
+  const W=canvas.width,H=canvas.height,g=context(canvas),img=g.getImageData(0,0,W,H),px=img.data,N=W*H;
+  const n=Math.ceil(3*sigma),K=[];let sum=0;for(let i=-n;i<=n;i++){const v=Math.exp(-i*i/(2*sigma*sigma));K.push(v);sum+=v;}for(let i=0;i<K.length;i++)K[i]/=sum;
+  const a0=new Float32Array(N),t=new Float32Array(N),b=new Float32Array(N);for(let i=0;i<N;i++)a0[i]=px[i*4+3]/255;
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-n;j<=n;j++)v+=K[j+n]*a0[r*W+Math.min(W-1,Math.max(0,c+j))];t[r*W+c]=v;}
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-n;j<=n;j++)v+=K[j+n]*t[Math.min(H-1,Math.max(0,r+j))*W+c];b[r*W+c]=v;}
+  const a1=new Float32Array(N);for(let i=0;i<N;i++)a1[i]=Math.min(1,Math.max(0,(b[i]-.55)/.16+.5));
+  // a cor de dentro, espalhada para a beirada: os pixels sólidos são conhecidos; cada passada dá a quem falta a média dos vizinhos conhecidos
+  const known=new Uint8Array(N),col=new Float32Array(N*3);
+  for(let i=0;i<N;i++)if(a0[i]>=.97){known[i]=1;col[i*3]=px[i*4];col[i*3+1]=px[i*4+1];col[i*3+2]=px[i*4+2];}
+  for(let pass=0;pass<Math.ceil(4*sigma)+4;pass++){const add=[];
+    for(let i=0;i<N;i++){if(known[i]||a1[i]<=0&&a0[i]<=0)continue;const c=i%W,r=(i-c)/W;let s0=0,s1=0,s2=0,k=0;
+      for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const rr=r+dr,cc=c+dc;if((dr||dc)&&rr>=0&&rr<H&&cc>=0&&cc<W){const m=rr*W+cc;if(known[m]){s0+=col[m*3];s1+=col[m*3+1];s2+=col[m*3+2];k++;}}}
+      if(k)add.push(i,s0/k,s1/k,s2/k);}
+    if(!add.length)break;for(let q=0;q<add.length;q+=4){const i=add[q];known[i]=1;col[i*3]=add[q+1];col[i*3+1]=add[q+2];col[i*3+2]=add[q+3];}}
+  for(let i=0;i<N;i++){const o=i*4;if(a1[i]<=0){px[o+3]=0;continue;}if(a0[i]<.97&&known[i]){px[o]=col[i*3];px[o+1]=col[i*3+1];px[o+2]=col[i*3+2];}px[o+3]=Math.round(a1[i]*255);}
+  g.putImageData(img,0,0);return canvas;}
 // a peça recortada inteira ganha uma sombra suave no chão, por baixo dela, para não parecer colada no fundo (as de perto, não)
 function ground(canvas){const W=canvas.width,H=canvas.height,g=context(canvas),px=g.getImageData(0,0,W,H).data;
   let x0=W,x1=-1,y1=-1;for(let r=0;r<H;r++)for(let c=0;c<W;c++)if(px[(r*W+c)*4+3]>40){if(c<x0)x0=c;if(c>x1)x1=c;if(r>y1)y1=r;}
@@ -159,6 +180,7 @@ try{
         big=spec.detalhe?resample(crop,[0,0,rect[2],rect[3]],...FRAME):place(crop);
         // ampliação desta foto (pixels do quadro por pixel da fonte): quanto mais ampliada, mais largo o realce
         const zoom=spec.detalhe?FRAME[1]/rect[3]:big.scale;
+        if(spec.fundo==='recortar')smoothEdge(big,Math.max(2.5,2.2*zoom));
         sharpen(big,Math.min(1.6,Math.max(.8,.7*zoom)),zoom>1.2?.7:.4);if(spec.fundo==='recortar'&&!spec.detalhe)ground(big);
         window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · ${spec.fundo==='recortar'?'fundo recortado':`fundo ${bg}`}`;
       }else if(v.id==='frente'){big=ground(place(await image(`/dist/assets/${p.catalogImage}`)));window.info[`${key}-${v.id}`]='foto da vitrine';}
