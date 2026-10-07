@@ -129,6 +129,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `design/vistas/PADRAO.md`. `node tools/galeria-vistas/gerar.cjs` grava em `dist/assets/vistas/` (tira o chuvisco da compressão,
   amplia com Lanczos e realça); depois, suba `VIEWS_VERSION`. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine, no mesmo
   quadro. Peça nova (unicórnio, girafa): entra em `GALLERY` e em `fotos.json` quando estiver à venda.
+- **Girafa e unicórnio (06/10/2026):** já são novidades na vitrine (GiraffeLamp e UnicornLamp, `SOON` em `products.js`; o macaco agora é MonkeyLamp), no molde do
+  macaco e com as cores de cada bicho; as imagens e o 3D ainda são os do macaco (veja `VITRINE-AVIAO-MACACO-QA.md`).
 - **Celular:** a tela da peça mostra só as partes, as cores e a compra; Detalhes, Cores, Entrega e Trocas ficam no (i) do topo, e as
   combinações prontas e o link das cores, na aba Cores dele.
 - Outros documentos úteis: `HOSTINGER-SETUP.md`, `ADMIN-SETUP.md`, `LEGAL-SETUP.md`, `RESEND-SETUP.md`, `COLLABORATOR_PROMPT.md`.
