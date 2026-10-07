@@ -242,26 +242,21 @@
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }
-  /* A compra numa linha só (06/10/2026, pedido do Luiz: "deixar apenas o preço, um carrinho e o compre. APENAS NO MOBILE"): o preço,
-     o carrinho (só o ícone; o nome continua para o leitor de tela) e "Comprar agora". O Pix, o "3x", a oferta do 2.º avião e o frete
-     grátis saem daqui no celular (continuam no (i) e no carrinho). Editando uma peça do carrinho, o botão mostra o texto inteiro. */
-  #product-dialog .modal-actions { display: grid; grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; padding: 10px 16px max(10px, env(safe-area-inset-bottom)); }
-  #product-dialog .modal-actions > .pdp-soon-bar { grid-column: 1 / -1; }
-  #product-dialog #purchase-panel, #product-dialog .purchase-actions { display: contents; }
-  #product-dialog .purchase-status { grid-column: 1 / -1; grid-row: 1; margin: 0; }
-  #product-dialog .pdp-price { grid-column: 1; min-width: 0; }
-  #product-dialog .pdp-price p { flex-wrap: nowrap; }
-  #product-dialog .pdp-price strong { font-size: 22px; line-height: 1.15; white-space: nowrap; }
-  #product-dialog :is(.pdp-pix, .pdp-price > small, .purchase-free-ship) { display: none; }
-  #product-dialog .pdp-price .pdp-offer { display: none; }
-  #product-dialog .purchase-actions .primary { min-height: 48px; padding: 0 18px; gap: 6px; border-radius: 14px; font-size: 14px; white-space: nowrap; }
-  #product-dialog:not([data-cart-edit]) #add-to-cart { width: 48px; padding: 0; }
-  #product-dialog:not([data-cart-edit]) #add-to-cart > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  #product-dialog[data-cart-edit] #add-to-cart { grid-column: 2 / -1; }
-  #product-dialog .purchase-actions .primary .icon { width: 20px; height: 20px; }
+  /* A compra, mais baixa (06/10/2026, "reduzir essa seção"): preço, Pix e "3x" numa linha só (o "3x" à direita, em duas linhas
+     curtas), a oferta do 2.º avião logo embaixo e os botões com 44 px de altura (o mínimo para o dedo). */
+  #product-dialog .modal-actions { gap: 8px; padding: 16px 16px max(10px, env(safe-area-inset-bottom)); }
+  #product-dialog .pdp-price { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; row-gap: 3px; }
+  #product-dialog .pdp-price p { grid-column: 1; grid-row: 1; flex-wrap: nowrap; gap: 8px; }
+  #product-dialog .pdp-price strong { font-size: 22px; line-height: 1.15; }
+  #product-dialog .pdp-pix { padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+  #product-dialog .pdp-price > small:not(.pdp-offer) { grid-column: 2; grid-row: 1; justify-self: end; max-width: 98px; line-height: 1.25; text-align: right; }
+  #product-dialog .pdp-price .pdp-offer { grid-column: 1 / -1; margin: 0; }
+  #product-dialog .purchase-actions { gap: 8px; }
+  #product-dialog .purchase-actions .primary { min-height: 44px; padding: 0 8px; gap: 6px; border-radius: 12px; font-size: 13px; white-space: nowrap; }
+  #product-dialog .purchase-actions .primary .icon { width: 18px; height: 18px; }
   .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #14231b24; transform: translateY(100%); }
 }
-@media (max-width: 374px) { #product-dialog[data-cart-edit] #add-to-cart .icon { display: none; } #product-dialog #buy-now { padding: 0 10px; font-size: 13px; } }
+@media (max-width: 374px) { #product-dialog .modal-actions:not(.is-compact) #add-to-cart .icon, #product-dialog[data-cart-edit] #add-to-cart .icon { display: none; } }
 @media (max-width: 374px) { #product-dialog .viewer-tools button { min-width: 32px; padding: 0 7px; } }
 @media (max-width: 600px) and (max-height: 700px) {
   #product-dialog .pdp-heading .detail-subtitle { display: none; }
@@ -274,3 +269,36 @@
 }
 /* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */
 #dialog-description .contact-mail { color: var(--pd-accent, var(--rose)); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+
+/* O resumo da compra recolhe e abre (06/10/2026, pedido do Luiz: "a linha que a pessoa possa diminuir o resumo"; vale para o site
+   todo). Uma alça no topo (puxar para baixo ou tocar) recolhe o resumo numa linha só: o preço, o carrinho (só o ícone; o nome continua
+   para o leitor de tela) e "Comprar agora". Recolhido, um balãozinho "Ver resumo" chama para abrir de novo (purchase-sheet.js). */
+#product-dialog .pdp-grip { position: absolute; top: -12px; left: 50%; z-index: 3; display: grid; place-items: center; width: 72px; height: 24px; padding: 0; border: 0; background: transparent; cursor: grab; transform: translateX(-50%); touch-action: none; }
+#product-dialog .pdp-grip i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #c7d2cc; box-shadow: 0 0 0 3px #fff; transition: width .3s var(--pd-ease), background-color .25s ease; }
+#product-dialog .pdp-grip:hover i, #product-dialog .pdp-grip:focus-visible i { width: 52px; background: var(--pd-accent); }
+#product-dialog .pdp-grip:focus-visible { outline: none; }
+#product-dialog .pdp-grip:active { cursor: grabbing; }
+#product-dialog[data-mode=preview] :is(.pdp-grip, .pdp-balloon) { display: none; }
+#product-dialog .pdp-balloon { position: absolute; left: 14px; bottom: calc(100% + 12px); z-index: 3; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--pd-text); color: #fff; font: inherit; font-size: 13px; font-weight: 650; box-shadow: 0 10px 22px #14231b33; cursor: pointer; animation: pdp-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, pdp-balloon-bob 2.4s 1s ease-in-out infinite; }
+#product-dialog .pdp-balloon::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--pd-text); border-bottom: 0; }
+#product-dialog .pdp-balloon svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#product-dialog .pdp-balloon[hidden] { display: none; }
+#product-dialog .pdp-balloon:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 3px; }
+@keyframes pdp-balloon-in { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+@keyframes pdp-balloon-bob { 50% { transform: translateY(-3px); } }
+#product-dialog .modal-actions.is-moving { overflow: clip; }
+#product-dialog .modal-actions.is-compact { grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; }
+#product-dialog .modal-actions.is-compact > .pdp-soon-bar { grid-column: 1 / -1; }
+#product-dialog .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }
+#product-dialog .modal-actions.is-compact .purchase-status { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+#product-dialog .modal-actions.is-compact .pdp-price { grid-column: 1; min-width: 0; }
+#product-dialog .modal-actions.is-compact .pdp-price p { flex-wrap: nowrap; }
+#product-dialog .modal-actions.is-compact .pdp-price strong { font-size: 22px; line-height: 1.15; white-space: nowrap; }
+#product-dialog .modal-actions.is-compact :is(.pdp-pix, .pdp-price > small, .purchase-free-ship) { display: none; }
+#product-dialog .modal-actions.is-compact .pdp-price .pdp-offer { display: none; }
+#product-dialog .modal-actions.is-compact .purchase-actions .primary { min-height: 48px; padding: 0 18px; border-radius: 14px; white-space: nowrap; }
+#product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart { width: 48px; padding: 0; }
+#product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#product-dialog[data-cart-edit] .modal-actions.is-compact #add-to-cart { grid-column: 2 / -1; }
+@media (max-width: 374px) { #product-dialog .modal-actions.is-compact #buy-now { padding: 0 10px; font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-balloon { animation: none; } }

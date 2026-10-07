@@ -51,7 +51,7 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
     <dl class="amounts"><div><dt>Subtotal</dt><dd>${money(amount.subtotal)}</dd></div>${delivery}<div class="grand-total"><dt>Total${withoutDelivery ? ' <small>(sem entrega)</small>' : ''}</dt><dd>${money(amount.total)}</dd></div>${chosen.length ? `<div class="pix-hint"><dt>No Pix <small>(5% off)</small></dt><dd>${money(amount.total - pixDiscount(chosen))}</dd></div>` : ''}</dl>
     ${realShipping && chosen.length ? shippingEstimate(estimate || {}) : ''}
     <div class="cart-checkout-bar" role="group" aria-label="Resumo da compra e finalização">
-      <a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total</span><strong>${money(amount.total)}</strong><span class="cart-summary-chip">${!chosen.length ? 'Selecione uma peça' : withoutDelivery ? 'Sem frete · ver resumo' : 'Ver resumo'}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></span></a>
+      <a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total</span><strong>${money(amount.total)}</strong>${!chosen.length ? '<small class="cart-total-note">Selecione uma peça</small>' : withoutDelivery ? '<small class="cart-total-note">sem frete</small>' : ''}</a>${chosen.length ? '<a class="cart-summary-balloon" href="#cart-summary-title">Ver resumo<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></a>' : ''}
       <button type="button" class="primary cart-checkout" data-action="checkout" ${chosen.length ? '' : 'disabled'}>Finalizar pedido ${icon('arrow')}</button>
     </div>
     ${!chosen.length ? '<p class="cart-selection-help">Selecione uma peça para continuar.</p>' : ''}
@@ -188,11 +188,14 @@ function scrollToY(y) {
 }
 export function wireSummaryLink(root) {
   root.addEventListener('click', async event => {
-    const link = event.target.closest('.cart-checkout-total');
+    const link = event.target.closest('.cart-checkout-total, .cart-summary-balloon');
     if (!link) return;
     const summary = root.querySelector('.cart-order-summary');
     if (!summary) return;
     event.preventDefault();
+    // o balão sobe e some, como se puxasse a página junto
+    const balloon = root.querySelector('.cart-summary-balloon');
+    if (balloon && !matchMedia('(prefers-reduced-motion: reduce)').matches) balloon.animate([{transform: 'none', opacity: 1}, {transform: 'translateY(-22px) scale(.94)', opacity: 0}], {duration: 380, easing: 'cubic-bezier(.4, 0, .2, 1)'});
     const header = document.querySelector('.header.site-header.is-floating')?.getBoundingClientRect().height || 0;
     const y = summary.getBoundingClientRect().top + scrollY - header - 16;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) scrollTo(0, y); else await scrollToY(y);

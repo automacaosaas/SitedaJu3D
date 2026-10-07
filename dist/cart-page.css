@@ -42,7 +42,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-checkout { min-height: 48px; font-size: 14px; font-weight: 500; border-radius: 10px; }
 .cart-checkout .icon { width: 20px; height: 20px; }
 .cart-checkout:disabled:hover { background: var(--rose); }
-.cart-checkout-total { display: none; }
+.cart-checkout-total, .cart-summary-balloon { display: none; }
 .cart-checkout:focus-visible, .cart-checkout-total:focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
 .cart-order-summary h2 { scroll-margin-top: 24px; }
 .cart-order-summary h2:focus { outline: none; }
@@ -53,8 +53,9 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   22% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--rose) 20%, transparent), 0 16px 40px #6536491c; border-color: color-mix(in srgb, var(--rose) 55%, transparent); }
   100% { box-shadow: 0 0 0 16px transparent, 0 8px 32px #65364904; }
 }
-@keyframes chip-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
-@media (prefers-reduced-motion: reduce) { .cart-order-summary.is-spotlight, .cart-summary-chip svg { animation: none; } }
+@keyframes cart-balloon-in { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+@keyframes cart-balloon-bob { 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .cart-order-summary.is-spotlight, .cart-summary-balloon { animation: none; } }
 .cart-selection-help { font-size: 12px; color: var(--rose); margin: 10px 0 0; }
 /* Depois do resumo (largura toda): "Você também pode gostar" e as informações da compra com os meios de pagamento. */
 .cart-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
@@ -158,11 +159,14 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-checkout-total { display: grid; justify-items: start; align-content: center; min-width: 0; min-height: 52px; color: var(--ink); text-decoration: none; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
   .cart-total-label { font-size: 12px; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .cart-checkout-total strong { font-size: clamp(18px, 5vw, 22px); line-height: 1.4; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  /* "Ver resumo": um botãozinho com a setinha para baixo; some enquanto o resumo está na tela (watchSummary) */
-  .cart-summary-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 3px 8px 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--rose) 11%, transparent); color: var(--rose); font-size: 12px; font-weight: 650; line-height: 1.35; white-space: nowrap; transition: opacity .3s ease, transform .3s cubic-bezier(.34, 1.56, .64, 1), background-color .25s ease; }
-  .cart-summary-chip svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; animation: chip-bob 1.8s ease-in-out infinite; }
-  .cart-checkout-total:active .cart-summary-chip { transform: scale(.95); background: color-mix(in srgb, var(--rose) 20%, transparent); }
-  .cart-checkout-bar.is-at-summary .cart-summary-chip { opacity: 0; transform: translateY(5px); }
+  .cart-total-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  /* "Ver resumo" (06/10/2026): um balãozinho em cima da barra de baixo, com o rabinho apontando para o total; um toque leva a página
+     até o resumo numa rolagem fluida, e ele sobe e some junto. Some enquanto o resumo está na tela (watchSummary). */
+  .cart-summary-balloon { position: absolute; left: max(16px, calc((100% - 690px) / 2)); bottom: calc(100% + 12px); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 10px 22px #14231b33; -webkit-tap-highlight-color: transparent; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1); animation: cart-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, cart-balloon-bob 2.4s 1s ease-in-out infinite; }
+  .cart-summary-balloon::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+  .cart-summary-balloon svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .cart-summary-balloon:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+  .cart-checkout-bar.is-at-summary .cart-summary-balloon { opacity: 0; transform: translateY(8px) scale(.9); pointer-events: none; animation: none; }
   .cart-checkout-bar .cart-checkout { min-height: 52px; padding: 12px 14px; text-align: left; }
   .cart-more { max-width: 690px; margin-inline: auto; }
   .cart-info { grid-template-columns: minmax(0, 1fr); }

@@ -90,7 +90,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(read('dist/cart-view.js'), /const AUTO_MS = 4200;/);
   assert.match(read('dist/cart-page.css'), /\.cart-rec-track \{ display: flex; flex-wrap: nowrap;/, 'side by side (on phones it wrapped into a column)');
   // "Ver resumo" (bar at the bottom on phones): a smooth scroll to the summary, which lights up for a moment
-  assert.match(page, /<a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total<\/span><strong>[^<]+<\/strong><span class="cart-summary-chip">Ver resumo<svg/);
+  assert.match(page, /<a class="cart-checkout-total" href="#cart-summary-title"><span class="cart-total-label">Total<\/span><strong>[^<]+<\/strong><\/a><a class="cart-summary-balloon" href="#cart-summary-title">Ver resumo<svg/, '"Ver resumo" is a balloon above the bar');
   assert.match(read('dist/checkout.js'), /wireSummaryLink\(main\);/);
   assert.match(read('dist/cart-page.css'), /\.cart-order-summary\.is-spotlight \{ animation: summary-spot/);
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),

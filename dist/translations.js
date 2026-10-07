@@ -863,6 +863,9 @@ Cada peça é impressa depois do pedido, nas cores escolhidas. A produção come
 Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
 Ver mais|See more|Ver más
 Ver todas|See all|Ver todas
+sem frete|without shipping|sin envío
+Recolher o resumo da compra|Collapse the purchase summary|Contraer el resumen de compra
+Abrir o resumo da compra|Open the purchase summary|Abrir el resumen de compra
 Fotos da peça|Photos of the piece|Fotos de la pieza
 Todas as peças|All pieces|Todas las piezas
 Peças anteriores|Previous pieces|Piezas anteriores
