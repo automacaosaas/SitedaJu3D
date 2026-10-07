@@ -4,7 +4,8 @@
 const COLUMNS = {
   id: 'id', email: 'email', emailVerifiedAt: 'email_verified_at', displayName: 'display_name', firstName: 'first_name', lastName: 'last_name',
   passwordHash: 'password_hash', cpfEnc: 'cpf_enc', cpfIndex: 'cpf_index', phoneEnc: 'phone_enc', companyCnpj: 'company_cnpj', companyName: 'company_name',
-  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at'
+  companyIe: 'company_ie', marketingOptIn: 'marketing_opt_in', marketingConsentAt: 'marketing_consent_at', termsVersion: 'terms_version', termsAcceptedAt: 'terms_accepted_at', createdAt: 'created_at',
+  avatarUrl: 'avatar_url'
 };
 
 function toCustomer(row) {
@@ -81,6 +82,7 @@ function groupBy(rows, keyOf) {
   return groups;
 }
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
+const toIdentity = row => row && {provider: row.provider, subject: row.subject, customerId: row.customer_id, email: row.email, privateEmail: Boolean(row.private_email), createdAt: row.created_at, lastLoginAt: row.last_login_at};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toChallenge = row => row && {id: row.id, email: row.email, purpose: row.purpose, codeHash: row.code_hash, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, verifiedAt: row.verified_at, grantHash: row.grant_hash, grantExpiresAt: row.grant_expires_at, usedAt: row.used_at};
 
@@ -332,6 +334,20 @@ function createMysqlStore(pool) {
     adminAudit: {
       add: ({adminId = null, action, detail = null, ip = null}) => run('INSERT INTO admin_audit (admin_id, action, detail, ip) VALUES (?, ?, ?, ?)', [adminId, String(action).slice(0, 40), detail === null ? null : String(detail).slice(0, 300), ip === null ? null : String(ip).slice(0, 64)]),
       async list(limit = 100) { return (await all(`SELECT * FROM admin_audit ORDER BY id DESC LIMIT ${Math.min(Number(limit) || 100, 1000)}`, [])).map(a => ({id: a.id, adminId: a.admin_id, action: a.action, detail: a.detail, ip: a.ip, createdAt: a.created_at})); }
+    },
+    // Google / Apple sign-in (db/migrations/014_login_social.sql). They go with the customer (ON DELETE CASCADE).
+    identities: {
+      find: async (provider, subject) => toIdentity(await one('SELECT * FROM customer_identities WHERE provider = ? AND subject = ?', [provider, subject])),
+      async create(data) {
+        try {
+          await run('INSERT INTO customer_identities (provider, subject, customer_id, email, private_email, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [data.provider, data.subject, data.customerId, data.email ?? null, data.privateEmail ? 1 : 0, data.createdAt ?? new Date(), data.lastLoginAt ?? null]);
+        } catch (error) { if (error?.code === 'ER_DUP_ENTRY') throw Object.assign(new Error('duplicate identity'), {code: 'identity_exists'}); throw error; }
+        return toIdentity(await one('SELECT * FROM customer_identities WHERE provider = ? AND subject = ?', [data.provider, data.subject]));
+      },
+      touch: async (provider, subject, {at, email = null}) => (await run('UPDATE customer_identities SET last_login_at = ?, email = COALESCE(?, email) WHERE provider = ? AND subject = ?', [at, email, provider, subject])).affectedRows === 1,
+      remove: async (provider, subject) => (await run('DELETE FROM customer_identities WHERE provider = ? AND subject = ?', [provider, subject])).affectedRows === 1,
+      listByCustomer: async customerId => (await all('SELECT * FROM customer_identities WHERE customer_id = ? ORDER BY created_at', [customerId])).map(toIdentity)
     },
     sessions: {
       create: s => run('INSERT INTO sessions (token_hash, customer_id, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?)', [s.tokenHash, s.customerId, s.expiresAt, s.ip, s.userAgent]),

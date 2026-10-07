@@ -125,6 +125,22 @@ regras e como conferir estão em `FRETE-SETUP.md` e `FRETE-CORREIOS-passo-a-pass
 `/api/health` mostra `"shipping":"off"` (faltam variáveis), `"pending"` (variáveis ok, dados da loja incompletos) ou
 `"correios"` (cotando). O código de acesso não vai por chat, e-mail nem GitHub.
 
+### 4.3 Entrar com o Google e com a Apple (opcional)
+
+Sem estas variáveis os botões simplesmente não aparecem. Onde pegar cada valor e o que cadastrar nos consoles:
+`SOCIAL-LOGIN.md`. Os endereços de retorno são `SITE_URL` + `/api/auth/google/callback` e `/api/auth/apple/callback`.
+
+| Nome | Valor | Secreta |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | ID do cliente OAuth (Aplicativo da Web) | não |
+| `GOOGLE_CLIENT_SECRET` | chave secreta do cliente | **sim** |
+| `APPLE_CLIENT_ID` | identificador do Services ID | não |
+| `APPLE_TEAM_ID` | Team ID | não |
+| `APPLE_KEY_ID` | Key ID da chave com Sign in with Apple | não |
+| `APPLE_PRIVATE_KEY` | conteúdo do arquivo .p8 | **sim** |
+
+`/api/health` mostra `"social":{"google":true,"apple":true}` quando cada um está configurado.
+
 ## 5. Conferir
 
 - `https://<endereço temporário>/api/health` responde `{"ok":true,...}` com `"accounts":"mysql"`, `"db":"ok"` e

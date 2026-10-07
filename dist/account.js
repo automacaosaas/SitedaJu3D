@@ -1,5 +1,5 @@
-import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, readDemoOrders, loadProfile, saveProfile, loadOrders, loadTracking, startDeletion, adoptDeletion, confirmDeletion} from './auth-service.js';
-import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
+import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, readDemoOrders, loadProfile, saveProfile, loadOrders, loadTracking, startDeletion, adoptDeletion, confirmDeletion, loadProviders, socialStartUrl, socialMessage} from './auth-service.js';
+import {identificationForm, wireIdentification, readIdentification, showIdentificationError, missingIdentification} from './identification.js';
 import {icon} from './icons.js';
 import {mountLanguagePicker, getLanguage} from './i18n.js';
 import {PRODUCTS, SOON, color} from './products.js';
@@ -19,6 +19,19 @@ const action = (text, target, style = 'back-auth') => `<button type="button" cla
 const stamp = () => `<div class="email-stamp"><span>${esc(email)}</span>${action('Alterar', 'email')}</div>`;
 const previewNote = AUTH_MODE === 'demo' ? '<p class="auth-demo-note">Prévia: use dados fictícios. Quando o envio não estiver disponível, um código de teste aparece nesta página.</p>' : '';
 const demoCode = () => screen === 'verify' ? challenge?.demoCode : screen === 'delete' ? deletion?.demoCode : '';
+// "Continuar com o Google / com a Apple", under the e-mail form, only for the providers configured on the server. A full
+// page round trip (also from the side panel, hence target="_top"); the server brings the person back to the checkout, to
+// "Meus pedidos", or here (#bem-vindo for a new account). Buttons after the brands' guidelines: Google's "G" in its colours
+// on white with a grey outline and Roboto Medium; Apple's logo and title in white on black; same size, same weight.
+let providers = {google: false, apple: false};
+const GOOGLE_LOGO = '<svg class="social-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+const APPLE_LOGO = '<svg class="social-logo" viewBox="0 0 814 1000" aria-hidden="true"><path fill="currentColor" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57-155.5-127C46.7 790.7 0 663 0 541.8c0-194.4 126.4-297.5 250.8-297.5 66.1 0 121.2 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>';
+const socialNext = () => new URLSearchParams(location.search).get('next') || (location.hash.startsWith('#pedidos') ? 'pedidos' : '');
+function socialBlock() {
+  if (!providers.google && !providers.apple) return '';
+  const button = (id, logo, label) => `<a class="social-button social-${id}" href="${esc(socialStartUrl(id, socialNext()))}" target="_top" data-social="${id}">${logo}<span>${label}</span></a>`;
+  return `<div class="social-login"><p class="social-divider"><span>ou entre com</span></p><div class="social-buttons">${providers.google ? button('google', GOOGLE_LOGO, 'Continuar com o Google') : ''}${providers.apple ? button('apple', APPLE_LOGO, 'Continuar com a Apple') : ''}</div><p class="auth-terms social-terms">Ao continuar, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.</p><p class="auth-terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p></div>`;
+}
 // "Meus pedidos": the account's orders from the server; demonstration orders (payments off) from this tab.
 // One card per order, in three parts: on top the number (its short form; the full code, the one in the e-mails, is under
 // "Detalhes do pedido"), the date and a coloured badge for where it stands; then the pieces with their colours, the
@@ -103,9 +116,9 @@ function render(focus = true) {
   document.querySelector('.preview-details').hidden = AUTH_MODE !== 'demo';
   document.querySelector('#scene-greeting').hidden = true;
   const session = getSession();
-  if (['profile', 'orders', 'details', 'delete'].includes(screen) && !session) screen = 'email';
+  if (['profile', 'orders', 'details', 'delete', 'welcome'].includes(screen) && !session) screen = 'email';
   document.title = (screen === 'orders' ? 'Meus pedidos' : 'Seu cantinho') + ' · Ju imprime pra mim';
-  if (screen === 'email') host.innerHTML = title('UM CANTINHO SÓ SEU', 'Tudo começa<br>com seu e-mail.', 'Entre ou crie sua conta para acompanhar cada detalhe das suas escolhas.') + `<form id="email-form">${input('email', 'Seu e-mail', 'email', 'email', 'voce@exemplo.com')}${submit('Continuar')}</form><div class="auth-reassurance">${icon('lock')}<div><strong>Seu e-mail, com cuidado.</strong><p>Para acessar seu perfil e acompanhar pedidos. Novidades e ofertas, só se você escolher.</p></div></div>` + previewNote;
+  if (screen === 'email') host.innerHTML = title('UM CANTINHO SÓ SEU', 'Tudo começa<br>com seu e-mail.', 'Entre ou crie sua conta para acompanhar cada detalhe das suas escolhas.') + `<form id="email-form">${input('email', 'Seu e-mail', 'email', 'email', 'voce@exemplo.com')}${submit('Continuar')}</form>${socialBlock()}<div class="auth-reassurance">${icon('lock')}<div><strong>Seu e-mail, com cuidado.</strong><p>Para acessar seu perfil e acompanhar pedidos. Novidades e ofertas, só se você escolher.</p></div></div>` + previewNote;
   if (screen === 'verify') {
     host.innerHTML = title('SÓ MAIS UM PASSINHO', 'Seu acesso,<br>com cuidado.', challenge?.demoCode ? 'Digite o código de teste abaixo para experimentar a confirmação do e-mail.' : 'Enviamos um código de seis números para o seu e-mail. Toque no botão da mensagem ou digite o código abaixo.') + stamp() + `<form id="verify-form"><label class="auth-field code-input" for="auth-code"><span>Código de 6 números</span><input id="auth-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="000000" aria-describedby="code-help account-feedback" required></label><p class="password-help" id="code-help">O código vale por 10 minutos.</p>${submit('Confirmar e continuar')}</form><div class="resend-row"><span>Precisa de outro código?</span><button id="resend-code" type="button">Reenviar código</button></div>` + (challenge?.purpose === 'reset' ? action('Voltar ao acesso', 'password') : action('Usar minha senha', 'password', 'auth-alternative'));
     const tick = () => { const b = host.querySelector('#resend-code'); if (!b) return; const seconds = Math.max(0, Math.ceil((challenge.resendAt - Date.now()) / 1000)); b.disabled = busy || seconds > 0; b.textContent = seconds ? `Reenviar em ${seconds}s` : 'Reenviar código'; };
@@ -114,7 +127,16 @@ function render(focus = true) {
   if (screen === 'password') host.innerHTML = title('BEM-VINDA DE VOLTA', 'Que bom ter<br>você por aqui.', 'Use a senha que criou no seu primeiro cadastro.') + stamp() + `<form id="password-form">${input('password', 'Sua senha', 'password', 'current-password', 'Digite sua senha')}<div class="auth-links"><button type="button" id="forgot-password">Esqueci minha senha</button></div>${submit('Entrar')}</form>` + action('Usar código de acesso', 'verify', 'auth-alternative') + previewNote;
   if (screen === 'signup') host.innerHTML = title('E-MAIL CONFIRMADO', 'Vamos nos<br>conhecer?', 'Só mais dois detalhes para criar seu cantinho.') + stamp() + `<form id="signup-form">${input('name', 'Como podemos chamar você?', 'text', 'name', 'Seu nome')}${input('password', 'Crie uma senha (opcional)', 'password', 'new-password', 'Pelo menos 8 caracteres', true)}<p class="auth-hint">Sem senha, você entra sempre com um código enviado para o seu e-mail.</p><label class="auth-optin"><input type="checkbox" name="marketing"><span>Quero receber novidades e ofertas da Ju por e-mail. <small>Opcional. Você pode mudar de ideia.</small></span></label><p class="auth-terms">Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.</p><p class="auth-terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p>${submit('Criar minha conta')}</form>` + previewNote;
   if (screen === 'reset') host.innerHTML = title('CÓDIGO CONFIRMADO', 'Um novo começo.', 'Escolha uma nova senha para acessar seu cantinho.') + `<form id="reset-form">${input('password', 'Nova senha', 'password', 'new-password', 'Pelo menos 8 caracteres')}${submit('Salvar nova senha')}</form>` + previewNote;
-  if (screen === 'profile') host.innerHTML = title('SEU CANTINHO', `Olá, ${esc(session.name.split(/\s+/)[0])}.`, 'Suas escolhas e seus próximos encantos, bem pertinho.') + `<div class="profile-summary"><span>${icon('check')} E-mail confirmado</span><strong>${esc(session.name)}</strong><p>${esc(session.email)}</p><small>Novidades por e-mail: ${session.marketingOptIn ? 'você escolheu receber' : 'não autorizadas'}.</small><small>O endereço é informado na etapa de entrega.</small></div><a class="primary account-submit" href="produtos.html">Explorar os produtos ${icon('arrow')}</a><a class="auth-alternative" href="checkout.html">Voltar ao carrinho ${icon('cart')}</a>${action('Meus dados', 'details')}${action('Meus pedidos', 'orders')}<button class="back-auth signout" id="signout">Sair da conta</button>`;
+  if (screen === 'profile') host.innerHTML = title('SEU CANTINHO', `Olá, ${esc(session.name.split(/\s+/)[0])}.`, 'Suas escolhas e seus próximos encantos, bem pertinho.') + `<div class="profile-summary">${session.avatar ? `<img class="profile-avatar" src="${esc(session.avatar)}" alt="" width="64" height="64" referrerpolicy="no-referrer">` : ''}<span>${icon('check')} E-mail confirmado</span><strong>${esc(session.name)}</strong><p>${esc(session.email)}</p><small>Novidades por e-mail: ${session.marketingOptIn ? 'você escolheu receber' : 'não autorizadas'}.</small><small>O endereço é informado na etapa de entrega.</small></div><a class="primary account-submit" href="produtos.html">Explorar os produtos ${icon('arrow')}</a><a class="auth-alternative" href="checkout.html">Voltar ao carrinho ${icon('cart')}</a>${action('Meus dados', 'details')}${action('Meus pedidos', 'orders')}<button class="back-auth signout" id="signout">Sair da conta</button>`;
+  // After a first "Continuar com o Google / com a Apple": the account exists already; only what the shop still needs to sell
+  // (usually CPF and phone, for the invoice and the order messages) is asked, and it can wait ("Agora não").
+  if (screen === 'welcome') {
+    const missing = missingIdentification(details);
+    host.innerHTML = title('BOAS-VINDAS', 'Que bom ter<br>você por aqui.', missing.length ? 'Sua conta está pronta. Para comprar sem pausas, faltam só estes dados para a nota fiscal e os avisos do pedido:' : 'Sua conta está pronta, com tudo o que precisamos para as suas compras.')
+      + (missing.length ? identificationForm({profile: details, submitLabel: 'Salvar e continuar', formId: 'welcome-form', only: missing}) : '')
+      + action(missing.length ? 'Agora não' : 'Ir para minha conta', 'profile');
+    if (missing.length) wireIdentification(host.querySelector('#welcome-form'));
+  }
   if (screen === 'details') {
     host.innerHTML = title('SEUS DADOS', 'Meus dados.', 'Usados na nota fiscal e na entrega. Altere quando quiser.') + identificationForm({email: session.email, profile: details, submitLabel: 'Salvar meus dados', formId: 'details-form'}) + action('Voltar à minha conta', 'profile') + `<div class="account-danger"><h3>Excluir minha conta</h3><p>Apaga seus dados de cadastro. Pede a confirmação de um código enviado ao seu e-mail.</p>${action('Excluir minha conta', 'delete', 'danger-link')}</div>`;
     wireIdentification(host.querySelector('#details-form'));
@@ -152,6 +174,8 @@ async function finishSession(user, created = false) {
   if (location.hash === '#pedidos') { myOrders = await loadOrders().catch(() => []); screen = 'orders'; } else screen = 'profile';
 }
 host.addEventListener('click', async event => {
+  const going = event.target.closest('.social-button');
+  if (going) { if (going.classList.contains('is-going')) event.preventDefault(); else { going.classList.add('is-going'); going.setAttribute('aria-busy', 'true'); } return; }
   const toggle = event.target.closest('.password-toggle');
   if (toggle) { const field = toggle.previousElementSibling, show = field.type === 'password'; field.type = show ? 'text' : 'password'; toggle.setAttribute('aria-pressed', String(show)); toggle.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha'); return; }
   if (busy) return;
@@ -196,7 +220,7 @@ host.addEventListener('input', event => {
 });
 host.addEventListener('submit', event => {
   event.preventDefault(); const form = event.target;
-  if (form.id === 'details-form') { saveDetails(form); return; }
+  if (form.id === 'details-form' || form.id === 'welcome-form') { saveDetails(form); return; }
   if (form.id === 'delete-form') { if (!busy && form.reportValidity()) deleteAccount(form); return; }
   if (busy || !form.reportValidity()) return;
   const values = Object.fromEntries(new FormData(form));
@@ -252,6 +276,18 @@ function route(focus = false) {
     if (params.get('c')) { resumeFromLink(params.get('c'), params.get('k') || ''); return; }
     screen = challenge ? 'verify' : getSession() ? 'profile' : 'email';
   } else if (routeName === 'pedidos' && getSession()) { openOrders(); return; }
+  // Back from "Continuar com o Google / com a Apple": a new account is welcomed; a problem is explained on the e-mail form.
+  else if (routeName === 'bem-vindo' && getSession()) {
+    history.replaceState(null, '', location.pathname + location.search);
+    run('Preparando seu cantinho…', async () => { details = await loadProfile(); screen = 'welcome'; });
+    return;
+  } else if (routeName === 'entrar') {
+    const code = new URLSearchParams(query).get('erro');
+    history.replaceState(null, '', location.pathname + location.search);
+    screen = getSession() ? 'profile' : 'email'; render(focus);
+    if (code) feedback.textContent = socialMessage(code);
+    return;
+  }
   else if (routeName === 'excluir') {
     // The link in the deletion e-mail fills in the code; the deletion itself still waits for the button.
     const params = new URLSearchParams(query);
@@ -273,5 +309,8 @@ if (window.parent !== window && new URLSearchParams(location.search).get('panel'
     if (event.key === 'Escape' && !document.querySelector('dialog[open]')) parent.postMessage({type:'ju:account-close'}, location.origin);
   });
 }
-await refreshSession();
+// The providers configured on the server (their buttons) and who is signed in, asked together.
+[providers] = await Promise.all([loadProviders(), refreshSession()]);
+// Back from a provider through the browser history (bfcache): the button that was opening it is a button again.
+window.addEventListener('pageshow', event => { if (event.persisted) host.querySelectorAll('.social-button.is-going').forEach(link => { link.classList.remove('is-going'); link.removeAttribute('aria-busy'); }); });
 route();

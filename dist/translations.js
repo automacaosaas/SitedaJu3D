@@ -994,6 +994,23 @@ Remover dados de pessoa jurídica|Remove company details|Eliminar los datos de p
 Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.|Company details removed. Once you confirm, the invoice will be issued to your CPF.|Datos de persona jurídica eliminados. Al confirmar, la factura se emitirá a tu CPF.
 Atendimento|Support hours|Atención
 Página não encontrada|Page not found|Página no encontrada
+ou entre com|or continue with|o continúa con
+Continuar com o Google|Continue with Google|Continuar con Google
+Continuar com a Apple|Continue with Apple|Continuar con Apple
+Ao continuar, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By continuing, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al continuar, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
+BOAS-VINDAS|WELCOME|BIENVENIDA
+Sua conta está pronta. Para comprar sem pausas, faltam só estes dados para a nota fiscal e os avisos do pedido:|Your account is ready. To shop without stops, we only need these details for the invoice and the order updates:|Tu cuenta está lista. Para comprar sin pausas, solo faltan estos datos para la factura y los avisos del pedido:
+Sua conta está pronta, com tudo o que precisamos para as suas compras.|Your account is ready, with everything we need for your purchases.|Tu cuenta está lista, con todo lo que necesitamos para tus compras.
+Salvar e continuar|Save and continue|Guardar y continuar
+Agora não|Not now|Ahora no
+Ir para minha conta|Go to my account|Ir a mi cuenta
+Telefone (WhatsApp)|Phone (WhatsApp)|Teléfono (WhatsApp)
+CPF e telefone são usados na nota fiscal e nos avisos do pedido.|CPF and phone are used for the invoice and the order updates.|El CPF y el teléfono se usan en la factura y en los avisos del pedido.
+Este jeito de entrar ainda não está disponível. Entre com o seu e-mail.|This sign-in option is not available yet. Sign in with your email.|Esta forma de entrar aún no está disponible. Entra con tu correo.
+A entrada foi cancelada. Tudo bem: escolha outro jeito de entrar.|Sign-in was cancelled. That's fine: choose another way to sign in.|Se canceló el acceso. No pasa nada: elige otra forma de entrar.
+O acesso demorou demais ou foi aberto em outra janela. Tente de novo.|Sign-in took too long or was opened in another window. Please try again.|El acceso tardó demasiado o se abrió en otra ventana. Inténtalo de nuevo.
+Não foi possível entrar agora. Tente de novo ou use o seu e-mail.|We couldn't sign you in right now. Try again or use your email.|No fue posible entrar ahora. Inténtalo de nuevo o usa tu correo.
+Não conseguimos confirmar o e-mail dessa conta. Entre com o código enviado ao seu e-mail.|We couldn't confirm that account's email. Sign in with the code sent to your email.|No pudimos confirmar el correo de esa cuenta. Entra con el código enviado a tu correo.
 O e-mail oficial entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our official email is coming soon. Meanwhile, send us your message with the form below.|Nuestro correo oficial llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
 Ver Envio e prazos →|See Shipping and delivery times →|Ver Envío y plazos →
 Envio e prazos|Shipping and delivery times|Envío y plazos
