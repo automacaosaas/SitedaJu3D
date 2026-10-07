@@ -10,12 +10,13 @@ import {fileURLToPath} from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['deploy.sh', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['deploy.sh', 'firewall.sh', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
 const setup = raw('deploy/setup-servidor.sh'), deploy = raw('deploy/deploy.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy]]) {
+const firewall = raw('deploy/firewall.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -54,4 +55,11 @@ assert.match(setup, /visudo -cqf "\$rules" \|\|/, 'the sudo rule is checked befo
 assert.match(setup, /GITHUB_FP='SHA256:\+DiY3wvvV6TuJJhbpZisF\/zLDA0zPMSvHdkr4UvCOqU'/, "github.com's published key fingerprint");
 assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the official SHA-256 list');
 
+// The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself
+// without a confirmation.
+assert(firewall.includes('policy drop;') && firewall.includes('tcp dport { 80, 443 } accept'), 'only the site from everywhere');
+assert(firewall.includes('ip saddr { $ssh_v4 } tcp dport 22 accept') && firewall.includes('ip6 saddr { fe80::/10, fc00::/7 } tcp dport 22 accept'), 'SSH only from the internal networks');
+assert(firewall.includes('meta l4proto ipv6-icmp accept'), 'IPv6 needs ICMPv6');
+assert(firewall.includes('read -r -t 120 answer || true\nif [ "$answer" != "OK" ]; then\n  nft flush ruleset\n'), 'without OK in 2 minutes, the old rules come back');
+assert(firewall.includes('nft -c -f "$new" ||'), 'the new rules are checked before they are applied');
 console.log('PASS: servidor próprio — LF scripts that stop at the first error, every setting in the .env, the app on 127.0.0.1 behind nginx, X-Forwarded-For from nginx, a health-checked deploy that rolls back, and only the sudo it needs.');

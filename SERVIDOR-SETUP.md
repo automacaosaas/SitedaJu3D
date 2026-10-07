@@ -68,15 +68,19 @@ disponível como reserva.
 
 O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
 
-1. **Rede:** o IP público da loja (a saída hoje aparece como `201.77.147.2`) precisa encaminhar as portas **80** e
-   **443** para `10.0.100.80`. Isso é feito pelo provedor ou pelo roteador. Em 06/10/2026, as duas portas ainda não
-   respondiam pelo IP público.
-2. **DNS:** criar os registros `A` de `juimprimepramim.com.br` e `www` apontando para o IP público.
-3. **nginx e certificado:**
+1. **Rede:** o IP público `201.77.147.2` encaminha as portas **80** e **443** para `10.0.100.80`. Feito pelo provedor
+   em 07/10/2026: de fora (Madri, Kiev, Miami) a porta 80 já responde. De dentro da própria rede o IP público não abre,
+   porque o roteador não faz o "retorno" (hairpin); teste sempre de fora ou pelo celular no 4G/5G. O servidor também tem
+   IPv6 (`2804:2b44:ffff:bebe::80`), para o registro `AAAA`.
+2. **Domínio:** `juimprimepramim.com.br` **ainda não está registrado** (consulta ao Registro.br em 07/10/2026). Registrar
+   no Registro.br com o CNPJ da empresa antes de tudo.
+3. **DNS:** criar os registros `A` (`201.77.147.2`) e `AAAA` (`2804:2b44:ffff:bebe::80`) de `juimprimepramim.com.br` e de
+   `www`.
+4. **nginx e certificado:**
    - trocar `server_name _` pelo domínio em `/etc/nginx/sites-available/juimprime`;
    - rodar `sudo certbot --nginx -d juimprimepramim.com.br -d www.juimprimepramim.com.br`. Ele emite o certificado
      gratuito, liga o HTTPS e renova sozinho.
-4. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
+5. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
 
 ## No lançamento
 
@@ -94,5 +98,12 @@ Junto com o domínio:
 ## Ainda falta (servidor)
 
 - Cópia de segurança diária do banco (`mariadb-dump` agendado), guardada fora do servidor.
-- Firewall: hoje o servidor não tem nenhum. O site só escuta em `127.0.0.1` e o banco também, mas vale fechar tudo
-  menos as portas 22, 80 e 443, com cuidado para não perder o acesso SSH.
+- **Firewall (`deploy/firewall.sh`, aplicar já):** o servidor tem IPv6 público (`2804:2b44:ffff:bebe::80`), e no IPv6
+  não há o filtro do encaminhamento de portas. Sem firewall, o SSH fica visível para a internet. O script (nftables):
+  - deixa entrar só o site (80 e 443) e o ping;
+  - aceita o SSH só das redes internas;
+  - vale para IPv4 e IPv6.
+
+  Rodar com `sudo bash firewall.sh`. Depois de aplicar, abrir **outra** sessão SSH para confirmar que o acesso
+  continua e digitar `OK` em até 2 minutos; sem isso, as regras de antes voltam sozinhas. Se o provedor administra o
+  servidor de um IP público, acrescentar esse IP em `EXTRA_SSH_V4` antes de rodar.
