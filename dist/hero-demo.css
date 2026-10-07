@@ -70,6 +70,20 @@
 .demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
 .demo-callout[data-align="right"] .demo-callout-label { transform: translate(12px, -50%); }
 
+/* O giro da cabeça (o unicórnio): o canvas com os quadros na caixa que muda, e a foto escondida só ali (máscara com um furo do tamanho da
+   caixa); a dica, uma pílula de vidro ao lado da cabeça (no celular, acima da lâmpada, sem cobrir o visor), entra devagar depois do giro. */
+.demo-frames { position: absolute; display: block; pointer-events: none; }
+.demo-frames[hidden] { display: none; }
+.demo-cover.is-turning { -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0); mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-position: 0 0, var(--turn-mask-pos); mask-position: 0 0, var(--turn-mask-pos); -webkit-mask-size: 100% 100%, var(--turn-mask-size); mask-size: 100% 100%, var(--turn-mask-size);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-composite: xor; mask-composite: exclude; }
+.demo-hint { position: absolute; left: calc(50% + var(--size) * .3); top: calc(var(--cy) - var(--size) * .3); z-index: 3; display: flex; align-items: center; gap: .6em; max-width: min(300px, 34cqw); margin: 0;
+  padding: .75em 1.1em .75em .85em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, #10281e); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', sans-serif;
+  opacity: 0; transform: translateY(6px); transition: opacity .45s cubic-bezier(.22, 1, .36, 1), transform .45s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
+.demo-hint.is-shown { opacity: 1; transform: none; }
+.demo-hint[hidden] { display: none; }
+.demo-hint svg { width: 22px; height: 22px; flex: none; color: var(--theme-accent, #25664c); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Controles: "voltar" no mesmo desenho das setas; o convite à direita da peça (no celular, abaixo). */
 .demo-close { position: absolute; top: clamp(10px, calc(var(--u) * .018), 28px); right: max(16px, calc(var(--hero-inset) - 24px)); display: grid; place-items: center; width: clamp(44px, 3.6vw, 56px); height: clamp(44px, 3.6vw, 56px); padding: 0;
   border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); cursor: pointer; pointer-events: auto; transition: background .2s, transform .2s; }
@@ -90,8 +104,11 @@
   .demo-callout-label { letter-spacing: .16em; }
   .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * var(--cta-y-compact, .78));   /* abaixo da peça; num equipamento alto (ctaY), abaixo dele */ width: fit-content; margin: 0 auto; }
   .demo-close { top: 8px; right: 14px; width: 44px; height: 44px; }
+  .demo-hint { left: 50%; top: calc(var(--cy) - var(--size) * .69 - 6px); max-width: min(320px, 88cqw); transform: translate(-50%, calc(-100% + 6px)); }
+  .demo-hint.is-shown { transform: translate(-50%, -100%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .demo-cta svg { animation: none; }
+  .demo-hint { transition: none; }
   .demo-close { transition: none; }
 }

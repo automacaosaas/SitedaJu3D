@@ -87,5 +87,16 @@ for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'R�
 assert.ok(demo.includes("fixed ? 'Comprar' : 'Personalizar o meu'") && demo.includes('fixed ? `#produto/${key}`'), 'a lâmpada (cores fixas, à venda): o convite é Comprar, que abre a peça na foto');
 assert.notEqual(translate('Comprar', 'en'), 'Comprar');
 for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
+// O unicórnio (07/10/2026: "fazer uma animação… girar o rostinho para a direita, para ensinar… o chifre pode atrapalhar"): depois do
+// encaixe a cabeça gira (os quadros do 3D numa tira, por cima da foto, só na caixa que muda) e a dica aparece; na volta, a cabeça desvira.
+{
+  const turn = SHOWCASE.unicornioscopio.demo.turn, file = new URL(`../dist/assets/${turn.src}`, import.meta.url);
+  assert.ok(turn.frames >= 12 && turn.angle > 45 && turn.box.length === 4 && turn.box.every(v => v >= 0 && v <= 1) && turn.box[0] + turn.box[2] <= 1.0001 && turn.box[1] + turn.box[3] <= 1.0001, 'o giro: quadros, ângulo e a caixa na foto');
+  const bytes = fs.readFileSync(file);
+  assert.ok(bytes.toString('latin1', 8, 12) === 'WEBP' && bytes.length < 900000, 'a tira dos quadros, leve');
+  assert.ok(!SHOWCASE.girafoscopio.demo.turn && !SHOWCASE.macacoscopio.demo.turn, 'só o unicórnio gira a cabeça');
+  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 0 : 1500)', "if (dom.giro.p > 0) playTurn(0, calm ? 0 : 320)", 'resetTurn();']) assert.ok(demo.includes(part), part);
+  assert.notEqual(translate(turn.hint, 'en'), turn.hint); assert.notEqual(translate(turn.hint, 'es'), turn.hint);
+}
 
 console.log('hero-demo: ok');

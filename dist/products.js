@@ -154,7 +154,10 @@ for (const [key, art, fit, theme, demo] of [
     {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'GiraffeLamp encaixado na lâmpada de fenda.'}],
   ['unicornioscopio', {h:.876, bottom:.052, foot:.257, alt:'UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca'}, .817,
     {bannerStops:'#fcf6fe 0%,#f1e3f8 52%,#e5d1f1 100%', headerBackground:'#f4e9fa', textColor:'#291532', mutedColor:'#5a3d6a', accentColor:'#87397a'},
-    {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'UnicornLamp encaixado na lâmpada de fenda.'}]
+    {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'UnicornLamp encaixado na lâmpada de fenda.',
+      // 07/10/2026: depois do encaixe, a cabeça gira para a direita — o chifre sai da frente da lâmpada, para a criança olhar pelos olhinhos
+      // (quadros do 3D por cima da foto: tools/render-aviao-macaco/lamp-assets.cjs --giro; box = a parte que muda, em frações da foto)
+      turn:{src:'unicornioscopio-giro.webp', frames:18, box:[0.2656, 0.0702, 0.5159, 0.3876], angle:70, hint:'Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.'}}]
 ]) {
   const monkey = SHOWCASE.macacoscopio, title = PRODUCTS[key].title;
   SHOWCASE[key] = {art, theme, demo:{...fitLamp(monkey.demo, fit, 1 - art.bottom), ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};

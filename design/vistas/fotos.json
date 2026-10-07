@@ -4,7 +4,6 @@
   "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (a cor média da parte na foto de frente original, medida em OKLab, com \"faixa\" de matiz em graus), \"para\" (a cor média da mesma parte na foto da vitrine, medida igual: assim a peça sai, em média, com a claridade, a saturação e o matiz da vitrine; ou um id da paleta), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda), \"croma_max\" (acima disso não muda: a regra só pega cores apagadas, como a costura lilás em volta do rosto da borboleta, sem tocar nas bochechas) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026). Borboleta: o brilho de cada olho fica branco, como na vitrine (\"olhos\"; a peça da foto tem o brilho rosa).",
   "_ampliadas_como": "Fontes ampliadas 4x pelo Real-ESRGAN (realesrgan-ncnn-vulkan, modelo realesrgan-x4plus, rodado no PC; tools/galeria-vistas/AMPLIAR.md): o gerador usa a ampliada no lugar da original, com as mesmas medidas (em pixels da original). encolher: quanto o recorte entra na peça (pixels da original), para tirar o fio escuro do fundo na beirada (07/10/2026).",
   "_ampliadas": {
-    "dinossauroscopio-3-vistas.webp": {"arquivo": "ampliadas/dinossauroscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
     "borboletoscopio-3-vistas.webp": {"arquivo": "ampliadas/borboletoscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
     "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4}
   },
@@ -54,54 +53,50 @@
     }
   },
   "dinossauroscopio": {
-    "cores": [{"de": "#32355a", "faixa": 45, "para": "#687560"}, {"de": "#78a14f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05}],
+    "_fontes": "O vídeo do render girando que o dono mandou em 07/10/2026 (1920 x 1920, fundo preto liso, sem chão nem reflexo; 251 quadros numa volta): de frente o quadro 0, três quartos o 48, costas o 140; o detalhe sai do quadro 0. As medidas são em pixels do vídeo; t é o tempo do quadro (n + 0,5)/30. No fundo preto puro, o recorte pega tudo o que não é preto (limiar 14: acima do chuvisco da compressão em volta da peça, abaixo das partes mais escuras dela) e entra 1,2 pixel (sem o fio escuro da borda); o vão entre as pernas visto de lado é fundo (buracos): a abertura embaixo da boca, as paredes de dentro, os pés e o olho de costas ficam como no render.",
+    "cores": [
+      {"de": "#2c2e55", "faixa": 70, "para": "#687560", "croma_min": 0.004},
+      {"de": "#84b24f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05}
+    ],
     "frente": {
-      "fonte": "dinossauroscopio-3-vistas.webp",
-      "recorte": [600, 150, 400, 720],
+      "fonte": "dinossauroscopio-girando.mp4",
+      "t": 0.0167,
+      "recorte": [560, 200, 800, 1520],
       "fundo": "recortar",
-      "chao": 866,
       "matte": "cobertura",
-      "limiar": 18,
-      "manter": [
-        [[700, 395], [745, 395], [745, 409.5], [737, 410.5], [730.5, 413.5], [726.5, 419], [724.5, 428], [724, 440], [700, 440]],
-        [[897.5, 440], [873.5, 440], [873, 428], [871, 419], [867, 413.5], [860.5, 410.5], [852.5, 409.5], [852.5, 395], [897.5, 395]],
-        [[745, 395], [852.5, 395], [852.5, 409.5], [745, 409.5]]
-      ]
+      "limiar": 14,
+      "encolher": 1.2
     },
     "tres-quartos": {
-      "fonte": "dinossauroscopio-3-vistas.webp",
-      "recorte": [130, 160, 390, 700],
+      "fonte": "dinossauroscopio-girando.mp4",
+      "t": 1.6167,
+      "recorte": ["auto", 200, 820, 1520],
       "fundo": "recortar",
-      "chao": [[150, 845], [260, 846], [312, 846.5], [500, 851]],
       "matte": "cobertura",
-      "limiar": 18,
-      "buracos": 0.02
+      "limiar": 14,
+      "encolher": 1.2,
+      "buracos": 0.002
     },
     "costas": {
-      "fonte": "dinossauroscopio-3-vistas.webp",
-      "recorte": [1080, 160, 400, 700],
+      "fonte": "dinossauroscopio-girando.mp4",
+      "t": 4.6833,
+      "recorte": ["auto", 200, 820, 1520],
       "fundo": "recortar",
-      "chao": [[1100, 846.5], [1460, 851.5]],
       "matte": "cobertura",
-      "limiar": 18,
-      "buracos": 0.02,
-      "manter": [
-        [[1429, 304], [1428.1, 310.5], [1425.7, 316.5], [1421.7, 321.7], [1416.5, 325.7], [1410.5, 328.1], [1404, 329], [1397.5, 328.1], [1391.5, 325.7], [1386.3, 321.7], [1382.3, 316.5], [1379.9, 310.5], [1379, 304], [1379.9, 297.5], [1382.3, 291.5], [1386.3, 286.3], [1391.5, 282.3], [1397.5, 279.9], [1404, 279], [1410.5, 279.9], [1416.5, 282.3], [1421.7, 286.3], [1425.7, 291.5], [1428.1, 297.5]]
-      ]
+      "limiar": 14,
+      "encolher": 1.2,
+      "buracos": 0.002
     },
     "detalhe": {
-      "fonte": "dinossauroscopio-3-vistas.webp",
-      "recorte": [640, 140, 320, 400],
+      "fonte": "dinossauroscopio-girando.mp4",
+      "t": 0.0167,
+      "recorte": [640, 250, 640, 800],
       "fundo": "recortar",
       "matte": "cobertura",
-      "limiar": 18,
+      "limiar": 14,
       "cor_fundo": "#000000",
       "detalhe": true,
-      "manter": [
-        [[700, 395], [745, 395], [745, 409.5], [737, 410.5], [730.5, 413.5], [726.5, 419], [724.5, 428], [724, 440], [700, 440]],
-        [[897.5, 440], [873.5, 440], [873, 428], [871, 419], [867, 413.5], [860.5, 410.5], [852.5, 409.5], [852.5, 395], [897.5, 395]],
-        [[745, 395], [852.5, 395], [852.5, 409.5], [745, 409.5]]
-      ]
+      "encolher": 1.2
     }
   },
   "aviaoscopia": {
@@ -143,10 +138,9 @@
     "costas": {"fonte": "design/vistas/girafoscopio-3d-costas.png", "fundo": "transparente"},
     "detalhe": {
       "fonte": "design/vistas/girafoscopio-3d-rosto.png",
-      "recorte": [270, 180, 1260, 1575],
+      "recorte": [240, 160, 1120, 1400],
       "fundo": "transparente",
       "detalhe": true
     }
-  },
-  "_dino_recorte": "Dino (07/10/2026: \"a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado\"): na de frente e no detalhe, a abertura embaixo da boca é a forma dela (as paredes de dentro e os cantos redondos ficam inteiros: manter); nas de três quartos e de costas, o chão é uma reta na linha em que a peça encosta (sem a sombra entre os pés e sem a borda ondulada do reflexo); de costas, o olho que aparece do lado da cabeça fica inteiro, redondo."
+  }
 }

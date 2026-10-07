@@ -22,6 +22,7 @@ Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da
 Novidade|New|Novedad
 Comprar|Buy|Comprar
 Ver e comprar|See and buy|Ver y comprar
+Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.|Turn the little head to the side: the horn moves out of the lamp's way.|Gira la cabecita hacia un lado: el cuerno sale de delante de la lámpara.
 Cada peça é impressa depois do pedido, nas cores dela. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in its own colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en sus propios colores. La producción empieza cuando se confirma el pago.
 GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
 UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.

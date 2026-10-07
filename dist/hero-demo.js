@@ -4,7 +4,8 @@
 // "Voltar" toca a mesma sequência ao contrário.
 // Com `assemble` (products.js) o produto é montado em vez de encaixado: a peça se abre em duas metades, o equipamento sobe por entre elas e as
 // metades se fecham em volta dele (peça de duas metades, como a de um avião com régua). Com `head`, uma segunda peça do equipamento desce por cima da
-// peça depois que a base sobe (equipamento em duas partes).
+// peça depois que a base sobe (equipamento em duas partes). Com `turn` (o unicórnio), depois do encaixe a cabeça da peça gira para o lado
+// (quadros renderizados do 3D, por cima da foto, só na parte que muda) e uma dica explica por quê.
 //
 // Camadas (de trás para frente): sombra projetada · peça, camada de trás (paredes internas da abertura) · sombra do
 // equipamento nas paredes · equipamento (com o reflexo verde da peça) · sombra da peça sobre o equipamento · peça,
@@ -53,9 +54,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       + '<div class="demo-cast">' + image('demo-cast-image') + '</div>'
       + '<div class="demo-tool"><img alt="" decoding="async" draggable="false"></div>'
       + '<div class="demo-head"><img alt="" decoding="async" draggable="false"></div>'
-      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '<div class="demo-sheen" aria-hidden="true"><i></i></div></div>'
+      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '<canvas class="demo-frames" hidden></canvas><div class="demo-sheen" aria-hidden="true"><i></i></div></div>'
       + '</div></div></div></div>');
-    const controls = node('div', 'demo-controls', '<div class="demo-callouts" aria-hidden="true"></div>');
+    const controls = node('div', 'demo-controls', '<div class="demo-callouts" aria-hidden="true"></div><p class="demo-hint" hidden>' + icon('returns') + '<span></span></p>');
     const close = node('button', 'demo-close', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
     close.type = 'button';
     close.setAttribute('aria-label', 'Voltar à vitrine');
@@ -73,7 +74,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       callouts: controls.querySelector('.demo-callouts'), header: shell.querySelector('.site-header'),
       rig: q('.demo-rig'), tilt: q('.demo-tilt'), turn: q('.demo-turn'), float: q('.demo-float'), drop: q('.demo-drop'), back: q('.demo-back'),
       cast: q('.demo-cast'), castImage: q('.demo-cast-image'), tool: q('.demo-tool'), toolImage: q('.demo-tool img'),
-      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), head: q('.demo-head'), headImage: q('.demo-head img'), ready: null};
+      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), head: q('.demo-head'), headImage: q('.demo-head img'),
+      frames: q('.demo-frames'), hint: controls.querySelector('.demo-hint'), ready: null, giro: null};
   }
 
   // Monta as camadas do produto e decodifica as imagens antes do clique (o equipamento nunca chega atrasado).
@@ -120,10 +122,55 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : fixed ? 'cart' : 'palette')));
       dom.cta.href = soon ? `#produto/${key}/3d` : fixed ? `#produto/${key}` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
+      setupTurn(config.turn || null);
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
       dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));
     }
     return dom.ready;
+  }
+
+  // ── o giro da cabeça (turn): os quadros lado a lado numa tira (src), na caixa [x, y, largura, altura] da foto (frações); a foto some
+  //    só dentro da caixa (máscara), e o canvas desenha o quadro do momento, com o seguinte por cima na fração que falta (sem degraus) ──
+  function setupTurn(turn) {
+    resetTurn();
+    dom.giro = null; dom.hint.hidden = true;
+    if (!turn) return;
+    const sprite = new Image(); sprite.src = `assets/${turn.src}`;
+    const [x, y, w, h] = turn.box, t = dom.giro = {turn, sprite, p: 0, raf: 0, ready: false, timer: 0};
+    Object.assign(dom.frames.style, {left: `${x * 100}%`, top: `${y * 100}%`, width: `${w * 100}%`, height: `${h * 100}%`});
+    dom.cover.style.setProperty('--turn-mask-pos', `${(x / (1 - w) * 100).toFixed(3)}% ${(y / (1 - h) * 100).toFixed(3)}%`);
+    dom.cover.style.setProperty('--turn-mask-size', `${(w * 100).toFixed(3)}% ${(h * 100).toFixed(3)}%`);
+    dom.hint.querySelector('span').textContent = turn.hint || '';
+    // load, not decode(): decode() of the long strip can stay pending (a hidden tab, a big image) and the turn would never start
+    const loaded = () => { if (dom.giro !== t || !sprite.naturalWidth) return; dom.frames.width = sprite.naturalWidth / turn.frames; dom.frames.height = sprite.naturalHeight; t.ready = true; };
+    if (sprite.complete) loaded(); else sprite.addEventListener('load', loaded, {once: true});
+  }
+  function drawTurn(p) {
+    const t = dom.giro, n = t.turn.frames, g = dom.frames.getContext('2d'), fw = dom.frames.width, fh = dom.frames.height, at = p * (n - 1), a = Math.floor(at), f = at - a;
+    t.p = p; g.clearRect(0, 0, fw, fh); g.globalAlpha = 1; g.drawImage(t.sprite, a * fw, 0, fw, fh, 0, 0, fw, fh);
+    if (f > .001 && a + 1 < n) { g.globalAlpha = f; g.drawImage(t.sprite, (a + 1) * fw, 0, fw, fh, 0, 0, fw, fh); g.globalAlpha = 1; }
+  }
+  // to: 1 = virada, 0 = de frente; a foto volta inteira quando o giro termina de frente
+  function playTurn(to, duration) {
+    const t = dom.giro; if (!t?.ready) return Promise.resolve();
+    cancelAnimationFrame(t.raf); clearTimeout(t.timer);
+    dom.frames.hidden = false; dom.cover.classList.add('is-turning'); drawTurn(t.p);
+    const from = t.p, start = performance.now(), ease = x => x < .5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+    return new Promise(done => {
+      const step = now => {
+        const k = duration ? Math.min(1, (now - start) / duration) : 1;
+        drawTurn(from + (to - from) * ease(k));
+        if (k < 1) { t.raf = requestAnimationFrame(step); return; }
+        if (to === 0) { dom.frames.hidden = true; dom.cover.classList.remove('is-turning'); }
+        done();
+      };
+      t.raf = requestAnimationFrame(step);
+    });
+  }
+  function resetTurn() {
+    if (!dom) return;
+    const t = dom.giro; if (t) { cancelAnimationFrame(t.raf); clearTimeout(t.timer); t.p = 0; }
+    dom.frames.hidden = true; dom.cover.classList.remove('is-turning'); dom.hint.hidden = true; dom.hint.classList.remove('is-shown');
   }
 
   function measure() {
@@ -276,6 +323,15 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   function settle() {
     state = 'open';
     status.textContent = configs[index].message || '';
+    const t = dom.giro;
+    if (t?.ready) t.timer = setTimeout(() => {
+      if (state !== 'open') return;
+      playTurn(1, calm ? 0 : 1500).then(() => {
+        if (state !== 'open' || !t.turn.hint) return;
+        dom.hint.hidden = false; requestAnimationFrame(() => dom.hint.classList.add('is-shown'));
+        status.textContent = `${configs[index].message || ''} ${t.turn.hint}`.trim();
+      });
+    }, calm ? 200 : 450);
     if (calm || !finePointer.matches) return;
     float = dom.float.animate([
       {transform: 'perspective(1100px) translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg)'},
@@ -298,6 +354,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (immediate || !timeline.animations.length || timeline.time <= 0) { finish(); return; }
     const time = timeline.time;
     stopIdle(false);
+    if (dom.giro) { dom.hint.classList.remove('is-shown'); dom.hint.hidden = true; if (dom.giro.p > 0) playTurn(0, calm ? 0 : 320); else clearTimeout(dom.giro.timer); }
     timeline.load(tracks({...measure(), closing: true}), time);   // saída própria onde precisa (closing); medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
     run('closing');
   }
@@ -305,6 +362,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   function finish() {
     const hadFocus = dom?.controls.contains(document.activeElement);
     stopIdle(true);
+    resetTurn();
     timeline.cancel();
     if (dom) show(false);
     state = 'idle';

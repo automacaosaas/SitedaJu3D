@@ -1,7 +1,7 @@
 // Borboletoscópio em 3D (07/10/2026: "o rosto dela está saltando para fora da peça… encaixar"; "a pupila dela é branca"): a cabeça (o
 // nó "cabeca" que trocar_cabeca.py pôs no corpo) recua dz no eixo da profundidade até assentar no encaixe, como na peça montada do 3MF,
 // e o brilho de cada olho (rosa, nas bochechas) vira um material próprio, branco ("highlight"), como na vitrine.
-// O site usa dz = -0.09 sobre o GLB de 06/10 (git show fb36280:dist/assets/models/borboletoscopio.glb).
+// O site usa dz = -0.03 (−0,09 afundava a cabeça; 0 a deixava saltada) sobre o GLB de 06/10 (git show fb36280:dist/assets/models/borboletoscopio.glb).
 // GLTF_NM=<node_modules do gltf-transform> node encaixar_cabeca.cjs <entrada.glb> <saida.glb> <dz> [inspect]
 const {createRequire} = require('module');
 const req = createRequire(require('path').join(process.env.GLTF_NM || 'C:/Users/LUIZ/tools/gltf/node_modules', '..', 'package.json'));
