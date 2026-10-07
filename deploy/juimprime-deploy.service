@@ -1,0 +1,13 @@
+# Uma rodada de publicação (deploy/deploy.sh): baixa a branch do GitHub e, se mudou, instala, reinicia e confere.
+# Chamado a cada minuto pelo juimprime-deploy.timer; na hora: sudo systemctl start juimprime-deploy.service
+[Unit]
+Description=Ju imprime pra mim: publica a versão nova do Git
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=juimprime
+Group=juimprime
+ExecStart=/usr/local/lib/juimprime/deploy.sh
+TimeoutStartSec=15min
