@@ -9,6 +9,31 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
+- **Atualização de 06/10/2026 (noite): servidor próprio da loja no ar** (`SERVIDOR-SETUP.md`). Debian 13 no endereço
+  interno `10.0.100.80`, com Node 24, MariaDB e nginx. A Hostinger continua como site de teste até o lançamento.
+  - **Publicação:** o servidor confere o GitHub a cada minuto. Subiu na branch configurada, ele baixa, instala,
+    reinicia e confere o `/api/health`. Se a versão nova não responder, volta sozinho para a anterior.
+  - **Branch publicada:** por enquanto a `servidor/proprio` (a `teste/rastreio-vitrine` mais o kit do servidor).
+    Depois do PR para a `main`, o servidor passa a publicar a `main`.
+  - **Chave do servidor no GitHub:** Deploy Key somente leitura; o servidor só baixa o código.
+  - **No código:**
+    - a pasta `deploy/` (instalação, publicação automática, serviço e nginx), `SERVIDOR-SETUP.md` e `tests/deploy.mjs`;
+    - a variável `HOST` no `server/create-server.cjs` (o site escuta só em `127.0.0.1`; sem ela, nada muda na
+      Hostinger);
+    - o `.gitattributes`, que mantém `deploy/` em LF.
+  - **Vantagem:** o site não "dorme". A fila de notas e o rastreio rodam sozinhos, sem o cron-job.org.
+  - **Rede:** o IP público `201.77.147.2` encaminha as portas 80 e 443 para o servidor (07/10). O provedor está
+    configurando o IPv6.
+  - **Falta:**
+    - a configuração secreta (`/srv/juimprime/shared/.env`), preenchida pelo dono direto no servidor;
+    - o DNS do domínio e o HTTPS (certbot);
+    - firewall antes de o IPv6 ser ligado (no IPv6 não há o filtro do encaminhamento de portas);
+    - cópia de segurança diária do banco;
+    - no lançamento: Mercado Pago real (com o 3x sem juros configurado), Bling em produção, webhook e endereço de
+      retorno do Bling no domínio, e domínio verificado no Resend.
+  - **Acesso ao servidor:** só por chave SSH. Ninguém manda senha por chat.
+  - **Pedidos ao Pedro:** juntar a `servidor/proprio` na `teste/rastreio-vitrine`, e no `tests/server.mjs` (linha
+    75) aceitar `\r?\n` (no Windows ele falha por causa da quebra de linha; no servidor passa).
 - **Atualização de 06/10/2026: o site de teste roda a `teste/rastreio-vitrine`**, a junção feita pelo Pedro de todas as
   branches abaixo (zip a cada junção; 44 suítes passam). Nenhuma delas está na `main` ainda.
   - **Rastreio (`rastreio/correios`, `RASTREIO.md`):**
