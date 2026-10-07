@@ -6,15 +6,19 @@
 // O padrão: 4 fotos — frente, três quartos, costas e um detalhe de perto (que enche o quadro, como o zoom das lojas). Cada peça diz qual é
 // o detalhe dela. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine.
 export const STANDARD=[['frente','Frente'],['tres-quartos','Três quartos'],['costas','Costas'],['detalhe','Detalhe de perto']];
+const NAMES={...Object.fromEntries(STANDARD),lado:'Lado'};
+// vistas: quando a peça não tem as 4 do padrão (a girafa, 07/10/2026: as imagens do render que o dono mandou, de frente, de lado e de
+// costas — a de lado no lugar da de três quartos).
 export const GALLERY={
   borboletoscopio:{detalhe:'Rostinho de perto'},
   dinossauroscopio:{detalhe:'Rosto de perto'},
-  aviaoscopia:{detalhe:'Cabine de perto'}
+  aviaoscopia:{detalhe:'Cabine de perto'},
+  girafoscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']}
 };
-export const viewsOf=key=>GALLERY[key]?STANDARD.map(([id,name])=>({id,name:id==='detalhe'?GALLERY[key].detalhe:name,zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
+export const viewsOf=key=>GALLERY[key]?(GALLERY[key].vistas||STANDARD.map(([id])=>id)).map(id=>({id,name:id==='detalhe'?GALLERY[key].detalhe:NAMES[id],zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const hasGallery=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='13';
+export const VIEWS_VERSION='14';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){

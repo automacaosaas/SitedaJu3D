@@ -5,10 +5,10 @@ import {readFile, stat} from 'node:fs/promises';
 // No padrão de 4 por peça — frente, três quartos, costas e um detalhe de perto —, todas 4:5 e com a peça do mesmo tamanho. Desde
 // 05/10/2026 são renders do modelo 3D (tools/render-vistas: luz de estúdio, cores da vitrine), feitos fora do navegador de quem compra.
 const read = file => readFile(new URL(`../${file}`, import.meta.url), 'utf8');
-const [html, controller, gallery, viewer, css, generator, page, i18n, fotosJson] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json'].map(read));
+const [html, controller, gallery, viewer, css, generator, page, i18n, fotosJson, landingCss] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json', 'dist/product-landing.css'].map(read));
 const {STANDARD, GALLERY, VIEWS_VERSION, viewsOf, hasGallery, staticViews} = await import('../dist/gallery.js');
 const {translations} = await import('../dist/translations.js');
-const {PRODUCTS, SOON} = await import('../dist/products.js');
+const {PRODUCTS, SOON, PALETTE} = await import('../dist/products.js');
 const fotos = JSON.parse(fotosJson);
 const dialog = html.match(/<dialog id="product-dialog"[\s\S]*?<\/dialog>/)[0];
 
@@ -23,23 +23,45 @@ const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
 assert.deepEqual([...keys].sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio', 'girafoscopio', 'macacoscopio', 'unicornioscopio']);
 const standardIds = ['frente', 'tres-quartos', 'costas', 'detalhe'];
 assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, três quartos, costas e um detalhe de perto');
-assert.deepEqual(Object.keys(GALLERY).sort(), ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'], 'as três peças com fotos reais');
+// A girafa (07/10/2026): ainda sem peça impressa, as imagens do render que o dono mandou — de frente, de lado (no lugar da de três
+// quartos) e de costas, e o rosto de perto saindo da de frente.
+const photoPieces = ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'];
+assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio'], 'as três peças com fotos reais e a girafa');
+assert.deepEqual(viewsOf('girafoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'a girafa: frente, lado, costas e o rosto de perto');
 for (const key of Object.keys(GALLERY)) {
-  // recortadas do fundo delas (preto ou claro), com transparência: ficam direto no fundo da página; a fonte é a foto do Luiz
-  assert(Object.values(fotos[key]).every(f => f.fundo === 'recortar' && f.fonte === `${key}-3-vistas.webp`), `${key}: as fotos reais, recortadas`);
-  assert(!/render/.test(JSON.stringify(fotos[key])), `${key}: nada de render`);
-  assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), Object.keys(fotos[key]).filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
-  for (const id of Object.keys(fotos[key])) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${key}-${id}: sem o fundo (com transparência)`); }
-  const ids = viewsOf(key).map(v => v.id);
-  assert.deepEqual(ids, standardIds, `${key}: as 4 fotos do padrão`);
-  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_')), standardIds, `${key}: fotos.json com as 4 fotos, na ordem`);
+  const ids = viewsOf(key).map(v => v.id), specs = ids.map(id => fotos[key][id]);
+  // recortadas do fundo delas (preto ou claro); a fonte é a foto do Luiz (a girafa: as imagens que o dono mandou)
+  assert(specs.every(f => f.fundo === 'recortar' && (photoPieces.includes(key) ? f.fonte === `${key}-3-vistas.webp` : f.fonte.startsWith(`${key}-`))), `${key}: as fotos, recortadas`);
+  assert(!/render/.test(JSON.stringify(specs)), `${key}: nada do render do visualizador do site`);
+  assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), ids.filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
+  // no branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), como nas lojas grandes: sem transparência
+  for (const id of ids) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(!(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10)), `${key}-${id}: no fundo branco (sem transparência)`); }
+  if (photoPieces.includes(key)) assert.deepEqual(ids, standardIds, `${key}: as 4 fotos do padrão`);
+  assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_') && id !== 'cores'), ids, `${key}: fotos.json com as fotos da galeria, na ordem`);
   assert(/ de perto$/.test(viewsOf(key).at(-1).name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
   const [, , w, h] = fotos[key].detalhe.recorte; assert(Math.abs(w / h - .8) < .01, `${key}: o recorte do detalhe é 4:5, como o quadro`);
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(`../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
-for (const key of ['macacoscopio', 'girafoscopio', 'unicornioscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
+for (const key of ['macacoscopio', 'unicornioscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
+// Nas cores da vitrine (07/10/2026: "preciso que as imagens estejam todas nas cores que ela é originalmente"): as fotos reais foram
+// feitas com peças de outras cores; cada regra de "cores" leva uma cor da foto para a da paleta (a borboleta, para o verde do render da
+// vitrine, mais verde que a amostra), e as regras que valem só numa parte dizem a área dela em todas as vistas.
+const showcaseTone = {borboletoscopio: {mint: '#5eca9b'}};
+for (const key of photoPieces) {
+  const rules = fotos[key].cores, targets = rules.map(rule => rule.para);
+  for (const rule of rules) {
+    assert(/^#[0-9a-f]{6}$/i.test(rule.de) && (PALETTE.some(p => p.id === rule.para) || /^#[0-9a-f]{6}$/i.test(rule.para)), `${key}: regra de cor ${JSON.stringify(rule)}`);
+    for (const area of [rule.so, rule.exceto].filter(Boolean)) for (const id of standardIds) assert(fotos[key][id].areas?.[area]?.length, `${key}-${id}: a área "${area}"`);
+  }
+  for (const part of PRODUCTS[key].parts) assert(targets.includes(showcaseTone[key]?.[part.default] || part.default), `${key}: ${part.name} na cor de fábrica (${part.default})`);
+}
+assert(page.includes("import {PRODUCTS,SOON,PALETTE} from '/dist/products.js';") && page.includes('function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,spec.areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
+// A base da girafa é redonda e encosta no reflexo: o chão é uma linha por vários pontos (em ordem de x), não uma altura só.
+assert(page.includes('while(j<floor.length-1&&sx>floor[j][0])j++;'), 'chão por vários pontos');
+for (const id of ['frente', 'lado', 'costas']) { const line = fotos.girafoscopio[id].chao; assert(Array.isArray(line) && line.length > 10 && line.every((p, i) => !i || p[0] > line[i - 1][0]), `girafoscopio-${id}: o chão segue a curva da base`); }
+assert(page.includes('function onWhite(canvas)') && page.includes('encode(photo,.93)') && page.includes('encode(resample(photo,[0,0,...FRAME],...MINI),.88)'), 'as fotos e as miniaturas saem no branco');
 // Uma foto (1200 x 1500) e uma miniatura (160 x 200) de cada vista: o mesmo quadro 4:5 em todas.
 let total = 0;
 for (const key of keys) for (const item of staticViews(key)) {
@@ -70,7 +92,14 @@ for (const part of ["track.addEventListener('scroll'", "{ArrowLeft:-1,ArrowRight
 assert(css.includes('#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
 assert(css.includes('.gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;'));
 assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-rail, \.gallery-arrows \{ display: none; \}[\s\S]*\.gallery-dots button \{ display: grid; place-items: center; width: 24px; height: 24px;/.test(css));
-assert(/.gallery-main {[^}]*background: transparent;/.test(css) && css.includes('#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }') && /#product-dialog .gallery img {[^}]*mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none;/.test(css), 'sem quadro em volta das fotos; as de perto enchem a área');
+assert(/\.gallery-main \{[^}]*border: 1px solid var\(--pd-line\);[^}]*background: #fff;/.test(css) && css.includes('#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }') && /#product-dialog .gallery img {[^}]*mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none;/.test(css), 'as fotos num painel branco (sem emenda com o branco delas); as de perto enchem o painel');
+assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-main \{ margin: 0 16px; border-radius: 20px;[^}]*\}\r?\n  \.gallery-slide \{ padding: 0; \}/.test(css), 'no tablet e no celular, o painel branco com margem dos lados');
+// A página da peça: o quadro da foto real branco, com borda (a foto, opaca, não cobre a borda), a foto inteira e sem a sombra do
+// contorno (marcaria o retângulo); as miniaturas brancas, com folga para a sombra da escolhida.
+assert(landingCss.includes('.pl-art.is-real { border: 1px solid #2a1c2214; background: #fff; }') && landingCss.includes('.pl-art.is-real .pl-photo { position: absolute; inset: 0; width: 100%; height: 100%; filter: none; }') && landingCss.includes('.pl-art.is-real[data-view="3d"] { background: radial-gradient('), 'página da peça: o quadro da foto branco');
+assert(/\.pl-thumbs button \{[^}]*background: #fff;/.test(landingCss) && landingCss.includes('padding: 3px 3px 16px; margin-bottom: -13px;'), 'página da peça: miniaturas brancas, sombra sem corte');
+// A novidade sem venda continua sem os botões de compra no celular (o display: contents do resumo compacto passava por cima).
+assert(css.includes('#product-dialog:not([data-mode=preview]) .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }') && css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade sem botões de compra no celular');
 // Surpreenda-me ao lado das cores, sempre à vista (fora de Combinações).
 assert(dialog.includes('<div class="pdp-palette-row"><div id="palette" role="radiogroup" aria-label="Cor da parte"></div><button type="button" class="pdp-surprise" id="surprise">') && controller.includes("PRESETS.filter(preset=>preset.id!=='surpresa')") && controller.includes("$('#surprise').addEventListener('click'"), 'Surpreenda-me ao lado das cores');
 assert(css.includes('.gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }'));
@@ -89,4 +118,4 @@ assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video
 // Tradução: nota, rótulos e texto alternativo das fotos.
 assert(i18n.includes('(Frente|Três quartos|Lado|Três quartos de trás|Costas|De cima|.+ de perto)'));
 
-console.log(`PASS: photo gallery — 4 real photos per piece, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the real photos onto the page background, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);
+console.log(`PASS: photo gallery — 4 photos per piece (the giraffe from the owner's render images), in the showcase colours, on pure white in a white panel and frame, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the sources, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);

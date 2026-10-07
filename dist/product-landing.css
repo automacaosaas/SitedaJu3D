@@ -24,11 +24,12 @@
 .pl-drag svg { width: 18px; height: 18px; color: var(--pl-accent); }
 .pl-art[data-view="3d"].is-3d-ready:not(.is-touched) .pl-drag { opacity: 1; transform: translate(-50%, 0); transition-delay: .6s; }
 /* as fotos da peça em miniaturas embaixo dela (06/10/2026): a da vitrine e as fotos reais; a escolhida troca a grande num esmaecimento
-   rápido. Na foto da vitrine, uma sombra macia no chão: a peça pousa no quadrado em vez de flutuar. */
-.pl-thumbs { display: flex; justify-content: center; gap: 8px; width: 100%; max-width: 100%; padding: 3px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+   rápido. Na foto da vitrine, uma sombra macia no chão: a peça pousa no quadrado em vez de flutuar. A faixa rola de lado e corta o que
+   passa dela: a folga embaixo (descontada na margem) é para a sombra da miniatura escolhida não sair cortada. */
+.pl-thumbs { display: flex; justify-content: center; gap: 8px; width: 100%; max-width: 100%; padding: 3px 3px 16px; margin-bottom: -13px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
 .pl-thumbs[hidden] { display: none; }
 .pl-thumbs::-webkit-scrollbar { display: none; }
-.pl-thumbs button { flex: 0 1 58px; min-width: 44px; aspect-ratio: 4 / 5; padding: 0; border: 1.5px solid #2a1c2214; border-radius: 12px; background: radial-gradient(85% 85% at 50% 40%, var(--pl-stops)); overflow: hidden; cursor: pointer; opacity: .72; transition: opacity .25s ease, border-color .25s ease, transform .3s var(--pl-spring), box-shadow .25s ease; }
+.pl-thumbs button { flex: 0 1 58px; min-width: 44px; aspect-ratio: 4 / 5; padding: 0; border: 1.5px solid #2a1c2214; border-radius: 12px; background: #fff; overflow: hidden; cursor: pointer; opacity: .72; transition: opacity .25s ease, border-color .25s ease, transform .3s var(--pl-spring), box-shadow .25s ease; }
 .pl-thumbs img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 .pl-thumbs button[data-main] img { padding: 5px; }
 .pl-thumbs button[aria-pressed="true"] { opacity: 1; border-color: var(--pl-accent); box-shadow: 0 6px 14px color-mix(in srgb, var(--pl-accent) 22%, transparent); }
@@ -37,6 +38,12 @@
 .pl-art[data-view="photo"] { touch-action: pan-y; }
 .pl-art::after { content: ''; position: absolute; left: 24%; right: 24%; bottom: 8.5%; height: 4.5%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, #2a1c222b, transparent); pointer-events: none; transition: opacity .4s ease; }
 .pl-art:is([data-view="3d"], .is-real)::after { opacity: 0; }
+/* as fotos reais vêm prontas sobre o branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), com a sombra delas no chão: o quadro fica
+   branco também (sem emenda), com um fio em volta, e a foto (4:5) enche a altura dele, inteira; sem a sombra do contorno, que marcaria o retângulo da
+   foto. No 3D, o quadro volta à cor da peça. */
+.pl-art.is-real { border: 1px solid #2a1c2214; background: #fff; }
+.pl-art.is-real[data-view="3d"] { background: radial-gradient(85% 85% at 50% 40%, var(--pl-stops)); }
+.pl-art.is-real .pl-photo { position: absolute; inset: 0; width: 100%; height: 100%; filter: none; }
 .pl-views { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #2a1c2214; border-radius: 999px; background: #ffffff9e; backdrop-filter: blur(10px); }
 .pl-views[hidden] { display: none; }
 .pl-views button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px; background: transparent; color: var(--pl-ink); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; transition: background .3s var(--pl-ease), color .3s var(--pl-ease); }

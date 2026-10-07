@@ -41,10 +41,10 @@
 #product-dialog .detail-visual { grid-column: 1; grid-row: 2 / 4; position: relative; min-height: 0; height: auto; display: block; overflow: hidden; border-radius: 0;
   background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
 /* Galeria de fotos (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto
-   escolhida grande; no celular, a foto ocupa a largura toda e muda arrastando de lado. As fotos vêm recortadas, com uma sombra leve no
-   chão, e ficam direto no fundo da área (o mesmo das duas abas, sem um quadro em volta); as de perto (.is-zoom) enchem a área toda, como
-   um zoom. Todas no mesmo formato, 4:5, e as miniaturas também. Peça ainda sem fotos reais: só a foto da vitrine, sem miniaturas nem
-   setas. */
+   escolhida grande; no celular, a foto ocupa a largura toda e muda arrastando de lado. As fotos vêm recortadas e prontas sobre o branco
+   puro (07/10/2026: "FUNDO BRANCO nas imagens"), com uma sombra leve no chão, num painel branco com um fio em volta (a foto e o painel
+   sem emenda); as de perto (.is-zoom) enchem o painel todo, como um zoom. Todas no mesmo formato, 4:5, e as miniaturas também (brancas,
+   como o painel). Peça ainda sem fotos reais: só a foto da vitrine, sem miniaturas nem setas. */
 #product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
 .gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
@@ -53,7 +53,7 @@
 .gallery-rail button[aria-current=true] { box-shadow: inset 0 0 0 2px var(--pd-text); }
 .gallery-rail button:focus-visible, .gallery-arrows button:focus-visible, .gallery-dots button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none; -webkit-user-drag: none; user-select: none; }
-.gallery-main { position: relative; min-width: 0; min-height: 0; border-radius: 22px; background: transparent; overflow: hidden; }
+.gallery-main { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--pd-line); border-radius: 22px; background: #fff; box-shadow: 0 10px 30px #14231b0d; overflow: hidden; }
 .gallery-slide.is-zoom { padding: 0; }
 #product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }
 .gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
@@ -201,8 +201,9 @@
   #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, #fff) 60%, #fff 100%); }
   #product-dialog .image-area { inset: 58px 0 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
   .gallery-rail, .gallery-arrows { display: none; }
-  .gallery-main { border-radius: 0; }
-  .gallery-slide { padding: 0 16px; }
+  /* o painel branco com uma margem dos lados e os cantos redondos (a área continua com a cor do topo em volta); a foto enche o painel */
+  .gallery-main { margin: 0 16px; border-radius: 20px; box-shadow: 0 8px 22px #14231b0f; }
+  .gallery-slide { padding: 0; }
   .gallery-dots { display: flex; justify-content: center; }
   .gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
   .gallery-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--pd-text) 28%, transparent); transition: width .25s var(--pd-ease), background .25s; }
@@ -288,7 +289,9 @@
 #product-dialog .modal-actions.is-moving { overflow: clip; }
 #product-dialog .modal-actions.is-compact { grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; }
 #product-dialog .modal-actions.is-compact > .pdp-soon-bar { grid-column: 1 / -1; }
-#product-dialog .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }
+/* a novidade sem venda (data-mode=preview) fica sem os botões de compra também no celular: o display: contents passava por cima do
+   display: none dela (o :is com o #id pesa mais) */
+#product-dialog:not([data-mode=preview]) .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }
 #product-dialog .modal-actions.is-compact .purchase-status { grid-column: 1 / -1; grid-row: 1; margin: 0; }
 #product-dialog .modal-actions.is-compact .pdp-price { grid-column: 1; min-width: 0; }
 #product-dialog .modal-actions.is-compact .pdp-price p { flex-wrap: nowrap; }

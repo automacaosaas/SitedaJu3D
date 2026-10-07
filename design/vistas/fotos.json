@@ -1,14 +1,20 @@
 {
-  "_como": "Fotos da galeria da aba Foto: as FOTOS REAIS de cada peça (06/10/2026), no padrão de 4 (dist/gallery.js): frente, três quartos, costas e um detalhe de perto, todas 4:5. Para cada uma, a fonte nesta pasta e o recorte [x, y, largura, altura] em pixels da fonte; \"fundo\": \"recortar\" tira o fundo liso (preto ou claro) e tudo abaixo de \"chao\" (y onde a peça toca o chão; abaixo, só o reflexo; com a peça em perspectiva, uma reta por dois pontos [[x, y], [x, y]]); \"matte\": \"cobertura\" com \"limiar\" deixa sólidas as sombras escuras encostadas no fundo preto (sem borrão) e alisa a beirada. O detalhe (\"detalhe\": true) é um recorte 4:5 que enche o quadro. node tools/galeria-vistas/gerar.cjs grava em dist/assets/vistas/ (tira o chuvisco, amplia com Lanczos, realça, sombra leve no chão). Os renders do 3D (tools/render-vistas) não entram: só fotos reais.",
+  "_como": "Fotos da galeria da aba Foto: as FOTOS REAIS de cada peça (06/10/2026), no padrão de 4 (dist/gallery.js): frente, três quartos, costas e um detalhe de perto, todas 4:5. Para cada uma, a fonte nesta pasta e o recorte [x, y, largura, altura] em pixels da fonte; \"fundo\": \"recortar\" tira o fundo liso (preto ou claro) e tudo abaixo de \"chao\" (y onde a peça toca o chão; abaixo, só o reflexo; com a peça em perspectiva, uma reta por dois pontos [[x, y], [x, y]]; com a base curva, uma linha por vários pontos, em ordem de x); \"matte\": \"cobertura\" com \"limiar\" deixa sólidas as sombras escuras encostadas no fundo preto (sem borrão) e alisa a beirada. O detalhe (\"detalhe\": true) é um recorte 4:5 que enche o quadro. node tools/galeria-vistas/gerar.cjs grava em dist/assets/vistas/ (tira o chuvisco, amplia com Lanczos, realça, sombra leve no chão). Os renders do 3D (tools/render-vistas) não entram: só fotos reais.",
   "_fontes": "*-3-vistas.webp: as fotos do Luiz em três vistas (04/10/2026), 1600 x 1006 (vieram comprimidas; com os arquivos originais, as fotos ficam mais nítidas). dinossauroscopio-girando.mp4: o vídeo do Luiz (04/10/2026).",
+  "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (uma cor da foto, com \"faixa\" de matiz em graus), \"para\" (id da paleta, ou o hex do tom da vitrine quando o render dela sai diferente da amostra), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026).",
   "borboletoscopio": {
+    "cores": [
+      {"de": "#9a80a6", "faixa": 40, "para": "#5eca9b"},
+      {"de": "#c48080", "faixa": 30, "para": "yellow", "croma_min": 0.04, "exceto": "rosto"}
+    ],
     "frente": {
       "fonte": "borboletoscopio-3-vistas.webp",
       "recorte": [515, 190, 555, 740],
       "fundo": "recortar",
       "chao": 916,
       "matte": "cobertura",
-      "limiar": 16
+      "limiar": 16,
+      "areas": {"rosto": [[725, 330, 140, 112]]}
     },
     "tres-quartos": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -16,7 +22,8 @@
       "fundo": "recortar",
       "chao": 862,
       "matte": "cobertura",
-      "limiar": 16
+      "limiar": 16,
+      "areas": {"rosto": [[232, 345, 115, 105]]}
     },
     "costas": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -24,7 +31,8 @@
       "fundo": "recortar",
       "chao": 862,
       "matte": "cobertura",
-      "limiar": 16
+      "limiar": 16,
+      "areas": {"rosto": [[1318, 352, 46, 60]]}
     },
     "detalhe": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -33,10 +41,12 @@
       "matte": "cobertura",
       "limiar": 16,
       "cor_fundo": "#000000",
-      "detalhe": true
+      "detalhe": true,
+      "areas": {"rosto": [[725, 330, 140, 112]]}
     }
   },
   "dinossauroscopio": {
+    "cores": [{"de": "#363a60", "faixa": 45, "para": "moss"}, {"de": "#a2c976", "faixa": 40, "para": "cream", "croma_min": 0.05}],
     "frente": {
       "fonte": "dinossauroscopio-3-vistas.webp",
       "recorte": [600, 150, 400, 720],
@@ -74,25 +84,71 @@
     }
   },
   "aviaoscopia": {
+    "cores": [
+      {"de": "#30507a", "faixa": 40, "para": "blue", "croma_min": 0.02},
+      {"de": "#d52829", "faixa": 35, "para": "yellow", "croma_min": 0.08, "so": "motores"},
+      {"de": "#dcb030", "faixa": 30, "para": "yellow", "croma_min": 0.06, "so": "motores"},
+      {"de": "#dcb030", "faixa": 30, "para": "red", "croma_min": 0.06, "exceto": "motores"}
+    ],
     "frente": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [538, 120, 525, 700],
-      "fundo": "recortar"
+      "fundo": "recortar",
+      "areas": {"motores": [[625, 400, 70, 85], [905, 400, 70, 85]]}
     },
     "tres-quartos": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [10, 120, 525, 700],
-      "fundo": "recortar"
+      "fundo": "recortar",
+      "areas": {"motores": [[130, 400, 50, 85], [340, 400, 65, 85]]}
     },
     "costas": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [1072, 120, 525, 700],
-      "fundo": "recortar"
+      "fundo": "recortar",
+      "areas": {"motores": [[1195, 400, 45, 85], [1410, 400, 70, 85]]}
     },
     "detalhe": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [580, 120, 440, 550],
       "fundo": "recortar",
+      "detalhe": true,
+      "areas": {"motores": [[625, 400, 70, 85], [905, 400, 70, 85]]}
+    }
+  },
+  "girafoscopio": {
+    "_fontes": "As imagens do render que o dono mandou em 07/10/2026 (frente 431 x 886, lado 318 x 993, costas 901 x 1746; a girafa ainda não tem peça impressa para fotografar). O detalhe sai da de frente. A base de cada uma segue a curva do fundo (medida coluna a coluna: onde o amarelo encontra a linha escura do contato com o chão); nas costas, o chão que aparece dentro do vão também sai. O render tem um brilho fraco em volta do amarelo (até 30 do preto; em cima da orelha esquerda, na de frente, até 45), que sai com o fundo (limiar 30; 46 na de frente e no detalhe, que não têm nada escuro no contorno — na de lado, o olho encosta nele). Com os arquivos originais em resolução maior, as fotos ficam mais nítidas.",
+    "frente": {
+      "fonte": "girafoscopio-frente.jpg",
+      "recorte": [0, 120, 431, 720],
+      "fundo": "recortar",
+      "chao": [[0, 800], [105, 800], [106, 800], [108, 804], [110, 806], [120, 811], [135, 815], [150, 818], [170, 820], [195, 822], [220, 822], [245, 820], [260, 818], [275, 815], [285, 813], [295, 808], [298, 806], [300, 803], [301, 801], [302, 800], [431, 800]],
+      "matte": "cobertura",
+      "limiar": 46
+    },
+    "lado": {
+      "fonte": "girafoscopio-lado.png",
+      "recorte": [0, 120, 318, 720],
+      "fundo": "recortar",
+      "chao": [[0, 800], [80, 800], [81, 801], [82, 802], [84, 805], [86, 806], [90, 808], [98, 811], [106, 814], [114, 816], [126, 818], [134, 819], [148, 820], [160, 821], [184, 823], [214, 823], [230, 822], [234, 821], [236, 820], [238, 817], [239, 800], [318, 800]],
+      "matte": "cobertura",
+      "limiar": 30
+    },
+    "costas": {
+      "fonte": "girafoscopio-costas.webp",
+      "recorte": [0, 150, 901, 1450],
+      "fundo": "recortar",
+      "chao": [[0, 1538], [252, 1538], [254, 1543], [256, 1546], [260, 1550], [266, 1554], [272, 1557], [278, 1560], [290, 1563], [302, 1566], [314, 1569], [326, 1571], [332, 1572], [344, 1572], [350, 1570], [353, 1568], [355, 1565], [356, 1519], [358, 1517], [368, 1515], [380, 1514], [392, 1512], [398, 1511], [434, 1511], [452, 1510], [470, 1509], [488, 1511], [500, 1512], [512, 1513], [524, 1514], [536, 1515], [548, 1517], [563, 1518], [564, 1563], [566, 1567], [569, 1570], [578, 1573], [584, 1573], [596, 1571], [608, 1569], [620, 1567], [632, 1564], [644, 1560], [650, 1557], [656, 1553], [660, 1549], [662, 1546], [664, 1541], [665, 1538], [901, 1538]],
+      "matte": "cobertura",
+      "limiar": 30
+    },
+    "detalhe": {
+      "fonte": "girafoscopio-frente.jpg",
+      "recorte": [20, 125, 390, 488],
+      "fundo": "recortar",
+      "matte": "cobertura",
+      "limiar": 46,
+      "cor_fundo": "#000000",
       "detalhe": true
     }
   }
