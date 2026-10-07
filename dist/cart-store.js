@@ -1,5 +1,5 @@
 import {PRODUCTS, validSelection} from './products.js';
-import {COMMERCE} from './commerce-config.js';
+import {COMMERCE, kitOf} from './commerce-config.js';
 export const CART_KEY = 'ju.cart.demo.v1';
 export const EDIT_KEY = 'ju.cart.edit.v1';
 export const DIRECT_KEY = 'ju.direct.demo.v1';
@@ -51,10 +51,24 @@ export function putItem(items, productId, selection, thumbnail = null, editId = 
 // What paying with Pix saves: the discount is taken per unit, exactly as the server does it.
 // The same amounts paid with Pix (the demonstration uses it): the pieces with the Pix discount, the delivery unchanged.
 // Preço por quantidade: cada linha vira os pedaços que o servidor cobra (api/_lib/catalog.js priceOrder faz igual): a primeira unidade
-// de cada peça, na ordem do carrinho, tem o preço cheio; as seguintes, o de COMMERCE.extraPrices, se houver. [{item, quantity, unitCents}]
+// de cada peça, na ordem do carrinho, tem o preço cheio; as seguintes, o de COMMERCE.extraPrices, se houver; as peças de um kit, o preço
+// do grupo em que caem. [{item, quantity, unitCents}]
+// Kits (COMMERCE.kits): as unidades das peças de um kit, somadas no carrinho todo, formam grupos com preço fechado, os maiores primeiro
+// (3 lâmpadas: R$ 210, R$ 70 cada; 2: R$ 160, R$ 80 cada); as que sobram sem grupo pagam o preço cheio. O preço de cada unidade, na ordem
+// do carrinho (null = o preço cheio).
+export function kitUnitPrices(count, groups) {
+  const sizes = Object.keys(groups).map(Number).filter(n => n > 1).sort((a, b) => b - a), out = [];
+  let left = count;
+  for (const size of sizes) while (left >= size) { for (let k = 0; k < size; k++) out.push(groups[size] / size); left -= size; }
+  while (left-- > 0) out.push(null);
+  return out;
+}
 export function priceSegments(items) {
-  const seen = {}, out = [];
+  const seen = {}, out = [], queue = {};
+  for (const [id, kit] of Object.entries(COMMERCE.kits || {})) queue[id] = kitUnitPrices(items.filter(i => kit.items.includes(i.productId)).reduce((sum, i) => sum + i.quantity, 0), kit.groups);
   for (const i of items) {
+    const kit = kitOf(i.productId);
+    if (kit) { const prices = queue[kit].splice(0, i.quantity).map(p => p ?? i.unitPrice); for (let k = 0; k < prices.length;) { let j = k; while (j < prices.length && prices[j] === prices[k]) j++; out.push({item: i, quantity: j - k, unitCents: prices[k]}); k = j; } continue; }
     const extra = COMMERCE.extraPrices?.[i.productId], before = seen[i.productId] || 0;seen[i.productId] = before + i.quantity;
     const full = extra == null ? i.quantity : Math.max(0, Math.min(i.quantity, 1 - before));
     if (full) out.push({item: i, quantity: full, unitCents: i.unitPrice});

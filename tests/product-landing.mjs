@@ -13,7 +13,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\
 const {build} = require('../tools/build-product-pages.cjs');
 const {COMPANY} = require('../api/_lib/legal');
 const {PRODUCTS, defaults, color} = await site('products.js');
-const {COMMERCE, money, pixPrice} = await site('commerce-config.js');
+const {COMMERCE, money, pixPrice, kitOffer} = await site('commerce-config.js');
 const BASE = COMPANY.website.replace(/\/+$/, '');
 
 // ── the files are what the tool builds now ────────────────────────────
@@ -30,28 +30,38 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert(page.includes(`<h1>${product.title}</h1>`), `${id}: the name as the page heading`);
   assert(page.includes(`<strong>${money(price).replace(/ /g, '&nbsp;')}</strong><span class="pl-pix">${money(pixPrice(price)).replace(/ /g, '&nbsp;')} no Pix</span>`), `${id}: price and Pix price`);
   for (const part of product.parts) assert(page.includes(`${part.name}: <strong>${color(defaults(id)[part.id]).name}</strong>`), `${id}: original color of ${part.id}`);
-  assert(page.includes(`href="index.html#produto/${id}/personalizar"`), `${id}: "Personalizar o meu" opens the configurator`);
+  // the lamps (07/10/2026): fixed colours — nothing to customize; the kit offer under the price
+  const fixed = !product.parts.length;
+  if (fixed) {
+    assert(!page.includes('data-pl-customize') && !page.includes('id="pl-custom"'), `${id}: a lamp — nothing to customize`);
+    assert(page.includes('<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="' + id + '">') && page.includes('<span>Adicionar ao carrinho</span>'), `${id}: only "Adicionar ao carrinho"`);
+    assert(page.includes(`<p class="pl-offer">${kitOffer(id)}</p>`), `${id}: the kit offer`);
+    for (const c of product.colors) assert(page.includes(`<li><span class="pl-dot is-fixed" role="img" title="${c.name}" aria-label="${c.name}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`), `${id}: the dot of ${c.name}`);
+    assert(page.includes('nas cores dela. A produção começa'), `${id}: printed in its own colours`);
+  } else assert(page.includes(`href="index.html#produto/${id}/personalizar"`), `${id}: "Personalizar o meu" opens the configurator`);
   assert(page.includes(`<button type="button" class="pl-add" data-add-product="${id}">`), `${id}: add in the original colors (mini-cart)`);
   assert(page.includes(`Produção em ${COMMERCE.productionLabel}`), `${id}: production time`);
   // hierarchy asked for on 2026-10-04: the piece, the category once (a badge above the name), name, price, colors, add
   // first, then "Personalizar o meu" (palette), accordions, and the description at the end
-  const order = ['data-pl-stage', '<p class="pl-badge">Oftalmologia</p>', `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-add"', 'data-pl-customize', 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
+  const order = ['data-pl-stage', '<p class="pl-badge">Oftalmologia</p>', `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-add"', ...(fixed ? [] : ['data-pl-customize']), 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
   assert(order.every((at, i) => at > 0 && (i === 0 || at > order[i - 1])), `${id}: order of the page ${order}`);
   assert.equal((page.match(/Oftalmologia|OFTALMOLOGIA/g) || []).length, (page.match(/"category":"Oftalmologia"/g) || []).length + 1, `${id}: the category shows once`);
   // 2026-10-05: the colors are dots on the top corner of the picture; the list and the note moved to "Sobre a peça"
   assert.match(page, /<ul class="pl-dots" data-pl-dots aria-label="Cores originais">/);
   assert(page.indexOf('class="pl-dots"') < page.indexOf('class="pl-info"'), `${id}: the dots are on the picture`);
   assert.doesNotMatch(page, /class="pl-colors"|valores ilustrativos/, `${id}: no colors block above the actions, no "valores ilustrativos"`);
-  assert.match(page, /<section class="pl-about"><h2>Sobre a peça<\/h2><p class="pl-desc">(?:[^<]+|<a class="contact-mail" href="mailto:juimprimepramim@gmail\.com\?subject=[^"]+">entre em contato<\/a>)+<\/p><p class="pl-note"><span>Cores originais:<\/span> /);
+  assert.match(page, /<section class="pl-about"><h2>Sobre a peça<\/h2><p class="pl-desc">(?:[^<]+|<a class="contact-mail" href="mailto:juimprimepramim@gmail\.com\?subject=[^"]+">entre em contato<\/a>)+<\/p><p class="pl-note"><span>(?:Cores originais|Cores da peça):<\/span> /);
   // 2026-10-06: "entre em contato" na descrição (hoje, só a do avião) abre o e-mail da Ju
   assert.equal(page.includes('class="contact-mail"'), product.description.includes('entre em contato'), `${id}: o link do e-mail onde a descrição diz "entre em contato"`);
   if (product.fixed) assert(page.includes(`<p class="pl-note"><span>Observação:</span> ${product.fixed}</p>`), `${id}: the fixed colors as a note in "Sobre a peça"`);
-  assert.match(page, /<a class="pl-customize" href="[^"]+" data-pl-customize><svg[^>]*>[^]*?<\/svg><span>Personalizar o meu<\/span><\/a>/);
-  assert(page.includes(read('dist/icons.js').match(/palette: '([^']+)'/)[1].slice(0, 60)), `${id}: the palette on "Personalizar o meu"`);
+  if (!fixed) {
+    assert.match(page, /<a class="pl-customize" href="[^"]+" data-pl-customize><svg[^>]*>[^]*?<\/svg><span>Personalizar o meu<\/span><\/a>/);
+    assert(page.includes(read('dist/icons.js').match(/palette: '([^']+)'/)[1].slice(0, 60)), `${id}: the palette on "Personalizar o meu"`);
+  }
   for (const part of product.parts) { const c = color(defaults(id)[part.id]).name; assert(page.includes(`<button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${part.name}: ${c}" aria-label="${part.name}: ${c}">`), `${id}: the dot of ${part.id} opens the picker`); }
   assert.deepEqual([...page.matchAll(/<details class="pl-acc"><summary><svg[^]*?<strong>([^<]+)<\/strong>/g)].map(m => m[1]), ['Feito sob encomenda', 'Envio para todo o Brasil', 'Trocas e Devoluções']);
   assert.match(page, /Desistência em até 7 dias[^]*<a href="trocas\.html">Ver a política<\/a>/);
-  assert.match(page, /<div class="pl-custom" id="pl-custom" data-pl-custom hidden><\/div>/);
+  if (!fixed) assert.match(page, /<div class="pl-custom" id="pl-custom" data-pl-custom hidden><\/div>/);
   assert.match(page, /<div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden>/, 'the photo / 3D switch only shows with the script');
   // the 3D model needs three.js by name: the home's import map (its hash is in the security policy) before any module
   const map = '<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>';

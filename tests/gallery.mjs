@@ -30,8 +30,12 @@ assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio'], 
 assert.deepEqual(viewsOf('girafoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'a girafa: frente, lado, costas e o rosto de perto');
 for (const key of Object.keys(GALLERY)) {
   const ids = viewsOf(key).map(v => v.id), specs = ids.map(id => fotos[key][id]);
-  // recortadas do fundo delas (preto ou claro); a fonte é a foto do Luiz (a girafa: as imagens que o dono mandou)
-  assert(specs.every(f => f.fundo === 'recortar' && (photoPieces.includes(key) ? f.fonte === `${key}-3-vistas.webp` : f.fonte.startsWith(`${key}-`))), `${key}: as fotos, recortadas`);
+  // recortadas do fundo delas (preto ou claro); a fonte é a foto do Luiz (a girafa: as imagens que o dono mandou). O avião de frente
+  // e a cabine de perto (07/10/2026: "a imagem de frente, você pode usar simplesmente a que está na vitrine"): a foto da vitrine,
+  // ampliada, já sem fundo.
+  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : [];
+  assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp'
+    : fotos[key][id].fundo === 'recortar' && (photoPieces.includes(key) ? fotos[key][id].fonte === `${key}-3-vistas.webp` : fotos[key][id].fonte.startsWith(`${key}-`))), `${key}: as fotos, recortadas`);
   assert(!/render/.test(JSON.stringify(specs)), `${key}: nada do render do visualizador do site`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), ids.filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
   // no branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), como nas lojas grandes: sem transparência
@@ -41,26 +45,34 @@ for (const key of Object.keys(GALLERY)) {
   assert(/ de perto$/.test(viewsOf(key).at(-1).name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
   const [, , w, h] = fotos[key].detalhe.recorte; assert(Math.abs(w / h - .8) < .01, `${key}: o recorte do detalhe é 4:5, como o quadro`);
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
-  for (const id of ids) await stat(new URL(`../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
+  for (const id of ids) await stat(new URL(fotos[key][id].fundo === 'transparente' ? `../${fotos[key][id].fonte}` : `../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
 for (const key of ['macacoscopio', 'unicornioscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
 // Nas cores da vitrine (07/10/2026: "preciso que as imagens estejam todas nas cores que ela é originalmente"): as fotos reais foram
 // feitas com peças de outras cores; cada regra de "cores" leva uma cor da foto para a da paleta (a borboleta, para o verde do render da
 // vitrine, mais verde que a amostra), e as regras que valem só numa parte dizem a área dela em todas as vistas.
-const showcaseTone = {borboletoscopio: {mint: '#5eca9b'}};
+// a cor média de cada parte na foto da vitrine (medida em OKLab, 07/10/2026): a peça sai, em média, com a claridade, a saturação e o
+// matiz da vitrine
+const showcaseTone = {borboletoscopio: {mint: '#5bc091', yellow: '#f3da3e'}, dinossauroscopio: {moss: '#687560', cream: '#cabc77'}, aviaoscopia: {blue: '#1f41a6', red: '#dd2e42', yellow: '#eaab39'}};
 for (const key of photoPieces) {
   const rules = fotos[key].cores, targets = rules.map(rule => rule.para);
   for (const rule of rules) {
     assert(/^#[0-9a-f]{6}$/i.test(rule.de) && (PALETTE.some(p => p.id === rule.para) || /^#[0-9a-f]{6}$/i.test(rule.para)), `${key}: regra de cor ${JSON.stringify(rule)}`);
-    for (const area of [rule.so, rule.exceto].filter(Boolean)) for (const id of standardIds) assert(fotos[key][id].areas?.[area]?.length, `${key}-${id}: a área "${area}"`);
+    for (const area of [rule.so, rule.exceto].filter(Boolean)) for (const id of standardIds.filter(id => fotos[key][id].fundo === 'recortar')) assert(Array.isArray(fotos[key][id].areas?.[area]), `${key}-${id}: a área "${area}"`);
   }
   for (const part of PRODUCTS[key].parts) assert(targets.includes(showcaseTone[key]?.[part.default] || part.default), `${key}: ${part.name} na cor de fábrica (${part.default})`);
 }
-assert(page.includes("import {PRODUCTS,SOON,PALETTE} from '/dist/products.js';") && page.includes('function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,spec.areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
+assert(page.includes("import {PRODUCTS,SOON,PALETTE} from '/dist/products.js';") && page.includes('function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
 // A base da girafa é redonda e encosta no reflexo: o chão é uma linha por vários pontos (em ordem de x), não uma altura só.
 assert(page.includes('while(j<floor.length-1&&sx>floor[j][0])j++;'), 'chão por vários pontos');
 for (const id of ['frente', 'lado', 'costas']) { const line = fotos.girafoscopio[id].chao; assert(Array.isArray(line) && line.length > 10 && line.every((p, i) => !i || p[0] > line[i - 1][0]), `girafoscopio-${id}: o chão segue a curva da base`); }
+// Zoom óptico (07/10/2026): as fontes ampliadas 4x pelo Real-ESRGAN, com as medidas de fotos.json em pixels da original; o recorte
+// entra um pouco na peça (sem o fio escuro do fundo), a claridade passa por uma curva (sem estourar em branco) e a cor nova cabe na tela.
+for (const [fonte, sr] of Object.entries(fotos._ampliadas)) { assert(sr.fator === 4 && sr.arquivo.startsWith('ampliadas/'), fonte); await stat(new URL(`../design/vistas/${sr.arquivo}`, import.meta.url)); }
+for (const key of Object.keys(GALLERY)) for (const id of viewsOf(key).map(v => v.id)) if (fotos[key][id].fundo === 'recortar') assert(fotos._ampliadas[fotos[key][id].fonte], `${key}-${id}: da fonte ampliada`);
+assert(page.includes("const sr=spec.t==null?fotos._ampliadas?.[spec.fonte]:null") && page.includes('if(opts.encolher>0)') && page.includes('function fitted(L,C,h)') && page.includes("rule.contraste!=null?dL+(L-sL)*rule.contraste:L<=sL?L*dL/sL:dL+(L-sL)*(1-dL)/(1-sL)"), 'ampliadas, encolher, a curva da claridade e a cor dentro da tela');
+assert(page.includes('const we=w*(1-taken);') && page.includes('for(const poly of opts.manter||[])'), 'o peso que sobra passa para a regra seguinte; "manter" protege o creme claro do avião');
 assert(page.includes('function onWhite(canvas)') && page.includes('encode(photo,.93)') && page.includes('encode(resample(photo,[0,0,...FRAME],...MINI),.88)'), 'as fotos e as miniaturas saem no branco');
 // Uma foto (1200 x 1500) e uma miniatura (160 x 200) de cada vista: o mesmo quadro 4:5 em todas.
 let total = 0;

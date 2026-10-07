@@ -22,7 +22,10 @@ const EXAMPLE_CONFIG = Object.freeze({
   boxes: Object.freeze({
     borboletoscopio: Object.freeze({unit: Object.freeze({length: 20, width: 15, height: 8, weightG: 320}), perBox: 2, full: Object.freeze({length: 24, width: 20, height: 10, weightG: 600})}),
     dinossauroscopio: Object.freeze({unit: Object.freeze({length: 22, width: 12, height: 9, weightG: 280}), perBox: 3, full: Object.freeze({length: 26, width: 22, height: 10, weightG: 800})}),
-    aviaoscopia: Object.freeze({unit: Object.freeze({length: 25, width: 14, height: 6, weightG: 350}), perBox: 1, full: null})
+    aviaoscopia: Object.freeze({unit: Object.freeze({length: 25, width: 14, height: 6, weightG: 350}), perBox: 1, full: null}),
+    macacoscopio: Object.freeze({unit: Object.freeze({length: 20, width: 10, height: 8, weightG: 150}), perBox: 3, full: Object.freeze({length: 22, width: 20, height: 9, weightG: 420})}),
+    girafoscopio: Object.freeze({unit: Object.freeze({length: 20, width: 10, height: 8, weightG: 150}), perBox: 3, full: Object.freeze({length: 22, width: 20, height: 9, weightG: 420})}),
+    unicornioscopio: Object.freeze({unit: Object.freeze({length: 20, width: 10, height: 8, weightG: 150}), perBox: 3, full: Object.freeze({length: 22, width: 20, height: 9, weightG: 420})})
   })
 });
 

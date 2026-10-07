@@ -1,6 +1,6 @@
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {productGrid} from './product-grid.js';
-import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, ALIASES, color, defaults, showcase} from './products.js';
+import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, ALIASES, color, defaults, showcase, fixedColors} from './products.js';
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
@@ -12,7 +12,9 @@ const cardArt = Object.freeze({
   borboletoscopio: 'card-borboletoscopio.webp',
   dinossauroscopio: 'card-dinossauroscopio.webp',
   aviaoscopia: 'card-aviaoscopia.webp',
-  macacoscopio: 'card-macacoscopio.webp'
+  macacoscopio: 'card-macacoscopio.webp',
+  girafoscopio: 'card-girafoscopio.webp',
+  unicornioscopio: 'card-unicornioscopio.webp'
 });
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
@@ -32,17 +34,17 @@ const railTone = id => {
   const {theme} = showcase(id), [one, two, three] = theme.bannerStops.match(/#[0-9a-f]{3,8}/gi);
   return `--rail-own-1:${one};--rail-own-2:${two};--rail-own-3:${three};--rail-own-accent:${theme.accentColor};--rail-own-ink:${theme.textColor}`;
 };
-function colorsFor(id, product) { const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
+function colorsFor(id, product) { if (fixedColors(id)) return product.colors; const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
 function soonCard({id, product}) {
   const categoryLabel = category(product.category).label, href = demoHref(id);
   return `<article class="product-rail-card is-soon" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${href}" aria-label="Ver o ${product.title} encaixado"><img src="assets/card-preview-${id}.webp" data-full-src="assets/card-${id}.webp" alt="${product.title}" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${href}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${product.colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><span class="product-soon">Em breve</span></div><div class="product-rail-actions is-single"><a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="${productHref(id)}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></div></article>`;
 }
 function productCard({id, product}) {
   if (product.soon) return soonCard({id, product});
-  const colors = colorsFor(id, product), categoryLabel = category(product.category).label;
+  const colors = colorsFor(id, product), categoryLabel = category(product.category).label, fixed = fixedColors(id);
   const fullArt = cardArt[id] || product.catalogImage || product.image;
   const previewArt = cardArt[id] ? `card-preview-${id}.webp` : fullArt;
-  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${productHref(id)}" aria-label="Personalizar ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note" role="status"></span><span class="product-rail-pix">${money(pixPrice(COMMERCE.prices[id]))} no Pix</span></div><div class="product-rail-actions"><a class="product-customize" href="${productHref(id)}/personalizar">Personalizar o meu</a><button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho nas cores originais" title="Adicionar nas cores originais">${icon('cart')}</button></div></div></article>`;
+  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${productHref(id)}" aria-label="${fixed ? 'Ver' : 'Personalizar'} ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note" role="status"></span><span class="product-rail-pix">${money(pixPrice(COMMERCE.prices[id]))} no Pix</span></div><div class="product-rail-actions">${fixed ? `<a class="product-customize" href="${productHref(id)}">Ver e comprar</a>` : `<a class="product-customize" href="${productHref(id)}/personalizar">Personalizar o meu</a>`}<button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho${fixed ? '' : ' nas cores originais'}" title="${fixed ? 'Adicionar ao carrinho' : 'Adicionar nas cores originais'}">${icon('cart')}</button></div></div></article>`;
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 

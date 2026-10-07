@@ -70,12 +70,24 @@ function matte(canvas,[x,y,w,h],floor,bgHex,opts={}){
     for(let n0=0;n0<W*H;n0++){if(bg[n0]||seen[n0]||d(n0*4)>=LOW)continue;const comp=[n0];seen[n0]=1;
       for(let q=0;q<comp.length;q++){const n=comp[q],c=n%W,r=(n-c)/W;for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&!seen[m]&&!bg[m]&&d(m*4)<LOW){seen[m]=1;comp.push(m);}}
       if(comp.length>=minArea)for(const n of comp)bg[n]=1;}}
+  // "manter": polígonos [[x, y], …] da fonte que são sempre peça — o brilho quase branco do creme do avião, cercado pela peça, tem a cor
+  // do fundo claro e virava um furo
+  for(const poly of opts.manter||[]){const xs=poly.map(p=>p[0]-x),ys=poly.map(p=>p[1]-y);
+    for(let r=Math.max(0,Math.floor(Math.min(...ys)));r<Math.min(H,Math.ceil(Math.max(...ys)));r++)for(let c=Math.max(0,Math.floor(Math.min(...xs)));c<Math.min(W,Math.ceil(Math.max(...xs)));c++){
+      let inside=false;for(let i=0,j=xs.length-1;i<xs.length;j=i++)if((ys[i]>r)!==(ys[j]>r)&&c<(xs[j]-xs[i])*(r-ys[i])/(ys[j]-ys[i])+xs[i])inside=!inside;if(inside)bg[r*W+c]=0;}}
   // "matte": "cobertura" — para a peça com sombras escuras encostando no fundo preto (a parede de dentro da abertura da borboleta, que
   // escurece até o preto): pela distância à cor, essa sombra virava meio transparente (um borrão cinza na página, com a borda serrilhada).
   // Aqui a transparência vem só da forma: a máscara do fundo é alisada (gaussiana de 1,3 pixel, que tira os dentes) e a beirada fica
   // 1 pixel para dentro, com 1,5 pixel de transição (o fio escuro da mistura com o fundo sai); a sombra fica sólida e só a beirada tira a
   // mistura com o fundo.
   if(opts.modo==='cobertura'){
+    // "encolher" (pixels da original): o corte entra um pouco na peça — a beirada da foto mistura a peça com o preto do fundo, e esse
+    // fio escuro em volta é o que denuncia o recorte (07/10/2026: "para que não pareça que foi editado ou recortado"). Distância ao
+    // fundo por chanfro (1 e 1,414), e sai o que fica a menos de encolher x fator pixels dele.
+    if(opts.encolher>0){const r=opts.encolher*(opts.fator||1),dist=new Float32Array(W*H);for(let n=0;n<W*H;n++)dist[n]=bg[n]?0:1e9;
+      for(let y0=0;y0<H;y0++)for(let x0=0;x0<W;x0++){const n=y0*W+x0;let d=dist[n];if(!d)continue;if(x0>0)d=Math.min(d,dist[n-1]+1);if(y0>0){d=Math.min(d,dist[n-W]+1);if(x0>0)d=Math.min(d,dist[n-W-1]+1.414);if(x0<W-1)d=Math.min(d,dist[n-W+1]+1.414);}dist[n]=d;}
+      for(let y0=H-1;y0>=0;y0--)for(let x0=W-1;x0>=0;x0--){const n=y0*W+x0;let d=dist[n];if(!d)continue;if(x0<W-1)d=Math.min(d,dist[n+1]+1);if(y0<H-1){d=Math.min(d,dist[n+W]+1);if(x0<W-1)d=Math.min(d,dist[n+W+1]+1.414);if(x0>0)d=Math.min(d,dist[n+W-1]+1.414);}dist[n]=d;}
+      for(let n=0;n<W*H;n++)if(dist[n]<r)bg[n]=1;}
     const m=new Float32Array(W*H),t=new Float32Array(W*H),K=[.0216,.0945,.2295,.3088,.2295,.0945,.0216];for(let n=0;n<W*H;n++)m[n]=bg[n]?0:1;
     for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-3;j<=3;j++)v+=K[j+3]*m[r*W+Math.min(W-1,Math.max(0,c+j))];t[r*W+c]=v;}
     for(let r=0;r<H;r++)for(let c=0;c<W;c++){let v=0;for(let j=-3;j<=3;j++)v+=K[j+3]*t[Math.min(H-1,Math.max(0,r+j))*W+c];m[r*W+c]=v;}
@@ -89,7 +101,7 @@ function matte(canvas,[x,y,w,h],floor,bgHex,opts={}){
       if(a<1)for(let j=0;j<3;j++)px[i+j]=Math.min(255,Math.max(0,Math.round((orig[i+j]-(1-a)*B0[j])/a)));px[i+3]=Math.round(a*255);}
     g.putImageData(img,0,0);return canvas;}
   // beirada: até B pixels do fundo (1,5 pixel da fonte)
-  const B=Math.max(2,Math.ceil(1.5*k)),R=B+2,dist=new Uint8Array(W*H).fill(255),queue=[];
+  const B=Math.max(2,Math.ceil(1.5*k*(opts.fator||1))),R=B+2,dist=new Uint8Array(W*H).fill(255),queue=[];
   for(let n=0;n<W*H;n++)if(bg[n]){dist[n]=0;queue.push(n);}
   for(let q=0;q<queue.length;q++){const n=queue[q],dd=dist[n];if(dd>=B)continue;const c=n%W,r=(n-c)/W;
     for(const m of [c>0?n-1:-1,c<W-1?n+1:-1,r>0?n-W:-1,r<H-1?n+W:-1])if(m>=0&&dist[m]>dd+1){dist[m]=dd+1;queue.push(m);}}
@@ -163,10 +175,14 @@ function sharpen(canvas,radius,amount,threshold=2){const W=canvas.width,H=canvas
 // Cores da vitrine (07/10/2026: "preciso que as imagens estejam todas nas cores que ela é originalmente"). As fotos reais foram
 // feitas com peças impressas em outras cores (o dino azul-marinho, a borboleta lilás com rosa, o avião com as estrelas amarelas e os
 // motores vermelhos). Cada regra de "cores" em fotos.json leva uma cor da foto ("de", com a faixa de matiz em graus) para a cor da
-// paleta ("para"), no espaço OKLab (o da percepção): a luz e a sombra de cada pixel ficam, só a tinta muda — a claridade escala pela
-// razão entre a cor nova e a de antes, a saturação também, e a variação de matiz da foto continua (mais fraca). Brancos, pretos e
+// paleta ("para"), no espaço OKLab (o da percepção): a luz e a sombra de cada pixel ficam, só a tinta muda — a claridade passa por uma
+// curva que leva a da cor de antes à da nova e mantém o preto e o branco no lugar (multiplicar estourava as partes claras em branco),
+// a saturação escala pela razão entre as duas, e a variação de matiz da foto continua (mais fraca). Brancos, pretos e
 // brilhos (pouca saturação) não mudam. A transição entre as cores é suave (sem serrilhado), e uma regra pode valer só dentro de
-// algumas áreas da fonte ("so") ou fora delas ("exceto"): as bochechas rosadas da borboleta são da cor das asas, o bico do avião é do
+// algumas áreas da fonte ("so") ou fora delas ("exceto"); "contraste" troca a curva da claridade por uma reta em volta da média (o
+// painel creme do avião, muito sombreado, vira azul com a variação de luz do azul da vitrine) e "matiz" diz quanto da variação de
+// matiz da foto passa (0 no creme, quase sem cor, em que o matiz e a saturação são só ruído: sai a saturação da cor nova) e "neutros"
+// leva também os brancos, cinzas e pretos (os brilhos e as sombras do painel creme): as bochechas rosadas da borboleta são da cor das asas, o bico do avião é do
 // vermelho dos motores. As áreas são retângulos [x, y, largura, altura] em pixels da fonte, listados por nome em "areas" de cada vista.
 const toLin=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;},toSrgb=v=>{v=v<=.0031308?12.92*v:1.055*v**(1/2.4)-.055;return Math.max(0,Math.min(255,Math.round(v*255)));};
 function oklab(r,g,b){r=toLin(r);g=toLin(g);b=toLin(b);
@@ -174,6 +190,14 @@ function oklab(r,g,b){r=toLin(r);g=toLin(g);b=toLin(b);
   return [.2104542553*l+.793617785*m-.0040720468*s,1.9779984951*l-2.428592205*m+.4505937099*s,.0259040371*l+.7827717662*m-.808675766*s];}
 function fromOklab(L,a,b){const l=(L+.3963377774*a+.2158037573*b)**3,m=(L-.1055613458*a-.0638541728*b)**3,s=(L-.0894841775*a-1.291485548*b)**3;
   return [toSrgb(4.0767416621*l-3.3077115913*m+.2309699292*s),toSrgb(-1.2684380046*l+2.6097574011*m-.3413193965*s),toSrgb(-.0041960863*l-.7034186147*m+1.707614701*s)];}
+// a cor que a tela mostra mais perto de L, C, h: com a mesma claridade e o mesmo matiz, a saturação baixa até caber no sRGB (cortar
+// os canais estourava a cor: o verde-menta das partes claras virava neon)
+function fitted(L,C,h){const a=Math.cos(h*Math.PI/180),b=Math.sin(h*Math.PI/180);
+  const lin=c=>{const l=(L+.3963377774*a*c+.2158037573*b*c)**3,m=(L-.1055613458*a*c-.0638541728*b*c)**3,s=(L-.0894841775*a*c-1.291485548*b*c)**3;
+    return [4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s];};
+  const inside=c=>lin(c).every(v=>v>=-.0005&&v<=1.0005);
+  if(!inside(C)){let lo=0,hi=C;for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(inside(mid))lo=mid;else hi=mid;}C=lo;}
+  return fromOklab(L,C*a,C*b);}
 const lch=hex=>{const [L,a,b]=oklab(...[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)));return {L,C:Math.hypot(a,b),h:(Math.atan2(b,a)*180/Math.PI+360)%360};};
 const smooth=(e0,e1,x)=>{const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t);};
 function recolor(canvas,[x,y],rules,areas={}){
@@ -183,13 +207,16 @@ function recolor(canvas,[x,y],rules,areas={}){
     return {...rule,src:lch(rule.de),dst:lch(hex),band:rule.faixa??40,cmin:rule.croma_min??.012};});
   for(let r=0;r<H;r++)for(let c=0;c<W;c++){const i=(r*W+c)*4;if(px[i+3]===0)continue;
     const [L,a,b]=oklab(px[i],px[i+1],px[i+2]),C=Math.hypot(a,b),h=(Math.atan2(b,a)*180/Math.PI+360)%360;
+    // a primeira regra que vale leva o seu peso; o que sobra passa para as seguintes (uma regra com peso quase nenhum não trava o pixel)
+    let sumR=0,sumG=0,sumB=0,taken=0;
     for(const rule of prepared){
       if(rule.so&&!inside(areas[rule.so],c,r))continue;if(rule.exceto&&inside(areas[rule.exceto],c,r))continue;
-      const dh=Math.abs(((h-rule.src.h+540)%360)-180),w=(1-smooth(.7*rule.band,rule.band,dh))*smooth(.5*rule.cmin,1.5*rule.cmin,C);
-      if(w<=0)continue;
-      const L2=Math.min(.99,L*rule.dst.L/rule.src.L),C2=rule.dst.C*Math.min(1.8,C/rule.src.C),h2=(rule.dst.h+.4*(((h-rule.src.h+540)%360)-180)+360)%360;
-      const [R,G,B]=fromOklab(L2,C2*Math.cos(h2*Math.PI/180),C2*Math.sin(h2*Math.PI/180));
-      px[i]=Math.round(px[i]+(R-px[i])*w);px[i+1]=Math.round(px[i+1]+(G-px[i+1])*w);px[i+2]=Math.round(px[i+2]+(B-px[i+2])*w);break;}}
+      const dh=Math.abs(((h-rule.src.h+540)%360)-180),w=(rule.neutros?Math.max(1-smooth(.02,.04,C),1-smooth(.7*rule.band,rule.band,dh)):1-smooth(.7*rule.band,rule.band,dh))*(rule.neutros?1:smooth(.5*rule.cmin,1.5*rule.cmin,C))*(rule.croma_max?1-smooth(.85*rule.croma_max,1.15*rule.croma_max,C):1);
+      const we=w*(1-taken);if(we<=0)continue;
+      const sL=rule.src.L,dL=rule.dst.L,L2=Math.max(0,Math.min(.995,rule.contraste!=null?dL+(L-sL)*rule.contraste:L<=sL?L*dL/sL:dL+(L-sL)*(1-dL)/(1-sL))),C2=rule.matiz===0?rule.dst.C:rule.dst.C*Math.min(1.8,C/rule.src.C),h2=(rule.dst.h+(rule.matiz??.4)*(((h-rule.src.h+540)%360)-180)+360)%360;
+      const [R,G,B]=fitted(L2,C2,h2);
+      sumR+=R*we;sumG+=G*we;sumB+=B*we;taken+=we;if(taken>.999)break;}
+    if(taken>0){px[i]=Math.round(px[i]*(1-taken)+sumR);px[i+1]=Math.round(px[i+1]*(1-taken)+sumG);px[i+2]=Math.round(px[i+2]*(1-taken)+sumB);}}
   g.putImageData(img,0,0);return canvas;}
 // "fundo": "transparente": uma imagem que já vem sem fundo (a foto da vitrine de uma novidade, render do 3D). Inteira: no quadro padrão;
 // detalhe: o recorte 4:5 dela, ampliado.
@@ -218,16 +245,24 @@ try{
         big=resample(img,[0,0,img.naturalWidth,img.naturalHeight],...FRAME);if(!spec.detalhe)ground(big);window.info[`${key}-${v.id}`]=`${spec.fonte} · render`;
       }else if(spec){
         if(spec.fundo!=='recortar'&&!spec.detalhe)throw new Error(`${key}-${v.id}: a vista inteira precisa de "fundo": "recortar" (fica no quadro padrão)`);
-        const rect=[...spec.recorte];if(spec.detalhe&&Math.abs(rect[2]/rect[3]-FRAME[0]/FRAME[1])>.01)throw new Error(`${key}-${v.id}: o recorte do detalhe precisa ser 4:5`);
-        const id=`${spec.fonte}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${spec.fonte}`):await still(`/design/vistas/${spec.fonte}`,spec.t));
+        // "_ampliadas" (07/10/2026: "como se fosse um zoom óptico mesmo, através das imagens originais"): a fonte ampliada 4x pelo
+        // Real-ESRGAN (design/vistas/ampliadas) no lugar da original — superfícies lisas, olhos e beiradas nítidos, sem o chuvisco do
+        // WhatsApp. As medidas de fotos.json continuam em pixels da original e são multiplicadas aqui.
+        const sr=spec.t==null?fotos._ampliadas?.[spec.fonte]:null,f=sr?sr.fator:1,up=n=>typeof n==='number'?n*f:n;
+        const rect=spec.recorte.map(up);if(spec.detalhe&&Math.abs(rect[2]/rect[3]-FRAME[0]/FRAME[1])>.01)throw new Error(`${key}-${v.id}: o recorte do detalhe precisa ser 4:5`);
+        const file=sr?sr.arquivo:spec.fonte,id=`${file}@${spec.t??''}`;if(!cache.has(id))cache.set(id,spec.t==null?await image(`/design/vistas/${file}`):await still(`/design/vistas/${file}`,spec.t));
+        const floor=Array.isArray(spec.chao)?spec.chao.map(p=>p.map(up)):spec.chao==null?null:up(spec.chao);
+        const areas=Object.fromEntries(Object.entries(spec.areas||{}).map(([name,list])=>[name,list.map(r=>r.map(up))]));
         // "cor_fundo": quando a peça encosta nas bordas (o detalhe de perto), a cor do fundo vem dita, não da mediana das bordas
         const source=cache.get(id),bg=spec.cor_fundo||background(source);if(rect[0]==='auto')rect[0]=Math.round(centerX(source,bg)-rect[2]/2);
-        const crop=denoise(cut(source,rect,bg));if(spec.fundo==='recortar')matte(crop,rect,spec.chao,bg,{limiar:spec.limiar,modo:spec.matte,buracos:spec.buracos});
-        if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,spec.areas);
+        // a ampliada já vem sem o chuvisco (o modelo tira); a original passa pelo denoise
+        const crop=cut(source,rect,bg);if(!sr)denoise(crop);
+        if(spec.fundo==='recortar')matte(crop,rect,floor,bg,{limiar:spec.limiar,modo:spec.matte,buracos:spec.buracos,manter:(spec.manter||[]).map(poly=>poly.map(p=>p.map(up))),fator:f,encolher:spec.encolher??sr?.encolher??0});
+        if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,areas);
         big=spec.detalhe?resample(crop,[0,0,rect[2],rect[3]],...FRAME):place(crop);
         // ampliação desta foto (pixels do quadro por pixel da fonte): quanto mais ampliada, mais largo o realce
         const zoom=spec.detalhe?FRAME[1]/rect[3]:big.scale;
-        if(spec.fundo==='recortar')smoothEdge(big,Math.max(2.5,2.2*zoom));
+        if(spec.fundo==='recortar')smoothEdge(big,Math.max(sr?1.6:2.5,2.2*zoom));
         sharpen(big,Math.min(1.6,Math.max(.8,.7*zoom)),zoom>1.2?.7:.4);if(spec.fundo==='recortar'&&!spec.detalhe)ground(big);
         window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · ${spec.fundo==='recortar'?'fundo recortado':`fundo ${bg}`}`;
       }else if(v.id==='frente'){big=ground(place(await image(`/dist/assets/${p.catalogImage}`)));window.info[`${key}-${v.id}`]='foto da vitrine';}

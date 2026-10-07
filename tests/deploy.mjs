@@ -29,8 +29,9 @@ const walk = dir => { for (const entry of fs.readdirSync(path.join(root, dir), {
 walk('api'); walk('server'); sources.push(raw('server.cjs'));
 const read = new Set(sources.flatMap(code => [...code.matchAll(/\benv\.([A-Z][A-Z0-9_]{2,})\b/g), ...code.matchAll(/pick\('([A-Z][A-Z0-9_]+)'/g)].map(m => m[1])));
 // Not for this server: Vercel's own, test and simulator switches, tuning with safe defaults, the generic NF-e service
-// (the shop uses Bling), the single-URL database form (the setup writes the separate fields) and the default port.
-const elsewhere = /^(VERCEL_|NFE_EXAMPLE_DATA$|NFE_TOKEN$|MAIL_TRANSPORT$|BLING_AUTHORIZE_URL$|BLING_TIMEOUT_MS$|BLING_REQUESTS_PER_SECOND$|DATABASE_URL$|DB_PORT$)/;
+// (the shop uses Bling), the single-URL database form (the setup writes the separate fields), the default port and the
+// local simulator of the Google/Apple sign-in.
+const elsewhere = /^(VERCEL_|NFE_EXAMPLE_DATA$|NFE_TOKEN$|MAIL_TRANSPORT$|BLING_AUTHORIZE_URL$|BLING_TIMEOUT_MS$|BLING_REQUESTS_PER_SECOND$|DATABASE_URL$|DB_PORT$|SOCIAL_FAKE_URL$)/;
 const missing = [...read].filter(name => !elsewhere.test(name) && !listed.has(name));
 assert.deepEqual(missing, [], 'the .env the setup writes lists every setting the code reads');
 assert(read.size > 25 && listed.has('DATA_KEY') && listed.has('MP_MODE'), 'found the settings');

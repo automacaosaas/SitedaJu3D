@@ -1,4 +1,4 @@
-import {PRODUCTS, SOON, color, showcase, artSmall} from './products.js';
+import {PRODUCTS, SOON, color, showcase, artSmall, itemColors, fixedColors} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {totals, pixDiscount, lineCents} from './cart-store.js';
 import {icon} from './icons.js';
@@ -7,13 +7,14 @@ import {formatDays, shippingMessage} from './shipping-client.js';
 import {FALLBACK_METHODS, payMark, MERCADO_PAGO_MARK} from './payment-marks.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const editButton = (item, circular = false) => `<button type="button" class="${circular ? 'cart-customize' : 'cart-edit-link'}" data-action="edit" data-id="${esc(item.id)}" aria-label="Editar personalização de ${esc(item.title)}">${circular ? icon('pencil') : 'Editar cores'}</button>`;
+// (a peça de cores fixas não tem o que editar)
+const editButton = (item, circular = false) => fixedColors(item.productId) ? '' : `<button type="button" class="${circular ? 'cart-customize' : 'cart-edit-link'}" data-action="edit" data-id="${esc(item.id)}" aria-label="Editar personalização de ${esc(item.title)}">${circular ? icon('pencil') : 'Editar cores'}</button>`;
 const formatCep = cep => { const digits = String(cep ?? '').replace(/\D/g, '').slice(0, 8); return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits; };
 
 function swatches(item) {
-  return `<div class="cart-colors"><span>Cores</span><ul aria-label="Cores escolhidas para ${esc(item.title)}">${PRODUCTS[item.productId].parts.map(part => {
-    const chosen = color(item.selection[part.id]), label = `${part.name}: ${chosen.name}`;
-    return `<li><span class="cart-swatch" style="--chip:${chosen.hex}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span></li>`;
+  return `<div class="cart-colors"><span>Cores</span><ul aria-label="Cores ${fixedColors(item.productId) ? 'de' : 'escolhidas para'} ${esc(item.title)}">${itemColors(item.productId, item.selection).map(c => {
+    const label = c.part ? `${c.part}: ${c.name}` : c.name;
+    return `<li><span class="cart-swatch" style="--chip:${c.hex}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span></li>`;
   }).join('')}</ul></div>`;
 }
 

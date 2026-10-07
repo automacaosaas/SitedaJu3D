@@ -30,15 +30,17 @@ async function site() {
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery, fixedColors, kitOffer} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
+  // a peça de cores fixas (as lâmpadas, 07/10/2026): as cores dela, a oferta do kit e só o botão de compra (nada para personalizar)
+  const fixed = fixedColors(id);
   // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
   const [before, phrase, after] = splitContact(product.description);
   const description = phrase ? `${esc(before)}<a class="contact-mail" href="${esc(contactMail(`Dúvida sobre o ${product.title}`))}">${phrase}</a>${esc(after)}` : esc(product.description);
   const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}.html`;
   const lines = base.replace(/\r\n/g, '\n');
   const head = lines.slice(lines.indexOf('<head>\n') + 7, lines.indexOf('  <!-- og -->'))
-    .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(`${product.title}: ${product.subtitle.toLowerCase()} impressa em 3D, nas cores que você escolher. ${product.description}`)}">`)
+    .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(`${product.title}: ${product.subtitle.toLowerCase()} impressa em 3D, ${fixed ? 'nas cores da peça' : 'nas cores que você escolher'}. ${product.description}`)}">`)
     .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(product.title)} · ${esc(product.subtitle)} | Ju, imprime pra mim?</title>\n  <link rel="canonical" href="${esc(url)}">`)
     .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="product-landing.css">')
     // the 3D model needs three.js by name (the same import map as the home; its hash is in the security policy)
@@ -56,8 +58,8 @@ function page(id, data, base) {
   const header = /<header class="header">[^]*?<\/header>/.exec(lines)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(lines)[0];
   // the colors as dots on the top corner of the picture; with product-landing.js a click opens the color picker on that part
-  const dots = product.parts.map(part => { const c = color(chosen[part.id]); return `<li><button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${esc(part.name)}: ${esc(c.name)}" aria-label="${esc(part.name)}: ${esc(c.name)}"><i style="--chip:${c.hex}" aria-hidden="true"></i></button></li>`; }).join('');
-  const colors = product.parts.map(part => `${esc(part.name)}: <strong>${esc(color(chosen[part.id]).name)}</strong>`).join(' · ');
+  const dots = fixed ? product.colors.map(c => `<li><span class="pl-dot is-fixed" role="img" title="${esc(c.name)}" aria-label="${esc(c.name)}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`).join('') : product.parts.map(part => { const c = color(chosen[part.id]); return `<li><button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${esc(part.name)}: ${esc(c.name)}" aria-label="${esc(part.name)}: ${esc(c.name)}"><i style="--chip:${c.hex}" aria-hidden="true"></i></button></li>`; }).join('');
+  const colors = fixed ? product.colors.map(c => `<strong>${esc(c.name)}</strong>`).join(' · ') : product.parts.map(part => `${esc(part.name)}: <strong>${esc(color(chosen[part.id]).name)}</strong>`).join(' · ');
   const style = `--pl-accent:${theme.accentColor};--pl-ink:${theme.textColor};--pl-muted:${theme.mutedColor};--pl-stops:${theme.bannerStops}`;
   const fact = (name, title, note, text) => `<details class="pl-acc"><summary>${icon(name)}<span><strong>${title}</strong><small>${note}</small></span><i class="pl-acc-mark" aria-hidden="true"></i></summary><div class="pl-acc-body"><p>${text}</p></div></details>`;
   const main = `<main class="pl-main" id="conteudo">
@@ -75,15 +77,16 @@ ${hasGallery(id) ? `
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>
           <p class="pl-installments">ou ${nbsp(installmentLabel(price))} sem juros no cartão</p>${COMMERCE.extraPrices?.[id] ? `
-          <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : ''}
-          <div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
-          <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>
+          <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : kitOffer(id) ? `
+          <p class="pl-offer">${esc(kitOffer(id))}</p>` : ''}
+          ${fixed ? `<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar ao carrinho</span></button></div>` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
+          <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>`}
           <div class="pl-facts">
-            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, 'Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>')}
+            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, `Cada peça é impressa depois do pedido, ${fixed ? 'nas cores dela' : 'nas cores escolhidas'}. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>`)}
             ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho. <a href="envio.html#frete">Ver envio e prazos</a>')}
             ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
           </div>
-          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${description}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
+          <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${description}</p><p class="pl-note"><span>${fixed ? 'Cores da peça' : 'Cores originais'}:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
         </div>
       </article>
     </main>`;

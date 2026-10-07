@@ -102,7 +102,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(data.customs.hsCode, '392690'); assert.equal(data.customs.dueLimitUsd, 1000);
   assert.deepEqual(data.options.map(o => o.code), ['45128', '45110']); assert.equal(data.refused[0].code, '45209');
   assert.equal((await call(h['international-quote'], {body: {country: 'BR', items: lines}, cookie})).json().error, 'invalid_country');
-  for (const items of [[], [{productId: 'macacoscopio', quantity: 1}], [{productId: 'borboletoscopio', quantity: 11}], [{productId: 'borboletoscopio', quantity: 1}, {productId: 'borboletoscopio', quantity: 1}], [{productId: 'aviaoscopia', quantity: 1.5}]])
+  for (const items of [[], [{productId: 'unicornio', quantity: 1}], [{productId: 'borboletoscopio', quantity: 11}], [{productId: 'borboletoscopio', quantity: 1}, {productId: 'borboletoscopio', quantity: 1}], [{productId: 'aviaoscopia', quantity: 1.5}]])
     assert.equal((await call(h['international-quote'], {body: {country: 'MX', items}, cookie})).statusCode, 400, JSON.stringify(items));
   const off = handlers['international-quote'].create({env: {...ENV, CORREIOS_USER: ''}, store, now: () => clock, fetchImpl: fake.fetchImpl});
   const offAnswer = await call(off, {body: {country: 'MX', items: lines}, cookie});

@@ -3,8 +3,8 @@
 // same category (in their original colors; they stay after being added, with how many are in the cart on the button), and
 // two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a computer, sheet from the bottom on a
 // phone; it slides away when closed. A <dialog>, so it sits above everything, traps focus and closes with Esc.
-import {PRODUCTS, color, defaults, artSmall} from './products.js';
-import {COMMERCE, money} from './commerce-config.js';
+import {PRODUCTS, color, defaults, artSmall, itemColors} from './products.js';
+import {COMMERCE, money, kitOf} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, pixDiscount, priceSegments, signature} from './cart-store.js';
 import {loadShippingConfig} from './shipping-client.js';
 import {freeShippingBar, riseBar} from './free-shipping.js';
@@ -22,10 +22,12 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
   const pix = amount.subtotal - pixDiscount(cart);
   // the kit: other pieces of the same category as the one just added (oftalmologia today; sensoriais and others later)
   const category = item ? PRODUCTS[item.productId].category : null;
-  const kit = Object.keys(PRODUCTS).filter(id => id !== item?.productId && (!category || PRODUCTS[id].category === category)).slice(0, 3);
+  // a lâmpada puxa as outras lâmpadas primeiro (o kit tem preço fechado: 2 por R$ 160, 3 por R$ 210)
+  const peers = item && kitOf(item.productId) ? COMMERCE.kits[kitOf(item.productId)].items.filter(id => id !== item.productId) : [];
+  const kit = [...peers, ...Object.keys(PRODUCTS).filter(id => id !== item?.productId && !peers.includes(id) && (!category || PRODUCTS[id].category === category))].slice(0, 3);
   const inCart = id => cart.filter(i => signature(i.productId, i.selection) === signature(id, defaults(id))).reduce((sum, i) => sum + i.quantity, 0);
   const added = item ? `<article class="mini-cart-item"><img src="${esc(picture(item))}" alt="" width="96" height="96"><div><h3>${esc(item.title)}</h3>`
-    + `<ul class="mini-cart-colors" aria-label="Cores de ${esc(item.title)}">${PRODUCTS[item.productId].parts.map(part => { const c = color(item.selection[part.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${esc(part.name)}: <strong>${esc(c.name)}</strong></li>`; }).join('')}</ul>`
+    + `<ul class="mini-cart-colors" aria-label="Cores de ${esc(item.title)}">${itemColors(item.productId, item.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`
     + `<p>${priceSegments(cart).filter(s => s.item === item).map(s => `${s.quantity} × ${money(s.unitCents)}`).join(' + ')}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>` : '';
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">Complete o kit</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];

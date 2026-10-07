@@ -111,6 +111,18 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
   assert.equal(planes.subtotal, 28500 + 2 * 21500 + 26500);
   assert.deepEqual(catalog.applyPixDiscount(planes).lines.map(l => l.chargeUnitCents), [27075, 20425, 25175, 20425], 'Pix: 5% off each real unit price');
   for (const id of Object.keys(catalog.PRODUCTS)) assert.equal(catalog.PRODUCTS[id].extraPrice, COMMERCE.extraPrices[id], `${id}: the site shows the same quantity price`);
+  // the lamps' kit (07/10/2026): R$ 90 each; mixed, 2 for R$ 160 and 3 for R$ 210, the largest groups first, the rest at full price.
+  // The same table and the same price per unit on the site (cart-store.js priceSegments) and on the server.
+  assert.deepEqual(JSON.parse(JSON.stringify(catalog.KITS)), JSON.parse(JSON.stringify(COMMERCE.kits)), 'the same kits on the site and on the server');
+  for (const kit of Object.values(COMMERCE.kits)) for (const [n, cents] of Object.entries(kit.groups)) assert(Number.isInteger(cents / Number(n)), `a group of ${n} splits into whole cents`);
+  const {totals} = await site('cart-store.js');
+  for (const [items, total] of [[[['girafoscopio', 1]], 9000], [[['girafoscopio', 1], ['macacoscopio', 1]], 16000], [[['girafoscopio', 2], ['unicornioscopio', 1]], 21000], [[['girafoscopio', 4]], 30000], [[['girafoscopio', 3], ['macacoscopio', 2]], 37000], [[['aviaoscopia', 2], ['unicornioscopio', 1], ['girafoscopio', 1]], 28500 + 21500 + 16000]]) {
+    const server = catalog.priceOrder(items.map(([productId, quantity]) => ({productId, quantity})));
+    const site = totals(items.map(([productId, quantity], i) => ({id: String(i), productId, quantity, unitPrice: COMMERCE.prices[productId], selection: {}})), 0);
+    assert.deepEqual([server.subtotal, site.subtotal], [total, total], `kit: ${JSON.stringify(items)}`);
+    assert(server.lines.every(l => Number.isInteger(l.unitCents) && l.unitCents > 0), 'every Mercado Pago item keeps an exact unit price');
+  }
+  assert.equal(catalog.encodeSelection('girafoscopio', {}), 'cores fixas', 'a lamp never sends Mercado Pago an empty description');
   assert.deepEqual(priced.lines[0].selection, {body: 'pink', details: 'yellow'}, 'missing part falls back to the default color');
   assert.deepEqual(catalog.priceOrder([{productId: 'aviaoscopia', quantity: 1, selection: {body: 'neon', details: '__proto__', engines: 'red'}}]).lines[0].selection, {body: 'blue', details: 'red', engines: 'red'}, 'unknown colors fall back to the default');
   for (const bad of [null, [], 'x', {}, [null], [{productId: 'toString', quantity: 1}], [{productId: 'nao-existe', quantity: 1}], [{productId: 'aviaoscopia', quantity: 0}], [{productId: 'aviaoscopia', quantity: 100}], [{productId: 'aviaoscopia', quantity: 1.5}], [{productId: 'aviaoscopia', quantity: '2'}], Array(61).fill({productId: 'aviaoscopia', quantity: 1})]) {

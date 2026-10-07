@@ -16,7 +16,7 @@ const piece = key => PRODUCTS[key] || SOON[key];
 
 // ── famílias: a ordem pedida, peças que existem e têm demonstração ──
 assert.deepEqual(Object.keys(FAMILIES), ['retinoscopio', 'regua', 'lampada']);
-assert.deepEqual(Object.values(FAMILIES).map(f => f.items), [['borboletoscopio', 'dinossauroscopio'], ['aviaoscopia'], ['macacoscopio']]);
+assert.deepEqual(Object.values(FAMILIES).map(f => f.items), [['borboletoscopio', 'dinossauroscopio'], ['aviaoscopia'], ['macacoscopio', 'girafoscopio', 'unicornioscopio']]);
 for (const [id, family] of Object.entries(FAMILIES)) for (const key of family.items) {
   assert(piece(key), `${id}: ${key} existe na loja`);
   assert(showcase(key).demo, `${key}: tem a demonstração do banner (as camadas da figura encaixada)`);
@@ -64,7 +64,7 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   const ids = html => [...html.matchAll(/data-product-id="([a-z]+)"/g)].map(m => m[1]);
   assert.deepEqual(ids(productGrid('oftalmologia', 'retinoscopio')), ['borboletoscopio', 'dinossauroscopio']);
   assert.deepEqual(ids(productGrid('oftalmologia', 'regua')), ['aviaoscopia']);
-  assert.deepEqual(ids(productGrid('oftalmologia', 'lampada')), ['macacoscopio']);
+  assert.deepEqual(ids(productGrid('oftalmologia', 'lampada')), ['macacoscopio', 'girafoscopio', 'unicornioscopio']);
   assert.deepEqual(ids(productGrid('oftalmologia', 'nada')), ids(productGrid('oftalmologia')), 'família desconhecida mostra tudo');
   const catalog = read('dist/catalog.js');
   assert.match(catalog, /new URLSearchParams\(location\.search\)\.get\('encaixe'\)/);

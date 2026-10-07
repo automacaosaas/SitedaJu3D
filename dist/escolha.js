@@ -14,7 +14,10 @@ export const FIT = {
   borboletoscopio: {frame: {scale: .85, y: .035}},
   dinossauroscopio: {frame: {scale: .84, y: .085}},
   aviaoscopia: {frame: {scale: .71, y: .07}},
-  macacoscopio: {frame: {scale: .74, y: .2}, fade: [.33, .47]}
+  macacoscopio: {frame: {scale: .74, y: .2}, fade: [.33, .47]},
+  // girafa e unicórnio: a demonstração do macaco (a mesma lâmpada, products.js fitLamp), então o mesmo enquadramento
+  girafoscopio: {frame: {scale: .74, y: .2}, fade: [.33, .47]},
+  unicornioscopio: {frame: {scale: .74, y: .2}, fade: [.33, .47]}
 };
 
 // Peças de uma família que a loja conhece hoje (as que ainda não chegaram ficam de fora) e as famílias com alguma peça.

@@ -38,7 +38,12 @@ const {translate} = await site('i18n-core.js');
   const all = miniCartBody({cart: full, itemId: full[2].id, original: true, freeShipping: null});
   // 2026-10-05: the kit stays — the other pieces of the same category, each with how many are in the cart (original colors)
   assert.match(all, /Complete o kit/, 'the kit does not disappear once its pieces are in the cart');
-  assert.deepEqual([...all.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio'], 'same category, without the piece just added, up to 3');
+  assert.deepEqual([...all.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio', 'macacoscopio'], 'same category, without the piece just added, up to 3');
+  // a lamp (07/10/2026) pulls the other lamps first: mixed, 2 for R$ 160 and 3 for R$ 210; its colours are its own, no part names
+  const lamp = normalizeCart([{productId: 'girafoscopio', selection: {}}]);
+  const lampHtml = miniCartBody({cart: lamp, itemId: lamp[0].id, original: true, freeShipping: null});
+  assert.deepEqual([...lampHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]).slice(0, 2), ['macacoscopio', 'unicornioscopio'], 'the other lamps first');
+  assert.match(lampHtml, /<li><i style="--chip:#eeb012" aria-hidden="true"><\/i><strong>Amarelo-ocre<\/strong><\/li>/, 'the lamp\'s own colours');
   assert.equal((all.match(/<\/span><\/span><b class="mini-cart-add-count" aria-hidden="true"><span>1<\/span><\/b><\/button>/g) || []).length, 2, 'the count on each kit button, outside the track that clips the running cart');
   assert.match(all, /Adicionado nas cores originais/); assert.match(all, /cores originais<\/span>/);
   assert.match(all, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?815,00<\/dd>/);

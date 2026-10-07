@@ -41,14 +41,15 @@ const html = string => string.replace(/ /g, '&nbsp;');
     const id = /data-product-id="([a-z]+)"/.exec(card)?.[1];
     assert(id && PRODUCTS[id], `card for a known product: ${id}`);
     const swatches = [...card.matchAll(/<i style="--swatch:(#[0-9a-f]{6})" title="([^"]+)"><\/i>/g)].map(m => [m[1], m[2]]);
-    const expected = Object.values(defaults(id)).map(c => [color(c).hex, color(c).name]);
+    // the lamps (fixed colours, 07/10/2026): their own colours
+    const expected = PRODUCTS[id].parts.length ? Object.values(defaults(id)).map(c => [color(c).hex, color(c).name]) : PRODUCTS[id].colors.map(c => [c.hex, c.name]);
     assert.deepEqual(swatches, expected, `${id}: the dots show the default colors`);
     assert(card.includes(`<strong>${money(COMMERCE.prices[id])}</strong>`), `${id}: price`);
     assert(card.includes(`${money(pixPrice(COMMERCE.prices[id]))} no Pix`), `${id}: Pix price`);
     assert(card.includes(`<h2><a href="${id}.html">${PRODUCTS[id].title}</a></h2>`), `${id}: the name links to the product's own page`);
     assert(card.includes(`${icon('clock')}<span><span class="sr-only">Produção em </span>${COMMERCE.productionLabel}</span>`), `${id}: the clock and the production time on the card (audit B5; 2026-10-05: no "Feito sob encomenda")`);
     assert.doesNotMatch(card, /Preço ilustrativo/, `${id}: no "Preço ilustrativo" (2026-10-05)`);
-    assert(card.includes(`href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`), `${id}: customize`);
+    assert(PRODUCTS[id].parts.length ? card.includes(`href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`) : card.includes(`<a class="product-customize" href="${id}.html">Ver a peça</a>`) && !card.includes('personalizar'), `${id}: customize (a lamp: its page, nothing to customize)`);
     assert(card.includes(`data-add-product="${id}"`), `${id}: quick add (mini-cart)`);
   }
   // the card art of the dinosaur is the moss-green default (the old one was sky blue); every card image exists
@@ -78,12 +79,12 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // policies, and the payment methods Mercado Pago takes in the shop (Termos: Pix, credit and debit card)
   assert.doesNotMatch(page, /cart-reassurance|accepted-methods|Compra segura/);
   assert(page.indexOf('</aside>') < page.indexOf('<div class="cart-more">'), 'the extras come after the order summary');
-  assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html'], 'recommends only what is not in the cart');
+  assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html', 'macacoscopio.html', 'girafoscopio.html', 'unicornioscopio.html'], 'recommends only what is not in the cart (the lamps too, on sale since 07/10/2026)');
   // 2026-10-06: small cards (photo, name, price) side by side in a carousel; after the pieces, the novelties ("Em breve");
   // "Ver todas" next to the title; the next arrow carries the countdown ring of the autoplay
   assert.deepEqual([...page.matchAll(/<a class="cart-rec is-soon" href="([^"]+)"/g)].map(m => m[1]), Object.keys(SOON).map(id => `index.html#produto/${id}/3d`), 'then the novelties, to see in 3D');
   assert.match(page, /<span class="cart-rec-name">Dinossauroscópio<\/span><span class="cart-rec-price">R\$\s?265,00<\/span><\/a>/, 'only the photo, the name and the price');
-  assert.match(page, /<span class="cart-rec-price">Em breve<\/span>/);
+  assert.match(page, /<span class="cart-rec-name">GiraffeLamp<\/span><span class="cart-rec-price">R\$\s?90,00<\/span>/, 'a lamp at R$ 90');
   assert.doesNotMatch(page, /cart-rec-sub|cart-rec-more/, 'no subtitle, no "Ver mais" card');
   assert.match(page, /<a class="cart-recs-all" href="produtos\.html">Ver todas/);
   assert.match(page, /<\/ul><button type="button" class="cart-rec-arrow is-next" data-rec-step="1" aria-label="Mais peças"><svg class="cart-rec-ring"/);
@@ -191,7 +192,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
 // ── B6: the quick cart button says which colors go in (the product page itself is the owner's, tests/product-page.mjs) ──
 {
   const cards = read('dist/catalog.js'), navigation = read('dist/shopping-navigation.js');
-  assert.match(cards, /aria-label="Adicionar \$\{product\.title\} ao carrinho nas cores originais" title="Adicionar nas cores originais"/, 'the quick cart button says which colors go in (audit B6)');
+  assert(cards.includes(`aria-label="Adicionar \${product.title} ao carrinho\${fixed ? '' : ' nas cores originais'}" title="\${fixed ? 'Adicionar ao carrinho' : 'Adicionar nas cores originais'}"`), 'the quick cart button says which colors go in (audit B6; a lamp has only its own)');
   assert.match(cards, /openMiniCart\(\{itemId: addedItemId\(cart, id, defaults\(id\)\), original: true\}\)/, 'the quick add opens the mini-cart saying the original colors went in (audits B6 and E1)');
   assert.doesNotMatch(navigation, /original/);
   assert.equal((read('dist/produtos.html').match(/ao carrinho nas cores originais" title="Adicionar nas cores originais">/g) || []).length, 3);

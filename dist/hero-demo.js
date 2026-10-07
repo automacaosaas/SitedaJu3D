@@ -13,7 +13,7 @@ import {Timeline} from './motion-timeline.js';
 import {withAlpha} from './hero-motion.js';
 import {imageReady} from './loading-ui.js';
 import {icon} from './icons.js';
-import {artSrcset, DEMO_SIZES} from './products.js';
+import {artSrcset, DEMO_SIZES, fixedColors} from './products.js';
 
 const PERSPECTIVE = 1600;
 const CLOSE_RATE = 1.35;
@@ -114,9 +114,11 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // novidade sem compra: o convite vira um aviso, sem link
       const soon = !!entries[i].soon;
       // novidade sem compra (cores fixas): o convite é para ver a peça em 3D, sem personalizar
-      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : 'Personalizar o meu';
-      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : 'palette')));
-      dom.cta.href = soon ? `#produto/${key}/3d` : `#produto/${key}/personalizar`;
+      // peça de cores fixas à venda (as lâmpadas): o convite é para comprar (abre a peça na foto, com o preço)
+      const fixed = !soon && fixedColors(key);
+      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : fixed ? 'Comprar' : 'Personalizar o meu';
+      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : fixed ? 'cart' : 'palette')));
+      dom.cta.href = soon ? `#produto/${key}/3d` : fixed ? `#produto/${key}` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
       dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));

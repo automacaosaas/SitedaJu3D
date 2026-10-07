@@ -46,6 +46,7 @@ const dynamic = [
   [/^Adicionar (.+) ao carrinho$/, 'Add $1 to cart', 'Añadir $1 al carrito'],
   [/^Adicionar (.+) ao carrinho nas cores originais$/, 'Add $1 to cart in the original colors', 'Añadir $1 al carrito en los colores originales'],
   [/^Personalizar (.+)$/, 'Customize $1', 'Personalizar $1'],
+  [/^Ver (MonkeyLamp|GiraffeLamp|UnicornLamp)$/, 'See $1', 'Ver $1'],
   [/^Mostrar (.+)$/, 'Show $1', 'Mostrar $1'],
   [/^Selecionar (.+)$/, 'Select $1', 'Seleccionar $1'],
   [/^Remover (.+)$/, 'Remove $1', 'Eliminar $1'],
@@ -61,6 +62,8 @@ const dynamic = [
   [/^(.+) sobre pilastra branca$/, '$1 on a white pedestal', '$1 sobre un pedestal blanco'],
   [/^Prévia 3D ilustrativa de (.+)$/, 'Illustrative 3D preview of $1', 'Vista previa 3D ilustrativa de $1'],
   [/^Levando 2, o segundo sai por (.+)$/, 'Buy 2 and the second one is $1', 'Llevando 2, el segundo sale por $1'],
+  // o kit das lâmpadas (commerce-config.js kitOffer)
+  [/^Leve (\d+) por (.+) ou (\d+) por (.+) \(pode misturar\)$/, 'Get $1 for $2 or $3 for $4 (mix and match)', 'Lleva $1 por $2 o $3 por $4 (puedes combinar)'],
   [/^Preço de (.+)$/, 'Price for $1', 'Precio de $1'],
   [/^para o frete grátis \((.+)\)\.$/, 'more for free shipping ($1).', 'para el envío gratis ($1).'],
   [/^(Pix · )?(\(?)(\d+)% de desconto nas peças(\)?)$/, '$1$2$3% off the items$4', '$1$2$3% de descuento en las piezas$4'],

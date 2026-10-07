@@ -87,8 +87,12 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   // ── dados: cada produto tem tema, enquadramento e cores originais ───────────────
   const {PRODUCTS, SOON, PRODUCT_CATEGORIES, PALETTE, SHOWCASE, DEFAULT_SHOWCASE, showcase, originalColors} = data;
   assert.ok(Object.keys(SHOWCASE).every(key => PRODUCTS[key] || SOON[key]), 'SHOWCASE só descreve produtos (ou novidades) que existem');
-  assert.ok(Object.keys(SOON).length >= 1 && Object.keys(SOON).every(key => !PRODUCTS[key] && SOON[key].soon === true && SOON[key].colors.length && SOON[key].colors.every(c => /^#[0-9a-f]{6}$/i.test(c.hex)) && !SOON[key].parts.length),
+  assert.ok(Object.keys(SOON).every(key => !PRODUCTS[key] && SOON[key].soon === true && SOON[key].colors.length && SOON[key].colors.every(c => /^#[0-9a-f]{6}$/i.test(c.hex)) && !SOON[key].parts.length),
     'novidade: só vitrine (fora de PRODUCTS: sem preço, carrinho, catálogo nem personalização) e com os pontinhos do banner');
+  // as lâmpadas (07/10/2026): à venda, de cores fixas (nada para escolher), com as cores delas nos pontinhos
+  const lamps = Object.keys(PRODUCTS).filter(key => !PRODUCTS[key].parts.length);
+  assert.deepEqual(lamps, ['macacoscopio', 'girafoscopio', 'unicornioscopio'], 'as lâmpadas: produtos de cores fixas');
+  assert.ok(lamps.every(key => PRODUCTS[key].colors.length && PRODUCTS[key].colors.every(c => /^#[0-9a-f]{6}$/i.test(c.hex)) && !PRODUCTS[key].soon), 'cores fixas com hex, sem o selo de novidade');
   const tokens = ['bannerStops', 'headerBackground', 'textColor', 'mutedColor', 'accentColor'];
   for (const key of [...Object.keys(PRODUCTS), ...Object.keys(SOON)]) {
     const {art, theme} = showcase(key), p = PRODUCTS[key] || SOON[key];
@@ -98,7 +102,8 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     assert.ok(art.h + art.bottom <= 1, `${key}: recorte cabe no quadrado`);
     for (const token of tokens) assert.ok(theme[token], `${key}: theme.${token}`);
     // cores mostradas = cores de fábrica de cada parte, sem repetir
-    if (!SOON[key]) {
+    if (!SOON[key] && !p.parts.length) assert.deepEqual(originalColors(key), p.colors, `${key}: as cores fixas dela`);
+    else if (!SOON[key]) {
       const shown = originalColors(key), expected = [...new Set(p.parts.map(part => part.default))];
       assert.deepEqual(shown.map(c => c.id), expected, `${key}: paleta = padrão das partes`);
       assert.ok(shown.every(c => PALETTE.some(x => x.id === c.id && /^#[0-9a-f]{6}$/i.test(c.hex))));

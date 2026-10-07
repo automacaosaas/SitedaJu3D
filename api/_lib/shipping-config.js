@@ -31,7 +31,9 @@ module.exports = Object.freeze({
   // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces. The shop's measures, packed: butterfly +
   // dinosaur together 257 g (so about half each), the airplane about 250 g on top (all three about 507 g). APPROXIMATE: weigh the real packed
   // boxes and edit the three numbers below (nothing else changes). The three pieces together sit right at 500 g, so that one matters most.
-  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250})}),
+  // The lamps (monkey, giraffe, unicorn; on sale since 07/10/2026): ESTIMATED at 110 g packed each (a printed tube with the head, lighter
+  // than the airplane) and assumed to fit the same box — weigh one packed and edit the numbers.
+  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250, macacoscopio: 110, girafoscopio: 110, unicornioscopio: 110})}),
   // Abroad (the panel's "Envio internacional", 05/10/2026): the Correios Exporta Fácil services, quoted with the same contract
   // and the same box. Only the services in the contract answer; one that is not comes back refused and the panel says so.
   // The codes are the ones in the Correios price API manual; confirm in Correios Empresas → Serviços do Contrato.
@@ -47,7 +49,10 @@ module.exports = Object.freeze({
     descriptions: Object.freeze({
       borboletoscopio: '3D printed plastic cover for ophthalmic retinoscope',
       dinossauroscopio: '3D printed plastic cover for ophthalmic retinoscope',
-      aviaoscopia: '3D printed plastic fixation target for skiascopy rack'
+      aviaoscopia: '3D printed plastic fixation target for skiascopy rack',
+      macacoscopio: '3D printed plastic cover for portable slit lamp',
+      girafoscopio: '3D printed plastic cover for portable slit lamp',
+      unicornioscopio: '3D printed plastic cover for portable slit lamp'
     }),
     dueLimitUsd: 1000
   })

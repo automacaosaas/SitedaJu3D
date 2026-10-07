@@ -16,9 +16,13 @@ Capa para lâmpada de fenda portátil|Cover for a handheld slit lamp|Funda para 
 Lâmpada de fenda|Slit lamp|Lámpara de hendidura
 MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.
 MonkeyLamp, capa de macaco marrom com uma banana, sobre uma pilastra branca|MonkeyLamp, a brown monkey cover holding a banana, on a white pedestal|MonkeyLamp, funda de mono marrón con una banana, sobre un pedestal blanco
-Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
-Uma girafinha para acompanhar o olhar dos pequenos. Em breve.|A little giraffe to keep the little ones company. Coming soon.|Una jirafita para acompañar la mirada de los pequeños. Próximamente.
-Um unicórnio para acompanhar o olhar dos pequenos. Em breve.|A unicorn to keep the little ones company. Coming soon.|Un unicornio para acompañar la mirada de los pequeños. Próximamente.
+Um macaquinho para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A little monkey to keep the little ones company. 3D printed, in the piece's own colors.|Un monito para acompañar la mirada de los pequeños. Impreso en 3D, en los colores de la pieza.
+Uma girafinha para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A little giraffe to keep the little ones company. 3D printed, in the piece's own colors.|Una jirafita para acompañar la mirada de los pequeños. Impresa en 3D, en los colores de la pieza.
+Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A unicorn to keep the little ones company. 3D printed, in the piece's own colors.|Un unicornio para acompañar la mirada de los pequeños. Impreso en 3D, en los colores de la pieza.
+Novidade|New|Novedad
+Comprar|Buy|Comprar
+Ver e comprar|See and buy|Ver y comprar
+Cada peça é impressa depois do pedido, nas cores dela. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in its own colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en sus propios colores. La producción empieza cuando se confirma el pago.
 GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
 UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.
 GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca|GiraffeLamp, a yellow giraffe cover with brown spots, on a white pedestal|GiraffeLamp, funda de jirafa amarilla con manchas marrones, sobre un pedestal blanco

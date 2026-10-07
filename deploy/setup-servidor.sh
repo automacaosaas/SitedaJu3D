@@ -128,6 +128,13 @@ NFE_PROVIDER=
 BLING_CLIENT_ID=
 BLING_CLIENT_SECRET=
 NFE_ENVIRONMENT=
+# Entrar com o Google e com a Apple (opcional; sem eles, os botões não aparecem). APPLE_PRIVATE_KEY: a chave .p8 numa linha só, com \n no lugar das quebras.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
 EOF
   )
   chown "$APP_USER:$APP_USER" "$ENV_FILE"; chmod 600 "$ENV_FILE"

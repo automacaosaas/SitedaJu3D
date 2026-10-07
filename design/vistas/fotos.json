@@ -1,11 +1,21 @@
 {
   "_como": "Fotos da galeria da aba Foto: as FOTOS REAIS de cada peça (06/10/2026), no padrão de 4 (dist/gallery.js): frente, três quartos, costas e um detalhe de perto, todas 4:5. Para cada uma, a fonte nesta pasta e o recorte [x, y, largura, altura] em pixels da fonte; \"fundo\": \"recortar\" tira o fundo liso (preto ou claro) e tudo abaixo de \"chao\" (y onde a peça toca o chão; abaixo, só o reflexo; com a peça em perspectiva, uma reta por dois pontos [[x, y], [x, y]]; com a base curva, uma linha por vários pontos, em ordem de x); \"matte\": \"cobertura\" com \"limiar\" deixa sólidas as sombras escuras encostadas no fundo preto (sem borrão) e alisa a beirada. O detalhe (\"detalhe\": true) é um recorte 4:5 que enche o quadro. node tools/galeria-vistas/gerar.cjs grava em dist/assets/vistas/ (tira o chuvisco, amplia com Lanczos, realça, sombra leve no chão). Os renders do 3D (tools/render-vistas) não entram: só fotos reais.",
   "_fontes": "*-3-vistas.webp: as fotos do Luiz em três vistas (04/10/2026), 1600 x 1006 (vieram comprimidas; com os arquivos originais, as fotos ficam mais nítidas). dinossauroscopio-girando.mp4: o vídeo do Luiz (04/10/2026).",
-  "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (uma cor da foto, com \"faixa\" de matiz em graus), \"para\" (id da paleta, ou o hex do tom da vitrine quando o render dela sai diferente da amostra), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026).",
+  "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (a cor média da parte na foto de frente original, medida em OKLab, com \"faixa\" de matiz em graus), \"para\" (a cor média da mesma parte na foto da vitrine, medida igual: assim a peça sai, em média, com a claridade, a saturação e o matiz da vitrine; ou um id da paleta), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda), \"croma_max\" (acima disso não muda: a regra só pega cores apagadas, como a costura lilás em volta do rosto da borboleta, sem tocar nas bochechas) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026).",
+  "_ampliadas_como": "Fontes ampliadas 4x pelo Real-ESRGAN (realesrgan-ncnn-vulkan, modelo realesrgan-x4plus, rodado no PC; tools/galeria-vistas/AMPLIAR.md): o gerador usa a ampliada no lugar da original, com as mesmas medidas (em pixels da original). encolher: quanto o recorte entra na peça (pixels da original), para tirar o fio escuro do fundo na beirada (07/10/2026).",
+  "_ampliadas": {
+    "dinossauroscopio-3-vistas.webp": {"arquivo": "ampliadas/dinossauroscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
+    "borboletoscopio-3-vistas.webp": {"arquivo": "ampliadas/borboletoscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
+    "girafoscopio-frente.jpg": {"arquivo": "ampliadas/girafoscopio-frente-x4.webp", "fator": 4, "encolher": 0.5},
+    "girafoscopio-lado.png": {"arquivo": "ampliadas/girafoscopio-lado-x4.webp", "fator": 4, "encolher": 0.5},
+    "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4},
+    "girafoscopio-costas.webp": {"arquivo": "ampliadas/girafoscopio-costas-x4.webp", "fator": 4, "encolher": 0.5}
+  },
   "borboletoscopio": {
     "cores": [
-      {"de": "#9a80a6", "faixa": 40, "para": "#5eca9b"},
-      {"de": "#c48080", "faixa": 30, "para": "yellow", "croma_min": 0.04, "exceto": "rosto"}
+      {"de": "#9c80a7", "faixa": 40, "para": "#5bc091"},
+      {"de": "#da8e8f", "faixa": 30, "para": "#f3da3e", "croma_min": 0.04, "exceto": "rosto"},
+      {"de": "#a08494", "faixa": 40, "para": "#a89584", "croma_max": 0.055, "so": "rosto"}
     ],
     "frente": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -46,7 +56,7 @@
     }
   },
   "dinossauroscopio": {
-    "cores": [{"de": "#363a60", "faixa": 45, "para": "moss"}, {"de": "#a2c976", "faixa": 40, "para": "cream", "croma_min": 0.05}],
+    "cores": [{"de": "#32355a", "faixa": 45, "para": "#687560"}, {"de": "#78a14f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05}],
     "frente": {
       "fonte": "dinossauroscopio-3-vistas.webp",
       "recorte": [600, 150, 400, 720],
@@ -84,36 +94,35 @@
     }
   },
   "aviaoscopia": {
+    "_fontes": "O avião de frente e a cabine de perto saem da foto da vitrine (dist/assets/product-aviaoscopia-cutout.webp, ampliada 4x: design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp; 07/10/2026: \"a imagem de frente, você pode usar simplesmente a que está na vitrine e depois pintar as outras imagens na respectiva cor dessa original\"). As de três quartos e de costas são as fotos reais, pintadas como a vitrine: o painel creme fica azul, as janelas da cabine (azuis na peça da foto) ficam brancas, os motores ficam amarelo-alaranjados e as estrelas e o bico, vermelhos. Na \"transparente\", o recorte é em pixels da própria fonte.",
     "cores": [
-      {"de": "#30507a", "faixa": 40, "para": "blue", "croma_min": 0.02},
-      {"de": "#d52829", "faixa": 35, "para": "yellow", "croma_min": 0.08, "so": "motores"},
-      {"de": "#dcb030", "faixa": 30, "para": "yellow", "croma_min": 0.06, "so": "motores"},
-      {"de": "#dcb030", "faixa": 30, "para": "red", "croma_min": 0.06, "exceto": "motores"}
+      {"de": "#334567", "faixa": 40, "para": "#f1f6f9", "croma_min": 0.02, "so": "janelas"},
+      {"de": "#2e496b", "faixa": 40, "para": "#1f41a6", "croma_min": 0.02},
+      {"de": "#c5beb3", "faixa": 70, "para": "#1f41a6", "croma_max": 0.06, "contraste": 0.5, "matiz": 0, "neutros": true},
+      {"de": "#bf2424", "faixa": 35, "para": "#eaab39", "croma_min": 0.08, "so": "motores"},
+      {"de": "#bd9222", "faixa": 30, "para": "#eaab39", "croma_min": 0.06, "so": "motores"},
+      {"de": "#bd9222", "faixa": 30, "para": "#dd2e42", "croma_min": 0.06, "exceto": "motores"},
+      {"de": "#ec3d3b", "faixa": 35, "para": "#dd2e42", "croma_min": 0.08, "exceto": "motores"}
     ],
-    "frente": {
-      "fonte": "aviaoscopia-3-vistas.webp",
-      "recorte": [538, 120, 525, 700],
-      "fundo": "recortar",
-      "areas": {"motores": [[625, 400, 70, 85], [905, 400, 70, 85]]}
-    },
+    "frente": {"fonte": "design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp", "fundo": "transparente"},
     "tres-quartos": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [10, 120, 525, 700],
       "fundo": "recortar",
-      "areas": {"motores": [[130, 400, 50, 85], [340, 400, 65, 85]]}
+      "areas": {"motores": [[130, 400, 50, 85], [340, 400, 65, 85]], "janelas": [[185, 235, 100, 62]]},
+      "manter": [[[285, 221], [316, 221], [332, 250], [340, 275], [348, 300], [352, 325], [353, 350], [354, 375], [355, 405], [285, 405]]]
     },
     "costas": {
       "fonte": "aviaoscopia-3-vistas.webp",
       "recorte": [1072, 120, 525, 700],
       "fundo": "recortar",
-      "areas": {"motores": [[1195, 400, 45, 85], [1410, 400, 70, 85]]}
+      "areas": {"motores": [[1195, 400, 45, 85], [1410, 400, 70, 85]], "janelas": []}
     },
     "detalhe": {
-      "fonte": "aviaoscopia-3-vistas.webp",
-      "recorte": [580, 120, 440, 550],
-      "fundo": "recortar",
-      "detalhe": true,
-      "areas": {"motores": [[625, 400, 70, 85], [905, 400, 70, 85]]}
+      "fonte": "design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp",
+      "recorte": [1360, 80, 2240, 2800],
+      "fundo": "transparente",
+      "detalhe": true
     }
   },
   "girafoscopio": {

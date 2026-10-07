@@ -83,7 +83,9 @@ assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 52
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /icon\('palette'\) \+ '<span>Personalizar o meu<\/span>'/.test(demo), 'a demonstração usa o mesmo botão do banner (paleta, sem seta)');
 assert.ok(/entries\[i\]\.soon/.test(demo) && /'Ver em 3D'/.test(demo) && demo.includes('#produto/${key}/3d'), 'novidade sem compra (cores fixas): o convite leva a ver a peça em 3D');
-for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
+for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, PRODUCTS.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
+assert.ok(demo.includes("fixed ? 'Comprar' : 'Personalizar o meu'") && demo.includes('fixed ? `#produto/${key}`'), 'a lâmpada (cores fixas, à venda): o convite é Comprar, que abre a peça na foto');
+assert.notEqual(translate('Comprar', 'en'), 'Comprar');
 for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
 
 console.log('hero-demo: ok');

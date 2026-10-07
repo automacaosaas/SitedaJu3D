@@ -15,7 +15,9 @@ function setup(root, key) {
   const stage = q('[data-pl-stage]'), host = q('[data-pl-viewer]'), status = q('[data-pl-status]'), views = q('[data-pl-views]');
   const add = q('.pl-add'), customize = q('[data-pl-customize]'), panel = q('[data-pl-custom]'), dots = q('[data-pl-dots]');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)'), phone = matchMedia('(max-width: 860px)');
-  let selection = {...original}, part = product.parts[0].id, view = 'photo', viewer = null, viewerImport = null, request = 0;
+  // a peça de cores fixas (as lâmpadas): sem partes nem painel de cores — só a foto, o 3D e a compra
+  const fixed = !product.parts.length;
+  let selection = {...original}, part = product.parts[0]?.id, view = 'photo', viewer = null, viewerImport = null, request = 0;
   let spinning = !reduced.matches, onScreen = true, busy = false;
   const isOriginal = () => product.parts.every(p => selection[p.id] === original[p.id]);
   const hex = () => Object.fromEntries(Object.entries(selection).map(([id, value]) => [id, color(value).hex]));
@@ -104,6 +106,20 @@ function setup(root, key) {
   new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; if (viewer?.active) viewer.setAuto(spinning && onScreen); }).observe(stage);
   window.addEventListener('pagehide', () => viewer?.hide());
   window.addEventListener('pageshow', event => { if (event.persisted && view === '3d') setView('3d'); });
+
+  // A peça de cores fixas: o botão leva a peça (nas cores dela) e confirma com o check antes de abrir o mini-carrinho.
+  if (fixed) {
+    add.addEventListener('click', () => {
+      if (busy) return;
+      let cart;
+      try { cart = writeCart(putItem(readCart(), key, {})); } catch (error) { status.hidden = false; status.textContent = error.message; return; }
+      window.dispatchEvent(new Event('ju:cart'));
+      busy = true; add.classList.add('is-added'); add.querySelector('span').textContent = 'Adicionado';
+      setTimeout(() => openMiniCart({itemId: addedItemId(cart, key, {}), original: true}), reduced.matches ? 0 : 650);
+      setTimeout(() => { busy = false; add.classList.remove('is-added'); add.querySelector('span').textContent = 'Adicionar ao carrinho'; }, 2200);
+    });
+    return;
+  }
 
   // ── as cores, aqui mesmo ──
   panel.innerHTML = `<div class="pl-custom-inner"><div class="pl-custom-card">
