@@ -94,24 +94,32 @@
 .copy-price { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: clamp(12px, calc(var(--u) * 0.012), 20px) 0 0; color: var(--text); }
 .copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', sans-serif; font-variant-numeric: tabular-nums; }
 .copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', sans-serif; letter-spacing: .02em; }
-/* O botão e, logo abaixo e centralizado, o link "Ver encaixado". */
-.palette { display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; max-width: 100%; }
+/* As duas ações lado a lado (07/10/2026: "deixar mais dinâmico o botão… integrar no nosso universo visual"): a principal, cheia, na cor
+   da peça, e "Ver encaixado", de vidro, com a borda na mesma cor; as duas na mesma altura e em pílula, como as setas e os selos. */
+.palette { display: flex; flex-direction: row; align-items: center; gap: 12px; width: max-content; max-width: 100%; }
 .copy[inert], .palette[inert] { pointer-events: none; }
 /* Ação principal, o elemento mais chamativo da vitrine: a cor da peça com um degradê vertical quase imperceptível (mais
-   clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), cantos de 18 px, letra bem espaçada e
-   a paleta de cores. No hover sobe em direção a quem olha (3% maior, sombra mais espalhada) e a paleta balança de leve;
-   no clique, afunda. */
-.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.75em 0 1.45em; border: 0; border-radius: 18px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: all .3s cubic-bezier(.25, .8, .25, 1); }
+   clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), em pílula, letra bem espaçada, a paleta de
+   cores à esquerda e, na ponta, um círculo branco com a seta (para onde o clique leva). De tempos em tempos um brilho atravessa
+   o botão (chama o clique sem piscar). No hover sobe em direção a quem olha (3% maior, sombra mais espalhada), a paleta balança
+   de leve e a seta anda; no clique, afunda. */
+.palette-button { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 6px 6px 6px 1.35em; border: 0; border-radius: 999px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s cubic-bezier(.25, .8, .25, 1), filter .3s ease; }
+.palette-button:not(:has(.palette-go)) { padding: 0 1.6em 0 1.35em; }
 .palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
+.palette-go { display: grid; place-items: center; width: 40px; height: 40px; flex: none; margin-left: .3em; border-radius: 50%; background: #fff; color: var(--accent); box-shadow: 0 2px 8px rgba(20, 30, 40, .18); transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+.palette-go svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.palette-button::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .3) 50%, transparent 65%); transform: translateX(-120%); animation: palette-sheen 5.6s cubic-bezier(.4, 0, .2, 1) 1.8s infinite; pointer-events: none; }
+@keyframes palette-sheen { 0%, 64% { transform: translateX(-120%); } 84%, 100% { transform: translateX(120%); } }
 .palette-button, .hero-demo-button { white-space: nowrap; }
 .palette-button:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
 @keyframes palette-tilt { 0% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 50% { transform: rotate(8deg); } 72% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-/* Secundária, só nas peças com demonstração: um link discreto com o olho (ver a peça montada), centralizado abaixo do botão. */
-.hero-demo-button { display: inline-flex; align-items: center; gap: .5em; min-height: 44px; padding: 0 .9em; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0102), 15px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer; transition: color .3s ease; }
-.hero-demo-button svg { width: 1.3em; height: 1.3em; flex: none; stroke-width: 1.6; transition: transform .3s ease; }
-.hero-demo-button > span:first-of-type { padding-bottom: 2px; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size .35s ease; }
+/* Secundária, só nas peças com demonstração: "Ver encaixado" com o olho (ver a peça montada), em vidro translúcido sobre o banner,
+   com a borda e o texto na cor da peça; no hover fica branca, a borda acende e o olho cresce. */
+.hero-demo-button { display: inline-flex; align-items: center; justify-content: center; gap: .5em; min-height: 52px; padding: 0 1.3em; border: 1.5px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--accent); font: 650 clamp(14px, calc(var(--u) * 0.0106), 16px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer;
+  box-shadow: 0 8px 20px -12px rgba(20, 30, 40, .3); transition: background .3s ease, border-color .3s ease, color .3s ease, transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s ease; }
+.hero-demo-button svg { width: 1.3em; height: 1.3em; flex: none; stroke-width: 1.7; transition: transform .3s ease; }
 /* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
 .palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
 /* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
@@ -159,11 +167,11 @@
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
   .palette-button:hover { transform: scale(1.03); filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 18px 40px var(--glow), 0 6px 14px -6px rgba(20, 30, 40, .22); }
   /* a paleta ganha vida: um balanço rápido, com um quique no fim */
-  .palette-button:hover svg { animation: palette-tilt .6s cubic-bezier(.34, 1.56, .64, 1); }
+  .palette-button:hover > svg { animation: palette-tilt .6s cubic-bezier(.34, 1.56, .64, 1); }
+  .palette-button:hover .palette-go { transform: translateX(3px); }
   .palette-button:hover:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
-  .hero-demo-button:hover { color: var(--strong); }
-  .hero-demo-button:hover > span:first-of-type { background-size: 100% 1px; }
-  .hero-demo-button:hover svg { transform: scale(1.08); }
+  .hero-demo-button:hover { background: #fff; border-color: var(--accent); color: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 26px -14px var(--glow); }
+  .hero-demo-button:hover svg { transform: scale(1.12); }
   .slot[data-front=true]:hover .piece img { transform: translateY(-8px) scale(1.012) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
   .slot[data-front=true]:hover .piece-shadow { transform: scale(.94); opacity: .8; }
 }
@@ -185,9 +193,12 @@
   .copy-price { justify-content: center; }
   /* o botão ocupa a linha inteira, com o link logo abaixo; as setas saem do lado dele e flutuam nas bordas da pilastra */
   .hero-palette { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
-  .palette { width: min(100%, 340px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 6px; }
-  .palette-button { width: 100%; padding: 0 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
-  .hero-demo-button { align-self: center; }
+  /* no celular, uma embaixo da outra, as duas na largura inteira (a principal por cima; o rótulo no meio, a seta na ponta) */
+  .palette { width: min(100%, 360px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; }
+  .palette-button { width: 100%; padding: 6px 6px 6px 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
+  .palette-button > svg:first-child { margin-left: auto; }
+  .palette-button .palette-go { margin-left: auto; }
+  .hero-demo-button { width: 100%; min-height: 50px; }
   .hero-arrow { position: static; translate: none; grid-row: 2; align-self: center; z-index: 6; width: 44px; height: 44px; margin: 0; }
   .hero-prev { grid-column: 1; justify-self: start; }
   .hero-next { grid-column: 3; justify-self: end; }
@@ -195,16 +206,18 @@
 @media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
 /* Celulares estreitos (até ~380 px): o rótulo cabe numa linha, sem perder a área de toque. */
 @media (max-width: 380px) {
-  .palette-button { gap: .45em; padding: 0 .85em; font-size: 14.5px; }
+  .palette-button { gap: .45em; padding: 6px 6px 6px .85em; font-size: 14.5px; }
 }
 @media (max-width: 340px) {
-  .palette-button { font-size: 13.5px; padding: 0 .7em; }
+  .palette-button { font-size: 13.5px; padding: 5px 5px 5px .7em; }
+  .palette-go { width: 36px; height: 36px; }
   .hero-arrow { width: 40px; height: 40px; }
 }
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
   .piece img, .piece-shadow, .hero-arrow, .hero-arrow svg, .palette-button, .hero-demo-button, .hero-demo-button svg { transition: none; }
-  .palette-button:hover svg { animation: none; }
+  .palette-button:hover > svg { animation: none; }
+  .palette-button::after { animation: none; display: none; }
   .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }

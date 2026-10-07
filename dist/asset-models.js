@@ -6,8 +6,9 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 // model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
   // A borboleta do arquivo de impressão (BORBOLETA COMPLETO.3mf, 06/10/2026): corpo e cabeça exatos, os encaixes das asas nos detalhes,
+  // (07/10/2026: a cabeça entra no encaixe do corpo, como na peça montada do 3MF, e o brilho dos olhos fica branco, como na vitrine)
   // rosto creme, olhos, sobrancelhas e sorriso pretos, bochechas rosadas (tools/modelo-borboleta)
-  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=3mf-2',import.meta.url),
+  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=3mf-3',import.meta.url),
   // O dinossauro do Meshy (05/10/2026), com os 2 espinhos da peça nova: corpo e detalhes coloríveis, olhos, dentes e brilho fixos
   dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshy-1',import.meta.url),
   aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
@@ -15,8 +16,10 @@ const ASSETS={
   macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
   // Girafa e unicórnio do Rodin (06/10/2026) com as cores fixas de cada um em materiais, sem textura; por dentro, lisos; as estrelas
   // do unicórnio refeitas (tools/modelo-novidades)
-  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-1',import.meta.url),
-  unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-1',import.meta.url)
+  // (07/10/2026: as cores seguem o relevo — as manchas, os olhos, as narinas e o sorriso da girafa; as orelhas, as mãos, a crina, o
+  // chifre e a faixa da base do unicórnio; o arco-íris em três faixas, roxo, lavanda e dourado; tools/modelo-novidades/pintura.md)
+  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-2',import.meta.url),
+  unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-2',import.meta.url)
 };
 // The file each piece loads (tests read the same one).
 export const modelURL=key=>ASSETS[key];

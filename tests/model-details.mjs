@@ -31,11 +31,11 @@ for(const key of ['borboletoscopio','dinossauroscopio','aviaoscopia','macacoscop
  };
  if(key==='borboletoscopio'){
   // 2026-10-06: the head of the print file (BORBOLETA COMPLETO.3mf, tools/modelo-borboleta/trocar_cabeca.py) on the site's body, in the
-  // colors of the real piece: big round black eyes with a PINK shine, thin black eyebrows, a black smile arc (along the shallow groove)
+  // colors of the real piece: big round black eyes with a WHITE shine (07/10/2026: "a pupila dela é branca", like the showcase), thin black eyebrows, a black smile arc (along the shallow groove)
   // and small pink oval cheeks (inside their raised rim) on a cream face.
   for(const sx of [-1,1]){
    assert.equal(materialAt(sx*.095,.53),'eyes','Big round eye');
-   assert.equal(materialAt(sx*.069,.556),'cheeks','The shine of each eye is pink, like the real piece');
+   assert.equal(materialAt(sx*.069,.556),'highlight','The shine of each eye is white, like the showcase (07/10/2026)');
    assert.equal(materialAt(sx*.15,.53),'face','Face beside the eye');
    assert.equal(materialAt(sx*.08,.596),'face','Face between the eye and the eyebrow');
    assert.equal(materialAt(sx*.083,.614),'eyes','Thin black eyebrow');

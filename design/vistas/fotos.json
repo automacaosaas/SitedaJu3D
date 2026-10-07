@@ -1,18 +1,16 @@
 {
   "_como": "Fotos da galeria da aba Foto: as FOTOS REAIS de cada peça (06/10/2026), no padrão de 4 (dist/gallery.js): frente, três quartos, costas e um detalhe de perto, todas 4:5. Para cada uma, a fonte nesta pasta e o recorte [x, y, largura, altura] em pixels da fonte; \"fundo\": \"recortar\" tira o fundo liso (preto ou claro) e tudo abaixo de \"chao\" (y onde a peça toca o chão; abaixo, só o reflexo; com a peça em perspectiva, uma reta por dois pontos [[x, y], [x, y]]; com a base curva, uma linha por vários pontos, em ordem de x); \"matte\": \"cobertura\" com \"limiar\" deixa sólidas as sombras escuras encostadas no fundo preto (sem borrão) e alisa a beirada. O detalhe (\"detalhe\": true) é um recorte 4:5 que enche o quadro. node tools/galeria-vistas/gerar.cjs grava em dist/assets/vistas/ (tira o chuvisco, amplia com Lanczos, realça, sombra leve no chão). Os renders do 3D (tools/render-vistas) não entram: só fotos reais.",
   "_fontes": "*-3-vistas.webp: as fotos do Luiz em três vistas (04/10/2026), 1600 x 1006 (vieram comprimidas; com os arquivos originais, as fotos ficam mais nítidas). dinossauroscopio-girando.mp4: o vídeo do Luiz (04/10/2026).",
-  "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (a cor média da parte na foto de frente original, medida em OKLab, com \"faixa\" de matiz em graus), \"para\" (a cor média da mesma parte na foto da vitrine, medida igual: assim a peça sai, em média, com a claridade, a saturação e o matiz da vitrine; ou um id da paleta), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda), \"croma_max\" (acima disso não muda: a regra só pega cores apagadas, como a costura lilás em volta do rosto da borboleta, sem tocar nas bochechas) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026).",
+  "_cores": "As fotos reais foram feitas com peças em outras cores; \"cores\" de cada peça leva as cores da foto para as da vitrine (a paleta de dist/products.js), mantendo a luz e a sombra de cada pixel (tools/galeria-vistas/vistas.html, recolor). Cada regra: \"de\" (a cor média da parte na foto de frente original, medida em OKLab, com \"faixa\" de matiz em graus), \"para\" (a cor média da mesma parte na foto da vitrine, medida igual: assim a peça sai, em média, com a claridade, a saturação e o matiz da vitrine; ou um id da paleta), \"croma_min\" (abaixo disso — branco, preto, brilho — não muda), \"croma_max\" (acima disso não muda: a regra só pega cores apagadas, como a costura lilás em volta do rosto da borboleta, sem tocar nas bochechas) e, se preciso, \"so\" ou \"exceto\" com o nome de uma lista de retângulos [x, y, largura, altura] da fonte em \"areas\" de cada vista (07/10/2026). Borboleta: o brilho de cada olho fica branco, como na vitrine (\"olhos\"; a peça da foto tem o brilho rosa).",
   "_ampliadas_como": "Fontes ampliadas 4x pelo Real-ESRGAN (realesrgan-ncnn-vulkan, modelo realesrgan-x4plus, rodado no PC; tools/galeria-vistas/AMPLIAR.md): o gerador usa a ampliada no lugar da original, com as mesmas medidas (em pixels da original). encolher: quanto o recorte entra na peça (pixels da original), para tirar o fio escuro do fundo na beirada (07/10/2026).",
   "_ampliadas": {
     "dinossauroscopio-3-vistas.webp": {"arquivo": "ampliadas/dinossauroscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
     "borboletoscopio-3-vistas.webp": {"arquivo": "ampliadas/borboletoscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
-    "girafoscopio-frente.jpg": {"arquivo": "ampliadas/girafoscopio-frente-x4.webp", "fator": 4, "encolher": 0.5},
-    "girafoscopio-lado.png": {"arquivo": "ampliadas/girafoscopio-lado-x4.webp", "fator": 4, "encolher": 0.5},
-    "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4},
-    "girafoscopio-costas.webp": {"arquivo": "ampliadas/girafoscopio-costas-x4.webp", "fator": 4, "encolher": 0.5}
+    "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4}
   },
   "borboletoscopio": {
     "cores": [
+      {"de": "#d99aa0", "faixa": 30, "para": "#f6f4f2", "croma_min": 0.06, "so": "olhos"},
       {"de": "#9c80a7", "faixa": 40, "para": "#5bc091"},
       {"de": "#da8e8f", "faixa": 30, "para": "#f3da3e", "croma_min": 0.04, "exceto": "rosto"},
       {"de": "#a08494", "faixa": 40, "para": "#a89584", "croma_max": 0.055, "so": "rosto"}
@@ -24,7 +22,7 @@
       "chao": 916,
       "matte": "cobertura",
       "limiar": 16,
-      "areas": {"rosto": [[725, 330, 140, 112]]}
+      "areas": {"rosto": [[725, 330, 140, 112]], "olhos": [[766, 369, 18, 18], [818, 369, 18, 18]]}
     },
     "tres-quartos": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -33,7 +31,7 @@
       "chao": 862,
       "matte": "cobertura",
       "limiar": 16,
-      "areas": {"rosto": [[232, 345, 115, 105]]}
+      "areas": {"rosto": [[232, 345, 115, 105]], "olhos": [[245, 386, 16, 16], [280, 386, 16, 16]]}
     },
     "costas": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -42,7 +40,7 @@
       "chao": 862,
       "matte": "cobertura",
       "limiar": 16,
-      "areas": {"rosto": [[1318, 352, 46, 60]]}
+      "areas": {"rosto": [[1318, 352, 46, 60]], "olhos": []}
     },
     "detalhe": {
       "fonte": "borboletoscopio-3-vistas.webp",
@@ -52,7 +50,7 @@
       "limiar": 16,
       "cor_fundo": "#000000",
       "detalhe": true,
-      "areas": {"rosto": [[725, 330, 140, 112]]}
+      "areas": {"rosto": [[725, 330, 140, 112]], "olhos": [[766, 369, 18, 18], [818, 369, 18, 18]]}
     }
   },
   "dinossauroscopio": {
@@ -63,13 +61,18 @@
       "fundo": "recortar",
       "chao": 866,
       "matte": "cobertura",
-      "limiar": 18
+      "limiar": 18,
+      "manter": [
+        [[700, 395], [745, 395], [745, 409.5], [737, 410.5], [730.5, 413.5], [726.5, 419], [724.5, 428], [724, 440], [700, 440]],
+        [[897.5, 440], [873.5, 440], [873, 428], [871, 419], [867, 413.5], [860.5, 410.5], [852.5, 409.5], [852.5, 395], [897.5, 395]],
+        [[745, 395], [852.5, 395], [852.5, 409.5], [745, 409.5]]
+      ]
     },
     "tres-quartos": {
       "fonte": "dinossauroscopio-3-vistas.webp",
       "recorte": [130, 160, 390, 700],
       "fundo": "recortar",
-      "chao": [[150, 846], [500, 853]],
+      "chao": [[150, 845], [260, 846], [312, 846.5], [500, 851]],
       "matte": "cobertura",
       "limiar": 18,
       "buracos": 0.02
@@ -78,10 +81,13 @@
       "fonte": "dinossauroscopio-3-vistas.webp",
       "recorte": [1080, 160, 400, 700],
       "fundo": "recortar",
-      "chao": [[1100, 848], [1460, 855]],
+      "chao": [[1100, 846.5], [1460, 851.5]],
       "matte": "cobertura",
       "limiar": 18,
-      "buracos": 0.02
+      "buracos": 0.02,
+      "manter": [
+        [[1429, 304], [1428.1, 310.5], [1425.7, 316.5], [1421.7, 321.7], [1416.5, 325.7], [1410.5, 328.1], [1404, 329], [1397.5, 328.1], [1391.5, 325.7], [1386.3, 321.7], [1382.3, 316.5], [1379.9, 310.5], [1379, 304], [1379.9, 297.5], [1382.3, 291.5], [1386.3, 286.3], [1391.5, 282.3], [1397.5, 279.9], [1404, 279], [1410.5, 279.9], [1416.5, 282.3], [1421.7, 286.3], [1425.7, 291.5], [1428.1, 297.5]]
+      ]
     },
     "detalhe": {
       "fonte": "dinossauroscopio-3-vistas.webp",
@@ -90,7 +96,12 @@
       "matte": "cobertura",
       "limiar": 18,
       "cor_fundo": "#000000",
-      "detalhe": true
+      "detalhe": true,
+      "manter": [
+        [[700, 395], [745, 395], [745, 409.5], [737, 410.5], [730.5, 413.5], [726.5, 419], [724.5, 428], [724, 440], [700, 440]],
+        [[897.5, 440], [873.5, 440], [873, 428], [871, 419], [867, 413.5], [860.5, 410.5], [852.5, 409.5], [852.5, 395], [897.5, 395]],
+        [[745, 395], [852.5, 395], [852.5, 409.5], [745, 409.5]]
+      ]
     }
   },
   "aviaoscopia": {
@@ -126,39 +137,16 @@
     }
   },
   "girafoscopio": {
-    "_fontes": "As imagens do render que o dono mandou em 07/10/2026 (frente 431 x 886, lado 318 x 993, costas 901 x 1746; a girafa ainda não tem peça impressa para fotografar). O detalhe sai da de frente. A base de cada uma segue a curva do fundo (medida coluna a coluna: onde o amarelo encontra a linha escura do contato com o chão); nas costas, o chão que aparece dentro do vão também sai. O render tem um brilho fraco em volta do amarelo (até 30 do preto; em cima da orelha esquerda, na de frente, até 45), que sai com o fundo (limiar 30; 46 na de frente e no detalhe, que não têm nada escuro no contorno — na de lado, o olho encosta nele). Com os arquivos originais em resolução maior, as fotos ficam mais nítidas.",
-    "frente": {
-      "fonte": "girafoscopio-frente.jpg",
-      "recorte": [0, 120, 431, 720],
-      "fundo": "recortar",
-      "chao": [[0, 800], [105, 800], [106, 800], [108, 804], [110, 806], [120, 811], [135, 815], [150, 818], [170, 820], [195, 822], [220, 822], [245, 820], [260, 818], [275, 815], [285, 813], [295, 808], [298, 806], [300, 803], [301, 801], [302, 800], [431, 800]],
-      "matte": "cobertura",
-      "limiar": 46
-    },
-    "lado": {
-      "fonte": "girafoscopio-lado.png",
-      "recorte": [0, 120, 318, 720],
-      "fundo": "recortar",
-      "chao": [[0, 800], [80, 800], [81, 801], [82, 802], [84, 805], [86, 806], [90, 808], [98, 811], [106, 814], [114, 816], [126, 818], [134, 819], [148, 820], [160, 821], [184, 823], [214, 823], [230, 822], [234, 821], [236, 820], [238, 817], [239, 800], [318, 800]],
-      "matte": "cobertura",
-      "limiar": 30
-    },
-    "costas": {
-      "fonte": "girafoscopio-costas.webp",
-      "recorte": [0, 150, 901, 1450],
-      "fundo": "recortar",
-      "chao": [[0, 1538], [252, 1538], [254, 1543], [256, 1546], [260, 1550], [266, 1554], [272, 1557], [278, 1560], [290, 1563], [302, 1566], [314, 1569], [326, 1571], [332, 1572], [344, 1572], [350, 1570], [353, 1568], [355, 1565], [356, 1519], [358, 1517], [368, 1515], [380, 1514], [392, 1512], [398, 1511], [434, 1511], [452, 1510], [470, 1509], [488, 1511], [500, 1512], [512, 1513], [524, 1514], [536, 1515], [548, 1517], [563, 1518], [564, 1563], [566, 1567], [569, 1570], [578, 1573], [584, 1573], [596, 1571], [608, 1569], [620, 1567], [632, 1564], [644, 1560], [650, 1557], [656, 1553], [660, 1549], [662, 1546], [664, 1541], [665, 1538], [901, 1538]],
-      "matte": "cobertura",
-      "limiar": 30
-    },
+    "_fontes": "Renders do modelo 3D corrigido (07/10/2026: as manchas, os olhos, as narinas e o sorriso pintados no relevo, sem vazar; tools/modelo-novidades/pintura.md), com o estúdio do avião: tools/render-aviao-macaco/lamp-assets.cjs --vistas grava design/vistas/girafoscopio-3d-*.png (frente, lado, costas e o rosto, para o detalhe). As imagens que o dono mandou (girafoscopio-frente.jpg, -lado.png, -costas.webp, do render antigo, com a pintura vazada) ficam aqui como referência.",
+    "frente": {"fonte": "design/vistas/girafoscopio-3d-frente.png", "fundo": "transparente"},
+    "lado": {"fonte": "design/vistas/girafoscopio-3d-lado.png", "fundo": "transparente"},
+    "costas": {"fonte": "design/vistas/girafoscopio-3d-costas.png", "fundo": "transparente"},
     "detalhe": {
-      "fonte": "girafoscopio-frente.jpg",
-      "recorte": [20, 125, 390, 488],
-      "fundo": "recortar",
-      "matte": "cobertura",
-      "limiar": 46,
-      "cor_fundo": "#000000",
+      "fonte": "design/vistas/girafoscopio-3d-rosto.png",
+      "recorte": [270, 180, 1260, 1575],
+      "fundo": "transparente",
       "detalhe": true
     }
-  }
+  },
+  "_dino_recorte": "Dino (07/10/2026: \"a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado\"): na de frente e no detalhe, a abertura embaixo da boca é a forma dela (as paredes de dentro e os cantos redondos ficam inteiros: manter); nas de três quartos e de costas, o chão é uma reta na linha em que a peça encosta (sem a sombra entre os pés e sem a borda ondulada do reflexo); de costas, o olho que aparece do lado da cabeça fica inteiro, redondo."
 }

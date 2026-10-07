@@ -33,9 +33,11 @@ for (const key of Object.keys(GALLERY)) {
   // recortadas do fundo delas (preto ou claro); a fonte é a foto do Luiz (a girafa: as imagens que o dono mandou). O avião de frente
   // e a cabine de perto (07/10/2026: "a imagem de frente, você pode usar simplesmente a que está na vitrine"): a foto da vitrine,
   // ampliada, já sem fundo.
-  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : [];
-  assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp'
-    : fotos[key][id].fundo === 'recortar' && (photoPieces.includes(key) ? fotos[key][id].fonte === `${key}-3-vistas.webp` : fotos[key][id].fonte.startsWith(`${key}-`))), `${key}: as fotos, recortadas`);
+  // A girafa (07/10/2026): renders do modelo 3D com a pintura corrigida (as imagens que o dono mandou tinham as manchas vazadas).
+  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : [];
+  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
+  assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === source(id)
+    : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === `${key}-3-vistas.webp`), `${key}: as fotos, recortadas`);
   assert(!/render/.test(JSON.stringify(specs)), `${key}: nada do render do visualizador do site`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), ids.filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
   // no branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), como nas lojas grandes: sem transparência
@@ -66,7 +68,12 @@ for (const key of photoPieces) {
 assert(page.includes("import {PRODUCTS,SOON,PALETTE} from '/dist/products.js';") && page.includes('function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
 // A base da girafa é redonda e encosta no reflexo: o chão é uma linha por vários pontos (em ordem de x), não uma altura só.
 assert(page.includes('while(j<floor.length-1&&sx>floor[j][0])j++;'), 'chão por vários pontos');
-for (const id of ['frente', 'lado', 'costas']) { const line = fotos.girafoscopio[id].chao; assert(Array.isArray(line) && line.length > 10 && line.every((p, i) => !i || p[0] > line[i - 1][0]), `girafoscopio-${id}: o chão segue a curva da base`); }
+for (const id of ['tres-quartos', 'costas']) { const line = fotos.dinossauroscopio[id].chao; assert(Array.isArray(line) && line.every((p, i) => !i || p[0] > line[i - 1][0]), `dinossauroscopio-${id}: o chão em linha`); }
+// O dino (07/10/2026: "a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado"): os cantos da
+// abertura embaixo da boca e o olho que aparece de costas ficam inteiros (polígonos "manter").
+assert(page.includes('for(const poly of opts.manter||[])') && fotos.dinossauroscopio.frente.manter.length === 3 && fotos.dinossauroscopio.costas.manter[0].length === 24, 'dino: a abertura e o olho de costas inteiros');
+// A borboleta: o brilho dos olhos branco, como na vitrine (a peça da foto tem o brilho rosa).
+assert(fotos.borboletoscopio.cores.some(r => r.so === 'olhos' && r.para === '#f6f4f2'), 'borboleta: o brilho dos olhos branco');
 // Zoom óptico (07/10/2026): as fontes ampliadas 4x pelo Real-ESRGAN, com as medidas de fotos.json em pixels da original; o recorte
 // entra um pouco na peça (sem o fio escuro do fundo), a claridade passa por uma curva (sem estourar em branco) e a cor nova cabe na tela.
 for (const [fonte, sr] of Object.entries(fotos._ampliadas)) { assert(sr.fator === 4 && sr.arquivo.startsWith('ampliadas/'), fonte); await stat(new URL(`../design/vistas/${sr.arquivo}`, import.meta.url)); }

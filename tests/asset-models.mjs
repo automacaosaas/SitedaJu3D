@@ -16,7 +16,7 @@ try{
  for(const key of Object.keys(PRODUCTS).filter(key=>PRODUCTS[key].parts.length)){
   const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
-  const expected={borboletoscopio:['body','details','face','eyes','cheeks'],dinossauroscopio:['body','details','eyes','teeth','highlight'],aviaoscopia:['body','details','engines','fixed']}[key];
+  const expected={borboletoscopio:['body','details','face','eyes','cheeks','highlight'],dinossauroscopio:['body','details','eyes','teeth','highlight'],aviaoscopia:['body','details','engines','fixed']}[key];
   // dinossauroscopio: the Meshy model (05/10/2026) adds the fixed white shine on each eye (highlight), like the monkey
   assert.deepEqual(json.materials.map(m=>m.name).sort(),expected.sort(),'Logical material contract');
   for(const material of json.materials.filter(m=>['body','details','engines'].includes(m.name))){

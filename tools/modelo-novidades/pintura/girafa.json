@@ -1,0 +1,69 @@
+{
+ "base": [
+  "coat",
+  "spots",
+  "muzzle"
+ ],
+ "details": [
+  "features"
+ ],
+ "smooth": 3,
+ "fragMaxBy": {
+  "coat": 6000,
+  "muzzle": 400,
+  "spots": 800
+ },
+ "projected": [
+  {
+   "name": "features",
+   "clearTo": "muzzle",
+   "box": [
+    -0.38,
+    0.9,
+    -0.04,
+    1.24
+   ],
+   "mode": "bump",
+   "sigma": 0.04,
+   "res": 1600,
+   "top": 0.3,
+   "far": 30,
+   "smoothPx": 6
+  },
+  {
+   "name": "features",
+   "clearTo": "muzzle",
+   "box": [
+    0.06,
+    0.9,
+    0.4,
+    1.24
+   ],
+   "mode": "bump",
+   "sigma": 0.04,
+   "res": 1600,
+   "top": 0.3,
+   "far": 30,
+   "smoothPx": 6
+  },
+  {
+   "name": "features",
+   "clearTo": "muzzle",
+   "box": [
+    -0.22,
+    0.72,
+    0.26,
+    0.87
+   ],
+   "mode": "curve",
+   "sigma": 0.03,
+   "res": 1600,
+   "near": 16,
+   "width": 32,
+   "window": 24,
+   "extend": 30,
+   "endLevel": -0.0001,
+   "smoothPx": 3
+  }
+ ]
+}

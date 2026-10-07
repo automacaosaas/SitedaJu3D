@@ -1,0 +1,69 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// Renders of the lamps (girafa, unicórnio) from the site's 3D preview, with the studio of the airplane (studio.js): the corrected paint of
+// 07/10/2026 (tools/modelo-novidades/pintura.md) in the showcase, the cards and the giraffe's gallery. Each view is a transparent PNG
+// cropped to the piece (cropToContent); tools/render-aviao-macaco/lamp-assets.cjs places it in the frame of each picture of the site.
+// node runpage.cjs "glb=/assets/models/girafoscopio.glb&views=frente:0:6,lado:90:6,costas:180:6,rosto:0:4:face" saida.png lamp-glb.html
+//   views: name:azimuth:elevation[:face] (degrees; "face" frames only the head, for the close-up)
+import * as THREE from 'three';
+import {GLTFLoader} from '/vendor/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from '/vendor/libs/meshopt_decoder.module.js';
+import {makeRenderer, studioEnvironment, renderStudio, finish, cropToContent} from './studio.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const SIZE = Number(P.size || 1600), PASSES = Number(P.passes || 48);
+const renderer = makeRenderer(SIZE, SIZE, {exposure: Number(P.exposure || 1.0), toneMapping: P.tone || 'neutral'});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: 5.5, left: 3, right: 2.4, scrim: 1.4, glint: 12});
+// the colours of the GLB (fixed colours of each lamp) as printed plastic: satin, a light clear coat; the black of the eyes glossier
+const buf = await (await fetch(P.glb)).arrayBuffer();
+const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buf, '');
+const subject = gltf.scene;
+subject.traverse(o => {
+  if (!o.isMesh) return;
+  // tint=coat:#e8b616,…: the colour of a material only in the picture (the showcase photo's yellow, more lemon than the satin plastic of
+  // the 3D under this light), the model unchanged
+  const tint = Object.fromEntries((P.tint || '').split(',').filter(Boolean).map(t => t.split(':')));
+  const src = o.material, dark = src.name === 'features';
+  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: dark ? .28 : .46, clearcoat: dark ? .8 : .28, clearcoatRoughness: dark ? .12 : .4, envMapIntensity: .9, side: THREE.DoubleSide});
+  // the thin, dense Rodin shells get shadow acne from their own inner wall (as on the site, asset-models.js): they cast, not receive
+  o.castShadow = true; o.receiveShadow = false;
+  // (the GLB normals are 8-bit: kept as they are)
+});
+// Normals rebuilt from the geometry, the same across the colour borders (a vertex has one normal whatever primitive it is in): the 8-bit
+// normals of the GLB and the needle triangles of the Rodin mesh drew thin light streaks on the coat in the close-up
+if (P.smooth !== '0') {
+  subject.updateMatrixWorld(true);
+  const meshes = []; subject.traverse(o => { if (o.isMesh) meshes.push(o); });
+  const key = v => `${Math.round(v.x * 2e4)},${Math.round(v.y * 2e4)},${Math.round(v.z * 2e4)}`, acc = new Map(), a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  const local = meshes.map(o => { const p = o.geometry.attributes.position, V = []; for (let i = 0; i < p.count; i++) V.push(new THREE.Vector3().fromBufferAttribute(p, i)); return V; });
+  const nb = new Map(), link = (p, q) => { if (!nb.has(p)) nb.set(p, new Set()); nb.get(p).add(q); };
+  meshes.forEach((o, mi) => { const V = local[mi], idx = o.geometry.index.array; for (let t = 0; t < idx.length; t += 3) { a.copy(V[idx[t]]); b.copy(V[idx[t + 1]]); c.copy(V[idx[t + 2]]); n.subVectors(c, b).cross(a.clone().sub(b)); const ks = [a, b, c].map(key); for (const k of ks) { const s0 = acc.get(k) || new THREE.Vector3(); s0.add(n); acc.set(k, s0); } link(ks[0], ks[1]); link(ks[1], ks[2]); link(ks[2], ks[0]); link(ks[1], ks[0]); link(ks[2], ks[1]); link(ks[0], ks[2]); } });
+  // a few passes of averaging the normals with the neighbours' (the noise of the dense mesh goes, the shape stays)
+  for (const k of acc.keys()) acc.get(k).normalize();
+  for (let it = 0; it < Number(P.ns ?? 4); it++) { const next = new Map(); for (const [k, v] of acc) { const s0 = v.clone(); for (const q of nb.get(k) || []) s0.add(acc.get(q)); next.set(k, s0.normalize()); } for (const [k, v] of next) acc.set(k, v); }
+  meshes.forEach((o, mi) => { const V = local[mi], N = new Float32Array(V.length * 3), pos = new Float32Array(V.length * 3); V.forEach((v, i) => { const s0 = acc.get(key(v)).clone().normalize(); N.set([s0.x, s0.y, s0.z], i * 3); pos.set([v.x, v.y, v.z], i * 3); });
+    o.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3)); o.geometry.setAttribute('normal', new THREE.BufferAttribute(N, 3)); });
+}
+// fitted like the site (height 4.1, standing on y = −1.9, centred)
+const box0 = new THREE.Box3().setFromObject(subject), size0 = box0.getSize(new THREE.Vector3()), c0 = box0.getCenter(new THREE.Vector3()), k = 4.1 / size0.y;
+const holder = new THREE.Group(); holder.add(subject); subject.position.set(-c0.x, -box0.min.y, -c0.z); holder.scale.setScalar(k); holder.position.y = -1.9;
+scene.add(holder); holder.updateMatrixWorld(true);
+const camera = new THREE.PerspectiveCamera(Number(P.fov || 20), 1, .1, 200);
+const out = {}, info = {};
+for (const spec of (P.views || 'frente:0:6').split(',')) {
+  const [name, az, el, mode] = spec.split(':'), a = Number(az) * Math.PI / 180, e = Number(el) * Math.PI / 180;
+  const face = mode === 'face', target = face ? new THREE.Vector3(0, 1.35, 0) : new THREE.Vector3(0, .15, 0), dist = face ? 6.2 : 15.5;
+  camera.position.set(target.x + dist * Math.sin(a) * Math.cos(e), target.y + dist * Math.sin(e), target.z + dist * Math.cos(a) * Math.cos(e));
+  camera.lookAt(target); camera.updateProjectionMatrix();
+  // the key light stays at the camera's upper left, whatever the azimuth
+  const kd = new THREE.Vector3(-.55, .75, .6).applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+  const canvas = renderStudio(renderer, scene, camera, {width: SIZE, height: SIZE, passes: PASSES, subject: holder, key: {dir: kd.toArray(), spread: .22, intensity: Number(P.key || 2.1)}, dome: {intensity: Number(P.dome || 1.05), minElevation: -.1}});
+  out[name] = face ? canvas : cropToContent(canvas, {pad: 2, symmetric: false}).canvas;
+  info[name] = [out[name].width, out[name].height];
+}
+finish(out, info);
+</script>
+</body>
