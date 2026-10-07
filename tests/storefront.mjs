@@ -81,7 +81,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html'], 'recommends only what is not in the cart');
   assert.match(page, /<a class="cart-rec cart-rec-more" href="produtos\.html">[^]*<strong>Ver mais<\/strong>[^]*<\/ul><button type="button" class="cart-rec-arrow is-next" data-rec-step="1" aria-label="Mais peças" hidden>/, 'the last card is "Ver mais" (Produtos), with the thin arrows of the rail');
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
-    [['termos.html#producao', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['termos.html#producao', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
+    [['envio.html#frete', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['envio.html#prazo', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
   assert.match(page, /começa depois da confirmação do pagamento\./);
   // without the account's list (payments off): Pix, the credit cards and the Caixa virtual debit card, in three groups
   assert.deepEqual([...page.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Mastercard', 'Elo', 'American Express', 'Hipercard', 'Cartão de débito virtual Caixa']);
@@ -200,7 +200,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(shell, /<nav class="drawer-links" aria-label="Navegação móvel">\$\{primaryNav\(\)\}<\/nav>\$\{drawerExtras\(\)\}<\/aside>/);
   assert.match(shell, /<a href="\$\{id\}\.html"><img src="assets\/card-preview-\$\{id\}\.webp" alt="" width="56" height="56" loading="lazy"/, 'the pieces with thumbnails, to their own pages');
   assert.match(shell, /<a href="conta\.html#pedidos">/, '"Meus pedidos"');
-  assert.match(shell, /\/\^\\d\{10,15\}\$\/\.test\(COMMERCE\.whatsapp\) \? `<a href="https:\/\/wa\.me\/\$\{COMMERCE\.whatsapp\}"/, '"Fale com a Ju" only once the WhatsApp number is set');
+  assert.match(shell, /\/\^\\d\{12,13\}\$\/\.test\(CONTACT\.whatsapp\) \? `<a href="https:\/\/wa\.me\/\$\{CONTACT\.whatsapp\}"/, '"Fale com a Ju" only once the WhatsApp number is set (api/_lib/legal.js)');
   assert.match(shell, /<p class="drawer-signature">feito com carinho, pela Ju\.<\/p>/, 'the signature at the foot');
 }
 

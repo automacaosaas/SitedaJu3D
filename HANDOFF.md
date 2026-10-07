@@ -152,8 +152,9 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `15111617959`; ver `NFE-SETUP.md`), escolhidas pelo tipo de cliente; texto da contadora; empresa sem IE como não
   contribuinte. Falta no Bling: formas de pagamento (17/03/04) e conta em homologação. Depois, zip e teste real em
   homologação: próximo número (11, série 1), CFOP de cada caso, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
-- **C. Atendimento.** Quando o Pedro passar e-mail e WhatsApp: `api/_lib/legal.js` (e-mail e telefone) e `dist/commerce-config.js`
-  (`whatsapp`), depois `node tools/sync-legal.cjs`. Com o número, o "Fale com a Ju" aparece sozinho no menu do celular.
+- **C. Atendimento.** Quando o Pedro passar e-mail, telefone, WhatsApp e horário: tudo em `api/_lib/legal.js` (`COMPANY.email`,
+  `COMPANY.phone`, `COMPANY.hours` e `WHATSAPP`, só números com 55 e DDD), depois `node tools/sync-legal.cjs` (atualiza as páginas e o
+  `dist/company.js`, de onde os scripts leem). Com o número, o botão do WhatsApp aparece no Contato, no menu do celular e na confirmação.
 - **D. Preços.** Os selos "ilustrativos" já saíram (05/10, pedido do dono). Falta só trocar os valores quando forem confirmados
   (`dist/commerce-config.js` e `api/_lib/catalog.js`, que precisam bater).
 
@@ -172,12 +173,11 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   Pago); verificar o domínio no Resend (hoje os e-mails só chegam ao e-mail de teste); Mercado Pago em `live` na conta do CNPJ;
   Bling em produção (certificado A1, plano); revisão jurídica (`LEGAL-SETUP.md`); bloquear a indexação do site de teste.
 - **Antes do lançamento — página de Contato (`contato.html`, ficou como a prévia aprovada em 05/10):** confirmar com a equipe
-  (1) o número do WhatsApp (`whatsapp` em `dist/commerce-config.js`; o botão aparece sozinho na página e no menu do celular);
+  (1) o número do WhatsApp (`WHATSAPP` em `api/_lib/legal.js` + `node tools/sync-legal.cjs`; o botão aparece sozinho na página e no menu do celular);
   (2) se `contato@juimprimepramim.com.br` é o e-mail oficial (criar a caixa no domínio; se for, preencher `email` em
   `api/_lib/legal.js` e rodar `node tools/sync-legal.cjs`; criar `CONTACT_EMAIL` na Hostinger se as mensagens do formulário
-  devem ir para ela em vez do `ORDER_NOTIFY_EMAIL`); (3) o horário "segunda a sexta, das 9h às 18h"; (4) o FAQ promete enviar o
-  código de rastreio quando a peça for postada: desde a `rastreio/correios` o site manda sozinho, quando a Ju informa o código
-  no painel (`RASTREIO.md`).
+  devem ir para ela em vez do `ORDER_NOTIFY_EMAIL`); (3) o horário "segunda a sexta, das 9h às 18h" (`COMPANY.hours`; aparece no topo do Contato e no cartão de ajuda). O FAQ do
+  rastreio já foi atualizado em 06/10 (acompanhamento automático em Meus pedidos).
 
 ## Como entregar
 

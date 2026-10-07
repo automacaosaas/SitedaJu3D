@@ -107,9 +107,9 @@ export function paymentBlock(methods) {
 function purchaseInfo(methods) {
   const row = (name, href, title, text) => `<li>${icon(name)}<a href="${href}"><strong>${title}</strong> <span>${text}</span></a></li>`;
   return `<section class="cart-info" aria-label="Informações da compra"><ul class="cart-info-list">${[
-    row('truck', 'termos.html#producao', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
+    row('truck', 'envio.html#frete', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
     row('card', 'termos.html#precos', 'Formas de pagamento.', 'Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.'),
-    row('clock', 'termos.html#producao', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
+    row('clock', 'envio.html#prazo', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
     row('returns', 'trocas.html', 'Trocas e devoluções.', 'Você pode desistir em até 7 dias depois de receber.')].join('')}</ul>
     ${paymentBlock(methods)}</section>`;
 }

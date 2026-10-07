@@ -1,6 +1,6 @@
 import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection} from './products.js';
 import {setupCartBridge} from './cart-bridge.js';
-import {COMMERCE,money} from './commerce-config.js';
+import {COMMERCE,money,installmentLabel} from './commerce-config.js';
 import {icon} from './icons.js';
 import {staticViews,createGallery} from './gallery.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
@@ -37,7 +37,7 @@ function fillProduct(key){
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;$('#dialog-description').textContent=p.description;
   gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
-  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;}
+  else{$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#product-installments').textContent=`ou ${installmentLabel(price)} sem juros no cartão`;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }

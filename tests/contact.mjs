@@ -97,7 +97,17 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const channels = [...page.matchAll(/<article class="contact-channel[^"]*">[^]*?<h2>([^<]+)<\/h2>/g)].map(m => m[1]);
   assert.deepEqual(channels, ['WhatsApp', 'E-mail', 'Instagram']);
   assert.match(page, /<a class="contact-cta" href="#" data-whatsapp-link target="_blank" rel="noopener" hidden>Falar agora no WhatsApp →<\/a>/);
-  assert.match(script, /const number = \/\^\\d\{10,15\}\$\/\.test\(COMMERCE\.whatsapp\) \? COMMERCE\.whatsapp : '';/);
+  assert.match(script, /const number = \/\^\\d\{12,13\}\$\/\.test\(CONTACT\.whatsapp\) \? CONTACT\.whatsapp : '';/);
+  // The contact channels come from one place (api/_lib/legal.js → company.js, audit Q3): the e-mail link appears once the
+  // address is filled in, the hours show on the page, and nothing else on the site keeps its own copy.
+  const legal = require('../api/_lib/legal');
+  assert.match(script, /import \{CONTACT\} from '\.\/company\.js';/);
+  assert.match(page, /<a class="contact-link" href="#" data-email-link hidden><span translate="no" data-company="email">/);
+  assert.match(page, /<p class="contact-soon" data-email-soon>O e-mail oficial entra aqui em breve\./);
+  assert.match(script, /if \(CONTACT\.email && mail\) \{\n  mail\.href = `mailto:\$\{CONTACT\.email\}`;/);
+  assert.equal((page.match(new RegExp(`<span data-company="hours">${legal.COMPANY.hours}</span>`, 'g')) || []).length, 2, 'the hours, under the title and in the help card');
+  assert.doesNotMatch(read('dist/commerce-config.js'), /whatsapp/, 'no second WhatsApp number');
+  for (const file of ['dist/site-shell.js', 'dist/checkout.js', 'dist/contato.js']) assert.doesNotMatch(read(file), /COMMERCE\.whatsapp|contato@juimprimepramim/, `${file}: the channels come from company.js`);
   assert.match(script, /https:\/\/wa\.me\/\$\{number\}\?text=\$\{encodeURIComponent\(translate\('Olá, Ju! Vim pelo site e tenho uma dúvida\.'\)\)\}/);
   assert(page.includes(`href="${/const INSTAGRAM = '([^']+)'/.exec(read('dist/site-shell.js'))[1]}"`), 'the same Instagram as the menu and the footer');
   // The form: the same fields and subjects the server accepts, a hidden trap field and the privacy note.
@@ -111,6 +121,9 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.equal((page.match(/<details class="faq-item"/g) || []).length, 7);
   const faq = page.slice(page.indexOf('class="contact-faq"'));
   assert(faq.includes(`a produção leva de ${COMMERCE.productionLabel}`), 'production time = commerce-config.js');
+  assert(faq.includes('você acompanha a localização e o status do pacote diretamente em Meus pedidos, atualizados automaticamente pelos Correios'), 'tracking: automatic, in Meus pedidos');
+  assert.doesNotMatch(faq, /enviamos o código de rastreio dos Correios/, 'no promise of a code sent by hand');
+  for (const id of ['faq-prazo', 'faq-frete']) assert.match(faq, new RegExp(`<details class="faq-item" id="${id}">[^]*?<a href="envio\\.html">Ver Envio e prazos →</a>[^]*?</details>`), `${id}: links to Envio e prazos`);
   assert(faq.includes(`Pix, com ${pixPercent}% de desconto nas peças`), 'Pix discount = the server rule');
   assert(faq.includes(`a partir de ${money(shipping.freeShipping.fromCents).replace(/ /g, ' ')} em peças, o envio por PAC é grátis`), 'free shipping = shipping-config.js');
   assert(read('dist/trocas.html').includes('desistir em até 7 dias corridos') && faq.includes('desistir da compra em até 7 dias corridos'), 'returns as in the policy');

@@ -19,7 +19,7 @@ const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const nbsp = text => text.replace(/ /g, '&nbsp;');
 // Pages search engines may list (Sobre stays out while it is empty; account and checkout steps are private).
-const LISTED = ['', 'produtos.html', 'escolha.html', '{products}', 'contato.html', 'termos.html', 'privacidade.html', 'trocas.html'];
+const LISTED = ['', 'produtos.html', 'escolha.html', '{products}', 'contato.html', 'envio.html', 'termos.html', 'privacidade.html', 'trocas.html'];
 const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html', '/conta.html', '/email-preview.html'];
 
 async function site() {
@@ -29,7 +29,7 @@ async function site() {
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, defaults, color, showcase, icon} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
   const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}.html`;
   const lines = base.replace(/\r\n/g, '\n');
@@ -68,12 +68,12 @@ function page(id, data, base) {
           <h1>${esc(product.title)}</h1>
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>
-          <p class="pl-installments">ou 3x sem juros no cartão</p>
+          <p class="pl-installments">ou ${nbsp(installmentLabel(price))} sem juros no cartão</p>
           <div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
           <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>
           <div class="pl-facts">
-            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, 'Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.')}
-            ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.')}
+            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, 'Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>')}
+            ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho. <a href="envio.html#frete">Ver envio e prazos</a>')}
             ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
           </div>
           <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${esc(product.description)}</p><p class="pl-note"><span>Cores originais:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>

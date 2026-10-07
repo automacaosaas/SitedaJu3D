@@ -13,7 +13,7 @@ const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const require = createRequire(import.meta.url);
 const catalog = require('../api/_lib/catalog');
-const {COMMERCE, money, pixUnitDiscount, pixPrice, pixPercent} = await site('commerce-config.js');
+const {COMMERCE, money, pixUnitDiscount, pixPrice, pixPercent, installmentLabel, installmentCents} = await site('commerce-config.js');
 const {normalizeCart, totals, pixTotals, pixDiscount} = await site('cart-store.js');
 const {createDemoOrder} = await site('demo-payment.js');
 const {cartSummary} = await site('cart-view.js');
@@ -56,13 +56,30 @@ const {translate} = await site('i18n-core.js');
 // ── checkout: the card option (decision of 01/10/2026: 3x sem juros) ──
 {
   const checkout = read('dist/checkout.js');
-  assert.match(checkout, /<span class="card-off"><strong>3X SEM JUROS<\/strong><span>ou até 12x no crédito<\/span><\/span>/);
+  assert.match(checkout, /<span class="card-off"><strong>3X SEM JUROS<\/strong><span><span>\$\{installmentLabel\(full\)\}<\/span> · <span>ou até 12x no crédito<\/span><\/span><\/span>/, 'the card option shows the installment value');
   assert.doesNotMatch(checkout, /ATÉ 12X NO CRÉDITO/);
   const bar = read('dist/announcement-bar.js');
   assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
   assert.doesNotMatch(bar, /até 12x no cartão/);
-  assert.match(read('dist/index.html'), /<small>ou 3x sem juros no cartão · valores ilustrativos nesta prévia</, 'and the product page');
-  assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: 12\}/, 'the Brick offers only the method chosen');
+  assert.match(read('dist/index.html'), /<small><span id="product-installments">ou 3x sem juros no cartão<\/span> · valores ilustrativos nesta prévia</, 'and the product window');
+  assert.match(read('dist/controller.js'), /\$\('#product-installments'\)\.textContent=`ou \$\{installmentLabel\(price\)\} sem juros no cartão`/, 'with the value of each installment');
+  assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: COMMERCE\.maxInstallments\}/, 'the Brick offers only the method chosen');
+  assert.equal(COMMERCE.maxInstallments, 12);
+}
+
+// ── "3x de R$ 43,00 sem juros": the price split in three, nothing added (audit Q4) ──
+{
+  assert.equal(COMMERCE.interestFreeInstallments, 3);
+  assert.equal(installmentLabel(12900), `3x de ${money(4300)}`);
+  assert.equal(installmentLabel(13900), `3x de ${money(4633)}`, 'rounded down to the cent, never above the price');
+  assert.equal(installmentLabel(15900), `3x de ${money(5300)}`);
+  for (const [id, price] of Object.entries(COMMERCE.prices)) {
+    const page = read(`dist/${id}.html`);
+    assert(page.includes(`<p class="pl-installments">ou ${installmentLabel(price).replace(/ /g, '&nbsp;')} sem juros no cartão</p>`), `${id}.html: ou ${installmentLabel(price)} sem juros`);
+    assert(installmentCents(price) * 3 <= price && installmentCents(price) * 3 > price - 3, `${id}: three installments make the price`);
+  }
+  assert.equal(translate('ou 3x de R$ 43,00 sem juros no cartão', 'en'), 'or 3 interest-free card installments of R$ 43,00');
+  assert.equal(translate('ou 3x de R$ 43,00 sem juros no cartão', 'es'), 'o 3 cuotas sin interés de R$ 43,00 con tarjeta');
 }
 
 // ── texts ─────────────────────────────────────────────────────────────

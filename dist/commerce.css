@@ -16,7 +16,7 @@
 /* Four steps (with Identificação) do not fit a phone: the steps not in progress show only their number; the name stays for screen readers. */
 @media(max-width:480px){.shop-steps>span:not([aria-current]){font-size:0;gap:0}.shop-steps>span:not([aria-current]) b{font-size:12px}}
 /* Real shipping (Correios): the options for the CEP, one card each, the cheapest chosen from the start. */
-.shipping-choice{margin-top:22px}.ship-title{margin:0 0 10px;font-size:13px}
+.shipping-choice{margin-top:22px}.ship-title{margin:0 0 10px;font-size:13px}.ship-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.ship-title a{color:var(--rose);font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .ship-note{margin:0;padding:14px 16px;border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--muted);background:var(--bg)}
 .ship-problem{border-style:solid;color:#98364e;background:#fdeef1}
 .ship-options{display:grid;gap:10px}

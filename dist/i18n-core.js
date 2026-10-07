@@ -70,6 +70,7 @@ const dynamic = [
   [/^Frete grátis \((.+)\) garantido!$/, 'Free shipping ($1) unlocked!', '¡Envío gratis ($1) garantizado!'],
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
+  [/^ou (\d+)x de (R\$ [\d.,]+) sem juros no cartão$/, 'or $1 interest-free card installments of $2', 'o $1 cuotas sin interés de $2 con tarjeta'],
   [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
   [/^(R\$ [\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
   [/^Combinação (.+) aplicada\.$/, (t, name) => `${t(name)} combination applied.`, (t, name) => `Combinación ${t(name)} aplicada.`],

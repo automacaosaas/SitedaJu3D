@@ -4,6 +4,10 @@
 .contact-hero { max-width: 680px; margin: 0 auto; text-align: center; }
 .contact-hero h1 { font-size: clamp(34px, 4.4vw, 54px); }
 .contact-lead { max-width: 56ch; margin: 18px auto 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
+/* The service hours under the title (from api/_lib/legal.js, like the rest of the contact channels). */
+.contact-when { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin: 18px auto 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--muted); font-size: 14px; }
+.contact-when svg { flex: none; width: 18px; height: 18px; color: var(--rose); }
+.contact-when strong { color: var(--ink); font-weight: 650; }
 
 .contact-channels { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; margin-top: clamp(30px, 5vw, 52px); }
 .contact-channel { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 26px 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 14px 40px #65364908; }

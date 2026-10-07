@@ -184,7 +184,12 @@ async function main() {
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
-      if (!fs.existsSync(file)) { res.statusCode = 404; return res.end('Not found'); }
+      if (!fs.existsSync(file)) {
+        // Like the real server: a missing page gets the site's 404 page, a missing file a short answer.
+        res.statusCode = 404; res.setHeader('Cache-Control', 'no-store');
+        if (/(^|\/)[^./]*$|\.html?$/i.test(url.pathname)) { res.setHeader('Content-Type', TYPES['.html']); return res.end(fs.readFileSync(path.join(ROOT, '404.html'))); }
+        return res.end('Not found');
+      }
       res.setHeader('Content-Type', TYPES[path.extname(file)] || 'application/octet-stream');
       res.setHeader('Cache-Control', 'no-store');
       // With --fake-mp the checkout pages load the simulated Payment Brick instead of the real SDK.

@@ -779,7 +779,7 @@ Informações da peça|Piece information|Información de la pieza
 Mais sobre a peça|More about this piece|Más sobre la pieza
 Cor da parte|Part color|Color de la parte
 Combinações prontas|Ready-made combinations|Combinaciones listas
-ou 3x sem juros no cartão · valores ilustrativos nesta prévia|or 3 interest-free card installments · illustrative prices in this preview|o 3 cuotas sin interés con tarjeta · precios ilustrativos en esta vista previa
+valores ilustrativos nesta prévia|illustrative prices in this preview|precios ilustrativos en esta vista previa
 Cada peça é feita sob encomenda: a produção leva|Each piece is made to order: production takes|Cada pieza se hace por encargo: la producción tarda
 O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são calculados pelo CEP no carrinho.|Shipping is by Correios, all over Brazil. The shipping cost and delivery time are calculated by postal code in the cart.|El envío es por Correios, a todo Brasil. El costo y el plazo de entrega se calculan por código postal en el carrito.
 Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
@@ -886,7 +886,8 @@ Cada peça é impressa sob encomenda, nas cores que você escolheu: a produção
 Posso encomendar um modelo personalizado que não está no site?|Can I order a custom design that is not on the site?|¿Puedo encargar un modelo personalizado que no está en el sitio?
 Sim! Adoramos criar projetos especiais. Conte a sua ideia pelo formulário desta página ou pelo WhatsApp e preparamos um orçamento. Se já tiver um arquivo 3D ou uma referência, avise na mensagem que combinamos como enviar.|Yes! We love creating special projects. Tell us your idea using the form on this page or on WhatsApp and we will prepare a quote. If you already have a 3D file or a reference, mention it in your message and we will arrange how to send it.|¡Sí! Nos encanta crear proyectos especiales. Cuéntanos tu idea con el formulario de esta página o por WhatsApp y preparamos un presupuesto. Si ya tienes un archivo 3D o una referencia, avísanos en el mensaje y acordamos cómo enviarlo.
 Como acompanho o status do meu pedido?|How do I track my order?|¿Cómo sigo el estado de mi pedido?
-Na sua conta, em Meus pedidos, você vê a situação de cada compra. Você também recebe um e-mail quando o pagamento é aprovado e outro quando o pedido é confirmado. Quando a peça for postada, enviamos o código de rastreio dos Correios.|In your account, under My orders, you can see the status of each purchase. You also get an email when the payment is approved and another when the order is confirmed. When the piece ships, we send you the Correios tracking code.|En tu cuenta, en Mis pedidos, ves el estado de cada compra. También recibes un correo cuando se aprueba el pago y otro cuando se confirma el pedido. Cuando la pieza se envíe, te mandamos el código de seguimiento de Correios.
+Na sua conta, em Meus pedidos, você acompanha cada compra pelas etapas: pagamento, produção, envio e entrega. Depois que a peça é postada, você acompanha a localização e o status do pacote diretamente em Meus pedidos, atualizados automaticamente pelos Correios, sem precisar copiar o código de rastreio.|In your account, under My orders, you follow each purchase step by step: payment, production, shipping and delivery. Once the piece is posted, you follow the package's location and status right there in My orders, updated automatically by the Correios, with no need to copy the tracking code.|En tu cuenta, en Mis pedidos, sigues cada compra por etapas: pago, producción, envío y entrega. Cuando la pieza se despacha, sigues la ubicación y el estado del paquete directamente en Mis pedidos, actualizados automáticamente por Correios, sin necesidad de copiar el código de seguimiento.
+Você também recebe um e-mail quando o pagamento é aprovado, quando a Ju confirma o pedido, quando ele é postado (com o código de rastreio), quando sai para entrega e quando é entregue.|You also get an email when the payment is approved, when Ju confirms the order, when it is posted (with the tracking code), when it is out for delivery and when it is delivered.|También recibes un correo cuando se aprueba el pago, cuando Ju confirma el pedido, cuando se despacha (con el código de seguimiento), cuando sale para entrega y cuando se entrega.
 Ver meus pedidos →|See my orders →|Ver mis pedidos →
 Quais são os cuidados com as peças impressas em 3D?|How should I care for 3D-printed pieces?|¿Qué cuidados necesitan las piezas impresas en 3D?
 Evite deixar as peças no calor forte ou no sol direto por muito tempo, como dentro de um carro estacionado, para preservar o acabamento e o formato. Para limpar, use um pano macio e seco.|Avoid leaving the pieces in strong heat or direct sunlight for long periods, such as inside a parked car, to preserve their finish and shape. To clean them, use a soft, dry cloth.|Evita dejar las piezas con calor fuerte o al sol directo por mucho tiempo, como dentro de un auto estacionado, para conservar el acabado y la forma. Para limpiarlas, usa un paño suave y seco.
@@ -904,7 +905,8 @@ Escolha um assunto.|Please choose a subject.|Elige un asunto.
 Escreva sua mensagem, com pelo menos 10 caracteres.|Write your message, with at least 10 characters.|Escribe tu mensaje, con al menos 10 caracteres.
 Enviando…|Sending…|Enviando…
 Muitas mensagens seguidas. Tente de novo daqui a pouco.|Too many messages in a row. Please try again in a little while.|Demasiados mensajes seguidos. Inténtalo de nuevo en un rato.
-Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para contato@juimprimepramim.com.br.|We could not send it right now. Try again in a few minutes or write to contato@juimprimepramim.com.br.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a contato@juimprimepramim.com.br.
+Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para|We could not send it right now. Try again in a few minutes or write to|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a
+Não foi possível enviar agora. Tente de novo em alguns minutos.|We could not send it right now. Try again in a few minutes.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos.
 Não foi possível enviar agora. Confira a sua conexão e tente de novo.|We could not send it right now. Check your connection and try again.|No se pudo enviar ahora. Revisa tu conexión e inténtalo de nuevo.
 Vistas da peça|Views of the piece|Vistas de la pieza
 Escolher a vista|Choose a view|Elegir la vista
@@ -966,4 +968,60 @@ Que tal dar uma olhada nas nossas coleções?|How about a look at our collection
 Ver as coleções|See the collections|Ver las colecciones
 Remover dados de pessoa jurídica|Remove company details|Eliminar los datos de persona jurídica
 Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.|Company details removed. Once you confirm, the invoice will be issued to your CPF.|Datos de persona jurídica eliminados. Al confirmar, la factura se emitirá a tu CPF.
+Atendimento|Support hours|Atención
+Página não encontrada|Page not found|Página no encontrada
+O e-mail oficial entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our official email is coming soon. Meanwhile, send us your message with the form below.|Nuestro correo oficial llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
+Ver Envio e prazos →|See Shipping and delivery times →|Ver Envío y plazos →
+Envio e prazos|Shipping and delivery times|Envío y plazos
+Prazos e frete|Delivery times and shipping|Plazos y envío
+Ver envio e prazos|See shipping and delivery times|Ver envío y plazos
+ENVIO E PRAZOS|SHIPPING AND DELIVERY TIMES|ENVÍO Y PLAZOS
+Do ateliê até você.|From the studio to you.|Del taller hasta ti.
+Cada peça é impressa sob encomenda, nas cores que você escolheu. Aqui estão os prazos, o frete e a entrega, num lugar só.|Each piece is printed to order, in the colors you chose. Here are the delivery times, shipping and delivery, all in one place.|Cada pieza se imprime por encargo, en los colores que elegiste. Aquí están los plazos, el envío y la entrega, en un solo lugar.
+Do pedido à entrega|From order to delivery|Del pedido a la entrega
+Começa depois da confirmação do pagamento.|Starts once the payment is confirmed.|Empieza después de la confirmación del pago.
+Postagem|Posting|Despacho
+Correios, PAC ou SEDEX|Correios, PAC or SEDEX|Correios, PAC o SEDEX
+Você recebe um e-mail com o código de rastreio.|You get an email with the tracking code.|Recibes un correo con el código de seguimiento.
+Prazo pelo CEP|Delivery time by postal code|Plazo por código postal
+Aparece no carrinho e na finalização da compra, antes do pagamento.|Shown in the cart and at checkout, before payment.|Aparece en el carrito y al finalizar la compra, antes del pago.
+Nesta página|On this page|En esta página
+Prazo total|Total delivery time|Plazo total
+Frete grátis|Free shipping|Envío gratis
+Acompanhe o seu pedido|Follow your order|Sigue tu pedido
+Onde entregamos|Where we deliver|Dónde entregamos
+Endereço e problemas na entrega|Address and delivery problems|Dirección y problemas en la entrega
+O prazo total é a soma da produção (3 a 5 dias úteis) com o transporte dos Correios. O transporte depende do CEP e do serviço escolhido, e o prazo já somado aparece no carrinho e na finalização da compra, antes de você pagar.|The total delivery time is production (3 to 5 business days) plus the Correios transit. Transit depends on the postal code and the service you choose, and the combined time appears in the cart and at checkout, before you pay.|El plazo total es la suma de la producción (3 a 5 días hábiles) y el transporte de Correios. El transporte depende del código postal y del servicio elegido, y el plazo ya sumado aparece en el carrito y al finalizar la compra, antes de pagar.
+Os prazos contam em dias úteis, a partir da confirmação do pagamento. O Pix é confirmado na hora; no cartão, a confirmação costuma levar poucos minutos.|Times are counted in business days from payment confirmation. Pix is confirmed instantly; card payments usually take a few minutes.|Los plazos se cuentan en días hábiles desde la confirmación del pago. Pix se confirma al instante; con tarjeta, la confirmación suele tardar pocos minutos.
+O frete é calculado pelo CEP, com o contrato da Ju com os Correios. Você escolhe entre o PAC, mais econômico, e o SEDEX, mais rápido.|Shipping is calculated by postal code, under Ju's contract with the Correios. You choose between PAC, the cheaper option, and SEDEX, the faster one.|El envío se calcula por código postal, con el contrato de Ju con Correios. Eliges entre PAC, más económico, y SEDEX, más rápido.
+O valor e o prazo de cada serviço aparecem no carrinho e na finalização da compra, antes do pagamento.|The price and delivery time of each service appear in the cart and at checkout, before payment.|El precio y el plazo de cada servicio aparecen en el carrito y al finalizar la compra, antes del pago.
+Nas compras a partir de|On orders from|En compras desde
+em peças, o envio por PAC é grátis para todo o Brasil.|in pieces, PAC shipping is free all over Brazil.|en piezas, el envío por PAC es gratis a todo Brasil.
+O valor considera as peças pelo preço cheio, sem o frete. Se preferir receber mais rápido, o SEDEX continua disponível, com o frete calculado normalmente.|The amount counts the pieces at full price, without shipping. If you prefer faster delivery, SEDEX is still available, with shipping calculated as usual.|El monto considera las piezas a precio completo, sin el envío. Si prefieres recibir más rápido, SEDEX sigue disponible, con el envío calculado normalmente.
+Em Meus pedidos, na sua conta, você acompanha cada etapa: pagamento, produção, envio e entrega. Depois da postagem, a localização e o status do pacote aparecem ali mesmo, atualizados automaticamente pelos Correios.|In My orders, in your account, you follow every step: payment, production, shipping and delivery. Once posted, the package's location and status appear right there, updated automatically by the Correios.|En Mis pedidos, en tu cuenta, sigues cada etapa: pago, producción, envío y entrega. Después del despacho, la ubicación y el estado del paquete aparecen ahí mismo, actualizados automáticamente por Correios.
+Você também recebe um e-mail quando o pedido é postado (com o código de rastreio), quando sai para entrega e quando é entregue.|You also get an email when the order is posted (with the tracking code), when it is out for delivery and when it is delivered.|También recibes un correo cuando el pedido se despacha (con el código de seguimiento), cuando sale para entrega y cuando se entrega.
+Entregamos em todo o Brasil, pelos Correios. Para enviar para outro país, fale com a Ju antes de comprar.|We deliver all over Brazil with the Correios. To ship to another country, talk to Ju before buying.|Entregamos en todo Brasil, por Correios. Para enviar a otro país, habla con Ju antes de comprar.
+Confira o endereço com atenção antes de pagar: uma entrega que não se completa por endereço errado pode exigir um novo frete.|Check the address carefully before paying: a delivery that fails because of a wrong address may need new shipping.|Revisa la dirección con atención antes de pagar: una entrega que no se completa por una dirección equivocada puede requerir un nuevo envío.
+Se a peça chegar danificada, fotografe a embalagem antes de jogá-la fora e fale com a gente: produzimos uma peça nova, com o frete por nossa conta.|If the piece arrives damaged, take a photo of the package before throwing it away and get in touch: we make a new piece, with shipping on us.|Si la pieza llega dañada, fotografía el embalaje antes de tirarlo y habla con nosotros: producimos una pieza nueva, con el envío por nuestra cuenta.
+Veja também:|See also:|Ver también:
+Contato e perguntas frequentes|Contact and FAQ|Contacto y preguntas frecuentes
+ERRO 404|ERROR 404|ERROR 404
+Ops! Essa página sumiu no meio das impressões 3D.|Oops! This page got lost among the 3D prints.|¡Ups! Esta página se perdió entre las impresiones 3D.
+O endereço pode ter mudado ou a página não existe mais. Que tal voltar para a vitrine ou ver as nossas peças?|The address may have changed, or the page no longer exists. How about going back to the showcase or seeing our pieces?|La dirección puede haber cambiado o la página ya no existe. ¿Qué tal volver a la vitrina o ver nuestras piezas?
+Ir para a vitrine|Go to the showcase|Ir a la vitrina
+Ver a coleção de produtos|See the product collection|Ver la colección de productos
+Procurando algo específico?|Looking for something specific?|¿Buscas algo en particular?
+Sua privacidade|Your privacy|Tu privacidad
+Usamos o essencial para o site funcionar e, com a sua permissão, cookies de análise e de anúncios para entender as visitas e melhorar a loja. Você escolhe.|We use what is essential for the site to work and, with your permission, analytics and advertising cookies to understand visits and improve the shop. You choose.|Usamos lo esencial para que el sitio funcione y, con tu permiso, cookies de análisis y de anuncios para entender las visitas y mejorar la tienda. Tú eliges.
+Essenciais|Essential|Esenciales
+Carrinho, login, idioma e esta escolha. Sempre ativos.|Cart, sign-in, language and this choice. Always on.|Carrito, inicio de sesión, idioma y esta elección. Siempre activos.
+Análise|Analytics|Análisis
+Medir as visitas e o desempenho das páginas, sem identificar você (Google Analytics).|Measure visits and page performance without identifying you (Google Analytics).|Medir las visitas y el rendimiento de las páginas, sin identificarte (Google Analytics).
+Anúncios|Advertising|Anuncios
+Mostrar anúncios da Ju para quem já visitou a loja (pixel da Meta).|Show Ju's ads to people who have visited the shop (Meta pixel).|Mostrar anuncios de Ju a quienes ya visitaron la tienda (píxel de Meta).
+Salvar minhas escolhas|Save my choices|Guardar mis elecciones
+Aceitar todos|Accept all|Aceptar todo
+Recusar|Decline|Rechazar
+Personalizar|Customize|Personalizar
+Preferências de cookies|Cookie preferences|Preferencias de cookies
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));

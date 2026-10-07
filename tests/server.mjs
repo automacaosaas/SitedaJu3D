@@ -62,7 +62,24 @@ try {
     assert.equal(res.status, 404, `blocked: ${path}`);
     assert(!/"scripts"|createServer|\[core\]/.test(res.body.toString()), `no file content leaks for ${path}`);
   }
-  assert.equal((await raw('/nao-existe.html')).status, 404);
+  // A missing page gets the site's 404 page (links back to the showcase, never cached, out of search results); a missing
+  // file keeps the short text answer.
+  for (const path of ['/nao-existe.html', '/pagina-antiga', '/loja/peca/', '/A/B.htm']) {
+    const res = await raw(path);
+    assert.equal(res.status, 404, path);
+    assert.match(res.headers['content-type'], /^text\/html/, `${path}: an HTML page`);
+    assert.equal(res.headers['cache-control'], 'no-store');
+    const html = res.body.toString();
+    assert.match(html, /<h1 id="not-found-title">Ops! Essa página sumiu no meio das impressões 3D\.<\/h1>/, path);
+    assert.match(html, /<a class="primary" href="index\.html">Ir para a vitrine/); assert.match(html, /<a class="not-found-secondary" href="produtos\.html">Ver a coleção de produtos<\/a>/);
+    assert.match(html, /<base href="\/">\n  <meta name="robots" content="noindex">\n  <script src="journey\.js"><\/script>/, 'every link resolves from the site root, before the first script');
+  }
+  for (const path of ['/nao-existe.js', '/assets/nao-existe.webp']) {
+    const res = await raw(path);
+    assert.equal(res.status, 404, path);
+    assert.equal(res.body.toString(), 'Página não encontrada.', `${path}: a missing file is not a page`);
+  }
+  assert.equal((await raw('/nao-existe', {method: 'HEAD'})).body.length, 0, 'HEAD: no body');
   assert.equal((await raw('/', {method: 'POST'})).status, 405, 'pages are read-only');
 
   // API routes behave like Vercel's; helpers in api/_lib are not routes.

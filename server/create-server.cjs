@@ -81,9 +81,16 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
     const found = resolveFile(pathname);
     if (!found) {
+      // A page address that does not exist gets the site's own 404 page (404.html, with links back to the showcase); a
+      // missing file (a script, an image) keeps the short text answer.
       res.statusCode = 404;
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
+      const page = /(^|\/)[^./]*$|\.html?$/i.test(pathname) && resolveFile('/404.html');
+      if (page) {
+        res.setHeader('Content-Type', TYPES['.html']);
+        return res.end(req.method === 'HEAD' ? undefined : fs.readFileSync(page.file));
+      }
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       return res.end(req.method === 'HEAD' ? undefined : 'Página não encontrada.');
     }
     const {file, stat} = found, ext = path.extname(file).toLowerCase();

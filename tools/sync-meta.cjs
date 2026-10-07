@@ -22,6 +22,7 @@ const PAGES = {
   'termos.html': {title: 'Termos de Uso · Ju, imprime pra mim?', description: 'Termos de Uso da loja Ju, imprime pra mim?: conta, pedidos sob encomenda, pagamento, produção, entrega e seus direitos.'},
   'privacidade.html': {title: 'Política de Privacidade · Ju, imprime pra mim?', description: 'Política de Privacidade da loja Ju, imprime pra mim?: quais dados coletamos, para quê, com quem compartilhamos e como exercer seus direitos (LGPD).'},
   'trocas.html': {title: 'Trocas e Devoluções · Ju, imprime pra mim?', description: 'Trocas e Devoluções da loja Ju, imprime pra mim?: desistência em 7 dias, peças com defeito e como o valor é devolvido.'},
+  'envio.html': {title: 'Envio e prazos · Ju, imprime pra mim?', description: 'Envio e prazos da loja Ju, imprime pra mim?: produção sob encomenda em 3 a 5 dias úteis, frete pelos Correios calculado pelo CEP e frete grátis a partir de R$ 500,00.'},
   'checkout.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'comprar-agora.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'conta.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP}

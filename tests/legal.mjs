@@ -19,6 +19,15 @@ assert.equal(legal.termsDate('2026-09-28'), '28 de setembro de 2026');
 for (const field of ['tradeName', 'legalName', 'cnpj', 'address', 'email', 'phone', 'website']) assert(legal.COMPANY[field], `COMPANY.${field}`);
 const stale = pages().filter(name => { const html = read('dist/' + name); return sync(html) !== html; });
 assert.deepEqual(stale, [], `pages out of date with api/_lib/legal.js — run: node tools/sync-legal.cjs (${stale.join(', ')})`);
+// The contact channels for the scripts (company.js) come from the same file; what is still "[PREENCHER]" is empty there.
+{
+  const {companyModule, COMPANY_JS} = require('../tools/sync-legal.cjs');
+  assert.equal(read('dist/' + COMPANY_JS), companyModule(), 'dist/company.js out of date — run: node tools/sync-legal.cjs');
+  const contact = legal.contact();
+  assert.deepEqual(Object.keys(contact), ['email', 'phone', 'whatsapp', 'hours']);
+  for (const [key, value] of Object.entries(contact)) assert(!value.includes('[PREENCHER'), `company.js: ${key} never shows a placeholder`);
+  if (legal.WHATSAPP) assert.match(legal.WHATSAPP, /^55\d{10,11}$/, 'WhatsApp: digits, with 55 and the area code');
+}
 
 // ── every public page: links to the three documents and who the store is ─
 const internal = new Set(['admin.html', 'email-preview.html']);
@@ -33,8 +42,8 @@ for (const name of pages().filter(n => !internal.has(n))) {
 // ── the documents ─────────────────────────────────────────────────────
 const docs = {
   'termos.html': ['Termos de Uso', 'Código de Defesa do Consumidor', 'maiores de 18 anos', 'Cada CPF pode ter uma conta', 'Propriedade intelectual', 'foro do domicílio do consumidor', 'href="trocas.html"', 'href="privacidade.html"', 'Excluir minha conta'],
-  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'Não usamos cookies de publicidade', 'não recebemos nem guardamos o número'],
-  'trocas.html': ['Trocas e Devoluções', 'até 7 dias', 'art. 49', 'inclusive o frete', '90 dias', 'art. 26', '30 dias', 'art. 18', 'Decreto nº 7.962/2013', 'Pix', 'Cartão de crédito']
+  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'não usamos cookies de publicidade', 'só serão carregadas depois do seu consentimento', 'Preferências de cookies', 'não recebemos nem guardamos o número'],
+  'trocas.html': ['Trocas e Devoluções', 'até 7 dias', 'art. 49', 'inclusive o frete', '90 dias', 'art. 26', '30 dias', 'art. 18', 'Decreto nº 7.962/2013', 'Pix', 'Cartão de crédito', 'Direito de arrependimento: 7 dias', 'href="#arrependimento">Como desistir']
 };
 for (const [file, musts] of Object.entries(docs)) {
   const html = read('dist/' + file);

@@ -27,7 +27,8 @@ Tudo fica em **um arquivo**, `api/_lib/legal.js` (`COMPANY`). Troque cada `[PREE
 node tools/sync-legal.cjs
 ```
 
-Ele copia os valores para os três documentos e para o rodapé de todas as páginas. `npm test` falha se alguma página
+Ele copia os valores para os três documentos, para o rodapé de todas as páginas, para a página de Contato (e-mail e horário)
+e para `dist/company.js`, de onde os scripts leem o e-mail e o WhatsApp (`WHATSAPP`, no mesmo arquivo, só números com 55 e DDD). `npm test` falha se alguma página
 ficar desatualizada, e `/api/health` mostra `"legal":"pending"` enquanto sobrar algum `[PREENCHER]`.
 
 ## Quando mudar um texto
@@ -37,6 +38,20 @@ ficar desatualizada, e `/api/health` mostra `"legal":"pending"` enquanto sobrar 
 3. Rode `node tools/sync-legal.cjs`, que atualiza a data "Última atualização" nas três páginas.
 
 Pedidos antigos continuam registrados com a versão que o cliente aceitou na época.
+
+## Cookies e ferramentas de análise
+
+Hoje o site não usa nenhuma ferramenta de análise nem de anúncios, então não mostra aviso de cookies (a Política de
+Privacidade diz isso). Para ligar o Google Analytics 4 ou o pixel da Meta:
+
+1. Preencha o id em `dist/analytics-config.js` (`ga4: 'G-…'` ou `metaPixel: '123…'`).
+2. Acrescente os endereços da ferramenta (`CSP_DOMAINS`, no mesmo arquivo) à Content-Security-Policy do `vercel.json` e rode
+   `node tools/sync-csp.cjs`. O `npm test` falha enquanto faltar este passo.
+3. Revise a seção "Cookies" da Política de Privacidade (dizer qual ferramenta é usada) e mude `TERMS_VERSION`.
+
+Com um id preenchido, o aviso aparece na primeira visita (Aceitar todos, Recusar ou Personalizar) e a ferramenta só carrega
+depois do aceite. A escolha muda a qualquer momento em "Preferências de cookies", no rodapé. Para ver o aviso antes de ligar
+qualquer ferramenta, abra uma página com `?cookies=preview` (vale para a aba; nada é carregado).
 
 ## Revisar com advogado ou contador antes do lançamento
 

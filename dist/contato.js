@@ -1,10 +1,11 @@
-// "Fale com a Ju" (contato.html): the WhatsApp button (it appears once the number is set in commerce-config.js), the
-// message form (checked here, then sent to /api/contact/send, which e-mails the shop) and a link straight to one question.
-import {COMMERCE} from './commerce-config.js';
+// "Fale com a Ju" (contato.html): the WhatsApp button and the e-mail link (each appears once it is filled in
+// api/_lib/legal.js, copied to company.js by tools/sync-legal.cjs), the message form (checked here, then sent to
+// /api/contact/send, which e-mails the shop) and a link straight to one question.
+import {CONTACT} from './company.js';
 import {translate} from './i18n.js';
 
 // ── WhatsApp: a ready greeting in the visitor's language; without a number the card says it is coming ──
-const number = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? COMMERCE.whatsapp : '';
+const number = /^\d{12,13}$/.test(CONTACT.whatsapp) ? CONTACT.whatsapp : '';
 const whatsapp = document.querySelector('[data-whatsapp-link]');
 const whatsappUrl = () => `https://wa.me/${number}?text=${encodeURIComponent(translate('Olá, Ju! Vim pelo site e tenho uma dúvida.'))}`;
 if (number && whatsapp) {
@@ -12,6 +13,13 @@ if (number && whatsapp) {
   whatsapp.addEventListener('click', () => { whatsapp.href = whatsappUrl(); });   // the language may have changed since
   whatsapp.hidden = false;
   document.querySelector('[data-whatsapp-soon]').hidden = true;
+}
+// ── E-mail: the official address, the same as in the footer and the legal pages ──
+const mail = document.querySelector('[data-email-link]');
+if (CONTACT.email && mail) {
+  mail.href = `mailto:${CONTACT.email}`;
+  mail.hidden = false;
+  document.querySelector('[data-email-soon]').hidden = true;
 }
 
 // ── the form ────────────────────────────────────────────────────────────
@@ -44,7 +52,7 @@ form.addEventListener('submit', async event => {
     const answer = await response.json().catch(() => ({}));
     if (response.ok) { form.reset(); error.hidden = true; form.hidden = true; sent.hidden = false; sent.focus(); return; }
     if (answer.error === 'invalid_request' && MESSAGES[answer.field]) return showError(MESSAGES[answer.field], answer.field);
-    showError(answer.error === 'too_many_requests' ? 'Muitas mensagens seguidas. Tente de novo daqui a pouco.' : 'Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para contato@juimprimepramim.com.br.');
+    showError(answer.error === 'too_many_requests' ? 'Muitas mensagens seguidas. Tente de novo daqui a pouco.' : CONTACT.email ? `${translate('Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para')} ${CONTACT.email}.` : 'Não foi possível enviar agora. Tente de novo em alguns minutos.');
   } catch {
     showError('Não foi possível enviar agora. Confira a sua conexão e tente de novo.');
   } finally {

@@ -28,3 +28,8 @@ html[lang="pt-BR"] .legal-language { display: none; }
   .legal-doc td { border: 0; padding: 4px 0; }
   .legal-doc td:last-child { color: var(--muted); padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 }
+/* Trocas: the right of withdrawal (7 days) highlighted at the top, before the details. */
+.legal-highlight { margin: 0 0 24px; padding: 20px 22px; border-radius: 18px; background: color-mix(in srgb, var(--rose) 11%, #fff); border: 1px solid color-mix(in srgb, var(--rose) 30%, transparent); }
+.legal-doc .legal-highlight-title { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: var(--rose); }
+.legal-highlight-title span { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--rose); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 700; }
+.legal-highlight a { font-weight: 650; font-size: 14px; }
