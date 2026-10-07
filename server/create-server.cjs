@@ -137,6 +137,8 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
 
 // Starts listening once, however the file was loaded. Hosting runners load the entry file with require() (so
 // `require.main === module` is false there) and may pass PORT as a number or as a socket path. Hostinger expects 3000.
+// HOST limits a numeric port to one address: on the shop's own server (SERVIDOR-SETUP.md) HOST=127.0.0.1, so only nginx
+// on the same machine reaches the app. Without it, every address, as before.
 let running = null;
 function start({env = process.env, log = console} = {}) {
   if (running) return running;
@@ -147,7 +149,8 @@ function start({env = process.env, log = console} = {}) {
   // working; /api/health reports the database state), so a database problem never takes the shop offline.
   const pool = require('../api/_lib/db').getPool(env);
   const ready = pool ? require('../api/_lib/migrate').migrate(pool, {log}).catch(error => log.error('db: migração falhou —', error.code || '', error.message)) : Promise.resolve();
-  ready.then(() => running.listen(port, () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · contas: ${pool ? 'MySQL' : isProduction(env) ? 'desligadas (sem banco)' : 'memória (teste)'} · ${env.SITE_URL || 'sem SITE_URL'}`)));
+  const host = typeof port === 'number' && env.HOST ? String(env.HOST) : undefined;
+  ready.then(() => running.listen(...(host ? [port, host] : [port]), () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · contas: ${pool ? 'MySQL' : isProduction(env) ? 'desligadas (sem banco)' : 'memória (teste)'} · ${env.SITE_URL || 'sem SITE_URL'}`)));
   // The NF-e queue (api/_lib/invoice-queue.js): a round a minute in the background, once the tables exist. Off when
   // NF-e issuing is off; a failure to start never stops the site.
   let stopQueue = () => {};

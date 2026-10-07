@@ -1,0 +1,31 @@
+# O site da loja (server.cjs), sempre ligado: reinicia sozinho se cair e liga junto com o servidor.
+# Instalado por deploy/setup-servidor.sh. Configuração em /srv/juimprime/shared/.env (veja SERVIDOR-SETUP.md).
+[Unit]
+Description=Ju imprime pra mim (site)
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=juimprime
+Group=juimprime
+WorkingDirectory=/srv/juimprime/current
+EnvironmentFile=/srv/juimprime/shared/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/node server.cjs
+Restart=always
+RestartSec=3
+# O site não grava nada no disco: o sistema fica só para leitura para ele.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=1536M
+
+[Install]
+WantedBy=multi-user.target
