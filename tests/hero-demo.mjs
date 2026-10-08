@@ -12,12 +12,18 @@ const {planTracks} = await load('motion-timeline.js');
 const {PRODUCTS, SOON, SHOWCASE, showcase} = await load('products.js');
 const {translate} = await load('i18n-core.js');
 
-// ── linha do tempo: todas as trilhas terminam juntas, então tocar ao contrário espelha a ordem ──
+// ── linha do tempo: um relógio só para todas as trilhas (tocar ao contrário espelha a ordem), sem endDelay — o Chrome não leva
+//    para a GPU uma animação com endDelay, e a demonstração inteira rodava na thread principal (movimento 2, 08/10/2026) ──
 const plan = planTracks([{el: 1, duration: 400}, {el: 2, delay: 1000, duration: 900}, {el: 3, delay: 2020, duration: 380}]);
 assert.equal(plan.total, 2400);
-for (const track of plan.tracks) assert.equal(track.delay + track.duration + track.endDelay, 2400);
-assert.deepEqual(plan.tracks.map(track => track.endDelay), [2000, 500, 0], 'a última a entrar é a primeira a sair');
+assert.deepEqual(plan.tracks.map(track => track.delay), [0, 1000, 2020]);
+assert.ok(plan.tracks.every(track => !('endDelay' in track)), 'nenhuma trilha com endDelay');
 assert.equal(planTracks([]).total, 0);
+{
+  const timeline = read('motion-timeline.js').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/endDelay:/.test(timeline) && /animation\.startTime = this\.origin/.test(timeline) && !/animation\.play\(\)/.test(timeline),
+    'play() por um startTime comum (sem o auto-rewind de play() numa trilha já terminada): ida e volta continuam alinhadas');
+}
 
 // ── dados: medidas coerentes com a peça e o equipamento ─────────────────────────
 const demos = Object.entries(SHOWCASE).filter(([, entry]) => entry.demo);
@@ -102,8 +108,27 @@ for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqua
   const bytes = fs.readFileSync(file);
   assert.ok(bytes.toString('latin1', 8, 12) === 'WEBP' && bytes.length < 900000, 'a tira dos quadros, leve');
   assert.ok(!SHOWCASE.girafoscopio.demo.turn && !SHOWCASE.macacoscopio.demo.turn, 'só o unicórnio gira a cabeça');
-  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 0 : 950)', "if (dom.giro.p > 0) playTurn(0, calm ? 0 : 560)", "g.globalCompositeOperation = 'lighter'", 'resetTurn();']) assert.ok(demo.includes(part), part);
+  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration, fade = false)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 260 : 950, calm)', 'if (dom.giro.p > 0) playTurn(0, calm ? 200 : 420, calm)', "g.globalCompositeOperation = 'lighter'", 'resetTurn();']) assert.ok(demo.includes(part), part);
   assert.notEqual(translate(turn.hint, 'en'), turn.hint); assert.notEqual(translate(turn.hint, 'es'), turn.hint);
+  // 08/10/2026 (movimento 3): a tira é decodificada fora da thread principal antes do giro (o primeiro drawImage de um <img> a
+  // decodificava na hora: até 1 s de tela parada no celular); em meia resolução quando ela basta para a tela
+  assert.ok(/createImageBitmap\(await response\.blob\(\)\)/.test(demo) && /t\.ready = true/.test(demo) && /drawImage\(t\.bitmap/.test(demo) && !/drawImage\(t\.sprite/.test(demo), 'tira decodificada com createImageBitmap antes de ficar pronta');
+  assert.ok(/t\?\.decoded\.then\(/.test(demo), 'o giro espera a tira decodificada');
+  const small = fs.readFileSync(new URL(`../dist/assets/${turn.small.src}`, import.meta.url));
+  assert.ok(small.toString('latin1', 8, 12) === 'WEBP' && small.length < bytes.length && turn.small.width > 200 && turn.small.width < 300, 'a tira em meia resolução existe, mais leve');
+  assert.ok(/turn\.small && turnPixels\(/.test(demo), 'a tira menor só quando basta para a tela');
+}
+
+// ── a saída (movimento 7): curta e própria com a peça montada; nada de filter nas trilhas (vai para a GPU) ──
+{
+  const exit = demo.slice(demo.indexOf('function exitTracks(g)'), demo.indexOf('function show(on)'));
+  assert.ok(exit.length > 500 && /exiting = state === 'open' && !calm;/.test(demo) && /timeline\.load\(exitTracks\(g\)\)/.test(demo), 'Voltar com a peça montada usa a saída própria');
+  const ends = [...exit.matchAll(/delay: (\d+), duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
+  assert.ok(ends.length >= 8 && Math.max(...ends) <= 650, `a saída inteira em até 0,65 s (${Math.max(...ends)} ms)`);
+  assert.ok(/\{el: d\.rig, delay: 40, duration: 540/.test(exit), 'a câmera começa a voltar logo (40 ms)');
+  assert.ok(/-Math\.max\(CLOSE_RATE, timeline\.time \/ REWIND_MS\)/.test(demo) && /REWIND_MS = 600/.test(demo), 'uma entrada interrompida volta de trás para frente em até ~0,6 s');
+  assert.ok(!/filter: '[^']*blur/.test(demo.slice(demo.indexOf('function tracks(g)'), demo.indexOf('function show(on)'))), 'nenhuma trilha anima filter: blur');
+  assert.ok(/if \(top < 0\) scrollTo\(\{top: Math\.max\(0, scrollY \+ top\)/.test(demo) && /dom\.close\.focus\(\{preventScroll: true\}\)/.test(demo), 'aberta com a página rolada: a vitrine sobe antes de o foco ir para Voltar (usabilidade 3)');
 }
 
 console.log('hero-demo: ok');
