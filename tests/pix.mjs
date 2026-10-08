@@ -1,7 +1,8 @@
 // Pix 5% on the storefront pieces outside the checkout (the checkout itself is covered by payments.mjs and
 // checkout-extras.mjs): the page shows exactly what the server charges (same rule, same rounding), the demonstration
 // follows it, the cards, the product window, the banner and the cart show the Pix price, the card option says "3x sem
-// juros" (decision of 01/10/2026), and the Termos state the rule. Run: node tests/pix.mjs — no network, no browser.
+// juros" (decision of 01/10/2026; one number, and never more than Mercado Pago gives, 2026-10-08), and the Termos state the
+// rule. Run: node tests/pix.mjs — no network, no browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +19,9 @@ const {normalizeCart, totals, pixTotals, pixDiscount} = await site('cart-store.j
 const {createDemoOrder} = await site('demo-payment.js');
 const {cartSummary} = await site('cart-view.js');
 const {translate} = await site('i18n-core.js');
+const {MESSAGES} = await site('announcement-bar.js');
+// the "3x sem juros" the pages announce: one number, COMMERCE.interestFreeInstallments (2026-10-08); nothing below writes a 3
+const n = COMMERCE.interestFreeInstallments;
 
 // ── the page and the server agree ─────────────────────────────────────
 {
@@ -55,33 +59,54 @@ const {translate} = await site('i18n-core.js');
   assert.match(read('dist/controller.js'), /if\(!soon\)\{paintPrice\(price\);/, 'the piece\'s own price first');
 }
 
-// ── checkout: the card option (decision of 01/10/2026: 3x sem juros) ──
+// ── checkout: the card option (decision of 01/10/2026: 3x sem juros; 2026-10-08: never more than Mercado Pago gives) ──
 {
   const checkout = read('dist/checkout.js');
-  assert.match(checkout, /<span class="card-off"><strong>3X SEM JUROS<\/strong><span><span>\$\{installmentLabel\(full\)\}<\/span> · <span>ou até 12x no crédito<\/span><\/span><\/span>/, 'the card option shows the installment value');
-  assert.doesNotMatch(checkout, /ATÉ 12X NO CRÉDITO/);
+  assert.match(checkout, /<span class="card-off" data-card-offer>\$\{cardOffer\(full\)\}<\/span>/, 'the card option carries the promise');
+  assert.match(checkout, /<strong>\$\{shown\}X SEM JUROS<\/strong><span><span>\$\{installmentLabel\(full, shown\)\}<\/span> · <span>ou até \$\{max\}x no crédito<\/span><\/span>/, 'with the installment value');
+  assert.match(checkout, /<strong>EM ATÉ \$\{max\}X<\/strong><span><span>no crédito<\/span> · <span>veja as parcelas ao digitar o cartão<\/span><\/span>/, 'or the honest one when Mercado Pago gives fewer');
+  assert.match(checkout, /const freeInstallments = \(\) => promisedInstallments\(cardFree, live\.interestFree, COMMERCE\.interestFreeInstallments\);/, 'the typed card first, then the account; never past the site\'s number (the rule itself: checkout-extras.mjs)');
+  assert.match(checkout, /const free = interestFreeCount\(rows\);\r?\n  if \(free !== cardFree\) \{ cardFree = free; paintCardOffer\(\); \}/, 'the card\'s own table decides once it is typed');
+  assert.match(checkout, /pollTimer = clockTimer = null; cardFree = null;/, 'and a new form starts from the account again (disposeLive)');
+  assert.doesNotMatch(checkout, /<strong>\d+X SEM JUROS|ATÉ 12X NO CRÉDITO/, 'no number written by hand');
+  // the two promises share one place: the larger sets the size, so switching does not push the Brick
+  assert.match(read('dist/cart-page.css'), /\.card-off \{ display: grid; grid-template-columns: minmax\(0, 1fr\); \}\r?\n\.card-offer \{ grid-area: 1 \/ 1;[^}]*\}\r?\n\.card-offer\[aria-hidden="true"\] \{ visibility: hidden; \}/);
   const bar = read('dist/announcement-bar.js');
-  assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
+  assert.match(bar, /text: `5% off no Pix ou \$\{COMMERCE\.interestFreeInstallments\}x sem juros no cartão`/, 'the top bar says the same, from the same number');
+  assert.equal(MESSAGES[1].text, `5% off no Pix ou ${n}x sem juros no cartão`);
   assert.doesNotMatch(bar, /até 12x no cartão/);
-  assert.match(read('dist/index.html'), /<small><span id="product-installments">ou 3x sem juros no cartão<\/span><\/small><small class="pdp-offer" id="product-offer" hidden><\/small>/, 'and the product window (prices confirmed on 05/10/2026: no "valores ilustrativos"; the second-airplane offer under it)');
+  assert.match(read('dist/index.html'), new RegExp(`<small><span id="product-installments">ou ${n}x sem juros no cartão</span></small><small class="pdp-offer" id="product-offer" hidden></small>`), 'and the product window (prices confirmed on 05/10/2026: no "valores ilustrativos"; the second-airplane offer under it)');
+  assert(read('dist/contato.html').includes(`cartão de crédito em até ${COMMERCE.maxInstallments}x, sendo até ${n}x sem juros.`), 'and the Contato FAQ (both written by tools/build-product-pages.cjs)');
   assert.match(read('dist/controller.js'), /\$\('#product-installments'\)\.textContent=cents\?`ou \$\{installmentLabel\(cents\)\} sem juros no cartão`/, 'with the value of each installment');
   assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: COMMERCE\.maxInstallments\}/, 'the Brick offers only the method chosen');
   assert.equal(COMMERCE.maxInstallments, 12);
 }
 
-// ── "3x de R$ 43,00 sem juros": the price split in three, nothing added (audit Q4) ──
+// ── "3x de R$ 43,00 sem juros": the price split in the announced installments, nothing added (audit Q4) ──
 {
-  assert.equal(COMMERCE.interestFreeInstallments, 3);
-  assert.equal(installmentLabel(12900), `3x de ${money(4300)}`);
-  assert.equal(installmentLabel(13900), `3x de ${money(4633)}`, 'rounded down to the cent, never above the price');
-  assert.equal(installmentLabel(15900), `3x de ${money(5300)}`);
+  // Changing the number is one line in commerce-config.js plus node tools/build-product-pages.cjs; 2 to 12 (below 2 there is
+  // no "sem juros" to announce: dropping it is a change of the texts, the owner's decision).
+  assert(Number.isInteger(n) && n >= 2 && n <= COMMERCE.maxInstallments, 'interestFreeInstallments: 2 to 12');
+  assert.equal(installmentLabel(12900), `${n}x de ${money(Math.floor(12900 / n))}`);
+  assert.equal(installmentLabel(12900, 3), `3x de ${money(4300)}`);
+  assert.equal(installmentLabel(13900, 3), `3x de ${money(4633)}`, 'rounded down to the cent, never above the price');
+  assert.equal(installmentLabel(15900, 2), `2x de ${money(7950)}`, 'fewer, when the checkout knows Mercado Pago gives fewer');
   for (const [id, price] of Object.entries(COMMERCE.prices)) {
     const page = read(`dist/${id}.html`);
     assert(page.includes(`<p class="pl-installments">ou ${installmentLabel(price).replace(/ /g, '&nbsp;')} sem juros no cartão</p>`), `${id}.html: ou ${installmentLabel(price)} sem juros`);
-    assert(installmentCents(price) * 3 <= price && installmentCents(price) * 3 > price - 3, `${id}: three installments make the price`);
+    assert(installmentCents(price) * n <= price && installmentCents(price) * n > price - n, `${id}: the installments make the price`);
   }
   assert.equal(translate('ou 3x de R$ 43,00 sem juros no cartão', 'en'), 'or 3 interest-free card installments of R$ 43,00');
   assert.equal(translate('ou 3x de R$ 43,00 sem juros no cartão', 'es'), 'o 3 cuotas sin interés de R$ 43,00 con tarjeta');
+  // whatever the number, every text with it is translated (rules in i18n-core.js, not one dictionary line per number)
+  for (const k of [2, 3, 6]) {
+    assert.equal(translate(`${k}X SEM JUROS`, 'en'), `${k}X INTEREST-FREE`); assert.equal(translate(`${k}X SEM JUROS`, 'es'), `${k}X SIN INTERESES`);
+    assert.equal(translate(`5% off no Pix ou ${k}x sem juros no cartão`, 'en'), `5% off with Pix or ${k} interest-free card installments`);
+    assert.equal(translate(`ou ${k}x sem juros no cartão`, 'es'), `o ${k} cuotas sin interés con tarjeta`);
+    assert.equal(translate(`Pix, com 5% de desconto nas peças, ou cartão de crédito em até 12x, sendo até ${k}x sem juros. O pagamento é feito pelo Mercado Pago, com segurança.`, 'en'), `Pix, with 5% off the pieces, or credit card in up to 12 installments, up to ${k} of them interest-free. Payment is processed securely by Mercado Pago.`);
+  }
+  assert.equal(translate('EM ATÉ 12X', 'en'), 'UP TO 12X'); assert.equal(translate('EM ATÉ 12X', 'es'), 'HASTA 12 CUOTAS');
+  for (const text of ['no crédito', 'veja as parcelas ao digitar o cartão', MESSAGES[1].text]) for (const locale of ['en', 'es']) assert.notEqual(translate(text, locale), text, `${locale}: ${text}`);
 }
 
 // ── texts ─────────────────────────────────────────────────────────────

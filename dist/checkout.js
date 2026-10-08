@@ -9,7 +9,7 @@ import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceI
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
 import {freeShippingBar, barRatio, riseBar} from './free-shipping.js';
-import {installmentRows, installmentsTable} from './installments.js';
+import {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
@@ -176,10 +176,21 @@ function livePaymentView() {
 function payChoice() {
   const full = order.amounts.total, discount = pixDiscount(order.items), pix = payMethod === 'pix';
   const option = (value, checked, inner) => `<button type="button" class="pay-option pay-${value}" role="radio" aria-checked="${checked}" tabindex="${checked ? 0 : -1}" data-action="pay-method" data-method="${value}">${inner}</button>`;
-  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off"><strong>3X SEM JUROS</strong><span><span>${installmentLabel(full)}</span> · <span>ou até 12x no crédito</span></span></span>`)}</div>`;
+  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off" data-card-offer>${cardOffer(full)}</span>`)}</div>`;
 }
+// The card's promise (2026-10-08): "3X SEM JUROS" only as far as Mercado Pago really gives it — for the typed card, its own
+// table (cardFree); before that, the account's number from /api/payments/config (unknown: no promise) — and never past what
+// the site announces (COMMERCE.interestFreeInstallments). Otherwise the honest "EM ATÉ 12X". Both texts sit in the same place
+// and the larger one sets the size (cart-page.css), so switching never moves the Brick under the buyer's fingers.
+let cardFree = null;
+const freeInstallments = () => promisedInstallments(cardFree, live.interestFree, COMMERCE.interestFreeInstallments);
+function cardOffer(full) {
+  const n = freeInstallments(), free = n >= 2, shown = free ? n : COMMERCE.interestFreeInstallments, max = COMMERCE.maxInstallments;
+  return `<span class="card-offer"${free ? '' : ' aria-hidden="true"'}><strong>${shown}X SEM JUROS</strong><span><span>${installmentLabel(full, shown)}</span> · <span>ou até ${max}x no crédito</span></span></span><span class="card-offer"${free ? ' aria-hidden="true"' : ''}><strong>EM ATÉ ${max}X</strong><span><span>no crédito</span> · <span>veja as parcelas ao digitar o cartão</span></span></span>`;
+}
+const paintCardOffer = () => { const box = main.querySelector('[data-card-offer]'); if (box && order?.amounts) box.innerHTML = cardOffer(order.amounts.total); };
 function disposeLive() {
-  brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null;
+  brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null; cardFree = null;
   try { brick?.unmount?.(); } catch {}
   brick = null;
 }
@@ -219,13 +230,14 @@ async function mountBrick() {
   }
 }
 // With the card's first digits, Mercado Pago tells every installment option for this card and amount: the table shows
-// each installment, the total and the interest on top of the price. Asked once per card and amount.
+// each installment, the total and the interest on top of the price, and the card option promises "sem juros" only as far as
+// the table goes (cardOffer). Asked once per card and amount.
 let binToken = 0;
 const installmentCache = new Map();
 async function showInstallments(mp, bin) {
   const box = main.querySelector('#installments-info'), token = ++binToken, digits = String(bin ?? '').replace(/\D/g, '').slice(0, 8);
   if (!box) return;
-  if (payMethod === 'pix' || digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; return; }
+  if (payMethod === 'pix' || digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; if (cardFree !== null) { cardFree = null; paintCardOffer(); } return; }
   const key = `${digits}:${order.amounts.total}`;
   let rows = installmentCache.get(key);
   if (!rows) {
@@ -236,6 +248,8 @@ async function showInstallments(mp, bin) {
   if (token !== binToken || !box.isConnected) return;
   box.innerHTML = installmentsTable(rows);
   box.hidden = !box.innerHTML;
+  const free = interestFreeCount(rows);
+  if (free !== cardFree) { cardFree = free; paintCardOffer(); }
 }
 // Called by the Brick when the customer presses its pay button. The promise tells the Brick when to stop spinning.
 // The attempt id stays the same until a definite answer: a retry after a timeout or a 5xx lands on the same order (and

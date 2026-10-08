@@ -30,6 +30,14 @@ try {
   assert.equal(home.headers['x-powered-by'], undefined);
   assert.equal(home.headers['x-robots-tag'], 'noindex, nofollow', 'test deployments stay out of search results');
   assert.equal((await raw('/produtos.html')).status, 200);
+  // A page typed with capitals moves to the lowercase page, query kept (08/10/2026: ADMIN.HTML gave 404 on the server);
+  // a vendor file with capitals in its name is served as it is, and a page that does not exist still gets the 404.
+  for (const [path, to] of [['/ADMIN.HTML', '/admin.html'], ['/Produtos.html?x=1', '/produtos.html?x=1']]) {
+    const moved = await raw(path);
+    assert.equal(moved.status, 301, `capitals: ${path}`); assert.equal(moved.headers.location, to); assert.equal(moved.body.length, 0);
+  }
+  assert.equal((await raw('/vendor/OrbitControls.js')).status, 200, 'vendor file with capitals');
+  assert.equal((await raw('/NAO-EXISTE.HTML')).status, 404, 'a missing page in capitals is still a 404');
 
   // Revalidation is cheap: same ETag → 304 with no body.
   const again = await raw('/', {headers: {'if-none-match': home.headers.etag}});
