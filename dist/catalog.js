@@ -244,6 +244,10 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
     }), {rootMargin: '0px 0px -10% 0px', threshold: .05});
     for (const part of parts) if (part.getBoundingClientRect().top > innerHeight) { part.classList.add('is-pending'); seen.observe(part); }
   }
+  // indo para a vitrine, a home guarda a altura: o "Voltar" de lá traz a pessoa de volta exatamente aqui (fenda.js)
+  for (const link of document.querySelectorAll('.nvb a[href^="fenda.html"]')) link.addEventListener('click', () => {
+    try { sessionStorage.setItem('ju:nvb-return', JSON.stringify({url: location.pathname + location.search, y: scrollY, time: Date.now()})); } catch {}
+  });
 }
 document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); const cart = writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await new Promise(done => setTimeout(done, reduceMotion() ? 0 : 600)); openMiniCart({itemId: addedItemId(cart, id, defaults(id)), original: true}); button.disabled = false; button.classList.remove('is-loading'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note, .product-grid-note'); if (notice) notice.textContent = error.message; } });
 

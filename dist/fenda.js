@@ -30,9 +30,18 @@ function buyNow(lines, status) {
   catch { if (status) status.textContent = translate('Não foi possível preparar a compra. Verifique o armazenamento do navegador.'); }
 }
 
-// ── "Voltar": a página de onde a pessoa veio, na mesma altura (o navegador guarda); sem ela, o link (a home no banner da novidade) ──
+// ── "Voltar": a página de onde a pessoa veio, na mesma altura; sem ela, o link (a home no banner da novidade) ──
+// Vindo da faixa da home, a altura que ela guardou (catalog.js) volta pelo mesmo caminho da volta do carrinho
+// (shopping-navigation.js › pageshow): o navegador sozinho às vezes restaura antes de a home terminar de montar e para mais acima.
 for (const back of document.querySelectorAll('[data-nv-return]')) back.addEventListener('click', event => {
-  if (localDestination(document.referrer, location.href) && history.length > 1) { event.preventDefault(); history.back(); }
+  const from = localDestination(document.referrer, location.href);
+  if (!from || history.length < 2) return;
+  event.preventDefault();
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('ju:nvb-return'));
+    if (saved?.url === from && Date.now() - saved.time < 86400000) sessionStorage.setItem('ju:restore-shopping', JSON.stringify({url: from, y: saved.y, time: Date.now()}));
+  } catch {}
+  history.back();
 });
 
 // ── convite para um colega no WhatsApp (o endereço desta página, na língua escolhida) ──

@@ -68,6 +68,7 @@ assert(page.indexOf('class="nv-share"') > page.indexOf('data-nv-kit-buy') && pag
 assert(js.includes("actions.className = 'nv-kit-actions'") && js.includes('actions.append(kitBuy, add)'), '"Comprar agora" and the smaller cart button on one row');
 assert(page.includes('<a class="nv-return" href="index.html#novidade" data-nv-return>') && page.indexOf('data-nv-return') < page.indexOf('<section class="nv-stage"'), '"Voltar" above the stage: back to the home banner');
 assert(js.includes('history.back()') && js.includes("import {localDestination} from './shopping-navigation.js';"), '"Voltar" returns to the page the person came from, at the same height');
+assert(read('dist/catalog.js').includes("sessionStorage.setItem('ju:nvb-return'") && js.includes("sessionStorage.setItem('ju:restore-shopping'"), 'from the home band: the height it saved comes back the way the cart\'s return does (shopping-navigation.js)');
 const share = new URL(page.match(/<a class="nv-share" href="([^"]+)"/)[1].replace(/&amp;/g, '&'));
 assert.equal(share.origin + share.pathname, 'https://wa.me/', '"Enviar a um colega" opens WhatsApp to pick a contact');
 assert(share.searchParams.get('text').endsWith(` ${BASE}/fenda`), 'the message carries the short link (server/create-server.cjs opens /fenda as fenda.html)');
