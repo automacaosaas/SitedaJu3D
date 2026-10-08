@@ -12,21 +12,25 @@
 // After changing anything here: node tools/sync-legal.cjs
 const PENDING = what => `[PREENCHER: ${what}]`;
 
+// The WhatsApp number, digits only, with the country code and the area code. Optional: while empty, the site shows no
+// WhatsApp button and says the channel is coming. The phone shown on the pages comes from it, so there is one copy.
+const WHATSAPP = '5531991981151';   // (31) 99198-1151, confirmado pelo dono em 07/10/2026
+// "5531991981151" → "(31) 99198-1151", as people dial it in Brazil.
+const brPhone = number => number.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+
 const COMPANY = {
   tradeName: 'Ju, imprime pra mim?',
   legalName: 'JU IMPRIME PARA MIM LTDA',
   cnpj: '67.771.044/0001-96',
   address: 'Rua Presidente Castelo Branco, 61, Nossa Senhora de Lourdes, Ouro Preto/MG, CEP 35404-450',
   email: 'juimprimepramim@gmail.com',   // confirmado pelo dono em 06/10/2026
-  phone: PENDING('telefone ou WhatsApp'),
+  phone: WHATSAPP ? brPhone(WHATSAPP) : PENDING('telefone ou WhatsApp'),
   hours: 'Segunda a sexta, das 9h às 18h',
   website: 'https://juimprimepramim.com.br'
 };
-// The WhatsApp number, digits only, with the country code and the area code (5531999999999). Optional: while empty, the
-// site shows no WhatsApp button and says the channel is coming. Not part of COMPANY, so it never shows as "[PREENCHER]".
-const WHATSAPP = '';
 
-const TERMS_VERSION = '2026-10-06';
+// 2026-10-07: the Privacidade says how long the contact messages are kept (Mensagens in Ju's panel).
+const TERMS_VERSION = '2026-10-07';
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const termsDate = (version = TERMS_VERSION) => { const [y, m, d] = version.split('-').map(Number); return `${d} de ${MONTHS[m - 1]} de ${y}`; };

@@ -282,6 +282,54 @@ async function contract(store, label) {
   assert.equal((await store.bills.remove(billId)).id, billId);
   assert.equal(await store.bills.remove(billId), null);
 
+  // Mensagens do formulário de contato (015_mensagens.sql, 2026-10-07): a message round-trips (the encrypted phone as
+  // bytes); the panel's views (novas: not read, not archived, not spam), newest first with a cursor; the count of new ones;
+  // changes and removal. Far in the future, so rows from earlier runs sit below these.
+  {
+    const top = new Date(Date.now() + 150 * 365 * 86400e3), ids = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse(), spamId = crypto.randomUUID(), phoneEnc = crypto.randomBytes(44);
+    const above = {createdAt: new Date(top.getTime() + 1), id: 'z'}, unreadBefore = await store.messages.countUnread();
+    const first = await store.messages.create({id: ids[1], name: 'Ana Contrato', email: 'ana@exemplo.com', phoneEnc, subject: 'produto', message: 'Linha 1\nLinha 2', orderRef: 'JU-ABCDEF1234', lang: 'en', status: 'nova', createdAt: top});
+    assert.deepEqual([first.name, first.email, first.subject, first.message, first.orderRef, first.lang, first.status, first.readAt, first.readBy, first.repliedAt, first.archivedAt, first.mailedAt],
+      ['Ana Contrato', 'ana@exemplo.com', 'produto', 'Linha 1\nLinha 2', 'JU-ABCDEF1234', 'en', 'nova', null, null, null, null, null], `${label}: a message round-trips`);
+    assert(Buffer.from(first.phoneEnc).equals(phoneEnc), `${label}: the encrypted phone comes back as the same bytes`);
+    assert.equal(new Date(first.createdAt).getTime(), top.getTime(), `${label}: the time keeps milliseconds`);
+    const second = await store.messages.create({id: ids[0], name: 'Bia', email: 'bia@exemplo.com', subject: 'outro', message: 'Mensagem dois', status: 'nova', createdAt: top});
+    assert.equal(second.phoneEnc, null, `${label}: no phone, null`);
+    await store.messages.create({id: spamId, name: 'Spam', email: 'spam@exemplo.com', subject: 'outro', message: 'http://a http://b http://c http://d', status: 'spam', createdAt: new Date(top.getTime() - 1)});
+    assert.equal(await store.messages.countUnread(), unreadBefore + 2, `${label}: spam is not counted as new`);
+    const page = await store.messages.list({view: 'todas', limit: 2, before: above});
+    assert.deepEqual(page.map(m => m.id), ids, `${label}: newest first, ties by id`);
+    const next = await store.messages.list({view: 'todas', limit: 2, before: {createdAt: page[1].createdAt, id: page[1].id}});
+    assert.equal(next[0].id, spamId, `${label}: the next page starts right below the cursor`);
+    assert.deepEqual((await store.messages.list({view: 'novas', limit: 3, before: above})).map(m => m.id), ids, `${label}: Novas leaves the spam out`);
+    const read = await store.messages.update(ids[1], {readAt: new Date(), readBy: 'ju@site.test', id: 'ignored', createdAt: new Date(0)});
+    assert(read.readAt && read.readBy === 'ju@site.test' && read.id === ids[1] && new Date(read.createdAt).getTime() === top.getTime(), `${label}: an update never changes the id or the time`);
+    assert.equal(await store.messages.countUnread(), unreadBefore + 1, `${label}: a read message is not new any more`);
+    assert.deepEqual((await store.messages.list({view: 'novas', limit: 3, before: above})).map(m => m.id), [ids[0]], `${label}: nor in Novas`);
+    await store.messages.update(ids[0], {archivedAt: new Date(), mailedAt: new Date()});
+    assert.equal(await store.messages.countUnread(), unreadBefore, `${label}: an archived message is not new`);
+    assert.deepEqual((await store.messages.list({view: 'arquivadas', limit: 3, before: above})).map(m => m.id), [ids[0]], `${label}: Arquivadas`);
+    assert.equal((await store.messages.update(spamId, {status: 'nova'})).status, 'nova', `${label}: not spam after all`);
+    assert.equal(await store.messages.countUnread(), unreadBefore + 1);
+    assert.equal(await store.messages.update(crypto.randomUUID(), {readAt: new Date()}), null, `${label}: an unknown message`);
+    for (const id of [...ids, spamId]) assert.equal(await store.messages.remove(id), true, `${label}: removed`);
+    assert.equal(await store.messages.findById(ids[0]), null);
+    assert.equal(await store.messages.remove(ids[0]), false, `${label}: and only once`);
+    assert.equal(await store.messages.countUnread(), unreadBefore);
+  }
+  // Their retention (Política de Privacidade): 12 months, spam 30 days.
+  {
+    const day = 86400000, nowMs = Date.now(), at = days => new Date(nowMs - days * day), make = (id, status, days) => store.messages.create({id, name: 'Prazo', email: 'prazo@exemplo.com', subject: 'outro', message: 'Mensagem de prazo', status, readAt: new Date(), createdAt: at(days)});
+    const [oldSpam, recentSpam, oldMessage, keptMessage] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    await make(oldSpam, 'spam', 40); await make(recentSpam, 'spam', 10); await make(oldMessage, 'nova', 400); await make(keptMessage, 'nova', 300);
+    await store.purge(nowMs);
+    assert.equal(await store.messages.findById(oldSpam), null, `${label}: spam goes after 30 days`);
+    assert(await store.messages.findById(recentSpam), `${label}: recent spam stays`);
+    assert.equal(await store.messages.findById(oldMessage), null, `${label}: a message goes after 12 months`);
+    assert(await store.messages.findById(keptMessage), `${label}: a younger one stays`);
+    await store.messages.remove(recentSpam); await store.messages.remove(keptMessage);
+  }
+
   // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
   const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();
   await store.customers.create({id: purger, email: purgerEmail, emailVerifiedAt: new Date(), displayName: 'P'});

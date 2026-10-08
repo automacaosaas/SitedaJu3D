@@ -929,6 +929,9 @@ Digite seu nome.|Please enter your name.|Escribe tu nombre.
 Digite um e-mail válido.|Please enter a valid email.|Escribe un correo válido.
 Escolha um assunto.|Please choose a subject.|Elige un asunto.
 Escreva sua mensagem, com pelo menos 10 caracteres.|Write your message, with at least 10 characters.|Escribe tu mensaje, con al menos 10 caracteres.
+WhatsApp (opcional)|WhatsApp (optional)|WhatsApp (opcional)
+Se preferir, a Ju responde por lá.|If you prefer, Ju can reply there.|Si prefieres, Ju te responde por allí.
+Confira o WhatsApp: com DDD, como (31) 99999-9999. De fora do Brasil, comece com + e o código do país.|Please check the WhatsApp number: from Brazil, with the area code, like (31) 99999-9999. From abroad, start with + and the country code.|Revisa el WhatsApp: en Brasil, con el código de área, como (31) 99999-9999. Desde fuera de Brasil, empieza con + y el código del país.
 Enviando…|Sending…|Enviando…
 Muitas mensagens seguidas. Tente de novo daqui a pouco.|Too many messages in a row. Please try again in a little while.|Demasiados mensajes seguidos. Inténtalo de nuevo en un rato.
 Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para|We could not send it right now. Try again in a few minutes or write to|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a

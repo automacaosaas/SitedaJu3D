@@ -6,7 +6,7 @@
 // Run: node tools/sync-meta.cjs   (or --check to only report)
 const fs = require('node:fs');
 const path = require('node:path');
-const {COMPANY} = require('../api/_lib/legal');
+const {COMPANY, contact} = require('../api/_lib/legal');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const IMAGE = {path: 'assets/og-ju.jpg', width: 1200, height: 630, alt: 'Borboletoscópio, Dinossauroscópio e Aviãoscopia ao lado da frase "Mais cor na consulta. Mais encanto em cada olhar."'};
@@ -18,7 +18,7 @@ const PAGES = {
   'index.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'produtos.html': {title: 'Produtos · Ju, imprime pra mim?', description: 'Borboletoscópio, Dinossauroscópio e Aviãoscopia: peças impressas em 3D para a consulta, personalizadas nas cores que você escolher.'},
   'sobre.html': {title: 'Sobre a Ju · Ju, imprime pra mim?', description: SHOP},
-  'contato.html': {title: 'Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?', description: 'Fale com a Ju pelo formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.'},
+  'contato.html': {title: 'Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?', description: `Fale com a Ju pelo ${contact().whatsapp ? 'WhatsApp, pelo ' : ''}formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.`},
   'termos.html': {title: 'Termos de Uso · Ju, imprime pra mim?', description: 'Termos de Uso da loja Ju, imprime pra mim?: conta, pedidos sob encomenda, pagamento, produção, entrega e seus direitos.'},
   'privacidade.html': {title: 'Política de Privacidade · Ju, imprime pra mim?', description: 'Política de Privacidade da loja Ju, imprime pra mim?: quais dados coletamos, para quê, com quem compartilhamos e como exercer seus direitos (LGPD).'},
   'trocas.html': {title: 'Trocas e Devoluções · Ju, imprime pra mim?', description: 'Trocas e Devoluções da loja Ju, imprime pra mim?: desistência em 7 dias, peças com defeito e como o valor é devolvido.'},
@@ -52,9 +52,15 @@ function tags({url, title, description, image = IMAGE, type = 'website', extra =
     '<!-- /og -->'
   ];
 }
-// Who the shop is, for search engines (on the home page).
-const organization = () => ({'@context': 'https://schema.org', '@type': 'Organization', name: SITE, legalName: COMPANY.legalName, url: `${base()}/`,
-  logo: `${base()}/assets/logo-ju.webp`, sameAs: ['https://www.instagram.com/juimprimepramim/']});
+// Who the shop is, for search engines (on the home page). The phone (the WhatsApp of api/_lib/legal.js, as
+// "+55-31-99198-1151") and the service channel only once the number is filled in.
+const intlPhone = digits => digits.replace(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/, '+$1-$2-$3-$4');
+function organization() {
+  const {whatsapp, email} = contact(), telephone = whatsapp ? intlPhone(whatsapp) : '';
+  return {'@context': 'https://schema.org', '@type': 'Organization', name: SITE, legalName: COMPANY.legalName, url: `${base()}/`,
+    logo: `${base()}/assets/logo-ju.webp`, sameAs: ['https://www.instagram.com/juimprimepramim/'],
+    ...(telephone ? {telephone, contactPoint: {'@type': 'ContactPoint', contactType: 'customer service', telephone, ...(email ? {email} : {}), areaServed: 'BR', availableLanguage: ['Portuguese', 'English', 'Spanish']}} : {})};
+}
 
 function block(name) {
   const page = PAGES[name];

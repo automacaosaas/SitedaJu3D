@@ -24,6 +24,8 @@
 .contact-channel > p:not(.contact-soon) { margin-bottom: 12px; }
 .contact-link { padding-top: 14px; color: var(--rose); font-size: 15px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 .contact-channel .contact-soon { padding-top: 12px; color: #1d6b40; font-size: 13px; }
+/* The number under the button, for whoever prefers to save it (from api/_lib/legal.js). */
+.contact-channel > p.contact-number { margin: 10px 0 0; color: #1d6b40; font-size: 14px; font-weight: 650; letter-spacing: .2px; font-variant-numeric: tabular-nums; }
 
 .contact-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 20px; margin-top: 20px; align-items: start; }
 .contact-help, .contact-form-card { padding: 30px 28px; border: 1px solid var(--line); border-radius: 22px; }
@@ -46,6 +48,7 @@
 .contact-field textarea { min-height: 132px; resize: vertical; line-height: 1.6; }
 .contact-field input:focus-visible, .contact-field select:focus-visible, .contact-field textarea:focus-visible { outline: 2px solid var(--rose); outline-offset: 1px; border-color: transparent; }
 .contact-field [aria-invalid=true] { border-color: #c2414f; background: #fff8f8; }
+.contact-hint { color: #6f6369; font-size: 13px; line-height: 1.4; }
 .contact-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .contact-error { margin: 0; padding: 11px 14px; border-radius: 12px; background: #fbe6ea; color: #8e3c50; font-size: 14px; line-height: 1.5; }
 .contact-submit { min-height: 52px; margin-top: 2px; font-size: 15px; }

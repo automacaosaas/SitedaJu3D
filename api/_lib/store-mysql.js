@@ -81,6 +81,17 @@ function groupBy(rows, keyOf) {
   for (const row of rows) { const key = keyOf(row), group = groups.get(key); if (group) group.push(row); else groups.set(key, [row]); }
   return groups;
 }
+// Mensagens do formulário de contato (db/migrations/015_mensagens.sql). The views of the panel, as in store-memory.js:
+// novas (not read, not archived, not spam), todas, arquivadas. Fixed SQL text, never built from a value.
+const MESSAGE_COLUMNS = {id: 'id', name: 'name', email: 'email', phoneEnc: 'phone_enc', subject: 'subject', message: 'message', orderRef: 'order_ref', lang: 'lang', status: 'status',
+  mailedAt: 'mailed_at', readAt: 'read_at', readBy: 'read_by', repliedAt: 'replied_at', archivedAt: 'archived_at', createdAt: 'created_at'};
+const MESSAGE_VIEWS = {novas: "status = 'nova' AND archived_at IS NULL AND read_at IS NULL", todas: '1 = 1', arquivadas: 'archived_at IS NOT NULL'};
+function toMessage(row) {
+  if (!row) return null;
+  const message = {};
+  for (const [field, column] of Object.entries(MESSAGE_COLUMNS)) message[field] = row[column] ?? null;
+  return message;
+}
 const toAdminSession = row => row && {tokenHash: row.token_hash, adminId: row.admin_id, mfaAt: row.mfa_at, attempts: row.attempts, createdAt: row.created_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
 const toIdentity = row => row && {provider: row.provider, subject: row.subject, customerId: row.customer_id, email: row.email, privateEmail: Boolean(row.private_email), createdAt: row.created_at, lastLoginAt: row.last_login_at};
 const toSession = row => row && {tokenHash: row.token_hash, customerId: row.customer_id, createdAt: row.created_at, lastSeenAt: row.last_seen_at, expiresAt: row.expires_at, revokedAt: row.revoked_at, ip: row.ip, userAgent: row.user_agent};
@@ -324,6 +335,28 @@ function createMysqlStore(pool) {
         return row;
       }
     },
+    // Mensagens: newest first, keyset pagination on (created_at, id) like orders.listForAdmin.
+    messages: {
+      async create(data) {
+        const fields = Object.keys(data).filter(f => MESSAGE_COLUMNS[f]);
+        await run(`INSERT INTO contact_messages (${fields.map(f => MESSAGE_COLUMNS[f]).join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`, fields.map(f => data[f] ?? null));
+        return toMessage(await one('SELECT * FROM contact_messages WHERE id = ?', [data.id]));
+      },
+      findById: async id => toMessage(await one('SELECT * FROM contact_messages WHERE id = ?', [id])),
+      async list({view = 'todas', limit = 50, before = null} = {}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 50, 1), 200);
+        const where = [MESSAGE_VIEWS[view] || MESSAGE_VIEWS.todas], params = [];
+        if (before) { where.push('(created_at < ? OR (created_at = ? AND id < ?))'); params.push(new Date(before.createdAt), new Date(before.createdAt), before.id); }
+        return (await all(`SELECT * FROM contact_messages WHERE ${where.join(' AND ')} ORDER BY created_at DESC, id DESC LIMIT ${cap}`, params)).map(toMessage);
+      },
+      countUnread: async () => Number((await one(`SELECT COUNT(*) AS n FROM contact_messages WHERE ${MESSAGE_VIEWS.novas}`, [])).n),
+      async update(id, patch) {
+        const fields = Object.keys(patch).filter(f => MESSAGE_COLUMNS[f] && !['id', 'createdAt'].includes(f));
+        if (fields.length) await run(`UPDATE contact_messages SET ${fields.map(f => `${MESSAGE_COLUMNS[f]} = ?`).join(', ')} WHERE id = ?`, [...fields.map(f => patch[f] ?? null), id]);
+        return toMessage(await one('SELECT * FROM contact_messages WHERE id = ?', [id]));
+      },
+      remove: async id => (await run('DELETE FROM contact_messages WHERE id = ?', [id])).affectedRows === 1
+    },
     adminSessions: {
       create: s => run('INSERT INTO admin_sessions (token_hash, admin_id, mfa_at, expires_at, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?)', [s.tokenHash, s.adminId, s.mfaAt ?? null, s.expiresAt, s.ip ?? null, s.userAgent ?? null]),
       find: async tokenHash => toAdminSession(await one('SELECT * FROM admin_sessions WHERE token_hash = ?', [tokenHash])),
@@ -366,11 +399,13 @@ function createMysqlStore(pool) {
       async markUsed(id, now) { return (await run('UPDATE auth_challenges SET used_at = ? WHERE id = ? AND used_at IS NULL', [now, id])).affectedRows === 1; }
     },
     // Data kept only as long as needed (Política de Privacidade): attempt counters for a day, e-mailed codes for 30 days,
-    // expired sessions (they hold the IP of each access) for the 6 months of the Marco Civil. Runs now and then from
-    // rateLimit, so no scheduled job is needed.
+    // expired sessions (they hold the IP of each access) for the 6 months of the Marco Civil, contact messages for 12
+    // months (spam for 30 days). Runs now and then from rateLimit, so no scheduled job is needed.
     async purge(now) {
       const day = 86400000, before = days => new Date(now - days * day);
       await run('DELETE FROM rate_limits WHERE window_start < ?', [now - day]);
+      await run('DELETE FROM contact_messages WHERE created_at < ?', [before(365)]);
+      await run("DELETE FROM contact_messages WHERE status = 'spam' AND created_at < ?", [before(30)]);
       await run('DELETE FROM auth_challenges WHERE expires_at < ?', [before(30)]);
       await run('DELETE FROM sessions WHERE expires_at < ?', [before(183)]);
       await run('DELETE FROM admin_sessions WHERE expires_at < ?', [before(183)]);

@@ -26,12 +26,12 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const fetchImpl = async (url, init) => { sent.push({url, body: JSON.parse(init.body), headers: init.headers}); return {ok: answer[0] < 400, status: answer[0], json: async () => answer[1]}; };
   const handler = send.create({env, store, now: () => Date.parse('2026-10-04T15:00:00Z'), fetchImpl});
   const call = async ({method = 'POST', origin = SITE, body = MESSAGE, ip = '203.0.113.20'} = {}) => { const res = makeRes(); await handler({method, headers: {...(origin ? {origin} : {}), 'x-forwarded-for': ip}, body, socket: {}, url: '/api/contact/send'}, res); return res; };
-  return {sent, call};
+  return {sent, call, store};
 }
 
 // ── the endpoint ──────────────────────────────────────────────────────
 {
-  const {sent, call} = setup();
+  const {sent, call, store} = setup();
   assert.equal((await call({method: 'GET'})).statusCode, 405);
   assert.equal((await call({origin: ''})).statusCode, 403, 'no Origin');
   assert.equal((await call({origin: 'https://evil.example'})).statusCode, 403, 'another site');
@@ -58,6 +58,8 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const bot = await call({body: {...MESSAGE, website: 'http://spam.example'}, ip: '192.0.2.99'});
   assert.equal(bot.statusCode, 200, 'the hidden field filled: the bot sees success…');
   assert.equal(sent.length, 1, '…and nothing goes out');
+  assert.equal((await store.messages.list()).length, 1, 'only the real message is kept for the panel (2026-10-07)');
+  assert(mail.html.includes('/admin.html#mensagens') && mail.text.includes('/admin.html#mensagens'), 'the notice links to Mensagens in the panel');
   assert.deepEqual(Object.keys(SUBJECTS), ['produto', 'pedido', 'personalizado', 'outro']);
 }
 
@@ -72,18 +74,26 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.equal(sent.length, 8);
 }
 
-// ── where it goes, and when it cannot go ──────────────────────────────
+// ── where it goes, and when the e-mail cannot go ──────────────────────
+// 2026-10-07: the message is saved first (Mensagens in the panel); the e-mail is only a notice, so no inbox, no e-mail
+// service or a refusal no longer lose it (they used to answer 503 / 502 and drop it). tests/messages.mjs has the rest.
 {
+  const realError = console.error; console.error = () => {};
   const noInbox = setup({...ENV, ORDER_NOTIFY_EMAIL: ''});
   const res = await noInbox.call();
-  assert.equal(res.statusCode, 503); assert.equal(res.json().error, 'contact_unavailable'); assert.equal(noInbox.sent.length, 0);
-  assert.equal((await setup({...ENV, RESEND_API_KEY: '', AUTH_SECRET: ''}).call()).statusCode, 503, 'no e-mail service');
+  assert.equal(res.statusCode, 200, 'no inbox: saved all the same'); assert.equal(noInbox.sent.length, 0);
+  assert.equal((await noInbox.store.messages.list())[0].mailedAt, null, 'and marked as not e-mailed');
+  const noService = setup({...ENV, RESEND_API_KEY: '', AUTH_SECRET: ''});
+  assert.equal((await noService.call()).statusCode, 200, 'no e-mail service: saved all the same');
+  assert.equal((await noService.store.messages.list()).length, 1);
   const own = setup({...ENV, CONTACT_EMAIL: 'Contato@Site.Test'});
   await own.call();
   assert.deepEqual(own.sent[0].body.to, ['contato@site.test'], 'CONTACT_EMAIL wins over ORDER_NOTIFY_EMAIL');
   const refused = setup(ENV, [500, {message: 'boom'}]);
   const failed = await refused.call();
-  assert.equal(failed.statusCode, 502); assert.equal(failed.json().error, 'mail_failed');
+  assert.equal(failed.statusCode, 200, 'the e-mail service refused: the message is in the panel all the same');
+  assert.equal((await refused.store.messages.list())[0].mailedAt, null);
+  console.error = realError;
 }
 
 // ── the page ──────────────────────────────────────────────────────────
@@ -111,7 +121,7 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.match(script, /https:\/\/wa\.me\/\$\{number\}\?text=\$\{encodeURIComponent\(translate\('Olá, Ju! Vim pelo site e tenho uma dúvida\.'\)\)\}/);
   assert(page.includes(`href="${/const INSTAGRAM = '([^']+)'/.exec(read('dist/site-shell.js'))[1]}"`), 'the same Instagram as the menu and the footer');
   // The form: the same fields and subjects the server accepts, a hidden trap field and the privacy note.
-  for (const name of ['name', 'email', 'subject', 'message', 'website']) assert.match(page, new RegExp(`name="${name}"`), name);
+  for (const name of ['name', 'email', 'phone', 'subject', 'message', 'website']) assert.match(page, new RegExp(`name="${name}"`), name);
   assert.deepEqual([...page.matchAll(/<option value="([a-z]+)">/g)].map(m => m[1]), Object.keys(SUBJECTS));
   assert.match(page, /<div class="contact-trap" aria-hidden="true"><label>Não preencha este campo<input name="website" tabindex="-1" autocomplete="off"><\/label><\/div>/);
   assert.match(page, /<a href="privacidade\.html">Política de Privacidade<\/a>/);
@@ -136,4 +146,4 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.match(read('tools/dev-server.cjs'), /'\/api\/contact\/send': require\('\.\.\/api\/contact\/send'\)/, 'the local server answers the form');
 }
 
-console.log('PASS: contact — the form reaches the shop inbox with the sender as reply-to, checked fields, a trap for bots, limits per address and per e-mail; the page with WhatsApp first, the same subjects as the server and questions that follow the shop settings.');
+console.log('PASS: contact — the form is saved for the panel and reaches the shop inbox with the sender as reply-to (a failed e-mail loses nothing), checked fields, a trap for bots, limits per address and per e-mail; the page with WhatsApp first, the same subjects as the server and questions that follow the shop settings.');

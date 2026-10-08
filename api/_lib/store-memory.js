@@ -2,10 +2,13 @@
 // In-memory store with the same interface as store-mysql.js. Used by tests and, outside production, when no database is
 // configured (local server, test site before the database exists). Data disappears when the process restarts.
 const QUEUED = ['fila', 'processando', 'autorizada'];   // the NF-e queue: to send, to check, or the buyer's e-mail to send again
+// Mensagens: the rows each view of the panel shows (store-mysql.js says the same in SQL).
+const MESSAGE_VIEWS = {novas: m => m.status === 'nova' && !m.archivedAt && !m.readAt, todas: () => true, arquivadas: m => Boolean(m.archivedAt)};
 
 function createMemoryStore() {
   const customers = new Map(), identities = new Map(), sessions = new Map(), challenges = new Map(), limits = new Map(), orders = new Map(), events = [];
   const admins = new Map(), adminSessions = new Map(), audit = [], invoices = new Map(), integrations = new Map(), cashEntries = new Map(), bills = new Map(), integrationLog = [];
+  const messages = new Map();
   let eventSerial = 0, auditSerial = 0, logSerial = 0;
   const key = buffer => Buffer.from(buffer).toString('hex');
   const copy = value => value && structuredClone(value);
@@ -194,6 +197,30 @@ function createMemoryStore() {
       async setLocked(id, lockedAt) { const row = bills.get(id); if (!row) return null; row.lockedAt = lockedAt; return copy(row); },
       async remove(id) { const row = bills.get(id); if (!row) return null; bills.delete(id); return copy(row); }
     },
+    // Mensagens do formulário de contato (db/migrations/015_mensagens.sql), same views as the MySQL store: novas (not
+    // read, not archived, not spam), todas, arquivadas. Newest first (ties by id), a page starting below `before`.
+    messages: {
+      async create(data) {
+        const row = {phoneEnc: null, orderRef: null, lang: null, status: 'nova', mailedAt: null, readAt: null, readBy: null, repliedAt: null, archivedAt: null, createdAt: new Date(), ...data};
+        messages.set(row.id, row);
+        return copy(row);
+      },
+      async findById(id) { return copy(messages.get(id) || null); },
+      async list({view = 'todas', limit = 50, before = null} = {}) {
+        const cap = Math.min(Math.max(Math.floor(Number(limit)) || 50, 1), 200), shows = MESSAGE_VIEWS[view] || MESSAGE_VIEWS.todas;
+        const at = value => new Date(value).getTime(), top = before && at(before.createdAt);
+        const below = m => !before || at(m.createdAt) < top || (at(m.createdAt) === top && m.id < before.id);
+        return copy([...messages.values()].filter(m => shows(m) && below(m)).sort((a, b) => at(b.createdAt) - at(a.createdAt) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0)).slice(0, cap));
+      },
+      async countUnread() { return [...messages.values()].filter(MESSAGE_VIEWS.novas).length; },
+      async update(id, patch) {
+        const row = messages.get(id);
+        if (!row) return null;
+        for (const [field, value] of Object.entries(patch)) if (field !== 'id' && field !== 'createdAt') row[field] = value;
+        return copy(row);
+      },
+      async remove(id) { return messages.delete(id); }
+    },
     adminSessions: {
       async create(session) { adminSessions.set(key(session.tokenHash), {mfaAt: null, attempts: 0, revokedAt: null, createdAt: new Date(), ...session}); },
       async find(tokenHash) { return copy(adminSessions.get(key(tokenHash)) || null); },
@@ -221,9 +248,11 @@ function createMemoryStore() {
       // Returns true only for the first caller, so a grant or a code is spent exactly once.
       async markUsed(id, now) { const c = challenges.get(id); if (!c || c.usedAt) return false; c.usedAt = now; return true; }
     },
-    // Same retention as store-mysql.js: counters 1 day, codes 30 days, expired sessions 6 months.
+    // Same retention as store-mysql.js: counters 1 day, codes 30 days, expired sessions 6 months, contact messages 12
+    // months (spam 30 days).
     async purge(now) {
       const day = 86400000, old = (value, days) => new Date(value).getTime() < now - days * day;
+      for (const [k, m] of messages) if (old(m.createdAt, 365) || (m.status === 'spam' && old(m.createdAt, 30))) messages.delete(k);
       for (const k of limits.keys()) if (Number(k.split('|').pop()) < now - day) limits.delete(k);
       for (const [k, c] of challenges) if (old(c.expiresAt, 30)) challenges.delete(k);
       for (const [k, s] of sessions) if (old(s.expiresAt, 183)) sessions.delete(k);
