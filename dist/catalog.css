@@ -57,36 +57,68 @@
 .catalog-home .catalog-all:focus-visible{outline:2px solid currentColor;outline-offset:3px}
 @media(hover:hover){.catalog-home .catalog-all:hover{background:color-mix(in srgb,currentColor 9%,transparent);transform:translateY(-1px);box-shadow:0 10px 24px color-mix(in srgb,currentColor 16%,transparent)}.catalog-home .catalog-all:hover .icon{transform:translateX(4px)}}
 @media(max-width:600px){.catalog-home .catalog-all{width:100%;max-width:340px;justify-content:center}}
-/* Nossa coleção na home (08/10/2026): a caixa e o recorte dos cards ficam em carousel.css; aqui o que muda por tamanho de tela, o
-   que some nos vizinhos e o movimento. Os vizinhos mostram só a foto e o nome: categoria, subtítulo, detalhes, preço e botões somem (e
+/* Nossa coleção na home (08/10/2026): a caixa dos cards fica em carousel.css; aqui o que muda por tamanho de tela, como os vizinhos
+   aparecem e o movimento. O card do centro mostra tudo; nos vizinhos, categoria, título, subtítulo, detalhes, preço e botões somem (e
    saem do Tab) e voltam quando o card chega ao centro. Os detalhes guardam o lugar em todos os cards (só a opacidade muda, nada
    reflui na troca) e o preço e os botões ficam no pé do card. */
 .home .product-rail-copy { display: flex; flex: 1; flex-direction: column; }
 .home .product-rail-bottom { margin-top: auto; padding-top: 12px; }
 .home .product-rail-active-details { max-height: none; overflow: visible; margin-top: 12px; border-block: 1px solid var(--line); }
-.home .product-rail-card:not(.is-active) :is(.product-rail-category, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 0; visibility: hidden; transition: opacity .16s ease, visibility 0s .16s; }
-.home .product-rail-card.is-active :is(.product-rail-category, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 1; visibility: visible; transition: opacity .32s ease .16s; }
+.home .product-rail-card:not(.is-active) :is(.product-rail-category, .product-rail-copy h3, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 0; visibility: hidden; transition: opacity .16s ease, visibility 0s .16s; }
+.home .product-rail-card.is-active :is(.product-rail-category, .product-rail-copy h3, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 1; visibility: visible; transition: opacity .32s ease .16s; }
+/* Os vizinhos, mais simples que o do centro (segunda volta, 08/10/2026): sem caixa, a peça recortada (fundo transparente) flutua num
+   halo claro, com a borda na cor da peça do centro (--theme-accent, que desliza com a seção), e uma sombra de chão macia; o nome fica
+   embaixo, centralizado (.product-rail-name, catalog.js). O halo (::after do card) e o chão (::before do texto) ficam atrás da peça,
+   presos ao card e fora do link da foto (catalog.js railArt); só a peça flutua. */
+.home .product-rail-float { display: block; width: 100%; height: 100%; }
+.home .product-rail-card::after, .home .product-rail-copy::before { content: ''; position: absolute; left: 50%; z-index: -1; border-radius: 50%; translate: -50% 0; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+.home .product-rail-card::after { top: calc(var(--art-h) * -.14); width: calc(var(--art-h) * 1.28); aspect-ratio: 1; background: radial-gradient(closest-side, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, .72) 34%, color-mix(in srgb, color-mix(in srgb, var(--theme-wash, #f4e4e7) 88%, var(--theme-accent, #b64c68)) 70%, transparent) 60%, transparent 100%); }
+.home .product-rail-copy::before { top: calc(var(--art-h) * .91); width: calc(var(--art-h) * .5); height: calc(var(--art-h) * .1); background: radial-gradient(closest-side, color-mix(in srgb, var(--theme-text, #282326) 26%, transparent), transparent); }
+.home .product-rail-card:not(.is-active)::after, .home .product-rail-card:not(.is-active) .product-rail-copy::before { opacity: 1; }
+.home .product-rail-name { position: absolute; left: -12%; right: -12%; top: calc(var(--art-h) + 14px); overflow: hidden; color: var(--theme-text, var(--ink)); font: 500 25px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.3px; text-align: center; text-overflow: ellipsis; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity .16s ease, visibility 0s .16s; }
+.home .product-rail-card:not(.is-active) .product-rail-name { opacity: 1; visibility: visible; transition: opacity .32s ease .16s; pointer-events: auto; cursor: pointer; }
+/* Por trás da fileira, uma névoa nas cores da peça do centro liga os vizinhos ao card e à faixa da seção (as cores deslizam com --cat-*,
+   carousel.css); o palco isola as camadas para ela ficar atrás dos cards. */
+.home .catalog-home[data-themed] .product-carousel-stage { isolation: isolate; }
+.home .catalog-home[data-themed] .product-carousel-stage::after { content: ''; position: absolute; inset: 4% 6% 8%; z-index: -1; background: radial-gradient(closest-side, color-mix(in srgb, var(--theme-wash, #f4e4e7) 92%, var(--theme-accent, #b64c68)) 0%, color-mix(in srgb, var(--theme-wash, #f4e4e7) 60%, transparent) 58%, transparent 100%); pointer-events: none; }
+/* Movimento parado (só com "reduzir movimento" desligado): a peça dos dois vizinhos sobe e desce devagar, o chão encolhe quando ela sobe
+   e o halo respira; vizinhos seguidos em fases trocadas; a névoa balança bem devagar. Tudo em transform/opacidade, em camadas próprias;
+   os cards de longe não animam e, com a coleção fora da tela (catalog.js, .is-away), tudo para. */
+@media (prefers-reduced-motion: no-preference) {
+  .home .product-rail-card.is-side .product-rail-float { animation: rail-float 6.4s ease-in-out infinite; }
+  .home .product-rail-card.is-side .product-rail-copy::before { animation: rail-floor 6.4s ease-in-out infinite; }
+  .home .product-rail-card.is-side::after { animation: rail-halo 6.4s ease-in-out infinite; }
+  .home .product-rail-card.is-side:nth-child(even) .product-rail-float, .home .product-rail-card.is-side:nth-child(even) .product-rail-copy::before, .home .product-rail-card.is-side:nth-child(even)::after { animation-delay: 3.2s; }
+  .home .catalog-home[data-themed] .product-carousel-stage::after { animation: rail-mist 16s ease-in-out infinite; }
+  .home .product-carousel.is-away .product-rail-float, .home .product-carousel.is-away .product-rail-copy::before, .home .product-carousel.is-away .product-rail-card::after, .home .product-carousel.is-away .product-carousel-stage::after { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) { .home .product-rail-card::after, .home .product-rail-copy::before, .home .product-rail-name { transition: none; } }
+@keyframes rail-float { 50% { transform: translate3d(0, -4%, 0); } }
+@keyframes rail-floor { 50% { transform: scale(.76); opacity: .45; } }
+@keyframes rail-halo { 50% { transform: scale(1.05); } }
+@keyframes rail-mist { 50% { transform: translate3d(0, -2%, 0) scale(1.05, .96); } }
 /* o foco da foto fica por dentro (o card recorta o que passa da borda) */
 .home .product-rail-art:focus-visible { outline: 2px solid var(--ink); outline-offset: -8px; border-radius: 18px; }
 .home .product-rail-copy h3 a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
 @media (max-width: 900px) {
-  .home .product-carousel-stage { height: 580px; --card-w: min(390px, 38vw); --card-h: 554px; --art-h: 210px; --keep: calc(var(--art-h) + 92px); --slot-w: calc(var(--card-w) * .77); --side-s: .6; --side-y: 60px; }
+  /* no tablet os vizinhos ficam no meio da sobra de cada lado, à altura da foto do card do centro, com o nome embaixo; as setas, mais
+     abaixo, não cobrem o nome */
+  .home .product-carousel-stage { height: 580px; --card-w: min(360px, 36vw); --card-h: 540px; --art-h: 200px; --slot-w: calc(var(--card-w) * .8); --side-s: .64; --side-y: -52px; }
 }
 @media (max-width: 760px) {
-  /* no celular os vizinhos espiam por trás do card do centro, com o meio da foto à vista; o nome (que sairia cortado) não aparece, e o
-     recorte fecha logo abaixo da foto (sem a faixa branca vazia onde o nome ficaria) */
-  .home .product-rail-card:not(.is-active) .product-rail-copy h3 { opacity: 0; transition: opacity .16s ease; }
-  .home .product-rail-card.is-active .product-rail-copy h3 { opacity: 1; transition: opacity .32s ease .16s; }
-  .home .product-carousel-stage { height: 540px; --card-w: 68vw; --card-r: 19px; --card-h: 516px; --art-h: 212px; --keep: calc(var(--art-h) + 10px); --slot-w: 44vw; --side-s: .76; --side-y: 48px; }
+  /* no celular os vizinhos espiam por trás do card do centro, à altura da foto dele (as setas ficam embaixo deles); o nome, que sairia
+     cortado, não aparece */
+  .home .product-rail-name { display: none; }
+  .home .product-carousel-stage { height: 540px; --card-w: 64vw; --card-r: 19px; --card-h: 516px; --art-h: 212px; --slot-w: 41vw; --side-s: .56; --side-y: -64px; }
 }
 @media (max-width: 390px) {
-  .home .product-carousel-stage { height: 532px; --card-w: 70vw; --card-h: 516px; --art-h: 204px; --side-s: .74; }
+  .home .product-carousel-stage { height: 532px; --card-w: 66vw; --card-h: 516px; --art-h: 204px; --side-s: .52; }
 }
 /* Arraste 1:1 (catalog.js): o transform não tem transição enquanto o dedo puxa, e os cards de longe aparecem conforme entram. Seguir a
    vitrine com a seção fora da tela e reposicionar um card que dá a volta acontecem sem transição. */
-.home .product-carousel-track.is-dragging .product-rail-card { transition: opacity .2s ease, clip-path 560ms cubic-bezier(.22, 1, .36, 1); }
+.home .product-carousel-track.is-dragging .product-rail-card { transition: opacity .2s ease; }
 .home .product-carousel-track.is-dragging .product-rail-card.is-far { opacity: 1; }
-.home .product-carousel-track.is-instant .product-rail-card, .home .product-carousel-track.is-instant .product-rail-card *, .home .product-carousel-track.is-instant .product-rail-card::before, .home .product-rail-card.is-placing { transition: none !important; }
+.home .product-carousel-track.is-instant .product-rail-card, .home .product-carousel-track.is-instant .product-rail-card *, .home .product-carousel-track.is-instant .product-rail-card::before, .home .product-carousel-track.is-instant .product-rail-card::after, .home .product-carousel-track.is-instant .product-rail-copy::before, .home .product-rail-card.is-placing { transition: none !important; }
 /* As bordas do palco esmaecem na cor da faixa da seção (--band, carousel.css): um card que sai ou entra some aos poucos, sem corte seco.
    O que passa da fileira, em cima e embaixo, se dissolve também: embaixo a faixa já começa a sumir e uma ponta lisa viraria um retângulo. */
 .home .catalog-home[data-themed] .product-carousel-track::before, .home .catalog-home[data-themed] .product-carousel-track::after { content: ''; position: absolute; top: -24px; bottom: -56px; z-index: 4; width: clamp(20px, 4vw, 64px); pointer-events: none; -webkit-mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 56px), transparent); }

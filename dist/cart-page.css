@@ -95,18 +95,32 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-rec-arrow, .cart-rec-toggle { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffe6; color: var(--ink); box-shadow: 0 6px 16px #6536491a; cursor: pointer; transition: transform .2s ease, box-shadow .25s ease, background-color .25s ease; }
 .cart-rec-arrow > .icon { width: 18px; height: 18px; transition: translate .25s ease; }
 .cart-rec-arrow.is-prev > .icon { transform: rotate(180deg); }
-.cart-rec-toggle > svg:not(.cart-rec-ring) { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.cart-rec-toggle > .cart-rec-play { display: none; fill: currentColor; stroke-width: 1.2; }
-.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-play { display: block; }
-.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-pause { display: none; }
 .cart-rec-arrow:active, .cart-rec-toggle:active { transform: scale(.92); transition-duration: .08s; }
 .cart-rec-arrow:focus-visible, .cart-rec-toggle:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
-.cart-rec-ring { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); transform: rotate(-90deg); pointer-events: none; }
-.cart-rec-ring circle { fill: none; stroke: var(--rose); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 132; stroke-dashoffset: 132; opacity: 0; transition: opacity .2s ease; }
-.cart-rec-rail.is-playing .cart-rec-ring circle { opacity: 1; animation: rec-ring var(--rec-auto, 4200ms) linear forwards; }
-@keyframes rec-ring { to { stroke-dashoffset: 0; } }
+/* A bolinha de pausa (08/10/2026, segunda volta, o dono: "uma bolinha menor... não precisa ser tão grande, nem tão chamativa"): o alvo
+   continua de 44 px, mas sem caixa; à vista, um anel fino de 18 px que se fecha no tempo até o próximo card e, dentro, o sinal pequeno
+   de pausa (ou de play, pausado). O anel são duas metades que giram dentro de duas janelas (só transform, no compositor): a da direita
+   na primeira metade do tempo, a da esquerda na segunda. Quando algo segura a contagem (is-held), ele congela onde está e se apaga um
+   pouco; pausado, fica só o trilho. */
+.cart-rec-toggle { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); }
+.cart-rec-toggle > * { grid-area: 1 / 1; }
+.cart-rec-dot { position: relative; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rose) 22%, transparent); transition: opacity .3s ease; }
+.cart-rec-dot > span { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; overflow: hidden; }
+.cart-rec-dot > span + span { left: 0; }
+.cart-rec-dot i { position: absolute; top: 0; left: -100%; width: 200%; height: 100%; box-sizing: border-box; border: 1.5px solid transparent; border-top-color: var(--rose); border-right-color: var(--rose); border-radius: 50%; opacity: 0; transform: rotate(225deg); }
+.cart-rec-dot > span + span i { left: 0; transform: rotate(45deg); }
+.cart-rec-rail.is-counting .cart-rec-dot i { opacity: 1; animation: rec-half-a var(--rec-auto, 8500ms) linear forwards; }
+.cart-rec-rail.is-counting .cart-rec-dot > span + span i { animation-name: rec-half-b; }
+.cart-rec-rail.is-held .cart-rec-dot i { animation-play-state: paused; }
+.cart-rec-rail.is-held .cart-rec-dot { opacity: .55; }
+@keyframes rec-half-a { 50%, 100% { transform: rotate(405deg); } }
+@keyframes rec-half-b { 0%, 50% { transform: rotate(45deg); } 100% { transform: rotate(225deg); } }
+.cart-rec-toggle > svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.cart-rec-toggle > .cart-rec-play { display: none; fill: currentColor; stroke-width: .6; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-play { display: block; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-pause { display: none; }
 /* com "reduzir movimento" o carrossel não anda sozinho: o botão de pausa não tem o que fazer */
-@media (prefers-reduced-motion: reduce) { .cart-rec-toggle { display: none; } .cart-rec-rail .cart-rec-ring circle { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .cart-rec-toggle { display: none; } .cart-rec-rail .cart-rec-dot i { animation: none !important; } }
 /* Informações da compra: uma linha por assunto, com o ícone e um link para a política. */
 .cart-info { display: grid; gap: 28px; }
 .cart-info-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -215,6 +229,8 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-rec-rail, .cart-rec-rail[data-count] { --rec-k: 2; --rec-gap: 10px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "view view" "controls more"; row-gap: 16px; }
   .cart-rec-viewport { grid-area: view; }
   .cart-rec-controls { position: static; grid-area: controls; }
+  /* o anel da bolinha alinha com a borda dos cards (o alvo de 44 px avança sobre a margem) */
+  .cart-rec-toggle { margin: 0 -6px 0 -13px; }
   .cart-rec-more { grid-area: more; display: inline-flex; flex-direction: row-reverse; align-items: center; justify-self: end; gap: 10px; min-height: 48px; padding: 0 7px 0 20px; border: 1.5px solid color-mix(in srgb, var(--rose) 38%, transparent); border-radius: 999px; background: #fff; }
   .cart-rec-controls[hidden] + .cart-rec-viewport + .cart-rec-more { grid-column: 1 / -1; justify-self: center; }
   .cart-rec-more-plus { width: 34px; height: 34px; box-shadow: none; background: color-mix(in srgb, var(--rose) 12%, #fff); }
@@ -235,7 +251,8 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-rec:hover, .cart-rec-more:hover { transform: translateY(-3px); border-color: #b64c6826; box-shadow: 0 14px 30px #65364914; }
   .cart-rec:hover .cart-rec-art img { transform: scale(1.06); }
   .cart-rec-more:hover .cart-rec-more-plus { transform: rotate(90deg); background: var(--rose); color: #fff; }
-  .cart-rec-arrow:hover, .cart-rec-toggle:hover { background: #fff; box-shadow: 0 10px 22px #65364926; }
+  .cart-rec-arrow:hover { background: #fff; box-shadow: 0 10px 22px #65364926; }
+  .cart-rec-toggle:hover { background: color-mix(in srgb, var(--rose) 8%, transparent); color: var(--ink); }
   .cart-rec-arrow.is-next:hover > .icon { translate: 2px 0; }
   .cart-rec-arrow.is-prev:hover > .icon { translate: -2px 0; }
   .cart-rec-rail:not(.is-static) .cart-rec-viewport { cursor: grab; }
