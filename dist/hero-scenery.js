@@ -210,10 +210,12 @@ const flowers = uid => [glow(uid, -118, 66, 70, 84) + glow(uid, 122, 84, 70, 112
 // Pré-história: a pegada de três dedos do T-rex, macia como nuvem (contorno arredondado, as almofadas dos dedos em bolhas mais claras e
 // as garras em ponta), outra menor mais adiante (o rastro), e samambaias à esquerda.
 // o contorno (calcanhar embaixo, na origem; dedos para cima, ~130 unidades de altura): calcanhar, dedo de fora, do meio e o outro
-const PRINT = [[0, 54], [-22, 49], [-33, 34], [-35, 17], [-38, 5], [-52, -12], [-63, -28], [-70, -42], [-74, -55], [-63, -49], [-50, -39], [-36, -28],
-  [-22, -20], [-15, -21], [-16, -38], [-14, -58], [-9, -74], [0, -90], [9, -74], [14, -58], [16, -38], [15, -21], [22, -20], [36, -28], [50, -39], [63, -49],
-  [74, -55], [70, -42], [63, -28], [52, -12], [38, 5], [35, 17], [33, 34], [22, 49]];
-const PADS = [[0, 24, 19], [0, -30, 10], [0, -54, 8], [-30, -14, 9.5], [-48, -31, 7.5], [30, -14, 9.5], [48, -31, 7.5]];
+// (08/10/2026: a de antes, com os dedos finos e muito abertos, lia como pegada de pássaro): dedos grossos e mais juntos, que afinam
+// até a garra em ponta, e a sola larga do pé de um terópode
+const PRINT = [[0, 53], [-18, 49], [-33, 38], [-40, 20], [-42, 4], [-50, -18], [-56, -40], [-61, -60], [-63, -74], [-52, -58], [-44, -40], [-36, -24],
+  [-28, -14], [-19, -14], [-16, -36], [-14, -60], [-9, -80], [0, -98], [9, -80], [14, -60], [16, -36], [19, -14], [28, -14], [36, -24], [44, -40], [52, -58],
+  [63, -74], [61, -60], [56, -40], [50, -18], [42, 4], [40, 20], [33, 38], [18, 49]];
+const PADS = [[0, 20, 15], [0, -34, 9], [0, -62, 7], [-40, -14, 8], [-50, -40, 6.5], [40, -14, 8], [50, -40, 6.5]];
 const footprint = (uid, x, y, s, turn, kind) => `<g class="${kind}" transform="translate(${x} ${y}) rotate(${turn}) scale(${s})"><path ${F(uid, 's')} d="${smooth(PRINT)}"/><path fill="#fff" opacity=".42" d="${PADS.map(([px, py, r]) => dot(px, py, r)).join('')}"/></g>`;
 const tracks = uid => [glow(uid, 116, 100, 76, 100)
   + `<g class="scn-r">${footprint(uid, 110, 126, .64, 16, 'scn-big')}${footprint(uid, 136, 18, .4, 8, 'scn-small')}</g>`

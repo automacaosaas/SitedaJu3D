@@ -328,6 +328,7 @@
   [data-motif="flowers"] .scn-rm { display:none; }
   [data-motif="tracks"] .scn-l { transform:translate(-104px, 246px) scale(.7) translate(104px, -148px); }
   [data-motif="tracks"] .scn-big { transform:translate(132px, 220px) rotate(18deg) scale(.42); }
+  [data-motif="tracks"] .scn-small { display:none; }
   [data-motif="sky"] .scn-a { transform:translate(36px, -62px); }
   [data-motif="sky"] .scn-r { transform:translate(0, 52px); }
   [data-motif="bananas"] .scn-r { transform:translate(0, -42px); }
