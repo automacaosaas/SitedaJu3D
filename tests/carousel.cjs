@@ -311,18 +311,22 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("const later = () => idle(() => setTimeout(() => idle(early), 3000));") && js.includes("if (document.readyState === 'complete') later(); else addEventListener('load', later, {once: true});") && !/requestIdleCallback\(early, \{timeout: 1500\}\)/.test(js), 'a demonstração nunca disputa a banda com a página');
 
   // ── fundo da vitrine em silhuetas brancas de nuvem (08/10/2026: "usando as nuvens BRANCAS… só silhuetas de características que
-  //    lembram [cada peça], limpas e otimizadas"; antes, 07/10, cada peça tinha um desenho colorido) ──
+  //    lembram [cada peça], limpas e otimizadas"; antes, 07/10, cada peça tinha um desenho colorido), e nas BORDAS (08/10/2026, depois:
+  //    "deixar as coisas mais na borda, para se conectar com a página… algo mais fluido, que conecte com o rolar da página… que não ocupe
+  //    além [da vitrine]") ──
   const {scenery, MOTIF_NAMES, SIDE_NAMES} = await load('hero-scenery.js');
-  const {luminance: lum, lightTint, sceneryVars, sceneryShift, SCENERY_SHADE, SCENERY_PARALLAX, SCENERY_EDGE} = motion;
+  const {luminance: lum, lightTint, sceneryVars, sceneryShift, SCENERY_SHADE, SCENERY_PARALLAX, SCENERY_EDGE, SCENERY_SCROLL, sceneryScroll} = motion;
   const looks = Object.fromEntries(Object.keys(PRODUCTS).map(key => [key, [showcase(key).scenery.side, showcase(key).scenery.motif]]));
   assert.deepEqual(looks, {borboletoscopio: ['daisies', 'flowers'], dinossauroscopio: ['ferns', 'tracks'], aviaoscopia: ['towers', 'sky'], macacoscopio: ['palms', 'bananas'], girafoscopio: ['grass', 'acacia'], unicornioscopio: ['puffs', 'rainbow']},
-    'borboleta: margaridas; dinossauro: samambaias e a pegada; avião: cúmulos e o rastro; macaco: palmeiras e bananas; girafa: o capim (o dono gostou) e a acácia; unicórnio: nuvens e o arco-íris');
+    'borboleta: margaridas; dinossauro: samambaias e as pegadas; avião: cúmulos e o rastro; macaco: palmeiras e bananas; girafa: o capim (o dono gostou) e a acácia; unicórnio: nuvens e o arco-íris');
   assert.deepEqual([...MOTIF_NAMES].sort(), ['acacia', 'bananas', 'flowers', 'rainbow', 'sky', 'tracks'], 'a biblioteca de desenhos (sem a pata colorida de T-rex)');
   assert.deepEqual([...SIDE_NAMES].sort(), ['daisies', 'ferns', 'grass', 'palms', 'petals', 'puffs', 'towers'], 'as silhuetas dos cantos');
   assert.deepEqual(showcase('produto-novo').scenery, {...DEFAULT_SHOWCASE.scenery}, 'produto sem entrada: as pétalas de sempre, sem desenho');
   assert.ok(scenery(showcase('produto-novo').scenery, 9).includes('scenery-petals') && !scenery(showcase('produto-novo').scenery, 9).includes('scenery-back'), 'e a vitrine dele só com os cantos');
   for (let a = 0; a <= 1; a += .05) assert.ok(Math.abs(lum(mixColor('#000000', '#ffffff', a)) - luminance(mixColor('#000000', '#ffffff', a))) < 1e-12, 'a mesma luminância dos testes');
   assert.ok(SCENERY_SHADE > 0 && SCENERY_SHADE <= .08, 'o sombreado do desenho: no máximo 8% da cor do texto');
+  // a borboleta sem nada colorido ("eu não quero coisa colorida. As flores estão com o miolo colorido"): só a sombra, no tom dela
+  assert.deepEqual(showcase('borboletoscopio').scenery.tints, ['#89cdbc'], 'borboleta: sem o amarelo dos miolos');
   const layers = Object.keys(PRODUCTS).map((key, i) => ({key, html: scenery(showcase(key).scenery, i), look: showcase(key).scenery, theme: showcase(key).theme}));
   const allIds = [];
   for (const {key, html, look, theme} of layers) {
@@ -340,21 +344,25 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
     allIds.push(...ids);
     for (const [, ref] of html.matchAll(/url\(#([^)]+)\)/g)) assert.ok(ids.includes(ref), `${key}: o degradê ${ref} está na própria camada`);
-    assert.ok(html.includes(`class="hero-scenery scenery-${look.side}"`) && html.includes(`data-motif="${look.motif}"`) && /<div class="scenery-back"><svg class="scenery-motif" viewBox="-180 -60 360 340"/.test(html), key + ': os cantos e o desenho dentro da raiz, no quadro da pilastra');
+    assert.ok(html.includes(`class="hero-scenery scenery-${look.side}"`) && html.includes(`data-motif="${look.motif}"`) && html.includes('<div class="scenery-back"><svg class="scenery-defs" focusable="false"><defs>'), key + ': os cantos e as silhuetas das bordas dentro da raiz; os degradês num <svg> só de definições');
     // limpo e leve: poucas formas (o navegador pinta uma vez; depois só desliza)
     const shapes = (html.match(/<(path|circle|ellipse)\b/g) || []).length;
-    assert.ok(shapes <= 48, `${key}: ${shapes} formas (no máximo 48)`);
-    // as nuvenzinhas que flutuam: cada uma num <svg> próprio, dentro do <span> que se mexe, no quadro do desenho, com a posição do
-    // celular e o seu tempo
-    const drifts = [...html.matchAll(/<span class="scenery-drift" style="([^"]+)"><svg viewBox="([-\d. ]+)"/g)].map(([, style, box]) => [, box, style]);
+    assert.ok(shapes <= 32, `${key}: ${shapes} formas (no máximo 32)`);
+    // cada silhueta da borda, nuvenzinha e estrelinha é um <span> com o lado, a profundidade na rolagem, o lugar no computador e no
+    // celular e o tamanho do desenho, com um <svg> próprio cujo quadro é esse tamanho
+    const spans = [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-(far|mid)(?: scn-fade)?" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">/g)];
+    assert.equal(spans.length, (html.match(/<span class="scenery-(edge|drift|spark)\b/g) || []).length, key + ': todas no mesmo molde');
+    assert.ok(!/scn-fade/.test(html) || look.motif === 'rainbow' && !/class="scenery-(drift|spark)[^"]*scn-fade/.test(html), key + ': só os arcos do arco-íris se dissolvem antes da borda');
+    for (const [, kind, , depthName, style, vw, vh] of spans) {
+      assert.ok(/^--x:-?[\d.]+;--y:-?[\d.]+;--s:[\d.]+;--cx:-?[\d.]+;--cy:-?[\d.]+;--cs:[\d.]+;--w:[\d.]+;--h:[\d.]+(;--d:\d+(\.\d+)?s;--dl:-?\d+(\.\d+)?s)?$/.test(style), `${key}: ${kind} com o lugar nas duas arrumações (${style})`);
+      assert.ok(style.includes(`--w:${vw};--h:${vh}`), `${key}: o quadro do ${kind} bate com o tamanho dele`);
+      assert.ok(kind === 'edge' || depthName === 'far', `${key}: nuvenzinhas e estrelinhas ficam mais ao longe na rolagem`);
+    }
+    assert.ok((html.match(/class="scenery-edge /g) || []).length >= 2 && /scenery-edge scn-l/.test(html) && /scenery-edge scn-r/.test(html), key + ': silhuetas nas duas bordas');
+    const drifts = spans.filter(([, kind]) => kind === 'drift');
     assert.ok(drifts.length >= 2 && drifts.length <= 3, key + ': duas ou três nuvenzinhas');
     // o que anima nunca é um <svg> (no Chrome, a animação dele não vai para o compositor): as silhuetas dos cantos também num <span>
-    assert.ok(!/<svg class="scenery-(drift|spark|left|right)"/.test(html) && (html.match(/<span class="scenery-(left|right)"><svg viewBox="0 0 360 440"/g) || []).length === 2, key + ': o que se mexe é um <span> em volta do <svg>');
-    for (const [, box, style] of drifts) {
-      const [x, y, w, h] = box.split(' ').map(Number);
-      assert.ok(style.startsWith(`--x:${x};--y:${y};--w:${w};--h:${h};--cx:`) && /--d:\d+s;--dl:-?\d+s/.test(style), key + ': o quadro da nuvenzinha bate com a posição dela');
-      assert.ok(x >= -180 && x + w <= 180 && y >= -40, key + ': nuvenzinha dentro do quadro e abaixo do header');
-    }
+    assert.ok(!/<svg class="scenery-(edge|drift|spark|glint|left|right)"/.test(html) && (html.match(/<span class="scenery-(left|right)"><svg viewBox="0 0 360 440"/g) || []).length === 2, key + ': o que se mexe é um <span> em volta do <svg>');
     // cores: a cor da peça clareada nunca escurece o fundo; o lado da sombra (8% do texto) mantém os textos legíveis
     const vars = sceneryVars(theme, look), [, mid] = stops(theme.bannerStops);
     assert.ok(look.tints.length >= 1 && look.tints.every(c => /^#[0-9a-f]{6}$/i.test(c)), key + ': as cores da peça em #rrggbb');
@@ -376,6 +384,30 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     const tint = lightTint(color, floor), k = [...Array(101).keys()].find(i => luminance(mixColor(color, '#ffffff', i / 100)) >= luminance(floor));
     assert.ok(luminance(tint) >= luminance(floor) && tint === mixColor(color, '#ffffff', k / 100), `lightTint(${color}, ${floor})`);
   }
+  // o arco-íris: as paradas do degradê das faixas sempre crescendo (fora de ordem, o navegador as juntava e só a faixa de fora aparecia)
+  const rainbowHtml = layers.find(({look}) => look.motif === 'rainbow').html;
+  const bands = [...rainbowHtml.matchAll(/<radialGradient id="scn-\d+-bands[lr]"[^>]*>(.*?)<\/radialGradient>/g)];
+  assert.equal(bands.length, 2, 'dois arcos, um em cada borda');
+  for (const [, inner] of bands) {
+    const offsets = [...inner.matchAll(/offset="([\d.]+)"/g)].map(m => +m[1]);
+    assert.ok(offsets.length === 13 && offsets.every((o, i) => i === 0 || o > offsets[i - 1]), 'faixas do arco-íris de dentro para fora');
+    assert.deepEqual([...inner.matchAll(/class="m-t(\d)"/g)].map(m => +m[1]), [3, 2, 1, 4], 'dourado, lavanda, roxo e rosa, de dentro para fora');
+  }
+  assert.equal((rainbowHtml.match(/<span class="scenery-glint" style="left:-?[\d.]+%;top:-?[\d.]+%;width:[\d.]+%;height:[\d.]+%;--turn:-?1">/g) || []).length, 2, 'um brilho que corre por cada arco');
+  // o pé de cada arco no meio da nuvem, acima da base dela (que se dissolve: ali o pé aparecia cortado reto por baixo), e o fim do arco
+  // se dissolvendo antes da borda, com o brilho (acima de 1560 px a borda é a do contêiner: sem isso, um corte reto no meio do fundo)
+  const feet = [...rainbowHtml.matchAll(/fill="url\(#scn-\d+-bands([lr])\)" d="M[\d.]+ ([\d.]+)A[^"]*" mask="url\(#scn-\d+-foot\1\)"\/><path fill="url\(#scn-\d+-c\)" d="M[\d.]+ ([\d.]+)A/g)];
+  assert.equal(feet.length, 2, 'cada arco, com o pé dissolvido (máscara), seguido da nuvem dele');
+  for (const [, , foot, base] of feet) assert.ok(+base - +foot >= 8, `o pé do arco (y ${foot}) bem acima da base da nuvem (y ${base})`);
+  for (const [, k, foot] of feet) assert.ok(new RegExp(`<linearGradient id="scn-\\d+-foot${k}g" gradientUnits="userSpaceOnUse" x1="0" y1="${+foot - 36}" x2="0" y2="${+foot - 6}"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`).test(rainbowHtml), 'as faixas somem antes do pé, dentro da nuvem');
+  assert.equal((rainbowHtml.match(/<span class="scenery-edge scn-[lr] scn-\w+ scn-fade" style="[^"]+"><svg[^>]*>(?:(?!<\/svg>).)*-bands[lr](?:(?!<\/span>).)*<span class="scenery-glint"/g) || []).length, 2, 'os dois arcos (e o brilho deles) se dissolvem antes da borda');
+  assert.ok(css.includes('.scenery-back > .scn-fade.scn-l { -webkit-mask-image:linear-gradient(90deg, transparent, #000 14%); mask-image:linear-gradient(90deg, transparent, #000 14%); }') && css.includes('.scenery-back > .scn-fade.scn-r { -webkit-mask-image:linear-gradient(270deg, transparent, #000 12%); mask-image:linear-gradient(270deg, transparent, #000 12%); }'), 'a máscara do lado de fora de cada arco');
+  // o macaco: só as folhas embaixo e nuvens em forma de banana (nenhuma nuvem comum nas bordas), com o cabinho e a pontinha
+  const bananaHtml = layers.find(({look}) => look.motif === 'bananas').html;
+  assert.ok(!/<span class="scenery-(edge|drift)[^"]*"[^>]*><svg[^>]*>(?:(?!<\/svg>).)*url\(#scn-\d+-c\)/.test(bananaHtml), 'bananas no lugar das nuvens');
+  assert.ok((bananaHtml.match(/class="m-nub"/g) || []).length >= 3 && css.includes('.scenery-back .m-nub { fill:var(--scn-s1); }'), 'o cabinho e a pontinha das bananas na sombra quente da peça');
+  // e as folhas de palmeira embaixo também no computador (mais altas, passavam por trás da seta, do "Comprar" e do preço; medido por pixel)
+  assert.ok(/@media \(min-width: 901px\) \{\r?\n  \.scenery-palms \.scenery-left, \.scenery-palms \.scenery-right \{ bottom:-175px; \}\r?\n\}\r?\n@media \(min-width: 1561px\) \{\r?\n  \.scenery-palms \.scenery-left \{ left:-13%; \}\r?\n  \.scenery-palms \.scenery-right \{ right:-13%; \}/.test(css), 'as folhas do macaco embaixo, longe das setas e dos botões');
   // profundidade no arraste: o desenho anda com a peça a 12% do caminho dela e os cantos a 5%; tudo parado no movimento reduzido
   assert.equal(SCENERY_PARALLAX, .12); assert.equal(SCENERY_EDGE, .05);
   assert.equal(sceneryShift(0, 600), 0);
@@ -385,6 +417,142 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     assert.ok(Math.abs(sceneryShift(d, 600, {depth: SCENERY_EDGE}) - x * .05) < 1e-9, 'os cantos, mais longe, a 5%');
     assert.equal(sceneryShift(d, 600, {reduced: true}), 0, 'movimento reduzido: o desenho não anda');
   }
+
+  // ── tudo nas bordas: nada atrás da peça e da pilastra, das setas, do texto, do preço e dos botões, no computador e no celular ──
+  // As contas do navegador (tools: medido de 360 a 2560 px, hero-scenery.js) em unidades da pilastra: x a partir da borda de cada lado,
+  // y a partir do alto do palco. O contorno de cada desenho sai do próprio SVG (caminhos achatados, com as transformações), na escala da
+  // tela (--m-scale: 0,9 dos 901 aos 1100 px e 0,92 até 600 px), e as nuvenzinhas com a folga do deslizar (9 px para cada lado).
+  const KEEP_OUT = {
+    wide: [
+      {side: 'all', x: [-1e3, 1e3], y: [-1e3, -34], what: 'o header'},
+      {side: 'l', x: [12, 44], y: [118, 152], what: 'a seta da esquerda'}, {side: 'r', x: [13, 44], y: [118, 152], what: 'a seta da direita'},
+      {side: 'l', x: [64, 1e3], y: [18, 178], what: 'o texto, o preço e os botões'},
+      // a peça e a pilastra, à direita: dos 901 aos 1100 px (escala 0,9) a pilastra chega a x 130 e a peça a 165; acima disso, 148 e 183
+      {side: 'r', x: [160, 1e3], y: [-6, 176], what: 'a peça', scale: [.9]}, {side: 'r', x: [128, 1e3], y: [150, 1e3], what: 'a pilastra', scale: [.9]},
+      {side: 'r', x: [178, 1e3], y: [-6, 176], what: 'a peça', scale: [1]}, {side: 'r', x: [146, 1e3], y: [150, 1e3], what: 'a pilastra', scale: [1]},
+      {side: 'l', x: [330, 1e3], y: [-6, 1e3], what: 'a peça e a pilastra'}
+    ],
+    compact: [
+      {side: 'all', x: [-1e3, 1e3], y: [-1e3, -130], what: 'o header'}, {side: 'all', x: [55, 1e3], y: [-1e3, -32], what: 'o título e o subtítulo'}, {side: 'all', x: [74, 1e3], y: [-32, -10], what: 'o preço'},
+      {side: 'all', x: [13, 60], y: [103, 146], what: 'as setas'},
+      {side: 'all', x: [100, 1e3], y: [-6, 176], what: 'a peça'}, {side: 'all', x: [67, 1e3], y: [150, 262], what: 'a pilastra'},
+      {side: 'all', x: [18, 1e3], y: [276, 1e3], what: 'os botões'}
+    ]
+  };
+  const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
+  const parseTransform = text => [...(text || '').matchAll(/(\w+)\(([^)]*)\)/g)].reduce((m, [, fn, args]) => {
+    const v = args.split(/[\s,]+/).filter(Boolean).map(Number), r = (v[0] || 0) * Math.PI / 180;
+    const t = fn === 'translate' ? [1, 0, 0, 1, v[0], v[1] || 0] : fn === 'scale' ? [v[0], 0, 0, v[1] ?? v[0], 0, 0] : fn === 'matrix' ? v
+      : [Math.cos(r), Math.sin(r), -Math.sin(r), Math.cos(r), (v[1] || 0) - (v[1] || 0) * Math.cos(r) + (v[2] || 0) * Math.sin(r), (v[2] || 0) - (v[1] || 0) * Math.sin(r) - (v[2] || 0) * Math.cos(r)];
+    return mul(m, t);
+  }, [1, 0, 0, 1, 0, 0]);
+  // os pontos de um caminho (só os comandos absolutos que hero-scenery.js escreve: M L Q C A Z), as curvas e os arcos amostrados
+  const outline = d => {
+    const tk = d.match(/[MLQCAZ]|-?\d*\.?\d+/g), pts = [];
+    let i = 0, x = 0, y = 0, sx = 0, sy = 0;
+    const num = () => +tk[i++];
+    while (i < tk.length) {
+      const c = tk[i++];
+      if (c === 'M') { x = sx = num(); y = sy = num(); pts.push([x, y]); }
+      else if (c === 'L') { x = num(); y = num(); pts.push([x, y]); }
+      else if (c === 'Q' || c === 'C') {
+        const v = Array.from({length: c === 'Q' ? 4 : 6}, num), [ex, ey] = v.slice(-2);
+        for (let t = .1; t < 1.01; t += .1) {
+          const u = 1 - t;
+          pts.push(c === 'Q' ? [u * u * x + 2 * u * t * v[0] + t * t * ex, u * u * y + 2 * u * t * v[1] + t * t * ey] : [u ** 3 * x + 3 * u * u * t * v[0] + 3 * u * t * t * v[2] + t ** 3 * ex, u ** 3 * y + 3 * u * u * t * v[1] + 3 * u * t * t * v[3] + t ** 3 * ey]);
+        }
+        x = ex; y = ey;
+      } else if (c === 'A') {
+        const [r0, , , large, sweep, ex, ey] = Array.from({length: 7}, num), hx = (ex - x) / 2, hy = (ey - y) / 2, d2 = hx * hx + hy * hy, r = Math.max(r0, Math.sqrt(d2));
+        const f = Math.sqrt(Math.max(0, r * r - d2) / (d2 || 1)) * (large === sweep ? -1 : 1), cx = x + hx - f * hy, cy = y + hy + f * hx;
+        let a1 = Math.atan2(y - cy, x - cx), da = Math.atan2(ey - cy, ex - cx) - a1;
+        if (sweep && da < 0) da += 2 * Math.PI; if (!sweep && da > 0) da -= 2 * Math.PI;
+        for (let k = 1; k <= 12; k++) pts.push([cx + r * Math.cos(a1 + da * k / 12), cy + r * Math.sin(a1 + da * k / 12)]);
+        x = ex; y = ey;
+      } else if (c === 'Z') { x = sx; y = sy; }
+    }
+    return pts;
+  };
+  // os pontos de cada <span> da borda, na unidade da pilastra a partir da borda dele: [lado, tipo, [[x, y], …], profundidade] por arrumação
+  const placed = (html, compact, m) => [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-(\w+)(?: scn-fade)?" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">(.*?)<\/svg>/g)].map(([, kind, side, depth, style, vw, , body]) => {
+    const v = Object.fromEntries([...style.matchAll(/--(\w+):(-?[\d.]+)/g)].map(([, k, n]) => [k, +n])), [x0, y0, s] = compact ? [v.cx, v.cy, v.cs] : [v.x, v.y, v.s];
+    const stack = [[1, 0, 0, 1, 0, 0]], pts = [], slack = kind === 'drift' ? 9 / (compact ? 1.08 : 1.535) : 0;
+    for (const [, close, tag, attrs] of body.matchAll(/<(\/?)(g|path|ellipse|circle|defs|linearGradient|radialGradient|stop)\b([^>]*)>/g)) {
+      if (tag === 'g') { if (close) stack.pop(); else if (!attrs.endsWith('/')) stack.push(mul(stack.at(-1), parseTransform((attrs.match(/transform="([^"]+)"/) || [])[1]))); continue; }
+      if (close || !/^(path|ellipse|circle)$/.test(tag)) continue;
+      const own = mul(stack.at(-1), parseTransform((attrs.match(/transform="([^"]+)"/) || [])[1])), a = name => +(attrs.match(new RegExp(` ${name}="(-?[\\d.]+)"`)) || [])[1];
+      const local = tag === 'path' ? outline(attrs.match(/ d="([^"]+)"/)[1]) : Array.from({length: 16}, (_, k) => [a('cx') + (a('rx') || a('r')) * Math.cos(k * Math.PI / 8), a('cy') + (a('ry') || a('r')) * Math.sin(k * Math.PI / 8)]);
+      const stroke = /stroke="/.test(attrs) ? (+(attrs.match(/stroke-width="([\d.]+)"/) || [])[1] || 3.4) / 2 : 0;
+      for (const [px, py] of local) {
+        const lx = own[0] * px + own[2] * py + own[4], ly = own[1] * px + own[3] * py + own[5];
+        // o quadro do <svg> vai da esquerda para a direita; na direita, a borda é o lado direito dele (a silhueta já vem espelhada)
+        const fromEdge = side === 'r' ? +vw - lx : lx;
+        for (const [ex, ey] of [[-stroke - slack, 0], [stroke + slack, 0], [0, -stroke], [0, stroke]]) pts.push([x0 + (fromEdge + ex) * s * m, y0 + (ly + ey) * s * m]);
+      }
+    }
+    return [side, kind, pts, depth];
+  });
+  // e em todo o caminho da rolagem (SCENERY_SCROLL: frações da altura da vitrine, que mede, em unidades da pilastra, de 556 a 666 no
+  // celular e no tablet e de 401 a 493 no computador): com as silhuetas descendo 6% e 14% da vitrine, no meio da rolagem as
+  // nuvenzinhas passavam por trás das setas
+  const HERO_UNITS = {wide: [401, 493], compact: [556, 666]};
+  for (const {key, html} of layers) for (const [layout, compact, scales] of [['wide', false, [1, .9]], ['compact', true, [1, .92]]]) for (const m of scales) {
+    for (const [side, kind, pts, depth] of placed(html, compact, m)) for (const zone of KEEP_OUT[layout]) {
+      if (zone.side !== 'all' && zone.side !== side || zone.scale && !zone.scale.includes(m)) continue;
+      for (const units of HERO_UNITS[layout]) for (const p of [0, .25, .5, .75, 1]) {
+        const dx = SCENERY_SCROLL[depth].x * units * p, dy = SCENERY_SCROLL[depth].y * units * p;
+        const hit = pts.map(([x, y]) => [x - dx, y + dy]).find(([x, y]) => x > zone.x[0] && x < zone.x[1] && y > zone.y[0] && y < zone.y[1]);
+        assert.ok(!hit, `${key} (${compact ? 'celular' : 'computador'}, escala ${m}${p ? `, ${p * 100}% da rolagem` : ''}): ${kind} da borda ${side === 'l' ? 'esquerda' : 'direita'} em cima de ${zone.what} (${hit && hit.map(n => n.toFixed(0))})`);
+      }
+    }
+  }
+
+  // ── a rolagem da página: cada parte do fundo na sua profundidade, só transform e opacity, recortada na vitrine ──
+  assert.deepEqual(Object.keys(SCENERY_SCROLL).sort(), ['far', 'mid', 'near']);
+  const {near, mid: midDepth, far} = SCENERY_SCROLL;
+  // os cantos ficam embaixo das setas e dos botões: só afundam (subindo 10%, no computador as margaridas e as pegadas passavam por trás
+  // das setas no meio da rolagem)
+  assert.ok(near.y > 0 && near.x === 0 && near.fade < 1 && midDepth.y === 0 && far.y === 0 && midDepth.x > far.x && far.x > 0 && midDepth.fade < 1 && far.fade < 1, 'os cantos afundam um pouco e esmaecem; as bordas só se abrem para fora e esmaecem, e o que está longe se abre mais devagar');
+  assert.ok(Object.values(SCENERY_SCROLL).every(d => Math.abs(d.y) <= .16 && d.x >= 0 && d.x <= .06 && d.fade >= .25 && d.fade < 1), 'de leve: no máximo 16% da altura da vitrine, 6% para fora');
+  assert.deepEqual(sceneryScroll(0, {depth: 'far', side: 1}, 800), {x: 0, y: 0, opacity: 1});
+  assert.deepEqual(sceneryScroll(1, {depth: 'far', side: -1}, 800), {x: -far.x * 800, y: far.y * 800, opacity: far.fade});
+  assert.deepEqual(sceneryScroll(3, {depth: 'near'}, 800), sceneryScroll(1, {depth: 'near'}, 800), 'depois de a vitrine sair, nada mais anda');
+  assert.deepEqual(sceneryScroll(-1, {depth: 'mid', side: 1}, 800), {x: 0, y: 0, opacity: 1}, 'o puxão para baixo no topo não anda');
+  const half = sceneryScroll(.5, {depth: 'mid', side: 1}, 800), whole = sceneryScroll(1, {depth: 'mid', side: 1}, 800);
+  assert.ok(Math.abs(half.y - whole.y / 2) < 1e-9 && Math.abs(half.x - whole.x / 2) < 1e-9 && Math.abs(half.opacity - (1 + whole.opacity) / 2) < 1e-9 && whole.x > 0, 'em linha reta (como o `linear` do CSS), para fora pelo lado');
+  assert.deepEqual(sceneryScroll(.6, {depth: 'near', side: -1}, 800, {reduced: true}), {x: 0, y: 0, opacity: 1}, 'movimento reduzido: tudo no lugar');
+  assert.ok(Object.is(sceneryScroll(.5, {depth: 'near', side: -1}, 800).x, 0), 'nunca -0');
+  // o CSS e o laço do JavaScript com os mesmos números
+  const depthVars = selector => Object.fromEntries(css.split(/\r?\n/).filter(line => line.startsWith(selector + ' {')).flatMap(line => [...line.matchAll(/--(s[xyf]):(-?[\d.]+)/g)].map(([, k, v]) => [k, +v])));
+  assert.deepEqual(depthVars('.scenery-mist'), {sy: near.y, sf: near.fade}, 'os cantos');
+  assert.deepEqual(depthVars('.scenery-back > .scn-mid'), {sy: midDepth.y, sx: midDepth.x, sf: midDepth.fade}, 'as silhuetas das bordas');
+  assert.deepEqual(depthVars('.scenery-back > .scn-far'), {sy: far.y, sx: far.x, sf: far.fade}, 'o que está longe');
+  assert.ok(css.includes('.scenery-back > .scn-l { --sd:-1; }') && css.includes('.scenery-back > .scn-r { --sd:1; }'), 'para fora: a esquerda para a esquerda, a direita para a direita');
+  // só transform e opacity (no compositor), ligadas à rolagem só onde o navegador sabe e sem movimento reduzido
+  assert.ok(/@keyframes scn-scroll \{ to \{ transform:translate3d\([^;]*var\(--sd[^;]*var\(--sx[^;]*var\(--hero-h[^;]*var\(--sy[^;]*\); opacity:var\(--sf, 1\); \} \}/.test(css), 'a rolagem: translate3d e opacity');
+  const scrollAt = css.indexOf('@supports (animation-timeline: scroll()) {'), scrollBlock = css.slice(scrollAt, css.indexOf('\n}', scrollAt));
+  assert.ok(scrollAt > 0 && /^@supports \(animation-timeline: scroll\(\)\) \{\r?\n  @media \(prefers-reduced-motion: no-preference\) \{/.test(scrollBlock), 'só onde o navegador liga a animação à rolagem, e sem movimento reduzido');
+  assert.ok(scrollBlock.includes('.scenery-mist, .scenery-back > .scenery-edge { animation:scn-scroll linear both; animation-timeline:scroll(root block); animation-range:0px var(--hero-h, 720px); }'), 'cantos e bordas: do topo até a vitrine sair da tela');
+  assert.ok(scrollBlock.includes('.scenery-back > .scenery-drift { animation:scn-drift var(--d, 20s) ease-in-out var(--dl, 0s) infinite alternate, scn-scroll linear both; animation-timeline:auto, scroll(root block); animation-range:normal, 0px var(--hero-h, 720px); }') && scrollBlock.includes('.scenery-back > .scenery-spark { animation:scn-twinkle var(--d, 6s) ease-in-out var(--dl, 0s) infinite, scn-lift linear both; animation-timeline:auto, scroll(root block); animation-range:normal, 0px var(--hero-h, 720px); }'), 'as nuvenzinhas e estrelinhas: o movimento delas e a rolagem (a estrelinha só anda; a opacidade é do cintilar)');
+  assert.ok((css.match(/animation-timeline:/g) || []).length === 4 && (scrollBlock.match(/animation-timeline:/g) || []).length === 4, 'a rolagem só nesse bloco (a condição e as três regras)');
+  assert.ok(css.includes('.hero-bg:is(.is-still, .is-moving, .is-scrolling) :is(.scenery-drift, .scenery-spark, .scenery-glint, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-glint, .scenery-mist > span) { animation-play-state:paused, running; }'), 'fora da tela, aba escondida, vitrine andando, página rolando ou camada apagada: o do ambiente para (a rolagem segue)');
+  // rolando, só o que acompanha a rolagem anda (a cada quadro o navegador recalcula o estilo de tudo o que anima): o ambiente volta 200 ms depois
+  assert.ok(js.includes("if (!onScreen || reduced.matches) return;") && js.includes("if (scrollRest) clearTimeout(scrollRest); else bgHost.classList.add('is-scrolling');") && /scrollRest = setTimeout\(\(\) => \{ scrollRest = 0; bgHost\.classList\.remove\('is-scrolling'\); \}, 200\);\r?\n  \}, \{passive: true\}\);/.test(js), 'o ambiente para enquanto a página rola (passivo, só com a vitrine na tela)');
+  // recortado na vitrine: o fundo inteiro dentro da raiz, que tem a altura da vitrine e esconde o que passa dela; a base se dissolve
+  assert.ok(css.includes('.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; }'), 'recortado na altura da vitrine');
+  assert.ok(/\.scenery-back \{ --u:calc\(var\(--scn-ped, 360px\) \/ 200 \* var\(--m-scale, 1\)\); --at:calc\(var\(--scn-ped, 360px\) \/ 200\); position:absolute; inset:0; will-change:translate; transform-origin:var\(--stage-x, 66%\) calc\(var\(--stage-top, 200px\) \+ 90 \* var\(--at\)\);[^}]*mask-image:linear-gradient\(#000 \d+%, transparent\); \}/.test(css), 'as bordas cobrem a vitrine, cada uma na própria camada do compositor; a câmera da demonstração vai até a peça; a base se dissolve');
+  assert.ok(css.includes('.scenery-back > span { position:absolute; top:calc(var(--stage-top, 200px) + var(--y) * var(--at)); width:calc(var(--w) * var(--s, 1) * var(--u)); height:calc(var(--h) * var(--s, 1) * var(--u)); }') && css.includes('.scenery-back > .scn-l { left:calc(max(0px, (100% - 1560px) / 2) + var(--x) * var(--at)); }') && css.includes('.scenery-back > .scn-r { right:calc(max(0px, (100% - 1560px) / 2) + var(--x) * var(--at)); }'), 'cada silhueta presa à borda do seu lado (a do contêiner nas telas largas) e ao alto do palco');
+  assert.ok(/@media \(max-width: 900px\) \{\r?\n  \.scenery-back > span \{ top:calc\(var\(--stage-top, 200px\) \+ var\(--cy\) \* var\(--at\)\); width:calc\(var\(--w\) \* var\(--cs, 1\) \* var\(--u\)\); height:calc\(var\(--h\) \* var\(--cs, 1\) \* var\(--u\)\); \}\r?\n  \.scenery-back > \.scn-l \{ left:calc\(var\(--cx\) \* var\(--at\)\); \}\r?\n  \.scenery-back > \.scn-r \{ right:calc\(var\(--cx\) \* var\(--at\)\); \}/.test(css), 'no celular e no tablet, a arrumação deles');
+  // onde o navegador não liga animação à rolagem: o laço, só então, passivo, um quadro por vez, só transform e opacity e só o que mudou
+  const followJs = js.slice(js.indexOf('const scrollLinked'), js.indexOf('function render()'));
+  assert.ok(followJs.startsWith("const scrollLinked = !!window.CSS?.supports?.('animation-timeline: scroll()');") && followJs.includes("[...layer.querySelectorAll('.scenery-mist, .scenery-back > .scenery-edge')]"), 'o laço só onde falta a animação ligada à rolagem, nos mesmos elementos');
+  assert.ok(followJs.includes("if (!scrollLinked) addEventListener('scroll', () => { scrollFrame ||= requestAnimationFrame(() => follow()); }, {passive: true});"), 'rolagem passiva, um quadro por vez');
+  assert.ok(followJs.includes('const progress = reduced.matches ? 0 : clamp(scrollY / heroHeight, 0, 1);') && followJs.includes('if (progress === followed && !force) return;') && followJs.includes("if (layer.classList.contains('is-off')) return;") && followJs.includes('sceneryScroll(progress, item, heroHeight)'), 'só quando a posição muda, só nas camadas à vista; parado no movimento reduzido');
+  assert.deepEqual([...followJs.matchAll(/put\(item\.el, '([a-z]+)'/g)].map(m => m[1]), ['transform', 'opacity'], 'só transform e opacity, escritos só quando mudam (put)');
+  assert.ok(!/\.style\./.test(followJs), 'nada escrito fora do put');
+  // na medida, o laço vem no quadro seguinte (catchUp): ler scrollY ali, depois das escritas, podia forçar o layout
+  assert.ok(/heroHeight = height;\r?\n    catchUp\(\);/.test(js.slice(js.indexOf('function measure()'), js.indexOf('// Um estilo só é escrito quando muda'))) && js.includes("if (shown) catchUp(); }") && js.includes('report(); catchUp(); });') && js.includes('const catchUp = () => { if (!scrollLinked) { cancelAnimationFrame(scrollFrame); scrollFrame = requestAnimationFrame(() => follow(true)); } };'), 'acompanha a medida da vitrine, a camada que aparece e a troca do movimento reduzido, sempre no quadro seguinte');
+
   // regras do pedido no código: sem nome de produto, palco medido, e o laço de quadros barato (movimento 1): translate direto no desenho e
   // nos cantos, só nas camadas à vista; a camada apagada fora da pintura (content-visibility); estilos escritos só quando mudam; as cores
   // do tema, no meio da troca, só no header e nas setas (o banner inteiro e o rodapé recebem a cor final ao assentar)
@@ -402,33 +570,26 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);") && renderJs.includes('for (const element of live) for (const name in themeNow)') && !renderJs.includes('themed') && reportJs.includes('for (const element of themed) for (const name in themeNow)'), 'cores do tema: header e setas no meio da troca; banner e rodapé ao assentar');
   assert.ok(js.includes("<div class=\"hero-layer${i === initial ? '' : ' is-off'}\""), 'só a camada da abertura nasce na pintura');
   assert.ok(css.includes('.hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }'), 'a camada apagada sai da pintura (content-visibility)');
-  assert.ok(/\.scenery-back \{[^}]*var\(--scn-ped[^}]*left:calc\(var\(--stage-x[^}]*top:calc\(var\(--stage-top[^}]*will-change:translate;/.test(css) && /\.scenery-mist \{[^}]*will-change:translate;/.test(css), 'o desenho no palco; desenho e cantos na própria camada do compositor (o transform da raiz é da demonstração)');
+  assert.ok(/\.scenery-mist \{[^}]*will-change:translate;/.test(css), 'os cantos na própria camada do compositor (o transform da raiz é da demonstração)');
   assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > span { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as silhuetas dos cantos não dimensionam o desenho');
   assert.ok(![...css.matchAll(/([^{}]+)\{[^}]*animation:scn-/g)].some(([, selector]) => /\bsvg\s*$/.test(selector.trim())), 'nenhuma animação do fundo num <svg> (só nos <span> em volta, que vão para o compositor)');
-  // a dinâmica: as nuvenzinhas deslizam e os cantos balançam (só translate, voltas longas) e duas estrelinhas por peça cintilam (só
-  // opacity e scale); param fora da tela, com a aba escondida, com a vitrine andando e na camada apagada; paradas no movimento reduzido
+  // a dinâmica: as nuvenzinhas deslizam e os cantos balançam (só translate, voltas longas), duas estrelinhas por peça cintilam (só
+  // opacity e scale) e, no arco-íris, um brilho gira pelas faixas (só transform e opacity); param fora da tela, com a aba escondida, com a
+  // vitrine andando e na camada apagada; paradas no movimento reduzido
   const keyframes = Object.fromEntries([...css.matchAll(/@keyframes (scn-[a-z]+) \{([^]*?)\}\s*\}/g)].map(m => [m[1], m[2]]));
-  assert.deepEqual(Object.keys(keyframes).sort(), ['scn-drift', 'scn-sway', 'scn-twinkle']);
+  assert.deepEqual(Object.keys(keyframes).sort(), ['scn-drift', 'scn-glint', 'scn-lift', 'scn-scroll', 'scn-sway', 'scn-twinkle']);
   assert.ok(['scn-drift', 'scn-sway'].every(name => (keyframes[name].match(/translate:/g) || []).length === 2 && !/transform|opacity|scale|left|top|width|height|margin/.test(keyframes[name].replace(/translate:/g, ''))), 'só translate no que desliza');
   assert.ok(/opacity:/.test(keyframes['scn-twinkle']) && /scale:/.test(keyframes['scn-twinkle']) && !/transform|translate|left|top|width|height|margin|filter/.test(keyframes['scn-twinkle']), 'só opacity e scale no que cintila');
-  assert.ok([...css.matchAll(/animation:scn-(drift|sway) (?:var\(--d, )?(\d+)s/g)].every(m => Number(m[2]) >= 10) && /animation:scn-twinkle var\(--d, [4-9]s\)/.test(css), 'voltas longas (10 s ou mais; o brilho, alguns segundos)');
-  for (const {key, html} of layers) assert.equal((html.match(/<span class="scenery-spark"/g) || []).length, 2, key + ': duas estrelinhas que cintilam');
-  assert.ok(css.includes('.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > span) { animation-play-state:paused; }'), 'fora da tela, aba escondida, vitrine andando ou camada apagada: param');
+  for (const name of ['scn-glint', 'scn-scroll', 'scn-lift']) assert.ok([...keyframes[name].matchAll(/([a-z-]+):/g)].every(([, prop]) => prop === 'transform' || prop === 'opacity') && /transform:/.test(keyframes[name]), `${name}: só transform e opacity`);
+  assert.ok(!/opacity/.test(keyframes['scn-lift']), 'a estrelinha só anda com a rolagem (a opacidade é do cintilar)');
+  assert.ok([...css.matchAll(/animation:scn-(drift|sway) (?:var\(--d, )?(\d+)s/g)].every(m => Number(m[2]) >= 10) && /animation:scn-twinkle var\(--d, [4-9]s\)/.test(css) && /animation:scn-glint (\d+)s/.test(css) && +css.match(/animation:scn-glint (\d+)s/)[1] >= 8, 'voltas longas (10 s ou mais; o brilho do arco-íris, 8 s ou mais; o das estrelinhas, alguns segundos)');
+  for (const {key, html} of layers) assert.equal((html.match(/<span class="scenery-spark /g) || []).length, 2, key + ': duas estrelinhas que cintilam');
   assert.ok(js.includes("const moving = on => bgHost.classList.toggle('is-moving', on);") && /stop\(\); target = next; moving\(true\);/.test(js) && /gesture\.horizontal = true; stop\(\); moving\(true\);/.test(js) && reportJs.includes('moving(false);'), 'param no arraste e no assentar, e voltam quando a peça assenta');
   assert.ok(css.includes('.palette[inert] .palette-button::after { animation: none; }'), 'o brilho do botão só no da peça à vista');
   assert.ok(js.includes("const rest = () => bgHost.classList.toggle('is-still', document.hidden || !onScreen);") && /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting; rest\(\); \}\)\.observe\(shell\)/.test(js) && /visibilitychange', \(\) => \{\s*rest\(\);/.test(js), 'a vitrine avisa quando sai da tela e quando a aba se esconde');
-  assert.ok(/@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-drift, \.scenery-spark, \.scenery-mist > span \{ animation:none; \}/.test(css), 'movimento reduzido: o fundo parado');
+  assert.ok(/@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-drift, \.scenery-spark, \.scenery-glint, \.scenery-mist > span \{ animation:none; \}/.test(css) && /\.scenery-glint \{ position:absolute; opacity:0;/.test(css), 'movimento reduzido: o fundo parado (e o brilho do arco-íris apagado)');
   assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css) && /@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css), 'o tamanho do desenho acompanha a pilastra em cada tela');
-  // no celular, nada do desenho atrás das setas de vidro nem do preço: cada desenho tem a sua arrumação para essas telas
-  const phone = css.slice(css.search(/@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/));
-  for (const motif of MOTIF_NAMES) assert.ok(phone.includes(`[data-motif="${motif}"]`), `${motif}: arrumado para o celular`);
-  // as nuvenzinhas vão para o lugar do celular em toda tela com o texto acima do palco (até 900 px): no tablet, no lugar do computador,
-  // passavam por trás do preço
-  assert.ok(/@media \(max-width: 900px\) \{\r?\n  \.scenery-back > :is\(\.scenery-drift, \.scenery-spark\) \{ left:calc\(\(var\(--cx, var\(--x\)\) \+ 180\) \* 100% \/ 360\);/.test(phone), 'as nuvenzinhas no lugar delas no celular e no tablet');
-  // dos 901 aos 1100 px os cúmulos baixos do céu saem de trás de "Ver encaixado" (a nuvenzinha alta fica no lugar)
-  assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{[^@]*\[data-motif="sky"\] \.scn-l \{ transform:translate\((\d+)px, (\d+)px\); \}\r?\n  \[data-motif="sky"\] \.scn-a \{ transform:translate\(-\1px, -\2px\); \}/.test(css), 'o céu longe dos botões no notebook pequeno');
-  // as pontinhas das bananas na sombra quente da peça (a do marrom clareado virava cinza)
-  assert.ok(css.includes('.scenery-back .m-nub { fill:var(--scn-s1); }'), 'pontinhas das bananas na cor quente');
+  assert.ok(!/\[data-motif="[a-z]+"\] \.scn-/.test(css), 'sem a arrumação por desenho de antes: cada silhueta traz o lugar dela nas duas telas');
 
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

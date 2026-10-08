@@ -3,7 +3,7 @@
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES, fixedColors} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, SCENERY_EDGE} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, sceneryScroll, SCENERY_EDGE} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -72,7 +72,7 @@ function init() {
 
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
   const bgLayers = [...bgHost.querySelectorAll('.hero-layer')], bandLayers = [...shell.querySelectorAll('[data-hero-band] .hero-layer')];
-  // O desenho em volta da peça e as silhuetas dos cantos de cada camada: o parallax do arraste escreve `translate` direto neles.
+  // As silhuetas das bordas e as dos cantos de cada camada: o parallax do arraste escreve `translate` direto nelas.
   const motifs = bgLayers.map(layer => layer.querySelector('.scenery-back')), edges = bgLayers.map(layer => layer.querySelector('.scenery-mist'));
   // No meio da troca as cores do tema vão só para o header e as setas (o resto do banner e o rodapé recebem a cor final em report()).
   const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);
@@ -158,6 +158,8 @@ function init() {
     put(page, '--scn-ped', `${pedestal}px`);
     travel = Math.max(pedestal * 1.3, viewport * .48);
     rise = Math.max(8, pedestal * .035);
+    heroHeight = height;
+    catchUp();
     render();
     measured();
   }
@@ -173,6 +175,31 @@ function init() {
   let themeNow = {};
   // Enquanto a vitrine anda, as nuvenzinhas e os cantos param (o parallax já os move; assim os quadros não recalculam as animações).
   const moving = on => bgHost.classList.toggle('is-moving', on);
+  // O fundo acompanha a rolagem da página (carousel.css › scn-scroll): os cantos afundam e esmaecem, as silhuetas das bordas se abrem
+  // para fora e esmaecem, cada uma na sua profundidade. Onde o navegador não liga uma animação à rolagem (animation-timeline), este laço faz
+  // o mesmo com os mesmos números (hero-motion.js › sceneryScroll): só na rolagem (passiva), um quadro por vez, só nas camadas à vista
+  // e só quando a posição muda, escrevendo transform e opacity direto nos cantos e nas silhuetas das bordas de cada camada (poucos
+  // elementos) e só o que mudou. Com movimento reduzido, tudo no lugar.
+  const scrollLinked = !!window.CSS?.supports?.('animation-timeline: scroll()');
+  const depthOf = el => ({el, depth: el.classList.contains('scenery-mist') ? 'near' : el.classList.contains('scn-far') ? 'far' : 'mid', side: el.classList.contains('scn-l') ? -1 : el.classList.contains('scn-r') ? 1 : 0});
+  const followers = scrollLinked ? [] : bgLayers.map(layer => [...layer.querySelectorAll('.scenery-mist, .scenery-back > .scenery-edge')].map(depthOf));
+  let heroHeight = 720, scrollFrame = 0, followed = -1;
+  function follow(force = false) {
+    scrollFrame = 0;
+    const progress = reduced.matches ? 0 : clamp(scrollY / heroHeight, 0, 1);
+    if (progress === followed && !force) return;
+    followed = progress;
+    bgLayers.forEach((layer, i) => {
+      if (layer.classList.contains('is-off')) return;
+      for (const item of followers[i]) {
+        const {x, y, opacity} = sceneryScroll(progress, item, heroHeight);
+        put(item.el, 'transform', x || y ? `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)` : '');
+        put(item.el, 'opacity', opacity < 1 ? opacity.toFixed(3) : '');
+      }
+    });
+  }
+  const catchUp = () => { if (!scrollLinked) { cancelAnimationFrame(scrollFrame); scrollFrame = requestAnimationFrame(() => follow(true)); } };
+  if (!scrollLinked) addEventListener('scroll', () => { scrollFrame ||= requestAnimationFrame(() => follow()); }, {passive: true});
   function render() {
     const motion = {reduced: reduced.matches};
     for (let i = 0; i < total; i++) {
@@ -193,7 +220,7 @@ function init() {
       for (const layer of [bgLayers[i], bandLayers[i]]) { put(layer, 'opacity', opacity.toFixed(3)); put(layer, 'zIndex', z); }
       // a camada apagada sai da pintura e para de animar (.is-off: visibility e content-visibility); na que aparece, o desenho
       // acompanha a peça a 12% do caminho e os cantos a 5% (profundidade), cada um no seu translate, parados no movimento reduzido
-      if (bgLayers[i].classList.contains('is-off') === shown) bgLayers[i].classList.toggle('is-off', !shown);
+      if (bgLayers[i].classList.contains('is-off') === shown) { bgLayers[i].classList.toggle('is-off', !shown); if (shown) catchUp(); }
       if (!shown) continue;
       const d = wrapDistance(i, position, total);
       if (motifs[i]) put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`);
@@ -347,11 +374,20 @@ function init() {
   addEventListener('resize', measure);
   if ('ResizeObserver' in window) { const sizes = new ResizeObserver(() => measure()); sizes.observe(shell); sizes.observe(slots[0]); }
   else requestAnimationFrame(measure);
-  reduced.addEventListener('change', () => { stop(); position = target; render(); report(); });
+  reduced.addEventListener('change', () => { stop(); position = target; render(); report(); catchUp(); });
   // As nuvenzinhas e os cantos do fundo só se mexem com o banner na tela e a aba aberta (carousel.css › .hero-bg.is-still).
   let onScreen = true;
   const rest = () => bgHost.classList.toggle('is-still', document.hidden || !onScreen);
   if ('IntersectionObserver' in window) new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; rest(); }).observe(shell);
+  // Enquanto a página rola, o que é do ambiente também para (.is-scrolling) e só o que acompanha a rolagem anda: a cada quadro da
+  // rolagem o navegador recalcula o estilo de tudo o que está animando (medido no Chrome, rolando pela vitrine: de 2870 para 933
+  // elementos recalculados). Volta 200 ms depois do último movimento.
+  let scrollRest = 0;
+  addEventListener('scroll', () => {
+    if (!onScreen || reduced.matches) return;
+    if (scrollRest) clearTimeout(scrollRest); else bgHost.classList.add('is-scrolling');
+    scrollRest = setTimeout(() => { scrollRest = 0; bgHost.classList.remove('is-scrolling'); }, 200);
+  }, {passive: true});
   document.addEventListener('visibilitychange', () => {
     rest();
     if (document.hidden) { stop(); gesture = null; region.classList.remove('is-dragging'); position = target; render(); report(); }
