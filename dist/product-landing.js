@@ -22,6 +22,8 @@ function setup(root, key) {
   // a peça de cores fixas (as lâmpadas): sem partes nem painel de cores — só a foto, o 3D e a compra
   const fixed = !product.parts.length;
   let selection = {...original}, part = product.parts[0]?.id, view = 'photo', viewer = null, viewerImport = null, request = 0;
+  // o grupo de cores à vista: o da cor da parte, a não ser que a pessoa tenha aberto outro para olhar (browsing)
+  let shownGroup = 'solid', browsing = false;
   let spinning = !reduced.matches, onScreen = true, busy = false;
   const isOriginal = () => product.parts.every(p => selection[p.id] === original[p.id]);
   // as cores escolhidas como as da paleta (com o acabamento: o 3D brilha como o filamento)
@@ -145,13 +147,24 @@ function setup(root, key) {
     <div class="pl-custom-head"><p>Escolha a cor de cada parte</p><button type="button" class="pl-reset" data-pl-reset>Restaurar cores</button></div>
     <div class="pl-tabs" role="group" aria-label="Partes da peça">${product.parts.map(p => `<button type="button" data-pl-tab="${p.id}" aria-pressed="false"><i aria-hidden="true"></i><span></span></button>`).join('')}</div>
     <p class="pl-hint" data-pl-hint></p>
-    <div class="pl-palette" role="radiogroup" aria-label="Cores">${PALETTE_GROUPS.map(g => `<span class="pl-palette-group" aria-hidden="true" data-pl-group="${g.id}"></span>` + PALETTE.filter(c => c.group === g.id).map(c => `<button type="button" class="pl-swatch" role="radio" aria-checked="false" data-pl-color="${c.id}"${c.finish ? ` data-finish="${c.finish}"` : ''} style="--swatch:${swatchOf(c)};--check:${isLight(c) ? '#332b32' : '#fff'}"><i aria-hidden="true"></i></button>`).join('')).join('')}</div>
+    <div class="pl-groups" role="group" aria-label="Tipos de cor">${PALETTE_GROUPS.map(g => `<button type="button" data-pl-group="${g.id}" aria-pressed="false" aria-controls="pl-palette"><span></span><i aria-hidden="true"></i></button>`).join('')}</div>
+    <div class="pl-palette" id="pl-palette" role="radiogroup" aria-label="Cores" data-group="solid">${PALETTE.map(c => `<button type="button" class="pl-swatch" role="radio" aria-checked="false" data-pl-color="${c.id}" data-group="${c.group}"${c.finish ? ` data-finish="${c.finish}"` : ''} style="--swatch:${swatchOf(c)};--check:${isLight(c) ? '#332b32' : '#fff'}"><i aria-hidden="true"></i><span class="pl-swatch-name"></span></button>`).join('')}</div>
     <p class="pl-now" data-pl-now aria-live="polite"></p>
   </div></div>`;
   // nomes por textContent/atributo (vêm dos dados, e o i18n.js traduz)
   product.parts.forEach(p => { panel.querySelector(`[data-pl-tab="${p.id}"] span`).textContent = p.name; });
-  PALETTE.forEach(c => { const b = panel.querySelector(`[data-pl-color="${c.id}"]`); b.title = c.name; b.setAttribute('aria-label', c.name); });
-  PALETTE_GROUPS.forEach(g => { panel.querySelector(`[data-pl-group="${g.id}"]`).textContent = g.name; });
+  PALETTE.forEach(c => { const b = panel.querySelector(`[data-pl-color="${c.id}"]`); b.title = c.name; b.setAttribute('aria-label', c.name); b.querySelector('.pl-swatch-name').textContent = c.name; });
+  PALETTE_GROUPS.forEach(g => { panel.querySelector(`[data-pl-group="${g.id}"] span`).textContent = g.name; });
+  // As cores, um grupo de cada vez (foscas, com brilho, multicor): a aba do grupo da cor escolhida leva uma bolinha dela; no Tab, a cor
+  // escolhida, ou a primeira do grupo aberto.
+  function paintGroups() {
+    const chosenColor = color(selection[part]);
+    if (!browsing) shownGroup = chosenColor.group;
+    panel.querySelector('.pl-palette').dataset.group = shownGroup;
+    panel.querySelectorAll('[data-pl-group]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plGroup === shownGroup)); const dot = b.querySelector('i'); dot.hidden = b.dataset.plGroup !== chosenColor.group; dot.style.background = swatchOf(chosenColor); });
+    const shown = [...panel.querySelectorAll(`.pl-swatch[data-group="${shownGroup}"]`)], focus = shown.find(b => b.getAttribute('aria-checked') === 'true') || shown[0];
+    panel.querySelectorAll('[data-pl-color]').forEach(b => { b.tabIndex = b === focus ? 0 : -1; });
+  }
 
   // As bolinhas no canto da peça: na foto, as cores originais (é o que ela mostra); no 3D, as escolhidas, mudando na hora.
   function paintDots() {
@@ -168,7 +181,8 @@ function setup(root, key) {
     const current = product.parts.find(p => p.id === part);
     paintDots();
     panel.querySelectorAll('[data-pl-tab]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plTab === part)); b.querySelector('i').style.background = swatchOf(color(selection[b.dataset.plTab])); });
-    panel.querySelectorAll('[data-pl-color]').forEach(b => { const on = b.dataset.plColor === selection[part]; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
+    panel.querySelectorAll('[data-pl-color]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.plColor === selection[part])));
+    paintGroups();
     panel.querySelector('[data-pl-hint]').textContent = current.hint;
     panel.querySelector('[data-pl-reset]').hidden = isOriginal();
     if (!add.classList.contains('is-added')) add.querySelector('span').textContent = isOriginal() ? 'Adicionar nas cores originais' : 'Adicionar com estas cores';
@@ -219,7 +233,7 @@ function setup(root, key) {
   }
   // A foto mostra só as cores originais: ao escolher uma cor, a peça passa para o 3D.
   function choose(id) {
-    selection = validSelection(key, {...selection, [part]: id});
+    selection = validSelection(key, {...selection, [part]: id}); browsing = false;
     paint(`${product.parts.find(p => p.id === part).name}: ${color(id).name}${color(id).note ? ` · ${color(id).note}` : ''}.`);
     if (view !== '3d') setView('3d');
   }
@@ -233,16 +247,18 @@ function setup(root, key) {
     requestAnimationFrame(() => panel.querySelector('[aria-checked="true"]')?.focus({preventScroll: true}));
   }));
   panel.addEventListener('click', event => {
-    const tab = event.target.closest('[data-pl-tab]'), swatch = event.target.closest('[data-pl-color]');
-    if (tab) { part = tab.dataset.plTab; paint(); }
+    const tab = event.target.closest('[data-pl-tab]'), swatch = event.target.closest('[data-pl-color]'), group = event.target.closest('[data-pl-group]');
+    if (tab) { part = tab.dataset.plTab; browsing = false; paint(); }
+    else if (group) { shownGroup = group.dataset.plGroup; browsing = shownGroup !== color(selection[part]).group; paintGroups(); }
     else if (swatch) choose(swatch.dataset.plColor);
-    else if (event.target.closest('[data-pl-reset]')) { selection = {...original}; paint('Cores originais restauradas para este produto.'); }
+    else if (event.target.closest('[data-pl-reset]')) { selection = {...original}; browsing = false; paint('Cores originais restauradas para este produto.'); }
   });
   // cores como grupo de opções: as setas trocam a cor e levam o foco junto
   panel.querySelector('.pl-palette').addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
     event.preventDefault();
-    const ids = PALETTE.map(c => c.id), i = ids.indexOf(selection[part]), next = ids[(i + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1) + ids.length) % ids.length];
+    const ids = PALETTE.filter(c => c.group === shownGroup).map(c => c.id), i = ids.indexOf(selection[part]), forward = ['ArrowRight', 'ArrowDown'].includes(event.key);
+    const next = ids[i < 0 ? (forward ? 0 : ids.length - 1) : (i + (forward ? 1 : -1) + ids.length) % ids.length];
     choose(next); panel.querySelector(`[data-pl-color="${next}"]`).focus();
   });
 

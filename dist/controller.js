@@ -25,6 +25,8 @@ const calm=matchMedia('(prefers-reduced-motion: reduce)');
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
 let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null,opener=null,trigger=null;
+// O grupo de cores à vista (products.js › PALETTE_GROUPS): o da cor da parte, a não ser que a pessoa tenha aberto outro para olhar (browsing).
+let shownGroup='solid',browsing=false;
 // na aba Foto não há nota embaixo: as fotos falam por si (o nome de cada uma fica nas miniaturas e nos pontinhos, para leitores de tela)
 const gallery=createGallery($('.image-area'));
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
@@ -154,27 +156,39 @@ async function setView(next){
 function renderControls(){
   const p=PRODUCTS[activeProduct];
   $('#part-tabs').replaceChildren(...p.parts.map(part=>{const b=document.createElement('button');b.type='button';b.dataset.part=part.id;b.innerHTML='<span class="part-dot" aria-hidden="true"></span><span></span>';b.lastElementChild.textContent=part.name;return b;}));
-  // as cores em grupos (foscas, com brilho, multicor), o nome de cada grupo antes das bolinhas dele; a bolinha é o degradê do filamento
-  $('#palette').replaceChildren(...PALETTE_GROUPS.flatMap(group=>{const label=document.createElement('span');label.className='palette-group';label.setAttribute('aria-hidden','true');label.textContent=group.name;
-    return [label,...PALETTE.filter(value=>value.group===group.id).map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;if(value.finish)b.dataset.finish=value.finish;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',paint(value));b.style.setProperty('--check',isLight(value)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');b.append(swatch);return b;})];}));
+  // As cores em três grupos (foscas, com brilho, multicor), um de cada vez: as abas trocam o grupo à vista, e a da cor escolhida leva uma
+  // bolinha dela. As foscas são só as bolinhas; nas com brilho e nas multicor (poucas, e de acabamento) a bolinha vem com o nome.
+  $('#palette-groups').replaceChildren(...PALETTE_GROUPS.map(group=>{const b=document.createElement('button');b.type='button';b.dataset.group=group.id;b.setAttribute('aria-controls','palette');b.innerHTML='<span></span><i aria-hidden="true"></i>';b.firstElementChild.textContent=group.name;return b;}));
+  $('#palette').replaceChildren(...PALETTE.map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;b.dataset.group=value.group;if(value.finish)b.dataset.finish=value.finish;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',paint(value));b.style.setProperty('--check',isLight(value)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');const name=document.createElement('span');name.className='swatch-name';name.textContent=value.name;b.append(swatch,name);return b;}));
+  browsing=false;
   $('#presets').replaceChildren(...PRESETS.filter(preset=>preset.id!=='surpresa').map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=paint(color(id));dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
   updateControls();
 }
 function updateControls(){
   const s=selections[activeProduct],p=PRODUCTS[activeProduct],part=p.parts.find(item=>item.id===selectedPart);
   document.querySelectorAll('#part-tabs [data-part]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.part===selectedPart));b.querySelector('.part-dot').style.background=paint(color(s[b.dataset.part]));});
-  document.querySelectorAll('#palette [data-color]').forEach(b=>{const on=b.dataset.color===s[selectedPart];b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;});
-  const chosen=color(s[selectedPart]);$('#selected-color').textContent=`${part.name}: ${chosen.name}${chosen.note?` · ${chosen.note}`:''}`;$('#part-hint').textContent=part.hint;
+  const chosen=color(s[selectedPart]);
+  document.querySelectorAll('#palette [data-color]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.color===s[selectedPart])));
+  paintGroups();
+  $('#selected-color').textContent=`${part.name}: ${chosen.name}${chosen.note?` · ${chosen.note}`:''}`;$('#part-hint').textContent=part.hint;
   $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=paint(color(s[item.id]));i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
   viewer?.update(chosenColors());revealSwatch();
+}
+// O grupo à vista: o da cor escolhida (ou o que a pessoa abriu para olhar); no Tab, a cor escolhida, ou a primeira do grupo aberto.
+function paintGroups(){
+  const chosen=color(selections[activeProduct]?.[selectedPart]);if(!browsing)shownGroup=chosen.group;
+  $('#palette').dataset.group=shownGroup;
+  document.querySelectorAll('#palette-groups [data-group]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.group===shownGroup));const dot=b.querySelector('i');dot.hidden=b.dataset.group!==chosen.group;dot.style.background=paint(chosen);});
+  const shown=[...document.querySelectorAll(`#palette [data-group="${shownGroup}"]`)],focus=shown.find(b=>b.getAttribute('aria-checked')==='true')||shown[0];
+  document.querySelectorAll('#palette [data-color]').forEach(b=>{b.tabIndex=b===focus?0:-1;});
 }
 // No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista. Só lá a fileira rola (product-page.css,
 // até 600 px), e a medida fica para o quadro seguinte: lida logo depois das escritas da janela, ela refazia o layout no meio da
 // abertura (150 ms com a CPU 4x mais lenta, 08/10/2026).
 const swatchRow=matchMedia('(max-width: 600px)');let swatchFrame=0;
-function revealSwatch(){if(!swatchRow.matches)return;cancelAnimationFrame(swatchFrame);swatchFrame=requestAnimationFrame(()=>{const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});}
+function revealSwatch(){if(!swatchRow.matches)return;cancelAnimationFrame(swatchFrame);swatchFrame=requestAnimationFrame(()=>{const row=$('#palette'),b=row.querySelector(`[data-group="${shownGroup}"][aria-checked="true"]`);if(!b){row.scrollTo({left:0});return;}if(row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});}
 // As fotos mostram só as cores da vitrine: ao escolher uma cor, a prévia passa para o 3D.
-function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
+function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);browsing=false;updateControls();save();announce(message);if(view!=='model')setView('model');}
 function chooseColor(id){const c=color(id);applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${c.name}${c.note?` · ${c.note}`:''}.`);}
 
 // ── Painel "Sobre a peça" (abas) ──
@@ -240,10 +254,12 @@ $('.purchase-actions').addEventListener('click',e=>{
   catch{status.textContent='Não foi possível preparar a compra. Verifique o armazenamento do navegador.';}
 },true);
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-$('#part-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-part]');if(!b)return;selectedPart=b.dataset.part;updateControls();});
+$('#part-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-part]');if(!b)return;selectedPart=b.dataset.part;browsing=false;updateControls();});
+// Abrir outro grupo só para olhar: a cor escolhida continua a mesma até tocar numa cor dele.
+$('#palette-groups').addEventListener('click',e=>{const b=e.target.closest('[data-group]');if(!b||!activeProduct)return;shownGroup=b.dataset.group;browsing=shownGroup!==color(selections[activeProduct][selectedPart]).group;paintGroups();revealSwatch();});
 $('#palette').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b)chooseColor(b.dataset.color);});
 // Cores como grupo de opções: as setas trocam a cor e levam o foco junto.
-$('#palette').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const ids=PALETTE.map(c=>c.id),i=ids.indexOf(selections[activeProduct][selectedPart]),next=ids[(i+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+ids.length)%ids.length];chooseColor(next);$(`#palette [data-color="${next}"]`)?.focus();});
+$('#palette').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const ids=PALETTE.filter(c=>c.group===shownGroup).map(c=>c.id),i=ids.indexOf(selections[activeProduct][selectedPart]),forward=['ArrowRight','ArrowDown'].includes(e.key),next=ids[i<0?(forward?0:ids.length-1):(i+(forward?1:-1)+ids.length)%ids.length];chooseColor(next);$(`#palette [data-color="${next}"]`)?.focus();});
 // Compartilhar estas cores: no celular, o menu de compartilhar; no computador, o link copiado.
 $('#share-colors').insertAdjacentHTML('afterbegin',icon('link'));
 $('#share-colors').addEventListener('click',async()=>{

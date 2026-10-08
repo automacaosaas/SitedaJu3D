@@ -19,7 +19,9 @@ assert(/if\(view!=='model'\)setView\('model'\)/.test(js));
 // Preço no Pix com a mesma regra do servidor (pixDiscountBps).
 assert(js.includes("cents-Math.round(cents*COMMERCE.pixDiscountBps/10000)") && js.includes('no Pix`'));
 // Cores como grupo de opções acessível: role=radio, aria-checked, tabindex itinerante e setas.
-assert(dialog.includes('id="palette" role="radiogroup"') && js.includes("b.setAttribute('role','radio')") && js.includes("b.tabIndex=on?0:-1") && /ArrowLeft','ArrowRight','ArrowUp','ArrowDown'/.test(js));
+assert(dialog.includes('id="palette" role="radiogroup"') && js.includes("b.setAttribute('role','radio')") && js.includes("b.tabIndex=b===focus?0:-1") && /ArrowLeft','ArrowRight','ArrowUp','ArrowDown'/.test(js))
+// as cores em grupos, um de cada vez (08/10/2026): as abas trocam o grupo à vista, e a do grupo da cor escolhida leva uma bolinha dela
+assert(dialog.includes('<div class="palette-groups" id="palette-groups" role="group" aria-label="Tipos de cor"></div>') && js.includes("$('#palette').dataset.group=shownGroup") && js.includes("ids=PALETTE.filter(c=>c.group===shownGroup)"), 'palette in groups, one at a time; the arrows stay in the group shown');
 // Combinações prontas.
 for (const [id, name] of [['original', 'Original'], ['pastel', 'Pastel'], ['vibrante', 'Vibrante'], ['surpresa', 'Surpreenda-me']]) assert(js.includes(`{id:'${id}',name:'${name}'`), name);
 // Painel com abas, aberto pelo (i) do topo (Detalhes, Cores, Entrega e Trocas não se repetem embaixo das cores, pedido de 05/10/2026):

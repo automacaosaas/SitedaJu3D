@@ -182,7 +182,11 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   altura da parte (de baixo para cima, como a peça sai da impressora), a dual é um degradê das duas cores do pé ao topo (a mais clara
   em cima, misturada em OKLab, para o meio sair vivo) com as faixas em diagonal do fio que gira, e a pérola tem redemoinhos creme,
   cinza-frio e bege, brilho de tecido e
-  iridescência. Sem `clearcoat`, porque deixava pontinhos escuros nas bordas finas. As bolinhas de cor de todo o site usam `paint(c)` (o
+  iridescência. Sem `clearcoat`, porque deixava pontinhos escuros nas bordas finas. Na personalização (janela da peça na home e
+  página de cada peça), as cores aparecem um grupo de cada vez: abas "Foscas · Com brilho · Multicor" (a do grupo da cor escolhida
+  leva uma bolinha dela; abrir outro grupo só mostra, sem trocar a cor), as foscas em bolinhas e as com brilho e multicor com o nome;
+  no celular, abas na largura toda, a janela com as cores do grupo numa fileira e a página da peça em fileiras e duas colunas; as setas
+  andam dentro do grupo à vista. As bolinhas de cor de todo o site usam `paint(c)` (o
   degradê das cores com brilho e multicor); `tests/asset-models.mjs` confere os acabamentos. A cópia do servidor
   (`api/_lib/catalog.js › COLORS`) tem as mesmas cores, na mesma ordem, em PT, EN e ES.
 - **Vitrine de novidade das lâmpadas de fenda (08/10/2026):** `fenda.html` (endereço curto `/fenda`, que o servidor abre como

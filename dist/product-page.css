@@ -151,10 +151,27 @@
 #product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pd-accent); animation: pd-pick .32s var(--pd-ease); }
 #product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
 #product-dialog .swatch:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 0; }
-/* Os grupos da paleta (products.js › PALETTE_GROUPS): o nome de cada um numa linha, antes das bolinhas dele. As cores com brilho e
-   as multicor trazem o degradê do filamento na bolinha (--swatch) e um reflexo que passa por ela ao chegar perto. */
-#product-dialog #palette .palette-group { flex: 0 0 calc(100% - 8px); margin: 8px 4px 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-#product-dialog #palette .palette-group:first-child { margin-top: 0; }
+/* As cores, um grupo de cada vez (products.js › PALETTE_GROUPS; controller.js troca o grupo à vista): as abas num controle
+   segmentado, a do grupo da cor escolhida com uma bolinha dela; as foscas em bolinhas, duas fileiras no computador (a altura fica
+   guardada, o painel não pula ao trocar de aba); nas com brilho e nas multicor, a bolinha com o nome ao lado. As cores com brilho e as
+   multicor trazem o degradê do filamento na bolinha (--swatch) e um reflexo que passa por ela ao chegar perto. */
+#product-dialog .palette-groups { display: inline-flex; justify-self: start; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--pd-wash) 55%, #f1edef); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-line) 70%, transparent); }
+#product-dialog .palette-groups button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 15px; border: 0; border-radius: 999px; background: transparent; color: var(--pd-muted); font: 600 13px/1 'DM Sans', 'DM Sans Fallback', sans-serif; white-space: nowrap; cursor: pointer; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+#product-dialog .palette-groups button:hover { color: var(--pd-text); }
+#product-dialog .palette-groups button[aria-pressed=true] { background: #fff; color: var(--pd-text); box-shadow: 0 1px 2px rgba(40, 28, 34, .12), 0 3px 10px -4px rgba(40, 28, 34, .18); }
+#product-dialog .palette-groups button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 1px; }
+#product-dialog .palette-groups i { flex: none; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(40, 28, 34, .18); }
+#product-dialog #palette { min-height: 92px; align-content: flex-start; }
+#product-dialog #palette .swatch:not([data-group="solid"]) { display: none; }
+#product-dialog #palette[data-group="shine"] .swatch, #product-dialog #palette[data-group="special"] .swatch { display: none; }
+#product-dialog #palette[data-group="solid"] .swatch[data-group="solid"] { display: grid; }
+#product-dialog #palette[data-group="shine"] .swatch[data-group="shine"], #product-dialog #palette[data-group="special"] .swatch[data-group="special"] { display: inline-flex; flex-direction: row; align-items: center; gap: 9px; width: auto; height: 44px; padding: 0 15px 0 6px; border-radius: 999px; }
+#product-dialog #palette:not([data-group="solid"]) { gap: 6px 4px; }
+#product-dialog #palette:not([data-group="solid"]) .swatch i { flex: none; width: 32px; height: 32px; }
+#product-dialog .swatch-name { display: none; font-size: 13px; font-weight: 600; color: var(--pd-text); white-space: nowrap; }
+#product-dialog #palette:not([data-group="solid"]) .swatch-name { display: inline; }
+#product-dialog #palette:not([data-group="solid"]) .swatch:hover { background: color-mix(in srgb, var(--pd-wash) 45%, #fff); }
+#product-dialog #palette:not([data-group="solid"]) .swatch[aria-checked=true] { background: color-mix(in srgb, var(--pd-wash) 55%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-accent) 35%, transparent); }
 #product-dialog .swatch[data-finish] i { position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
 #product-dialog .swatch[data-finish] i::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); translate: -60% 0; transition: translate .6s var(--pd-ease); pointer-events: none; }
 #product-dialog .swatch[data-finish]:hover i::before, #product-dialog .swatch[data-finish][aria-checked=true] i::before { translate: 60% 0; }
@@ -321,9 +338,12 @@
   #product-dialog #palette { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: -4px 0 -4px -16px; padding: 4px 4px 4px 12px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   #product-dialog #palette::-webkit-scrollbar { display: none; }
   #product-dialog .swatch { scroll-snap-align: start; }
-  /* na fileira que rola, o nome do grupo fica antes das bolinhas dele, separado das do grupo anterior por um traço */
-  #product-dialog #palette .palette-group { flex: none; align-self: center; margin: 0 2px 0 8px; padding-left: 10px; border-left: 1px solid var(--line, #e6dde0); white-space: nowrap; }
-  #product-dialog #palette .palette-group:first-child { margin-left: 4px; padding-left: 0; border-left: 0; }
+  /* no celular: as abas na largura toda e as cores do grupo numa fileira só (as foscas rolam de lado) */
+  #product-dialog .palette-groups { display: flex; justify-self: stretch; }
+  #product-dialog .palette-groups button { flex: 1 1 0; padding: 0 8px; }
+  #product-dialog #palette { min-height: 0; }
+  #product-dialog .pdp-colors-head { flex-wrap: wrap; row-gap: 2px; }
+  #product-dialog #selected-color { flex: 1 0 100%; text-align: left; }
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }

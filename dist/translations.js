@@ -445,6 +445,7 @@ Dual azul e verde|Dual blue and green|Dual azul y verde
 Foscas|Matte|Mates
 Com brilho|With shine|Con brillo
 Multicor|Multicolor|Multicolor
+Tipos de cor|Color types|Tipos de color
 acabamento perolado|pearl finish|acabado perlado
 acabamento metalizado|metallic finish|acabado metalizado
 acabamento seda|silk finish|acabado seda
