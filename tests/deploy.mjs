@@ -241,6 +241,8 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       assert.equal(effective().ORDER_NOTIFY_EMAIL, 'ju@example.com'); assert.deepEqual(leftovers(), []);
     }
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
+}
+
 // The "voltamos já" page (08/10/2026: "uma página de voltamos já bonita e profissional"): when Node is down or too slow,
 // nginx answers with deploy/manutencao.html and a 503 instead of its 502. Nothing of the site is up then, so the page asks
 // for nothing: no script, no stylesheet, font or image from anywhere (the logo is a small data URI); only the contact
