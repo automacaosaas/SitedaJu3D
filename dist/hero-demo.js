@@ -154,9 +154,11 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   }
   // Um "não" (o equipamento passou dos 6,5 s numa rede lenta) não fica guardado: o próximo prepare, o do clique em "Ver encaixado",
   // confere de novo; as imagens que já chegaram respondem na hora (antes, o 1º toque dava erro e só o 2º abria) e a que falhou de
-  // verdade (a rede caiu) é pedida outra vez. O limite é o mesmo: a vitrine fica travada enquanto o clique espera, e não mais que antes.
+  // verdade (a rede caiu) é pedida outra vez, junto com as sombras feitas do mesmo arquivo (drop e shade da frente, a do equipamento
+  // na parede): sem elas, a peça abria sem sombra. O limite é o mesmo: a vitrine fica travada enquanto o clique espera, e não mais
+  // que antes.
   function check() {
-    for (const img of [...dom.images, dom.castImage]) if (img.complete && !img.naturalWidth && img.getAttribute('src')) img.src = img.getAttribute('src');
+    for (const img of [...dom.images, dom.drop, dom.shade, dom.castImage]) if (img.complete && !img.naturalWidth && img.getAttribute('src')) img.src = img.getAttribute('src');
     const ready = dom.ready = Promise.all(dom.images.map(img => imageReady(img, 6500))).then(results => {
       const ok = results.every(Boolean);
       if (dom.ready === ready) dom.failed = !ok;
