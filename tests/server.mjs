@@ -177,6 +177,14 @@ try {
     assert.equal(moved.headers.location, 'https://juimprimepramim.com.br/api/auth/start?lang=en');
   }
   assert.equal((await raw('/api/health', {headers: www, at})).headers.location, 'https://juimprimepramim.com.br/api/health');
+  // Calls from other servers are the exception: the Mercado Pago webhook and the scheduled task reach their handler on www
+  // and answer as on the domain (a 308 would never be followed: no 200 for Mercado Pago, no Authorization for the cron).
+  for (const path of ['/api/payments/webhook?data.id=ORD01ABCDEFGH&type=order', '/api/fila/rodar', '/api/fila/rodar/']) {
+    const [onWww, onDomain] = await Promise.all([www, {host: 'juimprimepramim.com.br'}].map(headers => raw(path, {method: 'POST', headers: {...headers, 'content-type': 'application/json'}, at})));
+    assert.equal(onWww.headers.location, undefined, `${path}: not moved`);
+    assert.deepEqual([onWww.status, onWww.body.toString()], [onDomain.status, onDomain.body.toString()], `${path}: the handler answers on www as on the domain`);
+  }
+  assert.equal((await raw('/api/payments/status?ref=x', {headers: www, at})).status, 301, 'the other payment routes still move');
   for (const headers of [{host: 'WWW.JuImprimePraMim.com.br.:443'}, {host: '127.0.0.1', 'x-forwarded-host': 'www.juimprimepramim.com.br, outro.com'}])
     assert.equal((await raw('/conta.html?x=1', {headers, at})).headers.location, 'https://juimprimepramim.com.br/conta.html?x=1', `moved: ${JSON.stringify(headers)}`);
   for (const host of ['juimprimepramim.com.br', '127.0.0.1', `127.0.0.1:${live.address().port}`, 'localhost:3000', 'wheat-llama-936569.hostingersite.com', 'www.juimprimepramim.com.br.evil.com', 'www.outro-site.com.br']) {

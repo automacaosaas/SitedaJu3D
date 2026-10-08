@@ -50,6 +50,10 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   // cart and the one origin the forms accept (api/_lib/http.js). Only that exact www name moves; 127.0.0.1/localhost (the
   // deploy's health checks), the temporary Hostinger domain and the dev server never match it.
   const mainHost = canonicalHost(env), wwwHost = mainHost && !mainHost.startsWith('www.') ? `www.${mainHost}` : '';
+  // Calls from other servers keep answering on www, as before: no cookie, cart or form origin is involved, and they would
+  // not follow the move (the Mercado Pago webhook wants its 200 and retries otherwise; curl and fetch drop Authorization
+  // when a redirect changes host, so the scheduled /api/fila/rodar would arrive without its secret).
+  const serverToServer = /^\/api\/(?:payments\/webhook|fila\/rodar)\/?$/;
   const handlers = new Map();
   const compressed = new Map();
   let compressedBytes = 0;
@@ -199,7 +203,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     // Same path and query on the domain, with the headers above: 301 for GET/HEAD, 308 (method and body kept) for the rest.
     // Kept by the browser only: a CDN in front must not hand it to other hosts (X-Forwarded-Host can be forged).
-    if (wwwHost && requestHost(req) === wwwHost) {
+    if (wwwHost && requestHost(req) === wwwHost && !serverToServer.test(pathname)) {
       res.statusCode = req.method === 'GET' || req.method === 'HEAD' ? 301 : 308;
       res.setHeader('Location', `https://${mainHost}${req.url.startsWith('/') ? req.url : pathname + search}`);   // "*" or a full URL: the parsed path
       res.setHeader('Cache-Control', 'private, max-age=86400');

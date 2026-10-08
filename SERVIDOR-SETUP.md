@@ -167,7 +167,10 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
 6. **Recomendado: `www` → domínio sem `www` (301).** O endereço oficial das páginas (o `<link rel="canonical">`, o
    `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Desde
    08/10/2026 o próprio site (Node, `server/create-server.cjs`) já responde `301` (GET/HEAD) ou `308` (os outros métodos)
-   para o mesmo caminho sem `www`; o bloco do nginx abaixo continua bom (economiza a ida até o Node). Depois do
+   para o mesmo caminho sem `www`, menos o webhook do Mercado Pago (`/api/payments/webhook`) e a tarefa agendada
+   (`/api/fila/rodar`), que continuam respondendo pelo `www`: o Mercado Pago espera o 200 e não segue o redirecionamento,
+   e o curl tira o `Authorization` quando o endereço muda. O bloco do nginx abaixo continua bom (economiza a ida até o
+   Node), mas redireciona os dois também: no painel do Mercado Pago e no agendador, a URL é sempre a sem `www`. Depois do
    certbot, acrescentar em `/etc/nginx/sites-available/juimprime` um bloco só para o `www`, que manda tudo (sem exceção)
    para o mesmo caminho no domínio sem `www`, e tirar o `www` do `server_name` do bloco principal:
 

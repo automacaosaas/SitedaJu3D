@@ -71,10 +71,14 @@ for (const file of (await readdir(new URL('dist/', root))).filter(f => f.endsWit
 const assetModels = await readFile(new URL('dist/asset-models.js', root), 'utf8');
 if (assetModels.includes('meshopt_decoder')) assert(directives['script-src'].includes("'wasm-unsafe-eval'"), "script-src has 'wasm-unsafe-eval' for the Meshopt decoder");
 
-// E-mail logos load from the public site (api/_lib/mail.js DEFAULT_SITE); the dev e-mail preview shows them in a frame.
-// Since 2026-10-08 that is the shop's own domain (COMPANY.website), the site itself ('self') once live; any other must be listed.
-const load = createRequire(import.meta.url), {DEFAULT_SITE: site} = load('../api/_lib/mail.js'), {COMPANY} = load('../api/_lib/legal.js');
-assert(site === COMPANY.website || allows('img-src', new URL(site).origin), `img-src allows the public site ${site}`);
+// E-mail logos load from the public site (api/_lib/mail.js assetUrl); the dev e-mail preview shows them in a frame. With
+// SITE_URL that is the site itself ('self'); without it (a preview, a server not configured yet) it is DEFAULT_SITE, the
+// shop's own domain since 2026-10-08 (COMPANY.website), which must be listed.
+const {config: mailConfig} = createRequire(import.meta.url)('../api/_lib/mail.js');
+for (const env of [{}, {APP_ENV: 'preview'}, {VERCEL_ENV: 'preview', VERCEL_URL: 'ju-abc.vercel.app'}]) {
+  const site = new URL(mailConfig(env).assetUrl).origin;
+  assert(allows('img-src', site), `img-src allows the e-mail logo's site ${site} (${JSON.stringify(env)})`);
+}
 assert(allows('img-src', 'data:') && allows('img-src', 'blob:'), 'cart thumbnails (data:) and 3D textures (blob:)');
 
 // Heavy files: images and models are cached, then refreshed in the background.
