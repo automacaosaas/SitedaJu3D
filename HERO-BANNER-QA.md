@@ -222,7 +222,7 @@ página. Nada de ilustração colorida detalhada (a pata laranja com garras cinz
 | Peça | Cantos (`side`) | Em volta da peça (`motif`) |
 | --- | --- | --- |
 | GiraffeLamp | `grass`: o capim alto de que o dono gostou | `acacia`: o sol, a acácia com a copa em camadas de nuvem, uma acácia pequena ao longe e capim no pé da pilastra |
-| MonkeyLamp | `palms`: folhas de palmeira arqueando dos cantos | `bananas`: um cacho de bananas deitado numa nuvem (e uma menor do outro lado), com o cabinho e as pontinhas no tom da peça |
+| MonkeyLamp | `palms`: folhas de palmeira arqueando dos cantos | `bananas`: um cacho de bananas abertas em leque, deitado numa nuvem (e um menor do outro lado), com o cabinho e as pontinhas no tom quente da peça |
 | UnicornLamp | `puffs`: nuvens fofas baixas | `rainbow`: arco-íris de faixas de nuvem, brancas com um fio das cores da peça, nuvens fofas nos pés e brilhos |
 | Borboletoscópio | `daisies`: margaridas de pétalas brancas | `flowers`: margaridas dos dois lados, os miolos num amarelo bem claro, as hastes nascendo de nuvens |
 | Dinossauroscópio | `ferns`: samambaias pré-históricas | `tracks`: a pegada de três dedos do T-rex, macia como nuvem, e outra menor adiante (o rastro); samambaias à esquerda |
@@ -233,12 +233,15 @@ página. Nada de ilustração colorida detalhada (a pata laranja com garras cinz
   miúdos. SVG em linha, sem filtros, 14 a 34 formas por cena (60 a 90 nós por camada, antes cerca de 170). `tests/carousel.cjs` confere: só branco ou degradês da própria
   camada, paradas brancas ou no tom da peça, sem as classes dos desenhos coloridos de antes, e o contraste dos textos.
 - **Dinâmica:** em cada cena, duas ou três nuvenzinhas deslizam 9 px para cada lado em voltas de 19 a 27 s, os cantos balançam
-  4 px em 13 s e duas estrelinhas cintilam (opacity e scale, 5 a 7 s). Cada uma é um `<svg>` pequeno e próprio, então o navegador
-  só desliza a camada (sem redesenhar). Tudo para com o banner fora da tela, com a aba escondida (`.hero-bg.is-still`), enquanto a
+  4 px em 13 s e duas estrelinhas cintilam (opacity e scale, 5 a 7 s). Cada uma é um `<svg>` pequeno e próprio dentro de um
+  `<span>`, e o que anima é o `<span>`: no Chrome, uma animação no próprio `<svg>` não vai para o compositor (medido na revisão:
+  parado, 58 recálculos de estilo por segundo; com o `<span>`, 2). Tudo para com o banner fora da tela, com a aba escondida (`.hero-bg.is-still`), enquanto a
   vitrine anda (`.is-moving`) e na camada apagada (`.is-off`). No arraste o desenho acompanha a peça a 12% do caminho e os cantos
   a 5%. Com movimento reduzido nada se mexe (só o cruzamento de opacidade entre as cenas).
 - **Celular:** até 760 px as setas de vidro alcançam o desenho. Cada cena tem uma arrumação própria nessas telas (CSS:
-  `[data-motif] .scn-*` e `--cx/--cy` das nuvenzinhas), sem nada atrás das setas nem do preço.
+  `[data-motif] .scn-*`), sem nada atrás das setas nem do preço. As nuvenzinhas e estrelinhas vão para o lugar do celular
+  (`--cx/--cy`) até 900 px, em toda tela com o texto acima do palco (no tablet, no lugar do computador, passavam por trás do preço).
+  Dos 901 aos 1100 px os cúmulos baixos do céu do avião descem e chegam para a pilastra, saindo de trás de "Ver encaixado".
 - **Laço de quadros mais leve (revisão "movimento" 1):** o parallax escreve `translate` direto no desenho e nos cantos, só nas
   duas camadas à vista (antes era a variável herdada `--scn-x` nas seis). As camadas apagadas saem da pintura com
   `content-visibility: hidden` e só a camada da abertura nasce na pintura. Cada estilo só é escrito quando muda. As cores do tema,

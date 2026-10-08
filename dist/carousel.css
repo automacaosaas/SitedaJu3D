@@ -240,7 +240,9 @@
 .hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }
 /* O parallax do arraste (carousel.js) escreve `translate` direto nos cantos e no desenho, cada um na sua camada do compositor. */
 .scenery-mist { position:absolute; inset:0; will-change:translate; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
-.scenery-mist > svg { position:absolute; width:clamp(240px,32vw,510px); animation:scn-sway 13s ease-in-out infinite alternate; }
+.scenery-mist > span { position:absolute; width:clamp(240px,32vw,510px); animation:scn-sway 13s ease-in-out infinite alternate; }
+/* o que se mexe é o <span>: uma animação no próprio <svg> não vai para o compositor do Chrome (recalculava o estilo a cada quadro) */
+.scenery-mist > span > svg { display:block; width:100%; height:auto; aspect-ratio:360 / 440; }
 .scenery-mist > .scenery-right { animation-delay:-6.5s; }
 .hero-scenery .scenery-left { left:-10%; bottom:-90px; transform:rotate(-18deg); }
 .hero-scenery .scenery-right { right:-10%; bottom:-125px; transform:scaleX(-1) rotate(-24deg); opacity:.82; }
@@ -272,28 +274,33 @@
   -webkit-mask-image:linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(transparent, #000 11%, #000 86%, transparent); -webkit-mask-composite:source-in; -webkit-mask-repeat:no-repeat; mask-image:linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(transparent, #000 11%, #000 86%, transparent); mask-composite:intersect; mask-repeat:no-repeat; }
 .scenery-back > svg { display:block; width:100%; height:100%; }
 /* As nuvenzinhas: cada uma no seu quadro (--x/--y/--w/--h, em unidades do desenho; --cx/--cy no celular), deslizando devagar. */
-.scenery-back > :is(.scenery-drift, .scenery-spark) { position:absolute; left:calc((var(--x) + 180) * 100% / 360); top:calc((var(--y) + 60) * 100% / 340); width:calc(var(--w) * 100% / 360); height:calc(var(--h) * 100% / 340); overflow:visible; }
+.scenery-back > :is(.scenery-drift, .scenery-spark) { position:absolute; left:calc((var(--x) + 180) * 100% / 360); top:calc((var(--y) + 60) * 100% / 340); width:calc(var(--w) * 100% / 360); height:calc(var(--h) * 100% / 340); }
+.scenery-back > span > svg { display:block; width:100%; height:100%; overflow:visible; }
 .scenery-back > .scenery-drift { animation:scn-drift var(--d, 20s) ease-in-out var(--dl, 0s) infinite alternate; }
 /* e duas estrelinhas por peça cintilam devagar (só opacity e scale) */
 .scenery-back > .scenery-spark { animation:scn-twinkle var(--d, 6s) ease-in-out var(--dl, 0s) infinite; }
 @keyframes scn-drift { from { translate:-9px 0; } to { translate:9px 0; } }
 @keyframes scn-sway { from { translate:-4px 1px; } to { translate:4px -1px; } }
 @keyframes scn-twinkle { 0%, 100% { opacity:.35; scale:.72; } 50% { opacity:1; scale:1; } }
-.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > svg), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > svg) { animation-play-state:paused; }
+.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > span) { animation-play-state:paused; }
 /* As cores: branco e, só nas sombras e no fio das faixas do arco-íris, o tom claro da peça (carousel.js › sceneryVars: --scn-tN,
-   nunca mais escuro que o meio do degradê); o cabinho e as pontinhas das bananas no lado da sombra (--scn-s3, 7% do texto). */
+   nunca mais escuro que o meio do degradê); o cabinho e as pontinhas das bananas no lado da sombra da cor quente da peça (--scn-s1,
+   7% do texto; a do marrom clareado virava um cinza frio, de borracha). */
 .scenery-back .m-t1 { stop-color:var(--scn-t1); }
 .scenery-back .m-t2 { stop-color:var(--scn-t2); }
 .scenery-back .m-t3 { stop-color:var(--scn-t3); }
 .scenery-back .m-t4 { stop-color:var(--scn-t4); }
 .scenery-back .m-shade { fill:none; stroke:var(--scn-t1); stroke-width:2.4; stroke-linecap:round; opacity:.55; }
-.scenery-back .m-nub { fill:var(--scn-s3); }
+.scenery-back .m-nub { fill:var(--scn-s1); }
 .scenery-back .m-trail { fill:none; stroke-width:3.4; stroke-linecap:round; stroke-dasharray:0 8.5; }
 /* Cada desenho no seu lugar, em cada tela (as medidas do desenho estão em hero-scenery.js). Dos 901 aos ~1365 px os botões
    chegam perto da pilastra, à esquerda: nada do desenho desce ali (o arco-íris fica menor e sobe um pouco, com as nuvens acima
    deles e o alto abaixo da faixa do header). */
 @media (min-width: 901px) and (max-width: 1100px) {
   .scenery-back { --m-scale:.9; }
+  /* os cúmulos baixos do céu descem e chegam para a pilastra, saindo de trás de "Ver encaixado" (a nuvenzinha alta fica onde está) */
+  [data-motif="sky"] .scn-l { transform:translate(22px, 30px); }
+  [data-motif="sky"] .scn-a { transform:translate(-22px, -30px); }
 }
 @media (min-width: 901px) and (max-width: 1365px) {
   [data-motif="rainbow"] .scenery-back { --m-scale:.82; --m-dy:-15; }
@@ -305,11 +312,14 @@
 @media (max-width: 600px) {
   .scenery-back { --m-scale:.92; }
 }
-/* Até 760 px as setas de vidro ainda alcançam o desenho: em unidades do desenho (px aqui = unidade) elas ficam em x ±114…170,
-   y 100…154, e o preço logo acima de y 0. Os grupos dos lados de cada desenho mudam de lugar (para o alto, perto da peça, ou para o
-   pé da pilastra) e as nuvenzinhas e estrelinhas vão para o lugar delas no celular (--cx/--cy). */
-@media (max-width: 760px) {
+/* Até 900 px o texto fica acima do palco, com o preço logo acima de y 0: as nuvenzinhas e estrelinhas vão para o lugar delas no
+   celular (--cx/--cy), longe do preço (no lugar do computador, algumas passavam por trás dele no tablet). */
+@media (max-width: 900px) {
   .scenery-back > :is(.scenery-drift, .scenery-spark) { left:calc((var(--cx, var(--x)) + 180) * 100% / 360); top:calc((var(--cy, var(--y)) + 60) * 100% / 340); }
+}
+/* Até 760 px as setas de vidro ainda alcançam o desenho: em unidades do desenho (px aqui = unidade) elas ficam em x ±114…170,
+   y 100…154. Os grupos dos lados de cada desenho mudam de lugar (para o alto, perto da peça, ou para o pé da pilastra). */
+@media (max-width: 760px) {
   [data-motif="flowers"] .scn-l { transform:translate(-113px, 88px) scale(.8) translate(113px, -148px); }
   [data-motif="flowers"] .scn-rm { display:none; }
   [data-motif="tracks"] .scn-l { transform:translate(-104px, 246px) scale(.7) translate(104px, -148px); }
@@ -325,7 +335,7 @@
   [data-motif="rainbow"] .scn-r { transform:translate(-14px, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scenery-drift, .scenery-spark, .scenery-mist > svg { animation:none; }
+  .scenery-drift, .scenery-spark, .scenery-mist > span { animation:none; }
 }
 
 /* Nossa coleção: só o card do centro ganha as cores da sua peça (catalog.js põe --rail-own-*, as mesmas do banner); os

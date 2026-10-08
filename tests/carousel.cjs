@@ -341,9 +341,12 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     // limpo e leve: poucas formas (o navegador pinta uma vez; depois só desliza)
     const shapes = (html.match(/<(path|circle|ellipse)\b/g) || []).length;
     assert.ok(shapes <= 48, `${key}: ${shapes} formas (no máximo 48)`);
-    // as nuvenzinhas que flutuam: cada uma num <svg> próprio, no quadro do desenho, com a posição do celular e o seu tempo
-    const drifts = [...html.matchAll(/<svg class="scenery-drift" viewBox="([-\d. ]+)" style="([^"]+)"/g)];
+    // as nuvenzinhas que flutuam: cada uma num <svg> próprio, dentro do <span> que se mexe, no quadro do desenho, com a posição do
+    // celular e o seu tempo
+    const drifts = [...html.matchAll(/<span class="scenery-drift" style="([^"]+)"><svg viewBox="([-\d. ]+)"/g)].map(([, style, box]) => [, box, style]);
     assert.ok(drifts.length >= 2 && drifts.length <= 3, key + ': duas ou três nuvenzinhas');
+    // o que anima nunca é um <svg> (no Chrome, a animação dele não vai para o compositor): as silhuetas dos cantos também num <span>
+    assert.ok(!/<svg class="scenery-(drift|spark|left|right)"/.test(html) && (html.match(/<span class="scenery-(left|right)"><svg viewBox="0 0 360 440"/g) || []).length === 2, key + ': o que se mexe é um <span> em volta do <svg>');
     for (const [, box, style] of drifts) {
       const [x, y, w, h] = box.split(' ').map(Number);
       assert.ok(style.startsWith(`--x:${x};--y:${y};--w:${w};--h:${h};--cx:`) && /--d:\d+s;--dl:-?\d+s/.test(style), key + ': o quadro da nuvenzinha bate com a posição dela');
@@ -393,7 +396,8 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("<div class=\"hero-layer${i === initial ? '' : ' is-off'}\""), 'só a camada da abertura nasce na pintura');
   assert.ok(css.includes('.hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }'), 'a camada apagada sai da pintura (content-visibility)');
   assert.ok(/\.scenery-back \{[^}]*var\(--scn-ped[^}]*left:calc\(var\(--stage-x[^}]*top:calc\(var\(--stage-top[^}]*will-change:translate;/.test(css) && /\.scenery-mist \{[^}]*will-change:translate;/.test(css), 'o desenho no palco; desenho e cantos na própria camada do compositor (o transform da raiz é da demonstração)');
-  assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > svg { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as silhuetas dos cantos não dimensionam o desenho');
+  assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > span { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as silhuetas dos cantos não dimensionam o desenho');
+  assert.ok(![...css.matchAll(/([^{}]+)\{[^}]*animation:scn-/g)].some(([, selector]) => /\bsvg\s*$/.test(selector.trim())), 'nenhuma animação do fundo num <svg> (só nos <span> em volta, que vão para o compositor)');
   // a dinâmica: as nuvenzinhas deslizam e os cantos balançam (só translate, voltas longas) e duas estrelinhas por peça cintilam (só
   // opacity e scale); param fora da tela, com a aba escondida, com a vitrine andando e na camada apagada; paradas no movimento reduzido
   const keyframes = Object.fromEntries([...css.matchAll(/@keyframes (scn-[a-z]+) \{([^]*?)\}\s*\}/g)].map(m => [m[1], m[2]]));
@@ -401,17 +405,23 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(['scn-drift', 'scn-sway'].every(name => (keyframes[name].match(/translate:/g) || []).length === 2 && !/transform|opacity|scale|left|top|width|height|margin/.test(keyframes[name].replace(/translate:/g, ''))), 'só translate no que desliza');
   assert.ok(/opacity:/.test(keyframes['scn-twinkle']) && /scale:/.test(keyframes['scn-twinkle']) && !/transform|translate|left|top|width|height|margin|filter/.test(keyframes['scn-twinkle']), 'só opacity e scale no que cintila');
   assert.ok([...css.matchAll(/animation:scn-(drift|sway) (?:var\(--d, )?(\d+)s/g)].every(m => Number(m[2]) >= 10) && /animation:scn-twinkle var\(--d, [4-9]s\)/.test(css), 'voltas longas (10 s ou mais; o brilho, alguns segundos)');
-  for (const {key, html} of layers) assert.equal((html.match(/<svg class="scenery-spark"/g) || []).length, 2, key + ': duas estrelinhas que cintilam');
-  assert.ok(css.includes('.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > svg), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > svg) { animation-play-state:paused; }'), 'fora da tela, aba escondida, vitrine andando ou camada apagada: param');
+  for (const {key, html} of layers) assert.equal((html.match(/<span class="scenery-spark"/g) || []).length, 2, key + ': duas estrelinhas que cintilam');
+  assert.ok(css.includes('.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > span) { animation-play-state:paused; }'), 'fora da tela, aba escondida, vitrine andando ou camada apagada: param');
   assert.ok(js.includes("const moving = on => bgHost.classList.toggle('is-moving', on);") && /stop\(\); target = next; moving\(true\);/.test(js) && /gesture\.horizontal = true; stop\(\); moving\(true\);/.test(js) && reportJs.includes('moving(false);'), 'param no arraste e no assentar, e voltam quando a peça assenta');
   assert.ok(css.includes('.palette[inert] .palette-button::after { animation: none; }'), 'o brilho do botão só no da peça à vista');
   assert.ok(js.includes("const rest = () => bgHost.classList.toggle('is-still', document.hidden || !onScreen);") && /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting; rest\(\); \}\)\.observe\(shell\)/.test(js) && /visibilitychange', \(\) => \{\s*rest\(\);/.test(js), 'a vitrine avisa quando sai da tela e quando a aba se esconde');
-  assert.ok(/@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-drift, \.scenery-spark, \.scenery-mist > svg \{ animation:none; \}/.test(css), 'movimento reduzido: o fundo parado');
+  assert.ok(/@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-drift, \.scenery-spark, \.scenery-mist > span \{ animation:none; \}/.test(css), 'movimento reduzido: o fundo parado');
   assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css) && /@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css), 'o tamanho do desenho acompanha a pilastra em cada tela');
   // no celular, nada do desenho atrás das setas de vidro nem do preço: cada desenho tem a sua arrumação para essas telas
   const phone = css.slice(css.search(/@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/));
   for (const motif of MOTIF_NAMES) assert.ok(phone.includes(`[data-motif="${motif}"]`), `${motif}: arrumado para o celular`);
-  assert.ok(phone.includes('left:calc((var(--cx, var(--x)) + 180) * 100% / 360)'), 'as nuvenzinhas no lugar delas no celular');
+  // as nuvenzinhas vão para o lugar do celular em toda tela com o texto acima do palco (até 900 px): no tablet, no lugar do computador,
+  // passavam por trás do preço
+  assert.ok(/@media \(max-width: 900px\) \{\r?\n  \.scenery-back > :is\(\.scenery-drift, \.scenery-spark\) \{ left:calc\(\(var\(--cx, var\(--x\)\) \+ 180\) \* 100% \/ 360\);/.test(phone), 'as nuvenzinhas no lugar delas no celular e no tablet');
+  // dos 901 aos 1100 px os cúmulos baixos do céu saem de trás de "Ver encaixado" (a nuvenzinha alta fica no lugar)
+  assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{[^@]*\[data-motif="sky"\] \.scn-l \{ transform:translate\((\d+)px, (\d+)px\); \}\r?\n  \[data-motif="sky"\] \.scn-a \{ transform:translate\(-\1px, -\2px\); \}/.test(css), 'o céu longe dos botões no notebook pequeno');
+  // as pontinhas das bananas na sombra quente da peça (a do marrom clareado virava cinza)
+  assert.ok(css.includes('.scenery-back .m-nub { fill:var(--scn-s1); }'), 'pontinhas das bananas na cor quente');
 
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

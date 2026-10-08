@@ -4,7 +4,8 @@
 //  · as silhuetas dos cantos (`side`: capim, palmeira, nuvens, margaridas, samambaias…), presas embaixo, nas bordas da vitrine;
 //  · em volta da peça, o desenho dela (`motif`, de SHOWCASE em products.js — aqui não há nome de produto), dentro de .scenery-back;
 //  · e as nuvenzinhas que flutuam e as estrelinhas que cintilam, cada uma num <svg> pequeno e próprio: o CSS só as desliza ou
-//    acende (transform e opacity), nada é redesenhado.
+//    acende (transform e opacity), nada é redesenhado. O que se mexe é sempre um <span> em volta do <svg> (também nas silhuetas dos
+//    cantos): no Chrome, uma animação no próprio <svg> não vai para o compositor e recalculava o estilo a cada quadro, sem parar.
 // Cores: branco translúcido. Só o lado da sombra, bem de leve, no tom claro da peça (--scn-tN, nunca mais escuro que o meio do
 // degradê: hero-motion.js › sceneryVars), então o desenho só clareia o fundo e nunca tira contraste de um texto. As bordas se
 // dissolvem por degradês e pela máscara do CSS (carousel.css › .scenery-back).
@@ -13,8 +14,8 @@
 // A peça ocupa y 0–172 (lâmpadas: corpo ±31, orelhas ±47; borboleta: asas ±65; dinossauro: cabeça ±43); a pilastra, x ±100 a partir
 // de y 152. No computador o texto fica à esquerda de x −205 (dos 901 aos 1100 px os botões chegam a x −143, de y 140 a 176) e o
 // header acima de y −30. No celular e no tablet estreito (até 760 px) o preço fica logo acima de y 0 e as setas em x ±114…170,
-// y 100…154: para essas telas os grupos (.scn-l, .scn-r…) de cada desenho mudam de lugar no CSS e as nuvenzinhas e estrelinhas têm
-// posição própria (--cx/--cy).
+// y 100…154: para essas telas os grupos (.scn-l, .scn-r…) de cada desenho mudam de lugar no CSS; as nuvenzinhas e estrelinhas têm
+// posição própria (--cx/--cy) em toda tela com o texto acima do palco (até 900 px), longe do preço.
 const VIEW = '-180 -60 360 340';
 const n = value => +value.toFixed(1);
 const rad = deg => deg * Math.PI / 180;
@@ -105,13 +106,13 @@ const glow = (uid, x, y, rx, ry = rx) => `<ellipse cx="${x}" cy="${y}" rx="${rx}
 const drift = (uid, x, y, w, h, {c, d = 18, dl = 0, o = 1, angles} = {}) => {
   const box = ([bx, by]) => [n(bx - w * .6), n(by - h - w * .24)], [vx, vy] = box([x, y]), vw = n(w * 1.2), vh = n(h + w * .24 + 1);
   const compact = c ? `;--cx:${box(c)[0]};--cy:${box(c)[1]}` : '';
-  return `<svg class="scenery-drift" viewBox="${vx} ${vy} ${vw} ${vh}" style="--x:${vx};--y:${vy};--w:${vw};--h:${vh}${compact};--d:${d}s;--dl:${-dl}s${o < 1 ? `;opacity:${o}` : ''}" focusable="false"><path ${F(uid, 'c')} d="${cumulus(x, y, w, h, angles)}"/></svg>`;
+  return `<span class="scenery-drift" style="--x:${vx};--y:${vy};--w:${vw};--h:${vh}${compact};--d:${d}s;--dl:${-dl}s${o < 1 ? `;opacity:${o}` : ''}"><svg viewBox="${vx} ${vy} ${vw} ${vh}" focusable="false"><path ${F(uid, 'c')} d="${cumulus(x, y, w, h, angles)}"/></svg></span>`;
 };
 
 // brilho que cintila: a estrelinha num <svg> próprio (o CSS só muda opacity e scale, devagar); c = [x, y] no celular
 const spark = (x, y, s, {c, d = 5, dl = 0} = {}) => {
   const r = n(9 * s + 1), at = ([px, py]) => [n(px - r), n(py - r)], [vx, vy] = at([x, y]), compact = c ? `;--cx:${at(c)[0]};--cy:${at(c)[1]}` : '';
-  return `<svg class="scenery-spark" viewBox="${vx} ${vy} ${n(2 * r)} ${n(2 * r)}" style="--x:${vx};--y:${vy};--w:${n(2 * r)};--h:${n(2 * r)}${compact};--d:${d}s;--dl:${-dl}s" focusable="false">${sparkle(x, y, s, 1)}</svg>`;
+  return `<span class="scenery-spark" style="--x:${vx};--y:${vy};--w:${n(2 * r)};--h:${n(2 * r)}${compact};--d:${d}s;--dl:${-dl}s"><svg viewBox="${vx} ${vy} ${n(2 * r)} ${n(2 * r)}" focusable="false">${sparkle(x, y, s, 1)}</svg></span>`;
 };
 
 // ── silhuetas dos cantos (quadro 360 × 440, presas embaixo; a da direita é espelhada no CSS) ──
@@ -136,7 +137,7 @@ const SIDES = {petals: blossom, grass, ferns, palms, puffs, towers, daisies};
 
 const mists = (side, uid) => `<div class="scenery-mist">${['left', 'right'].map(at => {
   const id = `scn-${uid}-mist-${at}`;
-  return `<svg class="scenery-${at}" viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${(SIDES[side] || SIDES.petals)()}</g></svg>`;
+  return `<span class="scenery-${at}"><svg viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${(SIDES[side] || SIDES.petals)()}</g></svg></span>`;
 }).join('')}</div>`;
 
 // ── desenhos em volta da peça: [o desenho, as nuvenzinhas] ──
@@ -159,8 +160,8 @@ const acacia = uid => [glow(uid, -110, 28, 62) + '<circle cx="-110" cy="28" r="1
 // embaixo e, no tom da peça, o cabinho e a pontinha
 const BANANA = 'M2 -6C28 0 58 -2 80 -24L86 -31L88 -26C76 -2 46 18 6 10C0 9 -1 -3 2 -6Z';
 const banana = (uid, y, a) => `<g transform="translate(0 ${y}) rotate(${a})"><path ${F(uid, 's')} d="${BANANA}"/><path class="m-shade" d="M9 10C44 13 70 0 85 -24"/><path class="m-nub" d="M80 -24L86 -31L88 -26L84 -21Z"/></g>`;
-// o cacho: bananas empilhadas quase paralelas, presas no mesmo cabinho, como uma mão de bananas
-const bunch = (uid, x, y, s, count = 3, flip = 1) => `<g transform="translate(${x} ${y}) scale(${flip * s} ${s})">${Array.from({length: count}, (_, i) => banana(uid, -i * 13, -i * 5)).reverse().join('')}<path ${F(uid, 's')} d="M-5 6C-8 -4 -7 -${count * 13 - 8} -2 -${count * 13 - 4}L3 -${count * 13 - 6}C5 -${count * 13 - 12} 5 -4 3 6Z"/><path class="m-nub" d="M-3 -${count * 13 - 3}L-4 -${count * 13 + 3}L1 -${count * 13 + 3}L3 -${count * 13 - 5}Z"/></g>`;
+// o cacho: bananas abertas em leque a partir do mesmo cabinho, como uma mão de bananas (paralelas, liam-se como penas de uma asa)
+const bunch = (uid, x, y, s, count = 3, flip = 1) => { const t = (count - 1) * 9 + 10; return `<g transform="translate(${x} ${y}) scale(${flip * s} ${s})">${Array.from({length: count}, (_, i) => banana(uid, -i * 9, 6 - i * 14)).reverse().join('')}<path ${F(uid, 's')} d="M-5 6C-8 -4 -7 -${t - 4} -2 -${t}L3 -${t - 2}C5 -${t - 8} 5 -4 3 6Z"/><path class="m-nub" d="M-3 -${t + 1}L-4 -${t + 7}L1 -${t + 7}L3 -${t - 1}Z"/></g>`; };
 const bananas = uid => [glow(uid, 108, 84, 80, 70)
   + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(100, 128, 124, 28)}"/>${bunch(uid, 60, 104, .9)}</g>`
   + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-112, 72, 84, 18)}"/>${bunch(uid, -80, 60, .52, 2, -1)}</g>`
