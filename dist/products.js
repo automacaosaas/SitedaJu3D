@@ -2,11 +2,12 @@
 // (pérola, metalizados e seda) e as multicor (seda: o arco-íris e as duais). Cada cor: `hex`, a cor de referência (a das contas de cor,
 // das auras e do pedido); `finish`, como a peça brilha no 3D (asset-models.js: pearl, metal, silk, rainbow, dual; sem ele, fosco);
 // `stops`, as cores de um filamento multicor (no arco-íris, de baixo para cima, como a peça sai da impressora; na dual, os dois lados
-// do fio; na pérola, os tons dos redemoinhos); `swatch`, a bolinha dela em CSS (o degradê dos brilhos e das multicor; sem ele, o hex); `note`, o acabamento, ao lado do nome.
+// do fio, a de baixo e a de cima; na pérola, os tons dos redemoinhos); `swatch`, a bolinha dela em CSS (o degradê dos brilhos e das multicor; sem ele, o hex); `note`, o acabamento, ao lado do nome.
 // As cores medidas nas fotos da Ju; o Azul BIC é o Pantone 2728 C. Os ids das cores que trocaram de nome ficaram (moss: Verde-oliva,
 // blue: Azul BIC, pink: Rosa-bebê): carrinhos, combinações compartilhadas e pedidos já salvos continuam valendo.
 const SHINE = (spot = 'rgba(255,255,255,.9)') => `radial-gradient(circle at 31% 26%, ${spot} 0 9%, rgba(255,255,255,0) 40%)`;
-const DUAL = (a, b) => `${SHINE('rgba(255,255,255,.72)')}, linear-gradient(125deg, ${a} 0 44%, ${b} 56% 100%)`;
+// a dual na bolinha como na peça: um degradê da cor de baixo (a) para a de cima (b), com a mistura no meio
+const DUAL = (a, b) => `${SHINE('rgba(255,255,255,.72)')}, linear-gradient(20deg, ${a} 0%, ${a} 18%, ${b} 82%, ${b} 100%)`;
 export const PALETTE = [
   {id:'white',name:'Branco',hex:'#f4f1ed',group:'solid'}, {id:'skin',name:'Pele caucasiana',hex:'#c9a992',group:'solid'},
   {id:'sand',name:'Areia',hex:'#cbbd93',group:'solid'}, {id:'cream',name:'Amarelo-claro',hex:'#f0dd7c',group:'solid'},
@@ -27,10 +28,10 @@ export const PALETTE = [
     swatch:`${SHINE('rgba(255,236,210,.85)')}, linear-gradient(135deg, #8e4f1c 0%, #f0b276 32%, #ce8946 55%, #e8a564 72%, #8e4f1c 100%)`},
   {id:'rainbow',name:'Arco-íris',hex:'#9aa6e0',group:'special',finish:'rainbow',note:'seda multicor',stops:['#fd7ab0','#b689d1','#7b96e2','#75cacf','#6cb089'],
     swatch:`${SHINE('rgba(255,255,255,.8)')}, linear-gradient(0deg, #fd7ab0, #b689d1 28%, #7b96e2 52%, #75cacf 76%, #6cb089)`},
-  {id:'duopinkblue',name:'Dual rosa e azul',hex:'#e2307a',group:'special',finish:'dual',note:'seda dual',stops:['#e2307a','#1240d8'],swatch:DUAL('#e2307a','#1240d8')},
-  {id:'duogoldorange',name:'Dual dourado e laranja',hex:'#fbaa3c',group:'special',finish:'dual',note:'seda dual',stops:['#fbaa3c','#ef670e'],swatch:DUAL('#fbaa3c','#ef670e')},
-  {id:'duogoldpurple',name:'Dual dourado e roxo',hex:'#921e5b',group:'special',finish:'dual',note:'seda dual',stops:['#e39a44','#921e5b'],swatch:DUAL('#e39a44','#921e5b')},
-  {id:'duobluegreen',name:'Dual azul e verde',hex:'#3c7fc8',group:'special',finish:'dual',note:'seda dual',stops:['#3c7fc8','#7fa35f'],swatch:DUAL('#3c7fc8','#7fa35f')}
+  {id:'duopinkblue',name:'Dual rosa e azul',hex:'#e2307a',group:'special',finish:'dual',note:'seda dual',stops:['#1240d8','#e2307a'],swatch:DUAL('#1240d8','#e2307a')},
+  {id:'duogoldorange',name:'Dual dourado e laranja',hex:'#fbaa3c',group:'special',finish:'dual',note:'seda dual',stops:['#ef670e','#fbaa3c'],swatch:DUAL('#ef670e','#fbaa3c')},
+  {id:'duogoldpurple',name:'Dual dourado e roxo',hex:'#921e5b',group:'special',finish:'dual',note:'seda dual',stops:['#921e5b','#e39a44'],swatch:DUAL('#921e5b','#e39a44')},
+  {id:'duobluegreen',name:'Dual azul e verde',hex:'#3c7fc8',group:'special',finish:'dual',note:'seda dual',stops:['#7fa35f','#3c7fc8'],swatch:DUAL('#7fa35f','#3c7fc8')}
 ];
 export const PALETTE_GROUPS = [{id:'solid',name:'Foscas'},{id:'shine',name:'Com brilho'},{id:'special',name:'Multicor'}];
 // A bolinha de uma cor (da paleta ou das cores fixas de uma peça): o degradê dela, ou o hex.

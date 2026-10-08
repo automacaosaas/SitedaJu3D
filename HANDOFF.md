@@ -179,7 +179,9 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   passou a abrir em Verde-oliva e o do avião em Azul BIC no 3D, mas as fotos dos dois ainda são das cores antigas. No 3D
   (`asset-models.js`), as partes que se escolhem viram `MeshPhysicalMaterial` (no fosco desenham igual a antes); `finish` dá o acabamento:
   seda e metal refletem um estúdio feito na hora (`viewer.js › studio`, só quando aparece uma cor com brilho), o arco-íris muda com a
-  altura da parte, a dual com o lado para onde cada face olha, e a pérola tem redemoinhos creme, cinza-frio e bege, brilho de tecido e
+  altura da parte (de baixo para cima, como a peça sai da impressora), a dual é um degradê das duas cores do pé ao topo (a mais clara
+  em cima, misturada em OKLab, para o meio sair vivo) com as faixas em diagonal do fio que gira, e a pérola tem redemoinhos creme,
+  cinza-frio e bege, brilho de tecido e
   iridescência. Sem `clearcoat`, porque deixava pontinhos escuros nas bordas finas. As bolinhas de cor de todo o site usam `paint(c)` (o
   degradê das cores com brilho e multicor); `tests/asset-models.mjs` confere os acabamentos. A cópia do servidor
   (`api/_lib/catalog.js › COLORS`) tem as mesmas cores, na mesma ordem, em PT, EN e ES.

@@ -54,10 +54,10 @@ try{
   }
   const dual=pick('dual');model.setColors({[part]:dual},env);
   {
-   // as duas cores do fio aparecem, cada uma de um lado
-   const [a,b]=dual.stops.map(h=>new T.Color(h));let nearA=0,nearB=0;
-   model.group.traverse(o=>{if(!o.isMesh||!materials.includes(o.material))return;const col=o.geometry.attributes.color;for(let i=0;i<col.count;i+=5){const c=[col.getX(i),col.getY(i),col.getZ(i)];if(Math.hypot(c[0]-a.r,c[1]-a.g,c[2]-a.b)<.05)nearA++;if(Math.hypot(c[0]-b.r,c[1]-b.g,c[2]-b.b)<.05)nearB++;}});
-   assert.ok(nearA>20&&nearB>20,`${key}: dual shows both colors (${nearA}/${nearB})`);
+   // as duas cores do fio aparecem e se misturam no meio (o degradê, em OKLab)
+   const [a,b]=dual.stops.map(h=>new T.Color(h));let nearA=0,nearB=0,blend=0;
+   model.group.traverse(o=>{if(!o.isMesh||!materials.includes(o.material))return;const col=o.geometry.attributes.color;for(let i=0;i<col.count;i+=5){const c=[col.getX(i),col.getY(i),col.getZ(i)],da=Math.hypot(c[0]-a.r,c[1]-a.g,c[2]-a.b),db=Math.hypot(c[0]-b.r,c[1]-b.g,c[2]-b.b);if(da<.05)nearA++;else if(db<.05)nearB++;else blend++;}});
+   assert.ok(nearA>20&&nearB>20&&blend>20,`${key}: dual shows both colors and the blend between them (${nearA}/${nearB}/${blend})`);
   }
   const pearl=pick('pearl');model.setColors({[part]:pearl},env);
   for(const m of materials){assert.equal(m.vertexColors,true,'pearl: the swirls painted on the vertices');assert.equal(m.color.getHexString(),'ffffff');assert.ok(m.iridescence>0&&m.sheen>0&&m.envMap===studio,'pearl: sheen and iridescence, reflecting the studio');}

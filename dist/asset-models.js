@@ -40,8 +40,19 @@ const FINISHES={
   dual:{metalness:.42,roughness:.3}
 };
 const PAINTED=['rainbow','dual','pearl'];
-// Quantas voltas o fio dual dá do pé ao topo da parte (as faixas em diagonal do vaso da foto).
-const DUAL_TWIST=.75;
+// A dual (08/10/2026, "mais em degradê, misturando, como o arco-íris"): as duas cores do fio num degradê do pé ao topo da parte
+// (`stops`: a de baixo e a de cima), e por cima dele as faixas em diagonal do fio que gira ao subir (DUAL_TWIST voltas, DUAL_SWIRL de
+// quanto elas empurram a mistura), para as duas cores aparecerem de qualquer lado. A mistura é feita em OKLab (o espaço de cor que
+// segue o olho): no meio, o rosa e o azul passam por um violeta vivo, e não por um cinza.
+const DUAL_TWIST=.85,DUAL_SWIRL=.3;
+const oklab=c=>{const l=Math.cbrt(.4122214708*c.r+.5363325363*c.g+.0514459929*c.b),m=Math.cbrt(.2119034982*c.r+.6806995451*c.g+.1073969566*c.b),s=Math.cbrt(.0883024619*c.r+.2817188376*c.g+.6299787005*c.b);
+  return [.2104542553*l+.793617785*m-.0040720468*s,1.9779984951*l-2.428592205*m+.4505937099*s,.0259040371*l+.7827717662*m-.808675766*s];};
+function mixOklab(out,a,b,t){
+  const L=a[0]+(b[0]-a[0])*t,A=a[1]+(b[1]-a[1])*t,B=a[2]+(b[2]-a[2])*t;
+  const l=(L+.3963377774*A+.2158037573*B)**3,m=(L-.1055613458*A-.0638541728*B)**3,s=(L-.0894841775*A-1.291485548*B)**3;
+  const clip=v=>Math.min(1,Math.max(0,v));
+  return out.setRGB(clip(4.0767416621*l-3.3077115913*m+.2309699292*s),clip(-1.2684380046*l+2.6097574011*m-.3413193965*s),clip(-.0041960863*l-.7034186147*m+1.707614701*s),T.LinearSRGBColorSpace);
+}
 // A parte que se escolhe vira MeshPhysicalMaterial (verniz, brilho de tecido, iridescência); no fosco ele desenha igual ao do modelo.
 function physical(source){
   const keep=['color','roughness','metalness','map','normalMap','normalScale','aoMap','emissive','emissiveIntensity','side','transparent','opacity','alphaTest','flatShading'];
@@ -100,7 +111,7 @@ export async function createAssetModel(key,colors,signal){
     });
   });
   // O arco-íris muda com a altura da parte, camada por camada, como a peça sai da impressora (de baixo para cima, `stops`); a dual,
-  // com o lado para onde cada face olha (o fio tem uma cor de cada lado e gira devagar ao subir); a pérola, em redemoinhos suaves
+  // no degradê das duas cores com as faixas do fio que gira (DUAL_TWIST); a pérola, em redemoinhos suaves
   // (senos que se dobram uns sobre os outros, no tamanho da parte) entre o creme, o cinza-frio e o bege. Feito uma vez por cor e guardado.
   const at=new T.Vector3(),facing=new T.Vector3(),normalMatrix=new T.Matrix3(),mixed=new T.Color();
   function paintVertices(part,c){
@@ -110,6 +121,7 @@ export async function createAssetModel(key,colors,signal){
     for(const mesh of list){const position=mesh.geometry.attributes.position;for(let i=0;i<position.count;i++)box.expandByPoint(at.fromBufferAttribute(position,i).applyMatrix4(mesh.matrixWorld));}
     const low=box.min.y,span=box.max.y-low||1,center=box.getCenter(new T.Vector3()),size=Math.max(...box.getSize(new T.Vector3()).toArray())||1;
     const ramp=x=>{const k=Math.min(stops.length-2,Math.floor(x*(stops.length-1)));return mixed.copy(stops[k]).lerp(stops[k+1],smooth(0,1,x*(stops.length-1)-k));};
+    const ends=stops.map(oklab);
     for(const mesh of list){
       const geometry=mesh.geometry,cache=geometry.userData.paints||(geometry.userData.paints={});
       if(!cache[c.id]){
@@ -125,9 +137,9 @@ export async function createAssetModel(key,colors,signal){
           }
           else{
             facing.fromBufferAttribute(normal,i).applyMatrix3(normalMatrix).normalize();
-            // nas faces de cima (o topo da peça) as duas cores se misturam, como as linhas do preenchimento
-            const side=Math.min(1,Math.hypot(facing.x,facing.z)*1.6),wave=.5+.5*Math.sin(Math.atan2(facing.z,facing.x)+h*Math.PI*2*DUAL_TWIST)*side;
-            mixed.copy(stops[0]).lerp(stops[1],smooth(.36,.64,wave));
+            // as faixas só nas faces dos lados; nas de cima (o topo da peça) fica o degradê
+            const side=Math.min(1,Math.hypot(facing.x,facing.z)*1.4),swirl=Math.sin(Math.atan2(facing.z,facing.x)+h*Math.PI*2*DUAL_TWIST)*side;
+            mixOklab(mixed,ends[0],ends[1],smooth(0,1,.5+(h-.5)*1.15+DUAL_SWIRL*swirl));
           }
           out[i*3]=mixed.r;out[i*3+1]=mixed.g;out[i*3+2]=mixed.b;
         }
