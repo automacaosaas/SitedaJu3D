@@ -70,7 +70,13 @@ const dynamic = [
   [/^Modelo 3D de (.+)$/, '3D model of $1', 'Modelo 3D de $1'],
   [/^Levando 2, o segundo sai por (.+)$/, 'Buy 2 and the second one is $1', 'Llevando 2, el segundo sale por $1'],
   // o kit das lâmpadas (commerce-config.js kitOffer)
-  [/^Leve (\d+) por (.+) ou (\d+) por (.+) \(pode misturar\)$/, 'Get $1 for $2 or $3 for $4 (mix and match)', 'Lleva $1 por $2 o $3 por $4 (puedes combinar)'],
+  [/^Leve (\d+) por (.+) ou (\d+) por (.+) \(pode misturar\)(\.?)$/, 'Get $1 for $2 or $3 for $4 (mix and match)$5', 'Lleva $1 por $2 o $3 por $4 (puedes combinar)$5'],
+  // as ofertas da vitrine das lâmpadas (fenda-stage.js) e o banner dela na home
+  [/^Vale para (.+) e ([^,]+)\.$/, 'Valid for $1 and $2.', 'Vale para $1 y $2.'],
+  [/^Escolher (\d+) peças?$/, (t, n) => n === '1' ? 'Choose 1 piece' : `Choose ${n} pieces`, (t, n) => n === '1' ? 'Elegir 1 pieza' : `Elegir ${n} piezas`],
+  [/^Economize (R\$\s?[\d.,]+)$/, 'Save $1', 'Ahorra $1'],
+  [/^por (R\$\s?[\d.,]+)$/, 'for $1', 'por $1'],
+  [/^Ou (\d+)x de (R\$ [\d.,]+) sem juros no cartão$/, 'Or $1 interest-free card installments of $2', 'O $1 cuotas sin interés de $2 con tarjeta'],
   // "Monte seu kit" (kit-builder.js): as faixas "2 por" / "R$ 160,00" / "R$ 80,00 cada"
   [/^(\d+) por$/, '$1 for', '$1 por'],
   [/^(R\$ [\d.,]+) cada$/, '$1 each', '$1 cada una'],

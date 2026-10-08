@@ -27,7 +27,7 @@ async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
   const [products, commerce, icons, grid, tour, motion] = await Promise.all([load('products.js'), load('commerce-config.js'), load('icons.js'), load('product-grid.js'), load('escolha.js'), load('hero-motion.js')]);
   const contact = await load('contact-link.js'), gallery = await load('gallery.js'), novelty = await load('fenda-stage.js');
-  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, noveltyStage: novelty.noveltyStage, noveltyBanner: novelty.noveltyBanner, journeyColors: motion.journeyColors, splitContact: contact.splitContact, contactMail: contact.contactMail, staticViews: gallery.staticViews, hasGallery: gallery.hasGallery};
+  return {...products, ...commerce, icon: icons.icon, productGrid: grid.productGrid, chooseBanners: tour.chooseBanners, noveltyStage: novelty.noveltyStage, noveltyOffers: novelty.noveltyOffers, noveltyBanner: novelty.noveltyBanner, journeyColors: motion.journeyColors, splitContact: contact.splitContact, contactMail: contact.contactMail, staticViews: gallery.staticViews, hasGallery: gallery.hasGallery};
 }
 
 function page(id, data, base) {
@@ -122,14 +122,14 @@ function choosePage(data, base) {
 }
 
 // Vitrine de novidade das lâmpadas de fenda (fenda.html, endereço curto /fenda; o banner da home e o flyer levam a ela): o palco de
-// fenda-stage.js (a peça encaixada no centro, as vizinhas desfocadas, "Ver mais" com o preço, as cores e o "Monte seu kit"), com o fundo
-// da vitrine da home (carousel.css), a figura da página Escolha o seu (escolha.css) e o selo e o kit da página da peça
-// (product-landing.css). Embaixo, como a compra funciona e os dois botões de WhatsApp (fenda.js). Prévia de link: assets/og-fenda.jpg
-// (tools/flyer-fenda/render.cjs).
+// fenda-stage.js (a peça na lâmpada inteira, as vizinhas, a compra e "Ver detalhes"; depois, as ofertas do kit e o "Monte seu kit"), com
+// o fundo da vitrine da home (carousel.css), a figura da página Escolha o seu (escolha.css) e o selo e o kit da página da peça
+// (product-landing.css). Embaixo, como a compra funciona e, discreto, o convite para um colega no WhatsApp (fenda.js). Prévia de link:
+// assets/og-fenda.jpg (tools/flyer-fenda/render.cjs).
 const FENDA = 'lampada';
 function fendaPage(data, base) {
   // o endereço da página (canônico, sitemap, prévia) e o curto, do flyer e da mensagem do WhatsApp (o servidor abre /fenda como fenda.html)
-  const {COMMERCE, pixPercent, kitOffer, icon, FAMILIES} = data, url = `${siteBase()}/fenda.html`, short = `${siteBase()}/fenda`, first = FAMILIES[FENDA].items[0];
+  const {COMMERCE, pixPercent, kitOffer, installmentLabel, icon, FAMILIES} = data, url = `${siteBase()}/fenda.html`, short = `${siteBase()}/fenda`, first = FAMILIES[FENDA].items[0];
   const title = `Novidade: encaixe para lâmpada de fenda · ${SITE}`;
   const description = 'MonkeyLamp, GiraffeLamp e UnicornLamp: capas impressas em 3D que se encaixam na lâmpada de fenda portátil. ' + kitOffer(first) + '.';
   const head = base.slice(base.indexOf('<head>\n') + 7, base.indexOf('  <!-- og -->'))
@@ -140,17 +140,17 @@ function fendaPage(data, base) {
   const preview = tags({url, title, description, image: {path: 'assets/og-fenda.jpg', width: 1200, height: 630, alt: 'MonkeyLamp, GiraffeLamp e UnicornLamp, as capas para lâmpada de fenda, com o selo Novidade'}}).map(line => '  ' + line).join('\n') + '\n';
   const header = /<header class="header">[^]*?<\/header>/.exec(base)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(base)[0];
-  const back = /<a class="catalog-back showcase-return"[^]*?<\/a>/.exec(base)[0];
   const share = `https://wa.me/?text=${encodeURIComponent(`Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça: ${short}`)}`;
-  const main = `<main class="nv-main" id="conteudo">${back}
+  const main = `<main class="nv-main" id="conteudo">
       ${data.noveltyStage(FENDA)}
+      ${data.noveltyOffers(FENDA)}
       <section class="nv-foot" aria-label="Como funciona">
         <ul class="nv-facts">
           <li>${icon('clock')}<span><strong>Feito sob encomenda</strong>Produção em ${esc(COMMERCE.productionLabel)}</span></li>
           <li>${icon('truck')}<span><strong>Envio para todo o Brasil</strong>Frete calculado pelo CEP</span></li>
-          <li>${icon('pix')}<span><strong>${pixPercent}% de desconto no Pix</strong>${esc(kitOffer(first))}</span></li>
+          <li>${icon('pix')}<span><strong>${pixPercent}% de desconto no Pix</strong>Ou ${esc(installmentLabel(COMMERCE.prices[first]))} sem juros no cartão</span></li>
         </ul>
-        <p class="nv-actions"><a class="nv-share" href="${esc(share)}" target="_blank" rel="noopener" data-nv-share>${icon('whatsapp')}<span>Enviar a um colega</span></a><a class="nv-ju" href="contato.html" data-nv-ju>${icon('chat')}<span>Falar com a Ju</span></a></p>
+        <a class="nv-share" href="${esc(share)}" target="_blank" rel="noopener" data-nv-share>${icon('whatsapp')}<span>Enviar para um colega pelo WhatsApp</span></a>
       </section>
     </main>`;
   return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="fenda-page">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;

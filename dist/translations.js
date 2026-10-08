@@ -23,6 +23,16 @@ Como funciona|How it works|Cómo funciona
 5% de desconto no Pix|5% off with Pix|5% de descuento con Pix
 Enviar a um colega|Send to a colleague|Enviar a un colega
 Falar com a Ju|Talk to Ju|Hablar con Ju
+Preço, cores e compra|Price, colors and purchase|Precio, colores y compra
+Ver detalhes|See details|Ver detalles
+Ofertas da novidade|What's new: offers|Ofertas de la novedad
+Leve mais,|Buy more,|Lleva más,
+pague menos.|pay less.|paga menos.
+a peça|each|cada una
+Escolha a sua|Pick yours|Elige la tuya
+Mais vantajoso|Best value|Más conveniente
+Enviar para um colega pelo WhatsApp|Send to a colleague on WhatsApp|Enviar a un colega por WhatsApp
+Ver as ofertas|See the offers|Ver las ofertas
 Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça:|Look how cute: 3D-printed covers for the handheld slit lamp, by Ju, imprime pra mim? Take a look:|Mira qué lindo: fundas impresas en 3D para la lámpara de hendidura portátil, de Ju, imprime pra mim? Conócelas:
 Olá, Ju! Vi as novidades para a lâmpada de fenda e tenho uma dúvida.|Hi, Ju! I saw the new slit lamp pieces and I have a question.|¡Hola, Ju! Vi las novedades para la lámpara de hendidura y tengo una duda.
 MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.

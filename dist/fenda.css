@@ -1,11 +1,11 @@
 /* Vitrine de novidade das lâmpadas de fenda (fenda.html; marcação em fenda-stage.js, movimento em fenda.js). Usa as peças do site:
    o fundo da vitrine da home (carousel.css: as silhuetas de hero-scenery.js e as setas de vidro .hero-arrow), a peça encaixada da
-   página Escolha o seu (escolha.css .fit-figure), o selo "Novidade" e o "Monte seu kit" da página da peça (product-landing.css,
-   mini-cart.css .kit). Aqui ficam só o palco e o "Ver mais". As cores vêm da peça do centro (--nv-accent, --nv-ink, --nv-muted,
-   trocadas por fenda.js); --nv-w é a largura da figura e mede todo o resto. */
-.fenda-page { --nv-ease: cubic-bezier(.22, 1, .36, 1); }
-.nv-main { max-width: 1240px; margin: 10px auto 64px; }
-.nv-stage { --nv-w: clamp(220px, 19vw, 300px); --nv-top: 40px; --scn-ped: var(--nv-w); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 30px; border-radius: 32px; overflow: hidden; color: var(--nv-ink); touch-action: pan-y; }
+   página Escolha o seu (escolha.css .fit-figure, aqui com a lâmpada inteira), o selo "Novidade" e o "Monte seu kit" da página da peça
+   (product-landing.css, mini-cart.css .kit). As cores vêm da peça do centro (--nv-accent, --nv-ink, --nv-muted, trocadas por fenda.js);
+   --nv-fh é a altura da figura (a lâmpada inteira), --fig-h a proporção dela (altura ÷ largura, de fenda-stage.js) e --nv-w a largura. */
+.fenda-page { --nv-ease: cubic-bezier(.22, 1, .36, 1); --nv-green: #1f7a4d; }
+.nv-main { max-width: 1240px; margin: 18px auto 56px; }
+.nv-stage { --nv-fh: clamp(340px, 50vh, 450px); --nv-w: calc(var(--nv-fh) / var(--fig-h, 2.2)); --nv-top: 30px; --scn-ped: calc(var(--nv-w) * 1.4); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 28px; border-radius: 32px; overflow: hidden; color: var(--nv-ink); touch-action: pan-y; }
 .nv-stage :is(a, button):focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
 
 /* O fundo: o degradê e as silhuetas de cada peça, trocados devagar (as mesmas camadas da vitrine da home) */
@@ -15,108 +15,164 @@
 .nv-layer .hero-scenery { height: 100%; }
 
 /* O selo, a família e a lista das peças, no canto */
-.nv-head { position: absolute; z-index: 3; top: 28px; left: 40px; display: grid; justify-items: start; gap: 4px; max-width: 30%; transition: opacity .35s ease; }
+.nv-head { position: absolute; z-index: 3; top: 26px; left: 40px; display: grid; justify-items: start; gap: 4px; max-width: 28%; transition: opacity .35s ease; }
 .nv-badges { margin: 0 0 10px; }
 .nv-kicker { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .24em; text-transform: uppercase; color: var(--nv-accent); }
 .nv-title { margin: 0 0 8px; font: 500 clamp(24px, 2.1vw, 30px)/1.1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.01em; color: var(--nv-ink); text-wrap: balance; }
 .nv-list { list-style: none; display: grid; margin: 0; padding: 0; }
-.nv-list button { min-height: 34px; padding: 0; border: 0; background: none; font: 500 clamp(18px, 1.6vw, 22px)/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: color-mix(in srgb, var(--nv-ink) 34%, transparent); text-align: left; cursor: pointer; transition: color .3s ease; }
-.nv-list button:hover { color: color-mix(in srgb, var(--nv-ink) 64%, transparent); }
+.nv-list button { min-height: 34px; padding: 0; border: 0; background: none; font: 500 clamp(18px, 1.6vw, 22px)/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: color-mix(in srgb, var(--nv-ink) 36%, transparent); text-align: left; cursor: pointer; transition: color .3s ease; }
+.nv-list button:hover { color: color-mix(in srgb, var(--nv-ink) 66%, transparent); }
 .nv-list button[aria-current=true] { color: var(--nv-ink); }
 
-/* A peça do centro e as vizinhas (fenda.js escreve --slot e --k: a distância e 0/1) */
+/* A peça do centro, na lâmpada inteira, e as vizinhas, nítidas (fenda.js escreve --slot e --k: a distância e 0/1) */
 .nv-focus { position: relative; z-index: 1; display: grid; align-self: start; align-content: start; justify-items: center; width: 100%; transition: transform .75s var(--nv-ease); }
-.nv-track { list-style: none; position: relative; width: 100%; height: calc(var(--nv-w) * 1.25); margin: 0; padding: 0; }
-.nv-item { position: absolute; left: 50%; top: 0; width: var(--nv-w); height: 100%; transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * 1.12)) translateY(calc(var(--k, 0) * 16%)) scale(calc(1 - var(--k, 0) * .44)); filter: blur(calc(var(--k, 0) * 4px)) saturate(calc(1 - var(--k, 0) * .15)); opacity: calc(1 - var(--k, 0) * .4); transition: transform .75s var(--nv-ease), filter .75s var(--nv-ease), opacity .5s ease; }
+.nv-track { list-style: none; position: relative; width: 100%; height: var(--nv-fh); margin: 0; padding: 0; }
+.nv-item { position: absolute; left: 50%; top: 0; width: var(--nv-w); height: 100%; transform-origin: 50% 100%; transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * 1.75)) scale(calc(1 - var(--k, 0) * .3)); opacity: calc(1 - var(--k, 0) * .12); transition: transform .75s var(--nv-ease), opacity .5s ease; }
 .nv-item[data-far] { opacity: 0; pointer-events: none; }
-.nv-art { position: absolute; inset: 0; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
+.nv-item[data-side]:hover { opacity: 1; }
+.nv-art { position: absolute; inset: 0; display: grid; place-items: end center; padding: 0; border: 0; background: none; cursor: pointer; }
 .nv-item:not([data-side]) .nv-art { cursor: default; }
-.nv-art .fit-figure { height: 100%; }
+.nv-art .nv-fig { width: 100%; height: auto; aspect-ratio: 1 / var(--fig-h); }
 
-/* O nome grande, o preço e "Ver mais" */
-.nv-caption { display: grid; justify-items: center; gap: 6px; margin-top: 6px; text-align: center; }
+/* O nome grande, o preço e a compra */
+.nv-caption { display: grid; justify-items: center; gap: 4px; margin-top: 10px; text-align: center; }
 .nv-sub { margin: 0; font-size: 14px; color: var(--nv-muted); }
-.nv-name { margin: 0; font: 500 clamp(40px, 4.8vw, 66px)/1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--nv-ink); transition: font-size .6s var(--nv-ease); }
-.nv-price-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: 4px 0 0; }
-.nv-price-line strong { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.nv-pix { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; background: #1f7a4d; color: #fff; font-size: 13px; font-weight: 650; white-space: nowrap; }
-.nv-more { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; margin-top: 10px; padding: 0 28px; border-radius: 999px; background: color-mix(in srgb, var(--nv-ink) 10%, transparent); color: var(--nv-ink); font-size: 14px; font-weight: 650; letter-spacing: .04em; text-decoration: none; transition: background-color .25s ease, transform .25s ease, opacity .3s ease; }
-.nv-more:hover { background: color-mix(in srgb, var(--nv-ink) 17%, transparent); transform: translateY(-1px); }
+.nv-name { margin: 0; font: 500 clamp(40px, 4.6vw, 62px)/1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--nv-ink); transition: font-size .6s var(--nv-ease); }
+.nv-buy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 18px; margin-top: 10px; }
+.nv-price-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: 0; }
+.nv-price-line strong { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nv-pix { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; background: var(--nv-green); color: #fff; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.nv-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.nv-cta { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 22px; border: 1.5px solid color-mix(in srgb, var(--nv-accent) 40%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .78); color: var(--nv-accent); font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.nv-cta:hover { background: #fff; transform: translateY(-1px); }
+.nv-cta.is-main { border-color: var(--nv-accent); background: var(--nv-accent); color: #fff; box-shadow: 0 12px 26px -14px var(--nv-accent); }
+.nv-cta.is-main:hover { background: color-mix(in srgb, var(--nv-accent) 84%, #000); }
+.nv-cta:disabled { opacity: .7; cursor: wait; }
+.nv-cta .icon { width: 19px; height: 19px; }
+.nv-more { display: inline-flex; align-items: center; min-height: 40px; margin-top: 2px; color: var(--nv-ink); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; transition: opacity .3s ease; }
 
 /* as setas de vidro da home (.hero-arrow), na altura do nome; carousel.css as põe na grade no celular, aqui ficam sempre soltas */
-.nv-stage > .nv-arrow { position: absolute; grid-area: auto; top: calc(var(--stage-top) + var(--nv-w) * 1.25 + 62px); translate: 0 -50%; margin: 0; }
+.nv-stage > .nv-arrow { position: absolute; grid-area: auto; top: calc(var(--stage-top) + var(--nv-fh) + 58px); translate: 0 -50%; margin: 0; }
 .nv-prev { left: clamp(12px, 2vw, 28px); }
 .nv-next { right: clamp(12px, 2vw, 28px); }
 .nv-arrow, .nv-back { transition: opacity .3s ease; }
-.nv-back { position: absolute; z-index: 4; top: 28px; left: 36px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 13px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgba(255, 255, 255, .6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--nv-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
+.nv-back { position: absolute; z-index: 4; top: 24px; left: 32px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 13px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgba(255, 255, 255, .6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--nv-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
 .nv-back .icon { width: 18px; height: 18px; transform: rotate(180deg); }
 
-/* "Ver mais": a peça vai para a esquerda e entram à direita o preço em cima, as cores em aletas ao lado, a descrição e o kit */
-/* o palco cresce até caber o kit inteiro (fenda.js › fit: min-height) */
-.nv-detail { position: absolute; z-index: 3; top: 26px; right: 32px; width: min(430px, 40%); display: grid; align-content: start; gap: 16px; animation: nv-in .6s var(--nv-ease) both; }
-.nv-detail-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px 18px; }
+/* "Ver detalhes": a peça vai para a esquerda e entram à direita o preço em cima, as cores em aletas ao lado, a descrição e a compra */
+/* o palco cresce até caber tudo (fenda.js › fit: min-height) */
+.nv-detail { position: absolute; z-index: 3; top: 30px; right: 36px; width: min(420px, 40%); display: grid; gap: 16px; animation: nv-in .6s var(--nv-ease) both; }
+.nv-detail-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 14px 18px; }
 .nv-price { display: grid; gap: 4px; justify-items: start; }
 .nv-price strong { font-size: clamp(32px, 3vw, 40px); font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .nv-price small { font-size: 13px; color: var(--nv-muted); }
 .nv-tabs { list-style: none; display: grid; gap: 6px; margin: 0; padding: 0; }
 .nv-tabs li { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 3px 12px 3px 4px; border-radius: 999px; background: rgba(255, 255, 255, .72); box-shadow: 0 1px 3px color-mix(in srgb, var(--nv-ink) 16%, transparent); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .nv-tabs i { width: 24px; height: 24px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 0 0 1px color-mix(in srgb, var(--nv-ink) 18%, transparent); }
-.nv-desc { grid-column: 1 / -1; margin: 0; font-size: 15px; line-height: 1.6; color: var(--nv-muted); }
-.nv-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; }
+.nv-detail-top > :is(.nv-desc, .nv-ctas, .nv-links) { grid-column: 1 / -1; }
+.nv-detail .nv-ctas { justify-content: stretch; }
+.nv-detail .nv-cta { flex: 1 1 auto; white-space: nowrap; }
+.nv-desc { margin: 0; font-size: 15px; line-height: 1.6; color: var(--nv-muted); }
+.nv-links { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; }
 .nv-links a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--nv-accent); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 .nv-links .icon { width: 18px; height: 18px; }
-.nv-kit { display: grid; gap: 12px; padding: 16px 16px 14px; border: 1px solid color-mix(in srgb, var(--nv-accent) 16%, transparent); border-radius: 22px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-.nv-kit .pl-kit-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--nv-ink); }
-.nv-kit .kit { --kit-accent: var(--nv-accent); --kit-strong: color-mix(in srgb, var(--nv-accent) 80%, #000); --kit-ink: var(--nv-ink); --kit-muted: var(--nv-muted); --kit-tint: color-mix(in srgb, var(--nv-accent) 7%, #fff); }
 @keyframes nv-in { from { opacity: 0; transform: translateX(24px); } }
 
 .nv-stage.is-detail .nv-focus { transform: translateX(-23%); }
 .nv-stage.is-detail .nv-item[data-side], .nv-stage.is-detail :is(.nv-head, .nv-arrow) { opacity: 0; pointer-events: none; visibility: hidden; }
-/* o preço e "Ver mais" da legenda saem (o preço passa para o alto dos detalhes) e as silhuetas das bordas clareiam atrás do texto */
-.nv-stage.is-detail .nv-caption :is(.nv-price-line, .nv-more) { display: none; }
+/* o preço e a compra da legenda saem (passam para os detalhes) e as silhuetas das bordas clareiam atrás do texto */
+.nv-stage.is-detail .nv-caption :is(.nv-buy, .nv-more) { display: none; }
 .nv-stage .scenery-back { transition: opacity .6s ease; }
 .nv-stage.is-detail .scenery-back { opacity: .35; }
-.nv-stage.is-detail .nv-name { font-size: clamp(36px, 4vw, 56px); }
+.nv-stage.is-detail .nv-name { font-size: clamp(36px, 4vw, 54px); }
 .nv-stage.is-detail .fit-float { animation-play-state: paused; }
 
-/* Embaixo do palco: como a compra funciona e o convite para um colega */
-.nv-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 22px; }
-.nv-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; padding: 0; }
+/* As ofertas, ao rolar: um cartão por faixa do kit, cada um nas cores de uma peça, e o "Monte seu kit" */
+.nv-offers { margin-top: 64px; scroll-margin-top: 24px; }
+.nv-offers-head { max-width: 640px; margin: 0 auto 28px; text-align: center; }
+.nv-offers-head h2 { margin: 6px 0 10px; font: 500 clamp(32px, 3.4vw, 48px)/1.08 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
+.nv-offers-head h2 em { color: var(--theme-accent, var(--rose)); }
+.nv-offers-head .nv-kicker { color: var(--theme-accent, var(--rose)); }
+.nv-offers-head > p:last-child { margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+.nv-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.nv-tier { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 18px 20px 20px; border-radius: 26px; background: radial-gradient(120% 92% at 50% 0%, var(--tier-stops)); color: var(--tier-ink); text-align: center; box-shadow: 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); transition: transform .3s var(--nv-ease), box-shadow .3s ease; }
+.nv-tier:hover { transform: translateY(-4px); box-shadow: 0 26px 48px -30px color-mix(in srgb, var(--tier-ink) 80%, transparent); }
+.nv-tier.is-best { box-shadow: inset 0 0 0 2px var(--tier-accent), 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); }
+.nv-tier-flag { position: absolute; top: 14px; right: 14px; padding: 5px 11px; border-radius: 999px; background: var(--tier-accent); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+.nv-tier-art { display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 4px; }
+.nv-tier-art img { width: auto; height: 140px; margin-left: -34px; filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--tier-ink) 22%, transparent)); }
+.nv-tier-art img:first-child { margin-left: 0; }
+.nv-tier-n { margin: 0; font: 500 24px/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
+.nv-tier-price { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.nv-tier-price strong { font-size: 34px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nv-tier-price span { font-size: 14px; font-weight: 600; color: color-mix(in srgb, var(--tier-ink) 70%, transparent); }
+.nv-tier-save { margin: 0 0 8px; padding: 3px 11px; border-radius: 999px; background: rgba(255, 255, 255, .7); color: var(--nv-green); font-size: 13px; font-weight: 700; }
+.nv-tier-cta { width: 100%; min-height: 48px; margin-top: auto; border: 0; border-radius: 999px; background: var(--tier-accent); color: #fff; font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: background-color .2s ease; }
+.nv-tier-cta:hover { background: color-mix(in srgb, var(--tier-accent) 84%, #000); }
+.nv-tier-cta:focus-visible { outline: 2px solid var(--tier-ink); outline-offset: 3px; }
+.nv-kit-panel { display: grid; gap: 12px; max-width: 580px; margin: 26px auto 0; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent, var(--rose)) 16%, #ece7e9); border-radius: 26px; background: var(--panel, #fffcfb); box-shadow: 0 20px 44px -34px rgba(40, 30, 20, .5); scroll-margin-top: 90px; }
+.nv-kit-panel .pl-kit-head h3 { margin: 0; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--ink); }
+.nv-kit-panel .kit { --kit-accent: var(--theme-accent, var(--rose)); --kit-strong: var(--theme-accent-strong, #9e3e59); --kit-tint: color-mix(in srgb, var(--theme-accent, var(--rose)) 7%, #fff); }
+/* no kit, "Comprar agora" é o botão cheio e "Adicionar ao carrinho" vira o contorno */
+.nv-kit-panel .kit-add { background: #fff; color: var(--kit-accent); box-shadow: inset 0 0 0 1.5px var(--kit-accent); }
+.nv-kit-buy { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; border: 0; border-radius: 999px; background: var(--theme-accent, var(--rose)); color: #fff; font: 650 15px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; box-shadow: 0 12px 26px -14px var(--theme-accent, var(--rose)); }
+.nv-kit-buy:hover { background: var(--theme-accent-strong, #9e3e59); }
+.nv-kit-buy[aria-disabled=true] { opacity: .6; cursor: not-allowed; }
+.nv-kit-buy .icon { width: 20px; height: 20px; }
+.nv-kit-fallback { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 0; }
+.nv-kit-fallback a { color: var(--theme-accent, var(--rose)); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+/* entram ao rolar (fenda.js põe .is-pending só com IntersectionObserver e sem movimento reduzido; sem ele, tudo já está à vista) */
+[data-nv-reveal].is-pending { opacity: 0; transform: translateY(28px); }
+[data-nv-reveal].is-in { opacity: 1; transform: none; transition: opacity .7s var(--nv-ease) calc(var(--i, 0) * 110ms), transform .7s var(--nv-ease) calc(var(--i, 0) * 110ms); }
+
+/* Embaixo: como a compra funciona e, discreto, o convite para um colega */
+.nv-foot { display: grid; justify-items: center; gap: 14px; margin-top: 40px; }
+.nv-facts { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 32px; margin: 0; padding: 0; }
 .nv-facts li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; color: var(--muted); }
 .nv-facts strong { display: block; color: var(--ink); font-weight: 650; }
 .nv-facts .icon { width: 20px; height: 20px; flex: none; color: var(--theme-accent, var(--rose)); }
-.nv-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
-.nv-ju { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 999px; background: var(--theme-accent, var(--rose)); color: #fff; font-size: 14px; font-weight: 650; }
-.nv-ju .icon { width: 20px; height: 20px; }
-.nv-share { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 20px; border: 1.5px solid #1f7a4d; border-radius: 999px; background: #fff; color: #1f7a4d; font-size: 14px; font-weight: 650; }
-.nv-share:hover { background: #eaf7ef; }
-.nv-share .icon { width: 20px; height: 20px; }
+.nv-share { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.nv-share:hover { color: var(--nv-green); }
+.nv-share .icon { width: 17px; height: 17px; }
 
+/* tablet e notebook pequeno: as vizinhas mais perto, para não cobrir a lista à esquerda */
+@media (min-width: 901px) and (max-width: 1220px) {
+  .nv-item { transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * 1.3)) scale(calc(1 - var(--k, 0) * .32)); }
+}
 @media (max-width: 900px) {
-  .nv-main { margin-top: 4px; }
-  .nv-stage { --nv-w: min(50vw, 250px); --stage-top: 196px; min-height: 0 !important; margin: 0 -10px; padding: 22px 0 28px; border-radius: 26px; }
-  .nv-head { position: static; max-width: none; justify-items: center; gap: 2px; padding: 0 18px 14px; text-align: center; }
+  .nv-main { margin-top: 6px; }
+  .nv-stage { --nv-fh: min(76vw, 300px); --stage-top: 190px; min-height: 0 !important; margin: 0 -10px; padding: 20px 0 26px; border-radius: 26px; }
+  .nv-head { position: static; max-width: none; justify-items: center; gap: 2px; padding: 0 18px 12px; text-align: center; }
   .nv-badges { margin-bottom: 6px; }
   .nv-title { margin-bottom: 10px; font-size: 26px; }
-  .nv-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-  .nv-list button { min-height: 38px; padding: 0 14px; border-radius: 999px; background: rgba(255, 255, 255, .62); font: 600 13px 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--nv-muted); }
+  .nv-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+  .nv-list button { min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .62); font: 600 12.5px 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--nv-muted); }
   .nv-list button[aria-current=true] { background: var(--nv-ink); color: #fff; }
-  .nv-item { transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * .95)) translateY(calc(var(--k, 0) * 8%)) scale(calc(1 - var(--k, 0) * .45)); }
-  .nv-stage > .nv-arrow { top: calc(var(--stage-top) + var(--nv-w) * .66); width: 44px; height: 44px; }
-  .nv-prev { left: 10px; } .nv-next { right: 10px; }
-  .nv-name { font-size: clamp(36px, 10vw, 48px); }
+  /* no celular as três ficam à vista lado a lado (tocar numa das laterais, as pílulas acima e arrastar trocam a peça): sem as setas */
+  .nv-item { transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * .86)) scale(calc(1 - var(--k, 0) * .38)); }
+  .nv-stage > .nv-arrow { display: none; }
+  .nv-name { font-size: clamp(36px, 10vw, 46px); }
+  .nv-buy { flex-direction: column; gap: 10px; width: 100%; padding: 0 16px; }
+  .nv-ctas { display: grid; width: 100%; gap: 8px; }
+  .nv-cta { padding: 0 16px; }
+  .nv-cta:not(.is-main) { min-height: 46px; }
   .nv-back { top: 14px; left: 14px; }
   .nv-stage.is-detail { padding-top: 66px; }
   .nv-stage.is-detail .nv-head { display: none; }
   .nv-stage.is-detail .nv-focus { transform: none; }
   .nv-stage.is-detail .nv-name { font-size: clamp(32px, 9vw, 42px); }
-  .nv-detail { position: static; width: auto; margin: 18px 14px 0; padding: 0; overflow: visible; scroll-margin: 120px 0 24px; animation-name: nv-in-up; }
-  .nv-foot { margin-top: 18px; }
-  .nv-actions { flex: 1 1 100%; }
-  .nv-actions > a { flex: 1 1 100%; }
+  .nv-detail { position: static; width: auto; margin: 18px 16px 0; scroll-margin: 120px 0 24px; animation-name: nv-in-up; }
+  .nv-offers { margin-top: 44px; }
+  .nv-tiers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(78%, 300px); gap: 12px; margin: 0 -22px; padding: 4px 22px 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; }
+  .nv-tiers::-webkit-scrollbar { display: none; }
+  .nv-tier { scroll-snap-align: start; }
+  .nv-tier:hover { transform: none; }
+  .nv-tier-art { height: 120px; }
+  .nv-tier-art img { height: 112px; margin-left: -28px; }
+  .nv-kit-panel { margin-top: 18px; padding: 16px 14px 14px; border-radius: 22px; }
 }
 @keyframes nv-in-up { from { opacity: 0; transform: translateY(16px); } }
 @media (prefers-reduced-motion: reduce) {
-  .nv-layer, .nv-focus, .nv-item, .nv-name, .nv-more, .nv-list button, .nv-head, .nv-arrow, .nv-back { transition: none; }
+  .nv-layer, .nv-focus, .nv-item, .nv-name, .nv-more, .nv-list button, .nv-head, .nv-arrow, .nv-back, .nv-cta, .nv-tier, [data-nv-reveal].is-in { transition: none; }
   .nv-detail { animation: none; }
 }

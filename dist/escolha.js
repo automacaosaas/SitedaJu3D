@@ -25,14 +25,15 @@ export const familyItems = id => (FAMILIES[id]?.items || []).filter(key => piece
 export const families = () => Object.keys(FAMILIES).filter(id => familyItems(id).length);
 
 // A peça encaixada: parede de trás, equipamento (com a mesma queda da demonstração), cabeça do equipamento (lâmpada),
-// sombra da peça sobre o equipamento e a frente. Flutua sobre uma sombra no chão.
-export function fitFigure(key, {lazy = true} = {}) {
+// sombra da peça sobre o equipamento e a frente. Flutua sobre uma sombra no chão. Quem mostra a figura em outro formato
+// (a vitrine das lâmpadas, fenda-stage.js: a lâmpada inteira) passa o próprio enquadramento (frame, fade), uma classe e variáveis.
+export function fitFigure(key, {lazy = true, frame: ownFrame = null, fade: ownFade = null, className = '', vars: extra = ''} = {}) {
   const product = piece(key), {tool, layers = {}, head, message} = showcase(key).demo, fit = FIT[key] || {};
-  const frame = fit.frame || {scale: .8, y: .1}, fade = fit.fade || tool.fade, front = layers.front || product.catalogImage || product.image;
+  const frame = ownFrame || fit.frame || {scale: .8, y: .1}, fade = ownFade || fit.fade || tool.fade, front = layers.front || product.catalogImage || product.image;
   const img = (className, src, text = '') => `<img${className ? ` class="${className}"` : ''} src="assets/${esc(src)}" alt="${esc(text)}"${lazy ? ' loading="lazy"' : ''} decoding="async" draggable="false">`;
   const vars = [`--fit-scale:${frame.scale}`, `--fit-y:${frame.y}`, `--tool-w:${tool.width}`, `--tool-top:${tool.top}`, `--tool-ratio:${tool.ratio}`,
-    `--fade-a:${fade[0]}`, `--fade-b:${fade[1]}`, `--tool-src:url(assets/${tool.src})`, ...(head ? [`--head-w:${head.width}`, `--head-top:${head.top}`, `--head-ratio:${head.ratio}`] : [])].join(';');
-  return `<div class="fit-figure" style="${vars}"><i class="fit-ground" aria-hidden="true"></i><div class="fit-float"><div class="fit-art">`
+    `--fade-a:${fade[0]}`, `--fade-b:${fade[1]}`, `--tool-src:url(assets/${tool.src})`, ...(head ? [`--head-w:${head.width}`, `--head-top:${head.top}`, `--head-ratio:${head.ratio}`] : []), ...(extra ? [extra] : [])].join(';');
+  return `<div class="fit-figure${className ? ` ${className}` : ''}" style="${vars}"><i class="fit-ground" aria-hidden="true"></i><div class="fit-float"><div class="fit-art">`
     + (layers.back ? img('fit-back', layers.back) : '')
     + `<div class="fit-tool">${img('', tool.src)}</div>`
     + (head ? `<div class="fit-head">${img('', head.src)}</div>` : '')

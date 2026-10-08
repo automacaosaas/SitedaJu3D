@@ -175,8 +175,13 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `fenda.html`) e o banner "Novidade · Lâmpada de fenda" da home (entre a vitrine e "Nossa coleção", entre `<!-- novidade -->` e
   `<!-- /novidade -->` no `index.html`). Marcação em `dist/fenda-stage.js`, gravada por `node tools/build-product-pages.cjs`; movimento em
   `dist/fenda.js`; estilos em `dist/fenda.css` e, os do banner, em `dist/catalog.css` (a home não ganhou folha nova). Reaproveita a peça
-  encaixada da página Escolha o seu, o fundo da vitrine da home, o selo "Novidade" e o "Monte seu kit" da página da peça. Peça nova da
-  família `lampada` (FAMILIES em `products.js`) entra sozinha. Flyer (conversa, Status) e a prévia do link (`assets/og-fenda.jpg`):
+  encaixada da página Escolha o seu (aqui com a lâmpada inteira: `fitFigure` aceita `frame`/`fade`), o fundo da vitrine da home, o selo
+  "Novidade" e o "Monte seu kit" da página da peça. As três peças ficam nítidas lado a lado (no celular também, sem setas: toca-se na
+  vizinha, nas pílulas ou arrasta-se). A página leva à compra: "Comprar" (direto para `comprar-agora.html`) e "Adicionar ao carrinho"
+  sob o nome; "Ver detalhes" abre preço, cores e descrição; ao rolar entram as ofertas (um cartão por faixa do kit, nas cores das
+  peças; escolher um monta o kit, que vai ao carrinho ou direto à compra). Sem "Falar com a Ju": o convite a um colega no WhatsApp
+  fica discreto no rodapé. No banner da home, as peças entram dos lados ao rolar (`animation-timeline: view()`, onde o navegador
+  tem; nos outros, ficam paradas). Peça nova da família `lampada` (FAMILIES em `products.js`) entra sozinha. Flyer (conversa, Status) e a prévia do link (`assets/og-fenda.jpg`):
   `node tools/flyer-fenda/render.cjs` (rode de novo quando mudar uma peça, o preço ou o kit). `tests/fenda.mjs` confere tudo.
 - **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
   continua na aba ao lado, e escolher uma cor leva a ele. **Só FOTOS REAIS** (06/10/2026: nem render do 3D nem imagem gerada): as fotos do
