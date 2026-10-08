@@ -202,7 +202,8 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("${icon('palette')}<span>Personalizar o meu</span><span class=\"palette-go\" aria-hidden=\"true\">${icon('arrow')}</span>"), 'ícone de paleta de cores à esquerda, verbo claro e, na ponta, o círculo com a seta');
   assert.ok(/\.palette-button:hover > svg \{ animation: palette-tilt \.6s/.test(css) && /\.palette-button:hover \{ transform: scale\(1\.03\);/.test(css), 'no hover o botão sobe 3% e a paleta balança');
   assert.ok(/\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \.product-rail-art img \{ transform: scale\(1\); \}/.test(css) && /\.home \.product-rail-card\[style\*="--rail-own-1"\] \.product-rail-art img \{ transform: scale\(\.9\);/.test(css) && !/translateY\(-21%\)/.test(css), 'em "Nossa coleção" a peça fica dentro do card; a do centro cresce um pouco (2026-10-05)');
-  assert.ok(/\.home \.product-rail-card \{ width: min\(300px, 30vw\); min-height: 400px; transform: translate\(calc\(-50% \+ var\(--slot\) \* 292px \+ var\(--drag\)\), 38px\) scale\(\.8\); \}/.test(css) && /\.home \.product-rail-card:not\(\.is-active\) \{ transform: translate\(calc\(-50% \+ var\(--slot\) \* min\(56vw, 260px\)/.test(css), 'cards dos lados menores e recolhidos atrás do central (desktop e celular)');
+  // 08/10/2026: a mesma caixa em todos os cards; os dos lados menores só pela escala (--side-s), nada pula na troca
+  assert.ok(/--card-w: min\(372px, 38vw\);[^}]*--slot-w: 304px; --side-s: \.645;/.test(css) && /scale\(var\(--side-s\)\)/.test(css) && /--slot-w: calc\(var\(--card-w\) \* \.77\)/.test(catalog) && /--slot-w: 44vw/.test(catalog), 'cards dos lados menores e recolhidos atrás do central (desktop e celular)');
   assert.ok(/\.palette-button:active \{ transform: scale\(\.98\);/.test(css), 'no clique o botão afunda');
   assert.ok(/\.palette-button \{[^}]*box-shadow: [^;]*0 10px 25px var\(--glow\)/.test(css), 'sombra viva no tom do botão');
   assert.ok(js.includes("data-demo-open>${icon('eye')}<span>Ver encaixado</span>"), '"Ver encaixado" com o olho (ver a peça montada)');
@@ -230,11 +231,11 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
 
   // ── categoria, valor, pontinhos e topo do card central no tema ─────────────────
   assert.ok(/\.home \.product-rail-category, \.home \.product-rail-active-details strong \{ color: var\(--theme-accent, var\(--rose\)\)/.test(css), 'categoria e valor "Categoria" seguem o tema');
-  assert.ok(css.includes('.home .product-carousel-dots button::after { background: var(--theme-soft') && css.includes('.home .product-carousel-dots button[aria-selected=true]::after { background: var(--theme-accent'), 'pontinhos seguem o tema (o alvo de toque de 44 px não muda)');
+  assert.ok(css.includes('.home .product-carousel-dots button::after { background: var(--theme-soft') && css.includes('.home .product-carousel-dots button[aria-current]::after { background: var(--theme-accent'), 'pontinhos seguem o tema (o alvo de toque de 44 px não muda)');
   assert.ok(/\.home \.product-rail-card\.is-active \{[^}]*border-color: var\(--theme-soft[^}]*var\(--theme-glow/.test(css) && /\.home \.product-rail-card\.is-active \.product-rail-art \{ background: linear-gradient\(to bottom, var\(--theme-wash/.test(css), 'o topo do card central se conecta ao degradê do tema');
   assert.ok(js.includes("'--theme-soft'") && js.includes("'--theme-wash'"), 'as duas cores novas são calculadas a cada quadro');
-  const desktopCards = css.match(/@media \(min-width: 901px\) \{\r?\n  \.home \.product-carousel-stage \{ height: (\d+)px; \}[\s\S]*?\r?\n\}/);
-  assert.ok(desktopCards && Number(desktopCards[1]) <= 540 && /\.home \.product-rail-card\.is-active \{ width: min\(372px/.test(desktopCards[0]), 'no desktop os cards cabem na tela (só na home); o do centro um pouco maior desde 2026-10-05');
+  const desktopCards = css.match(/@media \(min-width: 901px\) \{\r?\n(?:  \/\*[\s\S]*?\*\/\r?\n)?  \.home \.product-carousel-stage \{ height: (\d+)px;[^}]*\}[\s\S]*?\r?\n\}/);
+  assert.ok(desktopCards && Number(desktopCards[1]) <= 540 && /--card-w: min\(372px/.test(desktopCards[0]), 'no desktop os cards cabem na tela (só na home); o do centro um pouco maior desde 2026-10-05');
   assert.ok([...desktopCards[0].matchAll(/font-size: (\d+)px/g)].every(match => Number(match[1]) >= 26) && !/product-rail-(bottom|actions|active-details)[^{]*\{[^}]*font-size/.test(desktopCards[0]), 'o texto das informações não encolhe (só o título cai de 28 para 26 px)');
   for (const key of Object.keys(PRODUCTS)) {
     const {theme} = showcase(key), [, mid] = stops(theme.bannerStops), wash = mixColor(mid, '#ffffff', .3);

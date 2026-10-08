@@ -42,6 +42,13 @@ assert.equal(t('Coleção de 1 produto', 'es'), 'Colección de 1 producto');
 const chooseLabel = 'Escolha sua cor: ver Borboletoscópio na coleção e personalizar. Cores originais: Verde-menta, Amarelo';
 assert.equal(t(chooseLabel, 'en'), 'Choose your color: view Borboletoscópio in the collection and customize. Original colors: Mint green, Yellow');
 assert.equal(t(chooseLabel, 'es'), 'Elige tu color: ver Borboletoscópio en la colección y personalizar. Colores originales: Verde menta, Amarillo');
+// 2026-10-08: accessible names of the showcase pieces and of the card's cart button come out whole in EN/ES
+assert.equal(t('Conhecer MonkeyLamp, capa para lâmpada de fenda portátil', 'en'), 'Discover MonkeyLamp, cover for a handheld slit lamp');
+assert.equal(t('Conhecer MonkeyLamp, capa para lâmpada de fenda portátil', 'es'), 'Conocer MonkeyLamp, funda para lámpara de hendidura portátil');
+assert.equal(t('Conhecer Aviãoscopia, avião magnético para régua de esquiascopia', 'en'), 'Discover Aviãoscopia, magnetic airplane for a skiascopy rack');
+assert.equal(t('Adicionar Borboletoscópio ao carrinho nas cores originais', 'en'), 'Add Borboletoscópio to cart in the original colors');
+assert.equal(t('Adicionar Borboletoscópio ao carrinho nas cores originais', 'es'), 'Añadir Borboletoscópio al carrito en los colores originales');
+assert.equal(t('Adicionar Borboletoscópio nas cores originais', 'en'), 'Add Borboletoscópio in the original colors');
 assert.equal(t('Aviãoscopia sobre pilastra branca', 'en'), 'Aviãoscopia on a white pedestal');
 assert.equal(t('Prévia 3D ilustrativa de Aviãoscopia', 'es'), 'Vista previa 3D ilustrativa de Aviãoscopia');
 assert.equal(t('Olá, Maria.', 'en'), 'Hello, Maria.');

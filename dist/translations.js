@@ -896,6 +896,9 @@ Fotos da peça|Photos of the piece|Fotos de la pieza
 Todas as peças|All pieces|Todas las piezas
 Peças anteriores|Previous pieces|Piezas anteriores
 Mais peças|More pieces|Más piezas
+Ver mais peças|See more pieces|Ver más piezas
+Pausar a troca automática|Pause auto-advance|Pausar el avance automático
+Retomar a troca automática|Resume auto-advance|Reanudar el avance automático
 Produção em|Production in|Producción en
 Canais de atendimento|Ways to reach us|Canales de atención
 Mensagem|Message|Mensaje

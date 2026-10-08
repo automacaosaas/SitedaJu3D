@@ -59,115 +59,221 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
   </aside>`;
 }
 
-// "Você também pode gostar" (06/10/2026, pedido do Luiz): cards pequenos, lado a lado num carrossel, só com a foto, o nome e o
-// preço; as peças que ainda não estão no carrinho e, depois, as novidades (com "Em breve" no lugar do preço). O carrossel passa
-// um card por vez sozinho (wireRecArrows) e a seta da direita mostra, num anel, quanto falta para o próximo; "Ver todas" leva à
-// página Produtos. Os cards se repetem uma vez no fim (cópias escondidas do leitor de tela e do Tab): o carrossel dá a volta sem
-// rebobinar, e anda também no computador, onde os originais cabem na largura.
+// "Você também pode gostar" (06/10/2026, refeito em 08/10/2026 a pedido do dono: "mostrar 3 produtos em carrossel e um 'Ver mais +' ao
+// lado; em sequência eles iriam atualizando e passando com o tempo"). Cards com a foto, o nome e o preço: as peças que ainda não estão
+// no carrinho e, depois, as novidades ("Em breve" no lugar do preço). Três cards à vista no computador e no tablet (dois no celular) e,
+// no fim da fileira, o "Ver mais +" para a página Produtos. Cada card aparece uma vez só (sem cópias): o carrossel dá a volta trocando
+// um card de ponta (wireRecArrows). Os botões (pausar, voltar, avançar) ficam acima, à direita do título (embaixo, no celular), longe
+// dos cards; com poucas peças, que cabem todas, eles somem e nada anda.
+const PLAY_ICONS = '<svg class="cart-rec-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21"></circle></svg><svg class="cart-rec-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7v10M15 7v10"/></svg><svg class="cart-rec-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5v11l8.5-5.5z"/></svg>';
 function recommendations(cart) {
   const inCart = new Set(cart.map(item => item.productId));
   const items = [...Object.keys(PRODUCTS).filter(id => !inCart.has(id)).map(id => ({id, href: `${id}.html`, title: PRODUCTS[id].title, price: money(COMMERCE.prices[id])})),
     ...Object.keys(SOON).map(id => ({id, href: `index.html#produto/${id}/3d`, title: SOON[id].title}))];
   if (!items.length) return '';
-  const arrow = step => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-label="${step < 0 ? 'Peças anteriores' : 'Mais peças'}"${step < 0 ? ' hidden' : ''}>${step > 0 ? '<svg class="cart-rec-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22"></circle></svg>' : ''}${icon('arrow')}</button>`;
-  const card = ({id, href, title, price}, clone) => {
+  const arrow = step => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-controls="cart-rec-track" aria-label="${step < 0 ? 'Peças anteriores' : 'Mais peças'}">${icon('arrow')}</button>`;
+  const card = ({id, href, title, price}, index) => {
     const {theme} = showcase(id);
-    return `<li${clone ? ' aria-hidden="true"' : ''}><a class="cart-rec${price ? '' : ' is-soon'}${clone ? ' is-clone' : ''}" href="${href}"${clone ? ' tabindex="-1"' : ''} style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-preview-${id}.webp" alt="" width="384" height="384" loading="lazy" decoding="async" draggable="false"></span><span class="cart-rec-name">${esc(title)}</span><span class="cart-rec-price">${price || 'Em breve'}</span></a></li>`;
+    return `<li class="cart-rec-slide" data-rec-index="${index + 1}"><a class="cart-rec${price ? '' : ' is-soon'}" href="${href}" draggable="false" style="--rec-stops:${theme.bannerStops};--rec-accent:${theme.accentColor};--rec-ink:${theme.textColor}"><span class="cart-rec-art"><img src="assets/card-preview-${id}.webp" alt="" width="384" height="384" loading="lazy" decoding="async" draggable="false"></span><span class="cart-rec-name">${esc(title)}</span><span class="cart-rec-price">${price || 'Em breve'}</span></a></li>`;
   };
-  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><div class="cart-recs-head"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2><a class="cart-recs-all" href="produtos.html">Ver todas ${icon('arrow')}</a></div><div class="cart-rec-rail" aria-roledescription="carrossel">${arrow(-1)}<ul class="cart-rec-track" data-rec-track>${items.map(item => card(item, false)).join('')}${items.map(item => card(item, true)).join('')}</ul>${arrow(1)}</div></section>`;
+  return `<section class="cart-recs" aria-labelledby="cart-recs-title"><div class="cart-recs-head"><h2 id="cart-recs-title">${cart.length ? 'Você também pode gostar' : 'Comece por uma destas'}</h2></div>`
+    + `<div class="cart-rec-rail is-static" data-count="${Math.min(items.length, 3)}" role="region" aria-roledescription="carrossel" aria-labelledby="cart-recs-title">`
+    + `<div class="cart-rec-controls" hidden><button type="button" class="cart-rec-toggle" data-rec-play aria-label="Pausar a troca automática" title="Pausar a troca automática">${PLAY_ICONS}</button>${arrow(-1)}${arrow(1)}</div>`
+    + `<div class="cart-rec-viewport"><ul class="cart-rec-track" id="cart-rec-track" data-rec-track>${items.map(card).join('')}</ul></div>`
+    + `<a class="cart-rec-more" href="produtos.html" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></span><span class="cart-rec-more-label">Ver mais</span></a>`
+    + `</div><p class="sr-only" data-rec-live aria-live="polite" aria-atomic="true"></p></section>`;
 }
 
-// A seta de avançar aparece sempre que a fileira rola (ela dá a volta); a de voltar, depois que a fileira andou.
-export function updateRecArrows(root) {
-  const track = root.querySelector('[data-rec-track]');
-  if (!track) return;
-  const max = track.scrollWidth - track.clientWidth - 2, rail = track.closest('.cart-rec-rail');
-  rail.classList.toggle('can-scroll', max > 0);
-  rail.classList.toggle('at-start', track.scrollLeft <= 2);
-  const prev = root.querySelector('[data-rec-step="-1"]'), next = root.querySelector('[data-rec-step="1"]');
-  if (prev) prev.hidden = max <= 0 || track.scrollLeft <= 2;
-  if (next) next.hidden = max <= 0;
-}
-
-// O carrossel: um card por vez a cada AUTO_MS, em volta (depois do último vem o primeiro, das cópias, e a fileira volta uma volta
-// inteira sem ninguém ver). Para enquanto o mouse está em cima, o foco
-// está dentro, a pessoa acabou de mexer (toque, arraste, rolagem: 6 s), a fileira está fora da tela ou a aba escondida; com
-// "reduzir movimento", não anda sozinho. No computador, a fileira também se arrasta com o mouse (e assenta no card mais perto).
+// O carrossel. A fileira (track) é uma lista só, deslocada por transform: à vista ficam os cards de lead a lead + k (k = 3, ou 2 no
+// celular, lido de --rec-k no CSS); para andar, o card de uma ponta passa para a outra (no DOM, fora da vista) e a fileira desliza um
+// card. Os que estão fora da vista ficam inertes (fora do Tab e do leitor de tela). Anda sozinho um card a cada AUTO_MS, com o anel do
+// botão de pausa mostrando o tempo; para com o mouse em cima, com o foco dentro, por 6 s depois de um toque, fora da tela, com a aba
+// escondida, com o botão de pausa e, sempre, com "reduzir movimento". Arrasta com o dedo ou o mouse (1:1, com velocidade); as setas do
+// teclado andam entre os cards e a fileira acompanha.
 const AUTO_MS = 4200;
+const HOLD_MS = 6000;
+const recStates = new WeakMap();
+const recState = root => { let state = recStates.get(root); if (!state) recStates.set(root, state = {lead: 0, paused: false, hover: false, focus: false, heldUntil: 0, onScreen: true}); return state; };
+const recParts = root => {
+  const rail = root.querySelector('.cart-rec-rail');
+  return rail && {rail, track: rail.querySelector('[data-rec-track]'), controls: rail.querySelector('.cart-rec-controls'), toggle: rail.querySelector('[data-rec-play]'), live: root.querySelector('[data-rec-live]')};
+};
+const reduceRec = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const perView = rail => Math.max(1, Math.round(parseFloat(getComputedStyle(rail).getPropertyValue('--rec-k')) || 3));
+const stepOf = track => { const first = track.firstElementChild; return first ? first.getBoundingClientRect().width + (parseFloat(getComputedStyle(track).columnGap) || 0) : 0; };
+function placeRec(parts, state, offset = 0) {
+  const {track} = parts, step = stepOf(track);
+  track.style.transform = state.moving && (state.lead || offset) ? `translate3d(${(-state.lead * step + offset).toFixed(2)}px, 0, 0)` : '';
+}
+function markRec(parts, state) {
+  const k = state.moving ? perView(parts.rail) : Infinity;
+  [...parts.track.children].forEach((slide, index) => { slide.inert = index < state.lead || index >= state.lead + k; });
+}
+// termina na hora o deslize em curso (antes de um arraste ou de redesenhar)
+function settleRec(parts, state) {
+  const anim = state.anim;
+  if (!anim) return;
+  state.anim = null; placeRec(parts, state); anim.cancel(); parts.rail.classList.remove('is-moving');
+}
+// abre espaço do lado para onde a fileira vai: o card da outra ponta muda de lugar no DOM (invisível) e a posição compensa
+function roomRec(parts, state, direction) {
+  const {track} = parts, n = track.children.length, k = perView(parts.rail);
+  if (direction > 0 && state.lead + k >= n) { track.append(track.firstElementChild); state.lead -= 1; }
+  if (direction < 0 && state.lead === 0) { track.prepend(track.lastElementChild); state.lead += 1; }
+}
+
+// Depois de cada desenho do carrinho (checkout.js), e o carrinho é redesenhado a cada quantidade e a cada frete calculado: a fileira nova
+// continua do card que estava primeiro à vista (sem voltar ao começo), e decide se é carrossel (mais peças do que cabem) ou fileira parada.
+export function updateRecArrows(root) {
+  const state = recState(root), parts = recParts(root);
+  clearTimeout(state.timer);
+  if (!parts) { state.watch?.disconnect(); return; }
+  if (state.rail !== parts.rail) {
+    const first = state.rail?.querySelector('[data-rec-track]')?.children[state.lead]?.querySelector('a')?.getAttribute('href');
+    const keep = first && [...parts.track.children].findIndex(slide => slide.querySelector('a')?.getAttribute('href') === first);
+    for (let i = 0; i < keep; i++) parts.track.append(parts.track.firstElementChild);
+    state.rail = parts.rail; state.lead = 0; state.anim = null; state.drag = null; state.focus = parts.rail.contains(document.activeElement);
+    state.watch?.disconnect();
+    if ('IntersectionObserver' in window) { state.watch = new IntersectionObserver(([entry]) => { state.onScreen = entry.isIntersecting; scheduleRec(root); }); state.watch.observe(parts.rail); }
+  }
+  settleRec(parts, state);
+  parts.rail.style.setProperty('--rec-auto', `${AUTO_MS}ms`);
+  const k = perView(parts.rail);
+  state.moving = parts.track.children.length > k;
+  parts.controls.hidden = !state.moving;
+  parts.rail.classList.toggle('is-static', !state.moving);
+  if (!state.moving) state.lead = 0;
+  // a tela girou (de 2 para 3 cards à vista) com a fileira perto do fim: o card da frente passa para o fim, sem um buraco no último lugar
+  while (state.moving && state.lead > 0 && state.lead + k > parts.track.children.length) { parts.track.append(parts.track.firstElementChild); state.lead -= 1; }
+  placeRec(parts, state); markRec(parts, state); paintToggle(parts, state);
+  scheduleRec(root);
+}
+function paintToggle(parts, state) {
+  const label = state.paused ? 'Retomar a troca automática' : 'Pausar a troca automática';
+  parts.rail.classList.toggle('is-paused', state.paused);
+  if (parts.toggle.getAttribute('data-label') !== label) { parts.toggle.setAttribute('data-label', label); parts.toggle.setAttribute('aria-label', label); parts.toggle.setAttribute('title', label); }
+}
+function playingRec(state) {
+  return state.moving && !state.paused && !state.hover && !state.focus && !state.drag && !state.anim && !document.hidden && state.onScreen && Date.now() >= state.heldUntil && !reduceRec();
+}
+function scheduleRec(root) {
+  const state = recState(root), parts = recParts(root);
+  clearTimeout(state.timer);
+  if (!parts || parts.rail !== state.rail) return;
+  const on = playingRec(state);
+  // o anel do botão de pausa recomeça a cada card (a animação dele dura AUTO_MS)
+  parts.rail.classList.remove('is-playing');
+  if (on) { void parts.rail.offsetWidth; parts.rail.classList.add('is-playing'); state.timer = setTimeout(() => { if (playingRec(state)) goRec(root, 1, true); else scheduleRec(root); }, AUTO_MS); }
+  else if (state.moving && Date.now() < state.heldUntil) state.timer = setTimeout(() => scheduleRec(root), state.heldUntil - Date.now() + 30);
+}
+// Anda um card. `offset` é onde a fileira está (no arraste); `auto` é a passagem sozinha, mais lenta e macia; a das setas, rápida.
+function goRec(root, direction, auto = false, offset = 0) {
+  const state = recState(root), parts = recParts(root);
+  if (!parts || !state.moving) return;
+  // um clique no meio de um deslize continua de onde a fileira está, sem saltar
+  const step = stepOf(parts.track), before = state.lead;
+  let from = -state.lead * step + offset;
+  if (state.anim) { from = new DOMMatrixReadOnly(getComputedStyle(parts.track).transform).m41; state.anim.cancel(); state.anim = null; }
+  roomRec(parts, state, direction);
+  from += (before - state.lead) * step;
+  state.lead += direction;
+  const to = -state.lead * step;
+  markRec(parts, state);
+  if (!auto) {
+    const entering = parts.track.children[direction > 0 ? state.lead + perView(parts.rail) - 1 : state.lead];
+    if (entering && parts.live) parts.live.textContent = `${entering.querySelector('.cart-rec-name')?.textContent || ''}, ${entering.dataset.recIndex} de ${parts.track.children.length}.`;
+  }
+  if (parts.rail.contains(document.activeElement) && document.activeElement.closest('[inert]')) parts.track.children[state.lead]?.querySelector('a')?.focus({preventScroll: true});
+  if (reduceRec()) { placeRec(parts, state); scheduleRec(root); return; }
+  const anim = parts.track.animate([{transform: `translate3d(${from.toFixed(2)}px, 0, 0)`}, {transform: `translate3d(${to.toFixed(2)}px, 0, 0)`}],
+    {duration: auto ? 760 : 420, easing: auto ? 'cubic-bezier(.45, 0, .25, 1)' : 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards'});
+  state.anim = anim; parts.rail.classList.add('is-moving');
+  anim.onfinish = () => { if (state.anim !== anim) return; state.anim = null; placeRec(parts, state); anim.cancel(); parts.rail.classList.remove('is-moving'); scheduleRec(root); };
+  scheduleRec(root);
+}
+function holdRec(root) { const state = recState(root); state.heldUntil = Date.now() + HOLD_MS; scheduleRec(root); }
+
 export function wireRecArrows(root) {
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  let timer = 0, settle = 0, hover = false, focus = false, heldUntil = 0, autoUntil = 0, drag = null;
-  const track = () => root.querySelector('[data-rec-track]');
-  const step = t => { const li = t.querySelector('li'); return li ? li.getBoundingClientRect().width + (parseFloat(getComputedStyle(t).columnGap) || 12) : 200; };
-  const hold = (ms = 6000) => { heldUntil = Date.now() + ms; schedule(); };
-  const lap = t => t.querySelectorAll('li:not([aria-hidden])').length * step(t);       // a largura de uma volta
-  const jump = (t, left) => { t.classList.add('is-dragging'); t.scrollLeft = left; void t.offsetWidth; t.classList.remove('is-dragging'); };
-  function wrap(t = track()) { if (t && t.scrollLeft >= lap(t) - 1) { autoUntil = Date.now() + 200; jump(t, t.scrollLeft - lap(t)); } }
-  function go(direction, t = track()) {
-    if (!t) return;
-    const behavior = reduce.matches ? 'auto' : 'smooth';
-    autoUntil = Date.now() + 900;
-    if (direction < 0 && t.scrollLeft < step(t) / 2) jump(t, t.scrollLeft + lap(t));
-    t.scrollTo({left: Math.round(t.scrollLeft / step(t) + direction) * step(t), behavior});
-    setTimeout(() => wrap(t), reduce.matches ? 0 : 700);
-  }
-  function playing(t) {
-    if (!t || reduce.matches || hover || focus || drag || document.hidden || Date.now() < heldUntil || t.scrollWidth - t.clientWidth <= 4) return false;
-    const box = t.getBoundingClientRect();
-    return box.bottom > 0 && box.top < innerHeight;
-  }
-  function schedule() {
-    clearTimeout(timer);
-    const t = track(), rail = t?.closest('.cart-rec-rail');
-    if (!rail) return;
-    const on = playing(t);
-    // o anel da seta recomeça a cada card (a animação dele dura AUTO_MS)
-    if (on !== rail.classList.contains('is-playing') || on) { rail.classList.remove('is-playing'); if (on) { void rail.offsetWidth; rail.classList.add('is-playing'); } }
-    rail.style.setProperty('--rec-auto', `${AUTO_MS}ms`);
-    timer = setTimeout(() => { if (playing(track())) go(1); schedule(); }, on ? AUTO_MS : 800);
-  }
+  const inRail = target => target?.closest?.('.cart-rec-rail');
   root.addEventListener('click', event => {
-    const button = event.target.closest('[data-rec-step]');
-    if (drag?.moved) { event.preventDefault(); event.stopPropagation(); drag = null; return; }
-    if (!button) return;
-    go(Number(button.dataset.recStep)); hold();
+    const state = recState(root);
+    if (state.suppress && event.target.closest?.('[data-rec-track]')) { event.preventDefault(); event.stopPropagation(); state.suppress = false; return; }
+    const step = event.target.closest('[data-rec-step]');
+    if (step) { goRec(root, Number(step.dataset.recStep)); return; }
+    if (event.target.closest('[data-rec-play]')) { state.paused = !state.paused; state.heldUntil = 0; const parts = recParts(root); if (parts) paintToggle(parts, state); scheduleRec(root); }
   }, true);
-  root.addEventListener('scroll', event => {
-    if (!event.target.matches?.('[data-rec-track]')) return;
-    updateRecArrows(root);
-    if (Date.now() > autoUntil && !drag) hold();          // a pessoa rolou: espera ela terminar
-    clearTimeout(settle); settle = setTimeout(() => wrap(), 160);
-  }, true);
-  root.addEventListener('pointerover', event => { if (event.pointerType === 'mouse' && event.target.closest('.cart-rec-rail')) { hover = true; schedule(); } });
-  root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && event.target.closest('.cart-rec-rail') && !event.relatedTarget?.closest?.('.cart-rec-rail')) { hover = false; schedule(); } });
-  root.addEventListener('focusin', event => { if (event.target.closest('.cart-rec-rail')) { focus = true; schedule(); } });
-  root.addEventListener('focusout', event => { if (event.target.closest('.cart-rec-rail') && !event.relatedTarget?.closest?.('.cart-rec-rail')) { focus = false; schedule(); } });
-  root.addEventListener('touchstart', event => { if (event.target.closest('.cart-rec-rail')) hold(); }, {passive: true});
-  // arrastar com o mouse
+  // teclado: dentro da fileira, as setas passam de card em card; no último à vista, a fileira anda e o foco vai junto
+  root.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const slide = event.target.closest?.('.cart-rec-slide'), parts = recParts(root), state = recState(root);
+    if (!slide || !parts) return;
+    event.preventDefault();
+    const direction = event.key === 'ArrowRight' ? 1 : -1, slides = [...parts.track.children], index = slides.indexOf(slide);
+    const k = state.moving ? perView(parts.rail) : slides.length, last = state.lead + k - 1;
+    let target = slides[index + direction];
+    if (!state.moving) { target?.querySelector('a')?.focus(); return; }
+    if ((direction > 0 && index >= last) || (direction < 0 && index <= state.lead)) { goRec(root, direction); target = parts.track.children[direction > 0 ? state.lead + k - 1 : state.lead]; }
+    target?.querySelector('a')?.focus({preventScroll: true});
+  });
+  root.addEventListener('pointerover', event => { if (event.pointerType === 'mouse' && inRail(event.target)) { recState(root).hover = true; scheduleRec(root); } });
+  root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && inRail(event.target) && !inRail(event.relatedTarget)) { recState(root).hover = false; scheduleRec(root); } });
+  // o foco do teclado pausa (o de um clique com o mouse numa seta, não: o mouse já pausa enquanto está em cima)
+  root.addEventListener('focusin', event => { if (inRail(event.target) && event.target.matches(':focus-visible')) { recState(root).focus = true; scheduleRec(root); } });
+  root.addEventListener('focusout', event => { if (inRail(event.target) && !inRail(event.relatedTarget)) { recState(root).focus = false; scheduleRec(root); } });
+  // arrastar: a fileira segue o dedo (ou o mouse) 1:1; ao soltar, anda se passou de um quinto do card ou se o gesto foi rápido
   root.addEventListener('pointerdown', event => {
-    const t = event.target.closest('[data-rec-track]');
-    if (!t || event.pointerType !== 'mouse' || event.button !== 0) return;
-    drag = {t, x: event.clientX, left: t.scrollLeft, moved: false, id: event.pointerId};
+    const viewport = event.target.closest?.('.cart-rec-viewport'), state = recState(root);
+    if (!viewport || event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    if (event.pointerType !== 'mouse') holdRec(root);
+    state.suppress = false;
+    state.drag = {id: event.pointerId, x: event.clientX, y: event.clientY, lx: event.clientX, lt: event.timeStamp, v: 0, moved: false, viewport};
   });
-  addEventListener('pointermove', event => {
+  root.addEventListener('pointermove', event => {
+    const state = recState(root), drag = state.drag, parts = recParts(root);
+    if (!drag || event.pointerId !== drag.id || !parts) return;
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    if (!drag.moved) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { state.drag = null; scheduleRec(root); return; }   // é rolagem da página
+      if (Math.abs(dx) < 8 || !state.moving) return;
+      drag.moved = true; settleRec(parts, state); drag.viewport.setPointerCapture?.(event.pointerId); parts.rail.classList.add('is-dragging');
+    }
+    // o card que vai entrar precisa existir do lado do arraste (com poucas peças, ele troca de ponta conforme o dedo muda de lado)
+    const k = perView(parts.rail), n = parts.track.children.length;
+    if (dx > 0 && state.lead === 0) roomRec(parts, state, -1);
+    if (dx < 0 && state.lead + k >= n) roomRec(parts, state, 1);
+    const step = stepOf(parts.track), limit = step * 1.15, offset = Math.max(-limit, Math.min(limit, dx));
+    const dt = event.timeStamp - drag.lt;
+    if (dt > 0) drag.v = .8 * (event.clientX - drag.lx) / dt + .2 * drag.v;
+    drag.lx = event.clientX; drag.lt = event.timeStamp; drag.offset = offset;
+    placeRec(parts, state, offset); markRec(parts, state);
+    if (event.cancelable) event.preventDefault();
+  });
+  const release = event => {
+    const state = recState(root), drag = state.drag, parts = recParts(root);
     if (!drag || event.pointerId !== drag.id) return;
-    const dx = event.clientX - drag.x;
-    if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; drag.t.classList.add('is-dragging'); }
-    if (drag.moved) drag.t.scrollLeft = drag.left - dx;
-  });
-  addEventListener('pointerup', () => {
-    if (!drag) return;
-    const {t, moved} = drag;
-    if (!moved) { drag = null; return; }
-    t.classList.remove('is-dragging');
-    autoUntil = Date.now() + 900;
-    t.scrollTo({left: Math.round(t.scrollLeft / step(t)) * step(t), behavior: reduce.matches ? 'auto' : 'smooth'});
-    setTimeout(() => { drag = null; hold(); }, 0);   // o clique que vem logo depois do arraste não abre o card
-  });
-  document.addEventListener('visibilitychange', schedule);
-  addEventListener('scroll', () => { if (!root.querySelector('.cart-rec-rail.is-playing')) schedule(); }, {passive: true});
-  addEventListener('resize', () => updateRecArrows(root), {passive: true});
-  schedule();
+    state.drag = null;
+    if (drag.viewport.hasPointerCapture?.(event.pointerId)) drag.viewport.releasePointerCapture(event.pointerId);
+    if (!drag.moved || !parts) { scheduleRec(root); return; }
+    parts.rail.classList.remove('is-dragging');
+    state.suppress = true; setTimeout(() => { state.suppress = false; }, 400);   // o clique que vem logo depois do arraste não abre o card
+    const offset = drag.offset || 0, v = event.timeStamp - drag.lt > 100 ? 0 : drag.v, step = stepOf(parts.track);
+    const flick = Math.abs(v) > .35 && Math.sign(v) === Math.sign(offset);
+    if (event.type === 'pointerup' && offset && (Math.abs(offset) > step * .2 || flick)) goRec(root, offset < 0 ? 1 : -1, false, offset);
+    else if (reduceRec() || !offset) { placeRec(parts, state); markRec(parts, state); }
+    else {
+      const anim = parts.track.animate([{transform: `translate3d(${(-state.lead * step + offset).toFixed(2)}px, 0, 0)`}, {transform: `translate3d(${(-state.lead * step).toFixed(2)}px, 0, 0)`}], {duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'forwards'});
+      state.anim = anim; placeRec(parts, state); markRec(parts, state);
+      anim.onfinish = () => { if (state.anim !== anim) return; state.anim = null; anim.cancel(); scheduleRec(root); };
+    }
+    if (event.pointerType !== 'mouse') holdRec(root);
+  };
+  root.addEventListener('pointerup', release); root.addEventListener('pointercancel', release);
+  root.addEventListener('dragstart', event => { if (event.target.closest?.('[data-rec-track]')) event.preventDefault(); });
+  document.addEventListener('visibilitychange', () => scheduleRec(root));
+  matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => scheduleRec(root));
+  let resized = 0;
+  addEventListener('resize', () => { clearTimeout(resized); resized = setTimeout(() => { if (recParts(root)) updateRecArrows(root); }, 120); }, {passive: true});
+  updateRecArrows(root);
 }
 
 // "Ver resumo" na barra de baixo do celular: a página desce até o resumo numa rolagem suave (e não num pulo), e o resumo acende

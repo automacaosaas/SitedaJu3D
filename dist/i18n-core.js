@@ -2,11 +2,15 @@ import {translations} from './translations.js';
 
 export const SUPPORTED = ['pt-BR', 'en', 'es'];
 const list = (t, text) => text.split(', ').map(part => t(part)).join(', ');
+// o subtítulo vem com a primeira letra minúscula no meio da frase (carousel.js): traduz como no dicionário e volta à minúscula
+const midSentence = (t, text) => { const out = t(text.charAt(0).toUpperCase() + text.slice(1)); return out.charAt(0).toLowerCase() + out.slice(1); };
 // Text that carries a name, a number or a list. Each rule is [pattern, English, Spanish]; a replacement is either a
 // string with $1 groups or a function that receives a translator for the target language plus the captured groups.
 const dynamic = [
   [/^COLEÇÃO 01 \/ PEÇA (\d+)$/, 'COLLECTION 01 / PIECE $1', 'COLECCIÓN 01 / PIEZA $1'],
   [/^(.+), produto (\d+) de (\d+)\.$/, '$1, product $2 of $3.', '$1, producto $2 de $3.'],
+  // a peça da vitrine (carousel.js): "Conhecer <nome>, <subtítulo>"
+  [/^Conhecer ([^,]+), (.+)$/, (t, name, sub) => `Discover ${name}, ${midSentence(t, sub)}`, (t, name, sub) => `Conocer ${name}, ${midSentence(t, sub)}`],
   [/^Conhecer (.+)$/, 'Discover $1', 'Conocer $1'],
   [/^Trazer ao centro (.+)$/, 'Bring $1 to center', 'Centrar $1'],
   [/^Olá, (.+)\.$/, 'Hello, $1.', 'Hola, $1.'],
@@ -20,6 +24,8 @@ const dynamic = [
   [/^(\d+) peças$/, '$1 items', '$1 piezas'],
   [/^(\d+) peças? no carrinho$/, (t, n) => n === '1' ? '1 item in the cart' : `${n} items in the cart`, (t, n) => n === '1' ? '1 pieza en el carrito' : `${n} piezas en el carrito`],
   [/^Cores de (.+)$/, 'Colors of $1', 'Colores de $1'],
+  // antes da regra genérica abaixo, que pegaria "Adicionar X ao carrinho" como se fosse o nome da peça (o carrinho dos cards)
+  [/^Adicionar (.+) ao carrinho nas cores originais$/, 'Add $1 to cart in the original colors', 'Añadir $1 al carrito en los colores originales'],
   [/^Adicionar (.+) nas cores originais$/, 'Add $1 in the original colors', 'Añadir $1 en los colores originales'],
   [/^(.+) adicionado nas cores originais\.$/, '$1 added in the original colors.', '$1 añadido en los colores originales.'],
   [/^Carrinho, (\d+) item$/, 'Cart, $1 item', 'Carrito, $1 artículo'],
@@ -44,7 +50,6 @@ const dynamic = [
   [/^(\d+) peça · (.+)$/, '$1 item · $2', '$1 pieza · $2'],
   [/^(\d+) peças · (.+)$/, '$1 items · $2', '$1 piezas · $2'],
   [/^Adicionar (.+) ao carrinho$/, 'Add $1 to cart', 'Añadir $1 al carrito'],
-  [/^Adicionar (.+) ao carrinho nas cores originais$/, 'Add $1 to cart in the original colors', 'Añadir $1 al carrito en los colores originales'],
   [/^Personalizar (.+)$/, 'Customize $1', 'Personalizar $1'],
   [/^Ver (MonkeyLamp|GiraffeLamp|UnicornLamp)$/, 'See $1', 'Ver $1'],
   [/^Mostrar (.+)$/, 'Show $1', 'Mostrar $1'],
