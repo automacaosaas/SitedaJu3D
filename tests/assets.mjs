@@ -25,7 +25,8 @@ for (const name of referenced) assert(!/\.png$/.test(name) || name === 'logo-ju-
 
 // Budgets for what visitors download. Raise them only on purpose, after measuring.
 // The butterfly on the home's banner is the first picture every new visitor downloads (index.html preloads it).
-const budget = {'logo-ju.webp': 40, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150};
+// The unicorn's head turn (36 frames, 07/10/2026) loads only when its 'Ver encaixado' opens, never with the page.
+const budget = {'logo-ju.webp': 40, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150, 'unicornioscopio-giro.webp': 450};
 for (const name of referenced) {
   const kb = (await stat(new URL(`assets/${name}`, dist))).size / 1024;
   const limit = budget[name] ?? (name.endsWith('.glb') ? 2500 : 300);

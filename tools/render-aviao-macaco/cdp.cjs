@@ -11,7 +11,7 @@ async function withBrowser(fn, {port = 9333, webgl = false} = {}) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'cdp-'));
   const proc = spawn(CHROME, [
     '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-    '--no-first-run', '--no-default-browser-check', ...(webgl ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : ['--disable-gpu']), '--hide-scrollbars',
+    '--no-first-run', '--no-default-browser-check', ...(webgl ? (process.env.RENDER_GPU ? ['--use-angle=' + process.env.RENDER_GPU, '--ignore-gpu-blocklist', '--enable-gpu-rasterization'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']) : ['--disable-gpu']), '--hide-scrollbars',
     '--force-device-scale-factor=1', '--disable-features=Translate', 'about:blank'
   ], {stdio: 'ignore'});
   try {

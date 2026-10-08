@@ -31,17 +31,51 @@ function bumpMask(map, h, valid, tex, o) {
   return mask;
 }
 function curveMask(map, h, valid, tex, o) {
-  const {W, H} = map, N = W * H, near = dilate(tex, W, H, o.near ?? 12); let x0 = W, x1 = -1;
+  const {W, H} = map, mask = new Uint8Array(W * H), r = (o.width ?? 10) / 2;
+  for (const [cx, cy] of curvePoints(map, h, valid, tex, o)) { for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) { if (x < 0 || y < 0 || x >= W || y >= H) continue; if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) mask[y * W + x] = 1; } }
+  return mask;
+}
+// the bottom of the groove as points [x, y] (px), one per column
+function curvePoints(map, h, valid, tex, o) {
+  const {W, H} = map, N = W * H; let x0 = W, x1 = -1;
   for (let i = 0; i < N; i++) if (tex[i]) { const x = i % W; x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
   // tracking: start at the deepest point of the valley inside the painted band, then follow it column by column, looking only
   // ±step px from the previous row, while it stays a valley (h below endLevel)
   let sx = -1, sy = -1, sh = Infinity; for (let i = 0; i < N; i++) if (valid[i] && tex[i] && h[i] < sh) { sh = h[i]; sx = i % W; sy = (i - sx) / W; }
   const follow = dir => { const out = []; let y = sy; for (let x = sx + dir; x >= 0 && x < W; x += dir) { let best = Infinity, by = -1; for (let yy = Math.max(0, y - (o.step ?? 3)); yy <= Math.min(H - 1, y + (o.step ?? 3)); yy++) { const i = yy * W + x; if (valid[i] && h[i] < best) { best = h[i]; by = yy; } } if (by < 0 || best > (o.endLevel ?? 0) || x < x0 - (o.extend ?? 20) || x > x1 + (o.extend ?? 20)) break; out.push([x, by, best]); y = by; } return out; };
   const run = [...follow(-1).reverse(), [sx, sy, sh], ...follow(1)];
-  const win = o.window ?? 15, ys = run.map((p, i) => { let s = 0, n = 0; for (let j = Math.max(0, i - win); j <= Math.min(run.length - 1, i + win); j++) { s += run[j][1]; n++; } return s / n; });
-  const mask = new Uint8Array(N), r = (o.width ?? 10) / 2;
-  for (let i = 0; i < run.length; i++) { const cx = run[i][0], cy = ys[i]; for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) { if (x < 0 || y < 0 || x >= W || y >= H) continue; if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) mask[y * W + x] = 1; } }
-  return mask;
+  // "fit": the valley points fitted by a polynomial of that degree (least squares): a regular curve, as modelled (the tracking jitters
+  // by a pixel or two); without it, a moving average
+  let ys;
+  if (o.fit) { const d = o.fit, n = d + 1, X0 = run.reduce((a, p) => a + p[0], 0) / run.length, sc = run.length / 2 || 1, A = Array.from({length: n}, () => new Float64Array(n + 1));
+    for (const p of run) { const t = (p[0] - X0) / sc, pw = Array.from({length: n}, (_, i) => t ** i); for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) A[i][j] += pw[i] * pw[j]; A[i][n] += pw[i] * p[1]; } }
+    for (let i = 0; i < n; i++) { let piv = i; for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r; [A[i], A[piv]] = [A[piv], A[i]]; for (let r = 0; r < n; r++) if (r !== i) { const k = A[r][i] / A[i][i]; for (let c = i; c <= n; c++) A[r][c] -= k * A[i][c]; } }
+    const coef = A.map((row, i) => row[n] / row[i]); ys = run.map(p => { const t = (p[0] - X0) / sc; return coef.reduce((a, c, i) => a + c * t ** i, 0); });
+    // trim: the ends of the groove, where the valley fades, are cut by trim px on each side (the painted line stops inside the groove)
+    if (o.trim) { run.splice(0, o.trim); ys.splice(0, o.trim); run.splice(-o.trim); ys.splice(-o.trim); }
+  } else { const win = o.window ?? 15; ys = run.map((p, i) => { let s = 0, n = 0; for (let j = Math.max(0, i - win); j <= Math.min(run.length - 1, i + win); j++) { s += run[j][1]; n++; } return s / n; }); }
+  return run.map((p, i) => [p[0], ys[i]]);
+}
+// raised lines (the unicorn's closed eyes and lashes): the pixels above a level along the painted line; level = levelFrac × the 90th
+// percentile of the relief inside the painted pixels
+function ridgeMask(map, h, valid, tex, o) {
+  const {W, H} = map, N = W * H, near = dilate(tex, W, H, o.near ?? 10), vals = [];
+  for (let i = 0; i < N; i++) if (tex[i] && valid[i]) vals.push(h[i]); vals.sort((a, b) => a - b);
+  const level = o.level ?? (o.levelFrac ?? .3) * (vals[Math.floor(vals.length * .9)] || 0), m0 = new Uint8Array(N);
+  for (let i = 0; i < N; i++) m0[i] = valid[i] && near[i] && h[i] > level ? 1 : 0;
+  const {id, sizes} = components(m0, W, H), big = Math.max(...sizes); for (let i = 0; i < N; i++) if (m0[i] && sizes[id[i]] < (o.keep ?? .05) * big) m0[i] = 0;
+  return o.grow ? dilate(m0, W, H, o.grow) : m0;
+}
+// the ellipse with the same area and second moments as the largest blob of a mask, scaled by k (round details become regular ovals)
+function ellipseOf(mask, W, H, k) {
+  const {id, sizes} = components(mask, W, H); if (!sizes.length) return mask;
+  const best = sizes.indexOf(Math.max(...sizes)); let n = 0, mx = 0, my = 0;
+  for (let i = 0; i < W * H; i++) if (id[i] === best) { n++; mx += i % W; my += (i - i % W) / W; } mx /= n; my /= n;
+  let sxx = 0, syy = 0, sxy = 0; for (let i = 0; i < W * H; i++) if (id[i] === best) { const dx = i % W - mx, dy = (i - i % W) / W - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; }
+  sxx /= n; syy /= n; sxy /= n; const tr = sxx + syy, det = sxx * syy - sxy * sxy, l1 = tr / 2 + Math.sqrt(Math.max(0, tr * tr / 4 - det)), l2 = tr / 2 - Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  const ang = Math.atan2(l1 - sxx, sxy || 1e-9), a = 2 * Math.sqrt(l1) * k, b = 2 * Math.sqrt(Math.max(l2, 1e-6)) * k, ca = Math.cos(ang), sa = Math.sin(ang), out = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const dx = x - mx, dy = y - my, u = dx * ca + dy * sa, v = -dx * sa + dy * ca; if ((u / a) ** 2 + (v / b) ** 2 <= 1) out[y * W + x] = 1; }
+  return out;
 }
 function grooveMask(map, h, valid, tex, o) {
   const {W, H} = map, N = W * H, near = dilate(tex, W, H, o.near ?? 12), m0 = new Uint8Array(N);
@@ -56,7 +90,8 @@ function projectTarget(m, label, k, target) {
   const fr = frame(m), box = fr.toLocalBox(target.box), res = 1 / ((target.res ?? 1100) * fr.s);
   const map = D.rasterize(m, box, res), {h, valid} = D.highpass(map, (target.sigma ?? .04) / (res * fr.s));
   const tex = texMask(map, label, k);
-  let mask = target.mode === 'curve' ? curveMask(map, h, valid, tex, target) : target.mode === 'groove' ? grooveMask(map, h, valid, tex, target) : bumpMask(map, h, valid, tex, target);
+  let mask = target.mode === 'curve' ? curveMask(map, h, valid, tex, target) : target.mode === 'groove' ? grooveMask(map, h, valid, tex, target) : target.mode === 'ridge' ? ridgeMask(map, h, valid, tex, target) : bumpMask(map, h, valid, tex, target);
+  if (target.ellipse) mask = ellipseOf(mask, map.W, map.H, target.ellipse);
   // each separate blob of the texture gets its own bump: run per blob when asked
   const soft = D.blur(Float32Array.from(mask), map.W, map.H, target.smoothPx ?? 3);
   const M = new Map(), tol = target.tol ?? 3 * res;
@@ -109,4 +144,4 @@ function seedRegions(m, label, region, names) {
   }
   return {out, map, lab};
 }
-module.exports = {projectTarget, frame, seedRegions};
+module.exports = {projectTarget, frame, seedRegions, curvePoints};

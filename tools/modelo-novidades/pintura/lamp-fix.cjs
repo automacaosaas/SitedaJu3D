@@ -6,13 +6,14 @@
 //     the detail colour that spilled from it onto the next patch goes back to that patch's colour;
 //  3. graph cut along the creases for what is left (nostrils, smile);
 //  4. smooth borders across the triangles (crisp.cjs).
-// node lamp-fix.cjs <in.glb> <out.glb> <girafa.json | unicornio.json | options JSON>
+// node lamp-fix.cjs <in.glb> <out.glb> '<options JSON>'
 const fs = require('fs');
 const lib = require('./seg-lib.cjs');
 const {patches} = require('./patches.cjs');
 const crisp = require('./crisp.cjs');
 const {projectTarget, seedRegions, frame} = require('./project2d.cjs');
 const {cut} = require('./snap.cjs');
+const exact = require('./exact.cjs');
 
 async function run(file, out, opt) {
   const t0 = Date.now(), m = await lib.load(file), topo = lib.topology(m), ring = lib.vertexRing(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
@@ -95,10 +96,32 @@ async function run(file, out, opt) {
   const fl = crisp.fields(m, label, ring, K, opt.smooth ?? 3, {iterationsBy: Object.fromEntries(Object.entries(opt.smoothBy || {}).map(([n, v]) => [idOf(n), v])), bias: Object.fromEntries(Object.entries(opt.bias || {}).map(([n, v]) => [idOf(n), v]))});
   for (const {k, o, yb, yMax, yMin, zMax, w, fr} of bands) for (let v = 0; v < m.nv; v++) { const y = (m.P[v * 3 + 1] - fr.lo[1]) * fr.s - 1.9, z = (m.P[v * 3 + 2] - fr.ctr[2]) * fr.s; if (y >= yMax || y < yMin || z > zMax || fl[k][v] + fl[o][v] < .5) continue; const s = fl[k][v] + fl[o][v], val = Math.max(0, Math.min(1, (yb - y) / w + .5)); fl[k][v] = s * val; fl[o][v] = s * (1 - val); }
   for (const {k, M} of projected) for (const [v, val] of M) { let S = 0; for (let j = 0; j < K; j++) if (j !== k) S += fl[j][v]; const keep = Math.max(0, 1 - val); for (let j = 0; j < K; j++) if (j !== k) fl[j][v] = S > 0 ? fl[j][v] * keep / S : 0; fl[k][v] = val; }
-  const vn = crisp.vertexNormals(m), {geo, split} = crisp.build(m, label, fl, vn, K);
-  log('4 crisp: split', split, 'faces; out', geo.map((G, k) => `${names[k]} ${G.idx.length / 3}`).join(' · '));
+  // 5. exact borders from the relief (exact.cjs): the neck's spots on the tube, then the front details in order (muzzle, eyes,
+  //    nostrils, smile), each a signed function of the position cut exactly across the triangles
+  for (const t of opt.tube || []) { const r = exact.tube(m, fl, K, names, ring, t); log('5 tube', t.name, 'vertices', r.n, 'inside', r.inside, process.env.HIST ? '\n' + r.hist : ''); }
+  const overrides = [], claimed = names.map(() => new Uint8Array(m.nv)), vn = crisp.vertexNormals(m);
+  const dets = (opt.exact || []).map(t => t.mode === 'line' ? exact.line(m, label, names, t) : exact.contour(m, label, names, t));
+  // mirrored pairs ('mirror': same group name): the same axes (the mean), the angle mirrored across the vertical — the two nostrils alike
+  for (const g of new Set((opt.exact || []).map(t => t.mirror).filter(Boolean))) {
+    const pair = dets.filter((d, i) => opt.exact[i].mirror === g && d.ell); if (pair.length !== 2) continue;
+    pair.sort((p, q) => p.centre[0] - q.centre[0]);
+    const a = (pair[0].ell.a + pair[1].ell.a) / 2, b = (pair[0].ell.b + pair[1].ell.b) / 2;
+    // the angle: mean of the left one and the mirror of the right one, weighted by how oval each is (doubled-angle vectors)
+    let sx = 0, sy = 0; pair.forEach((d, i) => { const e = (d.ell.a - d.ell.b) / (d.ell.a + d.ell.b), th = i ? Math.PI - d.ell.ang : d.ell.ang; sx += e * Math.cos(2 * th); sy += e * Math.sin(2 * th); });
+    const angL = Math.atan2(sy, sx) / 2; pair[0].setEllipse(a, b, angL); pair[1].setEllipse(a, b, Math.PI - angL);
+    log('5 mirror', g, `axes ${(a * frame(m).s).toFixed(3)}×${(b * frame(m).s).toFixed(3)} at ${(angL * 180 / Math.PI).toFixed(0)}°`);
+  }
+  for (const [i, t] of (opt.exact || []).entries()) {
+    const k = idOf(t.name), det = dets[i];
+    const ov = exact.override(m, k, det, {...t, surround: t.surround ? idOf(t.surround) : -1}), n = exact.applyVertices(m, fl, K, ov, claimed[k], vn); overrides.push(ov);
+    log('5 exact', t.name, t.mode || 'contour', JSON.stringify(t.box), 'vertices', n, det.R ? `relief top ${det.topRender.toFixed(4)} · rough ${det.rough.toFixed(4)} · r ${(det.extent * frame(m).s).toFixed(3)} ${det.info}` : `points ${det.points.length}`);
+  }
+  // a colour that only the details draw (the giraffe's black): nothing of it outside them
+  for (const name of opt.onlyExact || []) log('5 only exact', name, 'cleared', exact.onlyClaimed(m, fl, K, idOf(name), claimed[idOf(name)], ring, idOf(opt.fallback || names[0])));
+  const {geo, split, refined} = crisp.build(m, label, fl, vn, K, overrides.length ? {overrides, target: (opt.refineTarget ?? .004) / frame(m).s, maxDepth: opt.maxDepth ?? 4} : null);
+  log('4 crisp: split', split, 'faces (refined', refined, '); out', geo.map((G, k) => `${names[k]} ${G.idx.length / 3}`).join(' · '));
   const bytes = await crisp.writeGeo(m, geo, out, {compress: opt.compress !== false});
   log('written', out, Math.round(bytes / 1024), 'KB');
 }
 const [file, out, json = '{}'] = process.argv.slice(2);
-run(file, out, json.trim().startsWith('{') ? JSON.parse(json) : JSON.parse(fs.readFileSync(json, 'utf8'))).catch(e => { console.error(e); process.exit(1); });
+run(file, out, JSON.parse(json)).catch(e => { console.error(e); process.exit(1); });

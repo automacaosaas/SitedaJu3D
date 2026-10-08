@@ -427,5 +427,73 @@
    "zMax": -0.6,
    "soft": 0.006
   }
+ ],
+ "projected": [
+  {
+   "name": "features",
+   "clearTo": "coat",
+   "box": [
+    -0.68,
+    0.96,
+    -0.15,
+    1.22
+   ],
+   "mode": "ridge",
+   "sigma": 0.03,
+   "res": 1600,
+   "near": 14,
+   "levelFrac": 0.3,
+   "smoothPx": 2
+  },
+  {
+   "name": "features",
+   "clearTo": "coat",
+   "box": [
+    0.15,
+    0.96,
+    0.7,
+    1.22
+   ],
+   "mode": "ridge",
+   "sigma": 0.03,
+   "res": 1600,
+   "near": 14,
+   "levelFrac": 0.3,
+   "smoothPx": 2
+  },
+  {
+   "name": "features",
+   "clearTo": "coat",
+   "box": [
+    -0.2,
+    0.68,
+    -0.05,
+    0.81
+   ],
+   "mode": "bump",
+   "sigma": 0.02,
+   "res": 2400,
+   "top": 0.3,
+   "far": 30,
+   "ellipse": 0.94,
+   "smoothPx": 3
+  },
+  {
+   "name": "features",
+   "clearTo": "coat",
+   "box": [
+    0.06,
+    0.68,
+    0.21,
+    0.81
+   ],
+   "mode": "bump",
+   "sigma": 0.02,
+   "res": 2400,
+   "top": 0.3,
+   "far": 30,
+   "ellipse": 0.94,
+   "smoothPx": 3
+  }
  ]
 }

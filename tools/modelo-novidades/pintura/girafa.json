@@ -13,57 +13,174 @@
   "muzzle": 400,
   "spots": 800
  },
- "projected": [
+ "tube": [
+  {
+   "name": "spots",
+   "other": "coat",
+   "axis": [
+    0.001,
+    -0.172
+   ],
+   "yMin": -1.86,
+   "yMax": 0.49,
+   "rMin": 0.66,
+   "rMax": 0.8,
+   "rBare": 0.712,
+   "t": 0.009,
+   "deg": 4,
+   "harm": 3,
+   "iters": 4,
+   "smooth": 1,
+   "scale": 0.08,
+   "thetaMax": 130
+  }
+ ],
+ "exact": [
+  {
+   "name": "muzzle",
+   "fromPaint": [
+    "muzzle",
+    "features"
+   ],
+   "box": [
+    -0.8,
+    0.35,
+    0.8,
+    1.6
+   ],
+   "exclude": [
+    "muzzle",
+    "features",
+    "spots"
+   ],
+   "ring": [
+    1.1,
+    1.5
+   ],
+   "harmonics": 10,
+   "surround": "coat",
+   "reach": 0.04,
+   "refine": 0.012,
+   "depth": 0.15,
+   "facing": [
+    0.45,
+    0.75
+   ]
+  },
   {
    "name": "features",
-   "clearTo": "muzzle",
+   "box": [
+    -0.56,
+    1.12,
+    -0.14,
+    1.72
+   ],
+   "exclude": [
+    "features",
+    "spots",
+    "muzzle"
+   ],
+   "surround": "coat",
+   "frac": 0.15,
+   "harmonics": 4,
+   "reach": 0.06,
+   "shape": "ellipse",
+   "cover": 0.97,
+   "maxScale": 1.06,
+   "depth": 0.03
+  },
+  {
+   "name": "features",
+   "box": [
+    0.14,
+    1.06,
+    0.58,
+    1.68
+   ],
+   "exclude": [
+    "features",
+    "spots",
+    "muzzle"
+   ],
+   "surround": "coat",
+   "frac": 0.15,
+   "harmonics": 4,
+   "reach": 0.06,
+   "shape": "ellipse",
+   "cover": 0.97,
+   "maxScale": 1.06,
+   "depth": 0.03
+  },
+  {
+   "name": "features",
    "box": [
     -0.38,
     0.9,
     -0.04,
     1.24
    ],
-   "mode": "bump",
-   "sigma": 0.04,
-   "res": 1600,
-   "top": 0.3,
-   "far": 30,
-   "smoothPx": 6
+   "exclude": [
+    "features",
+    "spots"
+   ],
+   "surround": "muzzle",
+   "frac": 0.15,
+   "harmonics": 4,
+   "reach": 0.05,
+   "shape": "ellipse",
+   "cover": 0.97,
+   "maxScale": 1.06,
+   "depth": 0.03,
+   "mirror": "narinas"
   },
   {
    "name": "features",
-   "clearTo": "muzzle",
    "box": [
     0.06,
     0.9,
     0.4,
     1.24
    ],
-   "mode": "bump",
-   "sigma": 0.04,
-   "res": 1600,
-   "top": 0.3,
-   "far": 30,
-   "smoothPx": 6
+   "exclude": [
+    "features",
+    "spots"
+   ],
+   "surround": "muzzle",
+   "frac": 0.15,
+   "harmonics": 4,
+   "reach": 0.05,
+   "shape": "ellipse",
+   "cover": 0.97,
+   "maxScale": 1.06,
+   "depth": 0.03,
+   "mirror": "narinas"
   },
   {
    "name": "features",
-   "clearTo": "muzzle",
+   "mode": "line",
    "box": [
     -0.22,
     0.72,
     0.26,
     0.87
    ],
-   "mode": "curve",
+   "surround": "muzzle",
    "sigma": 0.03,
    "res": 1600,
    "near": 16,
-   "width": 32,
-   "window": 24,
+   "width": 30,
    "extend": 30,
    "endLevel": -0.0001,
-   "smoothPx": 3
+   "fit": 2,
+   "trim": 6,
+   "reach": 0.04,
+   "depth": 0.04
   }
- ]
+ ],
+ "onlyExact": [
+  "features"
+ ],
+ "fallback": "coat",
+ "refineTarget": 0.005,
+ "maxDepth": 3
 }

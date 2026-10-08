@@ -23,6 +23,22 @@ da geometria, em passos:
 6. **Faixas retas** (`bands`): a faixa roxa da base do unicórnio e a divisão da crina de trás, numa linha de nível.
 7. **Bordas lisas** (`crisp.cjs`): cada cor ganha um campo suave nos vértices e a borda passa a cortar os triângulos no meio (sem
    degraus), com as normais originais.
+8. **Bordas exatas pelo relevo** (`exact.cjs`, 07/10/2026, segunda rodada: "o nariz mostra linhas fora do campo do nariz… pinta não
+   colorida 100%… olhos vazados… contornos padronizados, no relevo por completo"). Em vez de uma máscara borrada amostrada nos vértices
+   (que serrilhava nos triângulos grandes e deixava filetes nas paredes), cada detalhe vira uma função lisa da posição, cortada com
+   precisão dentro dos triângulos:
+   - `tube` (pintas do pescoço): a superfície do próprio tubo (raio em função do ângulo e da altura, ajustado ao tubo liso) e a pinta
+     onde a superfície fica mais alta que ele por mais de `t` — o planalto inteiro de cada pinta, parede incluída. Só até `thetaMax`
+     graus da frente (a fenda das costas também tem bordas altas) e abaixo da gola (`yMax`);
+   - `exact` (olhos, narinas): o pé de cada relevo, achado em 360 raios no mapa de altura da frente, e a elipse com a mesma área e os
+     mesmos momentos (`shape: ellipse`), crescida até conter o relevo (`cover`, até `maxScale`); `mirror` deixa as duas narinas
+     iguais e espelhadas;
+   - `fromPaint` (o focinho): a borda que a pintura já tinha, só alisada (primeiros harmônicos), e só onde a superfície olha para a
+     frente (`facing`): nos flancos íngremes a vista da frente não decide a borda;
+   - `mode: line` (o sorriso): o fundo do sulco com largura constante e pontas redondas;
+   - `onlyExact`: o preto só existe onde um detalhe o desenhou (os pingos soltos somem);
+   - o `crisp.cjs` subdivide só os triângulos que a borda cruza (`refineTarget`; `refine` por detalhe), para a elipse não sair
+     facetada.
 
 ## Refazer
 

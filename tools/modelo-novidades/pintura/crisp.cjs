@@ -47,7 +47,10 @@ function clipPoly(poly, g) { // poly: [{b:[3], g:value}]; keep g >= 0
   return out;
 }
 
-function build(m, label, fl, vn, K) {
+// ref (exact.cjs): {overrides, target, maxDepth} — a triangle that a detail's border may cross (override.crosses) and is bigger than
+// `target` is split into 4^depth smaller ones (flat: the shape does not change), each corner getting the fields interpolated and then
+// the details' exact values; the border then follows the detail's smooth outline instead of one straight cut per big triangle
+function build(m, label, fl, vn, K, ref = null) {
   const geo = Array.from({length: K}, () => ({pos: [], nor: [], idx: [], map: new Map()}));
   const P = m.P;
   const addVert = (k, b, vs) => {
@@ -59,9 +62,43 @@ function build(m, label, fl, vn, K) {
   };
   const argmax = v => { let best = 0, bv = -1; for (let k = 0; k < K; k++) if (fl[k][v] > bv) { bv = fl[k][v]; best = k; } return best; };
   const vmax = new Uint8Array(m.nv); for (let v = 0; v < m.nv; v++) vmax[v] = argmax(v);
-  let split = 0;
+  let split = 0, refined = 0;
+  const clipInto = (vs, corners) => {   // corners: [{b (barycentric in the original triangle), vec (K fields)}] × 3
+    const L = corners.map(c => { let best = 0; for (let k = 1; k < K; k++) if (c.vec[k] > c.vec[best]) best = k; return best; });
+    if (L[0] === L[1] && L[1] === L[2]) { geo[L[0]].idx.push(...corners.map(c => addVert(L[0], c.b, vs))); return; }
+    const cand = []; for (let k = 0; k < K; k++) if (corners.some(c => c.vec[k] > .15) || L.includes(k)) cand.push(k);
+    for (const k of cand) {
+      let poly = [{b: [1, 0, 0]}, {b: [0, 1, 0]}, {b: [0, 0, 1]}];
+      for (const j of cand) { if (j === k || !poly.length) continue; const d = corners.map(c => c.vec[k] - c.vec[j]); poly = clipPoly(poly, b => b[0] * d[0] + b[1] * d[1] + b[2] * d[2] + (k < j ? 1e-9 : -1e-9)); }
+      if (poly.length < 3) continue;
+      const ids = poly.map(p => addVert(k, [0, 1, 2].map(t => p.b[0] * corners[0].b[t] + p.b[1] * corners[1].b[t] + p.b[2] * corners[2].b[t]), vs));
+      for (let i = 1; i + 1 < ids.length; i++) if (ids[0] !== ids[i] && ids[i] !== ids[i + 1] && ids[0] !== ids[i + 1]) geo[k].idx.push(ids[0], ids[i], ids[i + 1]);
+    }
+  };
   for (let f = 0; f < m.nf; f++) {
     const vs = [m.F[f * 3], m.F[f * 3 + 1], m.F[f * 3 + 2]], L = vs.map(v => vmax[v]);
+    if (ref?.overrides.length) {
+      const p = vs.map(v => [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]]), d = Math.max(...[0, 1, 2].map(i => Math.hypot(p[i][0] - p[(i + 1) % 3][0], p[i][1] - p[(i + 1) % 3][1], p[i][2] - p[(i + 1) % 3][2])));
+      let depth = 0;
+      for (const ov of ref.overrides) { const tg = ov.target || ref.target; if (d > tg && ov.crosses(p, d)) depth = Math.max(depth, Math.min(ref.maxDepth ?? 4, Math.ceil(Math.log2(d / tg)))); }
+      if (depth) {
+        refined++; split++;
+        const n = 1 << depth, cache = new Map(), at = (i, j) => {
+          const key = i * (n + 1) + j; let c = cache.get(key); if (c) return c;
+          const b = [(n - i - j) / n, i / n, j / n], vec = new Float64Array(K);
+          for (let k = 0; k < K; k++) vec[k] = b[0] * fl[k][vs[0]] + b[1] * fl[k][vs[1]] + b[2] * fl[k][vs[2]];
+          const x = b[0] * p[0][0] + b[1] * p[1][0] + b[2] * p[2][0], y = b[0] * p[0][1] + b[1] * p[1][1] + b[2] * p[2][1], z = b[0] * p[0][2] + b[1] * p[1][2] + b[2] * p[2][2];
+          const nx = b[0] * vn[vs[0] * 3] + b[1] * vn[vs[1] * 3] + b[2] * vn[vs[2] * 3], ny = b[0] * vn[vs[0] * 3 + 1] + b[1] * vn[vs[1] * 3 + 1] + b[2] * vn[vs[2] * 3 + 1], nz = b[0] * vn[vs[0] * 3 + 2] + b[1] * vn[vs[1] * 3 + 2] + b[2] * vn[vs[2] * 3 + 2];
+          for (const ov of ref.overrides) ov.apply(vec, x, y, z, nz / (Math.hypot(nx, ny, nz) || 1));
+          c = {b, vec}; cache.set(key, c); return c;
+        };
+        for (let i = 0; i < n; i++) for (let j = 0; i + j < n; j++) {
+          clipInto(vs, [at(i, j), at(i + 1, j), at(i, j + 1)]);
+          if (i + j < n - 1) clipInto(vs, [at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)]);
+        }
+        continue;
+      }
+    }
     if (L[0] === L[1] && L[1] === L[2]) { const k = L[0]; const ids = [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map(b => addVert(k, b, vs)); geo[k].idx.push(...ids); continue; }
     split++;
     const cand = []; for (let k = 0; k < K; k++) if (vs.some(v => fl[k][v] > .15) || L.includes(k)) cand.push(k);
@@ -73,7 +110,7 @@ function build(m, label, fl, vn, K) {
       for (let i = 1; i + 1 < ids.length; i++) if (ids[0] !== ids[i] && ids[i] !== ids[i + 1] && ids[0] !== ids[i + 1]) geo[k].idx.push(ids[0], ids[i], ids[i + 1]);
     }
   }
-  return {geo, split};
+  return {geo, split, refined};
 }
 
 async function writeGeo(m, geo, file, {extra = [], compress = true} = {}) {

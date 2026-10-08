@@ -138,7 +138,7 @@
     "costas": {"fonte": "design/vistas/girafoscopio-3d-costas.png", "fundo": "transparente"},
     "detalhe": {
       "fonte": "design/vistas/girafoscopio-3d-rosto.png",
-      "recorte": [240, 160, 1120, 1400],
+      "recorte": [180, 0, 1440, 1800],
       "fundo": "transparente",
       "detalhe": true
     }

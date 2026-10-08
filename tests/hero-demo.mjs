@@ -95,7 +95,7 @@ for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqua
   const bytes = fs.readFileSync(file);
   assert.ok(bytes.toString('latin1', 8, 12) === 'WEBP' && bytes.length < 900000, 'a tira dos quadros, leve');
   assert.ok(!SHOWCASE.girafoscopio.demo.turn && !SHOWCASE.macacoscopio.demo.turn, 'só o unicórnio gira a cabeça');
-  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 0 : 1500)', "if (dom.giro.p > 0) playTurn(0, calm ? 0 : 320)", 'resetTurn();']) assert.ok(demo.includes(part), part);
+  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 0 : 950)', "if (dom.giro.p > 0) playTurn(0, calm ? 0 : 560)", "g.globalCompositeOperation = 'lighter'", 'resetTurn();']) assert.ok(demo.includes(part), part);
   assert.notEqual(translate(turn.hint, 'en'), turn.hint); assert.notEqual(translate(turn.hint, 'es'), turn.hint);
 }
 

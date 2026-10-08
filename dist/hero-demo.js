@@ -129,26 +129,32 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     return dom.ready;
   }
 
-  // ── o giro da cabeça (turn): os quadros lado a lado numa tira (src), na caixa [x, y, largura, altura] da foto (frações); a foto some
-  //    só dentro da caixa (máscara), e o canvas desenha o quadro do momento, com o seguinte por cima na fração que falta (sem degraus) ──
+  // ── o giro da cabeça (turn): os quadros numa grade de `cols` colunas (src), na caixa [x, y, largura, altura] da foto (frações); a
+  //    foto some só dentro da caixa, recortada um pouco para dentro dela (`inset`: foto e quadros se sobrepõem num anel onde nada muda,
+  //    sem fresta enquanto a demonstração flutua), e o canvas mistura o quadro do momento com o seguinte (sem degraus) ──
   function setupTurn(turn) {
     resetTurn();
     dom.giro = null; dom.hint.hidden = true;
     if (!turn) return;
     const sprite = new Image(); sprite.src = `assets/${turn.src}`;
-    const [x, y, w, h] = turn.box, t = dom.giro = {turn, sprite, p: 0, raf: 0, ready: false, timer: 0};
+    const [x, y, w, h] = turn.box, t = dom.giro = {turn, sprite, p: 0, raf: 0, ready: false, timer: 0}, cols = turn.cols || turn.frames;
     Object.assign(dom.frames.style, {left: `${x * 100}%`, top: `${y * 100}%`, width: `${w * 100}%`, height: `${h * 100}%`});
-    dom.cover.style.setProperty('--turn-mask-pos', `${(x / (1 - w) * 100).toFixed(3)}% ${(y / (1 - h) * 100).toFixed(3)}%`);
-    dom.cover.style.setProperty('--turn-mask-size', `${(w * 100).toFixed(3)}% ${(h * 100).toFixed(3)}%`);
+    const k = turn.inset ?? .006, [hx, hy, hw, hh] = [x + k, y + k, w - 2 * k, h - 2 * k];
+    dom.cover.style.setProperty('--turn-mask-pos', `${(hx / (1 - hw) * 100).toFixed(3)}% ${(hy / (1 - hh) * 100).toFixed(3)}%`);
+    dom.cover.style.setProperty('--turn-mask-size', `${(hw * 100).toFixed(3)}% ${(hh * 100).toFixed(3)}%`);
     dom.hint.querySelector('span').textContent = turn.hint || '';
     // load, not decode(): decode() of the long strip can stay pending (a hidden tab, a big image) and the turn would never start
-    const loaded = () => { if (dom.giro !== t || !sprite.naturalWidth) return; dom.frames.width = sprite.naturalWidth / turn.frames; dom.frames.height = sprite.naturalHeight; t.ready = true; };
+    const loaded = () => { if (dom.giro !== t || !sprite.naturalWidth) return; t.cols = cols; dom.frames.width = sprite.naturalWidth / cols; dom.frames.height = sprite.naturalHeight / Math.ceil(turn.frames / cols); t.ready = true; };
     if (sprite.complete) loaded(); else sprite.addEventListener('load', loaded, {once: true});
   }
+  // a mistura soma os dois quadros com pesos 1 − f e f ('lighter'): nada fica translúcido no meio (as orelhas não "falham" no movimento)
   function drawTurn(p) {
-    const t = dom.giro, n = t.turn.frames, g = dom.frames.getContext('2d'), fw = dom.frames.width, fh = dom.frames.height, at = p * (n - 1), a = Math.floor(at), f = at - a;
-    t.p = p; g.clearRect(0, 0, fw, fh); g.globalAlpha = 1; g.drawImage(t.sprite, a * fw, 0, fw, fh, 0, 0, fw, fh);
-    if (f > .001 && a + 1 < n) { g.globalAlpha = f; g.drawImage(t.sprite, (a + 1) * fw, 0, fw, fh, 0, 0, fw, fh); g.globalAlpha = 1; }
+    const t = dom.giro, n = t.turn.frames, g = dom.frames.getContext('2d'), fw = dom.frames.width, fh = dom.frames.height, at = p * (n - 1), a = Math.min(n - 1, Math.floor(at)), f = at - a;
+    const cell = i => [(i % t.cols) * fw, Math.floor(i / t.cols) * fh];
+    t.p = p; g.clearRect(0, 0, fw, fh); g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = f > .001 && a + 1 < n ? 1 - f : 1; g.drawImage(t.sprite, ...cell(a), fw, fh, 0, 0, fw, fh);
+    if (f > .001 && a + 1 < n) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = f; g.drawImage(t.sprite, ...cell(a + 1), fw, fh, 0, 0, fw, fh); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   // to: 1 = virada, 0 = de frente; a foto volta inteira quando o giro termina de frente
   function playTurn(to, duration) {
@@ -326,7 +332,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const t = dom.giro;
     if (t?.ready) t.timer = setTimeout(() => {
       if (state !== 'open') return;
-      playTurn(1, calm ? 0 : 1500).then(() => {
+      playTurn(1, calm ? 0 : 950).then(() => {
         if (state !== 'open' || !t.turn.hint) return;
         dom.hint.hidden = false; requestAnimationFrame(() => dom.hint.classList.add('is-shown'));
         status.textContent = `${configs[index].message || ''} ${t.turn.hint}`.trim();
@@ -354,7 +360,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (immediate || !timeline.animations.length || timeline.time <= 0) { finish(); return; }
     const time = timeline.time;
     stopIdle(false);
-    if (dom.giro) { dom.hint.classList.remove('is-shown'); dom.hint.hidden = true; if (dom.giro.p > 0) playTurn(0, calm ? 0 : 320); else clearTimeout(dom.giro.timer); }
+    if (dom.giro) { dom.hint.classList.remove('is-shown'); dom.hint.hidden = true; if (dom.giro.p > 0) playTurn(0, calm ? 0 : 560); else clearTimeout(dom.giro.timer); }
     timeline.load(tracks({...measure(), closing: true}), time);   // saída própria onde precisa (closing); medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
     run('closing');
   }
