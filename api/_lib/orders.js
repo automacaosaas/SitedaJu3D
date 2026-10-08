@@ -59,6 +59,18 @@ const discountOf = order => Math.max(0, (order.subtotalCents || 0) + (order.ship
 // Whether what Mercado Pago says would leave a waiting order exactly as it is (no write needed).
 const sameBase = (order, base) => ['mpOrderId', 'paymentState', 'method', 'installments'].every(f => (order[f] ?? null) === (base[f] ?? null));
 const methodOf = method => method?.type === 'bank_transfer' || method?.id === 'pix' ? 'pix' : method?.type === 'debit_card' ? 'debit' : method?.id || method?.type ? 'card' : null;
+// What Mercado Pago charged must be what we asked (2026-10-08): our total exactly — or, only for a credit card in 2x or more,
+// a larger total, our price plus the interest of the installments the buyer chose (Mercado Pago's financing, paid by the buyer,
+// never the shop's revenue). The Orders API documents total_amount as the amount asked (it must equal the payments' amount we
+// send) and paid_amount as what was really paid, so the interest should stay out of the total; a total raised by it is accepted
+// as well, up to a sane bound (12x at Mercado Pago's highest rates stays well under +60%). Less is never a payment of this
+// order, nor a larger total on Pix, debit or 1x.
+const MAX_INTEREST = 0.6;
+function amountMatches(order, payment) {
+  if (payment.total === order.totalCents) return true;
+  const installments = Number(payment.method?.installments) || 1;
+  return payment.method?.type === 'credit_card' && installments > 1 && payment.total > order.totalCents && payment.total <= Math.round(order.totalCents * (1 + MAX_INTEREST));
+}
 
 function createOrders({store, env = process.env, now = () => Date.now()}) {
   const date = () => new Date(now());
@@ -84,9 +96,9 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   }
 
   // Applies what Mercado Pago says about an order (mp.normalizeOrder shape). Refuses anything that does not match the
-  // order we opened: another reference or another amount is recorded and ignored, never marked paid.
+  // order we opened: another reference or another amount (amountMatches) is recorded and ignored, never marked paid.
   async function applyPayment(order, payment, {actor = 'mercadopago'} = {}) {
-    if (payment.reference !== order.reference || payment.total !== order.totalCents) {
+    if (payment.reference !== order.reference || !amountMatches(order, payment)) {
       await store.orders.addEvent(order.id, 'payment_mismatch', `${payment.reference} · ${payment.total}`, actor);
       return {order, newlyPaid: false};
     }
@@ -108,6 +120,8 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     else if (['refused', 'expired', 'canceled'].includes(payment.state)) moved = await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
     else if (!sameBase(order, base)) moved = await store.orders.transition(order.id, ['aguardando_pagamento'], base);
     if (newlyPaid || payment.state !== order.paymentState) await store.orders.addEvent(order.id, newlyPaid ? 'paid' : 'payment', payment.state, actor);
+    // the buyer paid interest on top (in the order's history: installments · interest in cents); the order keeps our price
+    if (newlyPaid && payment.total > order.totalCents) await store.orders.addEvent(order.id, 'card_interest', `${payment.method.installments}x · ${payment.total - order.totalCents}`, actor);
     return {order: moved ? await store.orders.findById(order.id) : order, newlyPaid};
   }
 
@@ -140,9 +154,10 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     const mail = config(env), ownerEmail = String(env.ORDER_NOTIFY_EMAIL || '').trim().toLowerCase();
     if (!mailReady(mail)) return {owner: false, customer: false};
     const data = summary(order), sent = {owner: Boolean(order.ownerNotifiedAt), customer: Boolean(order.customerNotifiedAt)};
-    const deliver = (to, message, key) => sendMail({settings: mail, to, subject: message.subject, html: message.html, text: message.text, idempotencyKey: key, fetchImpl, outbox: outbox && (m => outbox({...m, kind: key.split('-')[1], reference: order.reference}))});
+    const deliver = (to, message, key, replyTo) => sendMail({settings: mail, to, replyTo, subject: message.subject, html: message.html, text: message.text, idempotencyKey: key, fetchImpl, outbox: outbox && (m => outbox({...m, kind: key.split('-')[1], reference: order.reference}))});
     if (!sent.owner && ownerEmail) {
-      try { await deliver(ownerEmail, renderOwnerEmail({summary: data, test, assetUrl: mail.assetUrl}), `order-owner-${order.id}`); await store.orders.update(order.id, {ownerNotifiedAt: date()}); sent.owner = true; }
+      // "Responder" on Ju's notice writes to the buyer, as on a contact message (api/_lib/contact.js).
+      try { await deliver(ownerEmail, renderOwnerEmail({summary: data, test, assetUrl: mail.assetUrl}), `order-owner-${order.id}`, data.customer.email); await store.orders.update(order.id, {ownerNotifiedAt: date()}); sent.owner = true; }
       catch (error) { console.error(`orders: e-mail to Ju failed for ${order.reference} —`, error.status || '', error.message); }
     }
     if (!sent.customer && data.customer.email) {

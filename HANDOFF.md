@@ -229,6 +229,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Pix:** 5% de desconto só nas peças, nunca no frete.
 - **Prazo de produção:** 3 a 5 dias úteis.
 - **Cartão:** texto "3x sem juros"; a loja configura isso no Mercado Pago depois (hoje a tabela de parcelas ainda mostra juros em 2x e 3x).
+  O número vem de uma linha só (`interestFreeInstallments` em `dist/commerce-config.js`) e o checkout só promete o que a conta
+  dá (`/api/health` → `interestFree`; senão "EM ATÉ 12X"): `MERCADOPAGO-VALIDACAO.md`.
 - **Frete:** Correios com contrato próprio, PAC marcado por padrão (SEDEX também); PAC grátis a partir de R$ 500.
 - **Preços confirmados (05/10/2026):** Borboletoscópio R$ 265, Dinossauroscópio R$ 265, Aviãoscopia R$ 285 — e o 2.º avião (e os
   seguintes) na mesma compra sai por R$ 215 (`extraPrices` em `dist/commerce-config.js` = `extraPrice` em `api/_lib/catalog.js`; o

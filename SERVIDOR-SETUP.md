@@ -132,6 +132,31 @@ Hostinger continua sendo o site de teste, pelo `.zip`.
   `Aviso: o kit do servidor mudou no Git`. Rodar `sudo bash /srv/juimprime/current/deploy/setup-servidor.sh` (instala o
   `deploy.sh`, as unidades e o sudoers novos; nada mais é mexido) e conferir com `systemctl list-timers` e o journal.
 
+## Painel da Júlia e frete no servidor
+
+O primeiro acesso do painel e o frete dos Correios entram no `.env` sem abrir o arquivo:
+`sudo bash /srv/juimprime/current/deploy/config-loja.sh`.
+
+- Ele pergunta o que configurar (**1** = Painel da Júlia, **2** = Frete dos Correios, **3** = os dois) e depois cada valor;
+  Enter mantém o que já está certo.
+- **Painel:** o e-mail de entrada e a senha (12 a 128 caracteres, digitada duas vezes, sem espaços, aspas, barra
+  invertida, acentos nem ç). Se o painel já tem alguém, ele avisa antes: essas duas variáveis só criam a primeira pessoa (`ADMIN-SETUP.md`).
+- **Frete:** usuário e código de acesso da API, contrato, cartão de postagem, DR e o CEP de onde a Júlia despacha (onde achar
+  cada um: `FRETE-SETUP.md`). Pontos e traços podem ir junto: ficam só os números.
+- A senha e o código de acesso não aparecem na tela. O `.env` de antes fica em `/var/backups/juimprime/`
+  (`env.antes-<data>-…`, só root lê; ficam as 10 mais novas) e o site reinicia sozinho.
+
+No fim ele mostra o que o `/api/health` enxerga:
+
+- `"admin":"bootstrap"`: a Júlia já pode abrir `https://juimprimepramim.com.br/admin.html`, entrar com esse e-mail e senha
+  e ler o QR Code no app autenticador (`"ready"`: o painel já tinha alguém, e vale a senha de quem já entra).
+- `"shipping":"correios"`: os dados estão completos e o checkout passa a cotar pelo contrato, mas os Correios só conferem
+  na primeira cotação: faça logo uma no carrinho. Sem PAC e SEDEX, algum dado foi recusado e o checkout não fecha pedidos
+  até corrigir (opção 2 de novo). `"pending"`: faltam dados da loja em `api/_lib/shipping-config.js` (chamar
+  quem cuida do código). `"off"`: algum dado dos Correios ficou vazio.
+
+O Mercado Pago e o e-mail da loja entram do mesmo jeito, com `deploy/config-pagamentos.sh`.
+
 ## Se a saída pela porta 22 estiver bloqueada
 
 O servidor fala com o GitHub por SSH na porta 22. Se o provedor bloquear essa saída (o journal mostra `Não consegui
@@ -165,7 +190,12 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
      gratuito, liga o HTTPS e renova sozinho.
 5. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
 6. **Recomendado: `www` → domínio sem `www` (301).** O endereço oficial das páginas (o `<link rel="canonical">`, o
-   `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Depois do
+   `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Desde
+   08/10/2026 o próprio site (Node, `server/create-server.cjs`) já responde `301` (GET/HEAD) ou `308` (os outros métodos)
+   para o mesmo caminho sem `www`, menos o webhook do Mercado Pago (`/api/payments/webhook`) e a tarefa agendada
+   (`/api/fila/rodar`), que continuam respondendo pelo `www`: o Mercado Pago espera o 200 e não segue o redirecionamento,
+   e o curl tira o `Authorization` quando o endereço muda. O bloco do nginx abaixo continua bom (economiza a ida até o
+   Node), mas redireciona os dois também: no painel do Mercado Pago e no agendador, a URL é sempre a sem `www`. Depois do
    certbot, acrescentar em `/etc/nginx/sites-available/juimprime` um bloco só para o `www`, que manda tudo (sem exceção)
    para o mesmo caminho no domínio sem `www`, e tirar o `www` do `server_name` do bloco principal:
 
@@ -200,6 +230,40 @@ vem do `SITE_URL` (quando é um nome público) ou, na falta, do `COMPANY.website
 Depois, no Google Search Console: propriedade de domínio (registro TXT no Registro.br), enviar
 `https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL".
 
+## Página "voltamos já" e registros de acesso
+
+Quando o site (Node) cai ou demora a responder, o nginx mostra a página `deploy/manutencao.html` ("Voltamos já", com os
+contatos da loja) com o código **503** e `Retry-After: 120`, no lugar do "502 Bad Gateway". A página não depende do site
+(o estilo e o logo vão dentro dela) e tenta de novo sozinha a cada minuto. Só os erros do próprio nginx viram essa página:
+as respostas do site, como o 503 do frete, passam como estão.
+
+Instalar ou atualizar (num servidor novo, o `setup-servidor.sh` já roda; pode rodar de novo, nada duplica):
+`sudo bash /srv/juimprime/current/deploy/config-nginx.sh`. Ele:
+
+- copia a página para `/var/www/juimprime-manutencao` e grava `/etc/nginx/snippets/juimprime-manutencao.conf`;
+- põe `include snippets/juimprime-manutencao.conf;` uma vez em cada bloco `server` de
+  `/etc/nginx/sites-available/juimprime` que leva ao site (o do 443 do certbot e o da porta 80, se ele também leva ao
+  site; o que só redireciona para o https fica como está), sem mexer em HTTPS, http2, HSTS nem no `server_name`;
+- guarda antes uma cópia em `/var/backups/juimprime`, confere com `nginx -t` (se falhar, volta a cópia e não recarrega
+  nada) e recarrega o nginx;
+- guarda os registros de acesso do nginx (`/var/log/nginx/*.log`) por **190 dias**, um arquivo por dia, comprimidos: a
+  política de privacidade promete 6 meses (Marco Civil da Internet, art. 15). Quem faz isso é
+  `/etc/logrotate.d/juimprime-nginx`; o `/etc/logrotate.d/nginx` do pacote vira só um aviso (um mesmo log não pode estar
+  em dois arquivos) e o original fica em `/var/backups/juimprime`. Num upgrade do nginx, se o apt perguntar por esse
+  arquivo, responda **N** (manter a versão instalada); na dúvida, rode o script de novo.
+
+Quando a página mudar no Git (por exemplo, um contato novo), rodar o script de novo. Conferir:
+
+- `curl -sk https://127.0.0.1/manutencao-previa | head` mostra a página sem derrubar nada (a prévia só abre de dentro do
+  servidor; do computador, por um túnel: `ssh -L 8443:127.0.0.1:443 <usuário>@10.0.100.80` e abrir
+  `https://localhost:8443/manutencao-previa`, passando pelo aviso do certificado, que é do domínio). Pelo 443 porque,
+  depois do certbot, o bloco da porta 80 pode só redirecionar para o https; antes do HTTPS, `http://` e a porta 80;
+- de verdade, com o site parado por uns segundos:
+  `sudo systemctl stop juimprime.service; sleep 2; curl -skI https://127.0.0.1/ | head -n 6; sudo systemctl start juimprime.service`
+  mostra `503` e `Retry-After: 120` (depois, `curl -s http://127.0.0.1:3000/api/health` confirma o site de volta);
+- `sudo logrotate -d /etc/logrotate.conf 2>&1 | grep 'nginx/\*.log'` mostra `(190 rotations)` e nenhum
+  `duplicate log entry`; os arquivos ficam em `/var/log/nginx` (`access.log.1`, `access.log.2.gz`…).
+
 ## Cópia do banco na nuvem (Backblaze B2)
 
 Todo dia às 03:30 o servidor faz a cópia do banco (`mariadb-dump`), confere se ela está inteira, tranca com uma chave
@@ -211,7 +275,9 @@ cópias mais novas também ficam no servidor, em `shared/backups`.
 
 Ligar (uma vez):
 
-1. **Backblaze:** criar a conta em backblaze.com (B2 Cloud Storage). Em **Buckets → Create a Bucket**: um nome único
+1. **Backblaze:** criar a conta em backblaze.com (B2 Cloud Storage), com a região dos dados nos EUA (**US West** ou
+   **US East**): é o que diz a Política de Privacidade; com a da Europa (EU Central), o texto dela muda
+   (`LEGAL-SETUP.md`). Em **Buckets → Create a Bucket**: um nome único
    (por exemplo `juimprime-backup-<algo>`), **Private**, criptografia padrão ligada. Em **Lifecycle Settings** do bucket,
    regra própria: arquivos ficam 120 dias e depois saem (`daysFromUploadingToHiding` 120, `daysFromHidingToDeleting` 1).
 2. **Chave do servidor:** em **Application Keys → Add a New Application Key**: nome `servidor-juimprime`, acesso só ao

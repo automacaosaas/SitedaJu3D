@@ -12,15 +12,28 @@ DOMAIN=https://juimprimepramim.com.br
 TESTING=${JU_TEST:-}
 [ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ] || { echo "Rode com sudo: sudo bash $0"; exit 1; }
 [ -f "$ENV_FILE" ] || { echo "Não achei $ENV_FILE (rode antes o setup-servidor.sh)."; exit 1; }
+# O .env fica numa pasta do juimprime: root só lê e grava ali como o próprio juimprime (runuser), para um link simbólico
+# deixado na pasta nunca levar a leitura ou a gravação a um arquivo do sistema. A cópia de antes vai para uma pasta só de
+# root, fora de /srv/juimprime (no teste, ao lado do .env).
+BACKUP_DIR=/var/backups/juimprime; [ -z "$TESTING" ] || BACKUP_DIR=$(dirname -- "$ENV_FILE")
+as_app() { if [ -n "$TESTING" ]; then "$@"; else runuser -u "$APP_USER" -- "$@"; fi; }
+load() { ENV_TEXT=$(as_app cat -- "$ENV_FILE") || { echo "Não consegui ler $ENV_FILE como $APP_USER."; exit 1; }; }
+load
 
-current() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
+# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, e, com o nome
+# repetido, fica com a ÚLTIMA linha.
+current() {
+  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"
+  while IFS= read -r line; do if [[ "$line" =~ $re ]]; then value=${BASH_REMATCH[1]}; fi; done <<<"$ENV_TEXT"
+  printf '%s' "${value%"${value##*[![:space:]]}"}"
+}
 declare -A NEW
 ask() {  # ask <VAR> <pergunta> <secreto 0|1> <regex>
   local var=$1 label=$2 secret=$3 re=$4 value had
   # Enter só mantém o atual quando ele já serve (uma chave de teste não fica no modo produção)
   had=$(current "$var"); [[ -n "$had" && "$had" =~ $re ]] || had=''; [ -n "$had" ] && label="$label [Enter mantém o atual]"
   while :; do
-    if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo; else read -r -p "$label: " value; fi
+    if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo; else read -r -e -p "$label: " value; fi
     value=${value//$'\r'/}; value="${value#"${value%%[![:space:]]*}"}"; value="${value%"${value##*[![:space:]]}"}"
     if [ -z "$value" ] && [ -n "$had" ]; then return 0; fi
     if [[ "$value" =~ $re ]]; then NEW[$var]=$value; return 0; fi
@@ -42,32 +55,38 @@ ask MP_ACCESS_TOKEN "Access Token $label (não aparece na tela)" 1 "^${prefix}[A
 ask MP_WEBHOOK_SECRET "Assinatura secreta do webhook (não aparece na tela)" 1 '^[A-Za-z0-9]{16,128}$'
 
 echo "== E-mail da loja (Resend)"
-ask ORDER_NOTIFY_EMAIL "E-mail da Júlia (recebe 'pedido pago' e os alertas)" 0 '^[^[:space:]@<>]+@[^[:space:]@<>]+\.[A-Za-z]{2,}$'
+ask ORDER_NOTIFY_EMAIL "E-mail da Júlia (recebe 'pedido pago' e os alertas)" 0 '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
 ask RESEND_API_KEY "Chave do Resend (re_…, não aparece na tela)" 1 '^re_[A-Za-z0-9_]{10,80}$'
 read -r -p "O domínio juimprimepramim.com.br já aparece como Verified no Resend? (s/N): " verified
 if [[ "${verified,,}" == s* ]]; then NEW[MAIL_FROM]="Ju imprime pra mim <pedidos@juimprimepramim.com.br>"; fi
 NEW[APP_ENV]=production
 NEW[SITE_URL]=$DOMAIN
 
-# Troca só as linhas pedidas (a primeira de cada nome; a que faltar entra no fim), com comandos internos do bash: os
-# valores nunca passam pela linha de comando de outro programa. A cópia de antes fica ao lado, só para root.
-backup="$ENV_FILE.antes-$(date +%Y%m%d-%H%M%S)"
-( umask 077; cp -p "$ENV_FILE" "$backup" )
-tmp=$(mktemp "$ENV_FILE.XXXXXX")
-declare -A DONE
+# Troca só as linhas pedidas, com comandos internos do bash (os valores nunca passam pela linha de comando de outro
+# programa): o valor novo entra na primeira linha do nome, as repetidas saem (o systemd ficaria com a última) e o nome que
+# faltar entra no fim. Antes, a cópia do .env de antes, só para root (ficam as 10 mais novas).
+load
+[ -n "$TESTING" ] || install -d -o root -g root -m 700 "$BACKUP_DIR"
+backup=$(mktemp "$BACKUP_DIR/env.antes-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+printf '%s\n' "$ENV_TEXT" > "$backup"
+olds=("$BACKUP_DIR"/env.antes-*); for ((i = 0; i < ${#olds[@]} - 10; i++)); do rm -f -- "${olds[i]}"; done
+ASSIGN='^[[:space:]]*([A-Z][A-Z0-9_]*)[[:space:]]*='
+declare -A DONE=()
+out=''
 while IFS= read -r line || [ -n "$line" ]; do
-  key=${line%%=*}
-  if [[ "$line" == *=* && "$key" =~ ^[A-Z][A-Z0-9_]*$ && -n "${NEW[$key]+x}" && -z "${DONE[$key]+x}" ]]; then
-    printf '%s=%s\n' "$key" "${NEW[$key]}"; DONE[$key]=1
+  key=''; if [[ "$line" =~ $ASSIGN ]]; then key=${BASH_REMATCH[1]}; fi
+  if [ -n "$key" ] && [ -n "${NEW[$key]+x}" ]; then
+    if [ -z "${DONE[$key]+x}" ]; then out+="$key=${NEW[$key]}"$'\n'; DONE[$key]=1; fi
   else
-    printf '%s\n' "$line"
+    out+="$line"$'\n'
   fi
-done < "$ENV_FILE" > "$tmp"
-for key in "${!NEW[@]}"; do [ -n "${DONE[$key]+x}" ] || printf '%s=%s\n' "$key" "${NEW[$key]}" >> "$tmp"; done
-chmod 600 "$tmp"; [ -n "$TESTING" ] || chown "$APP_USER:$APP_USER" "$tmp"
-mv -f "$tmp" "$ENV_FILE"
-unset NEW
-echo "gravado (a versão de antes ficou em $backup)"
+done < <(printf '%s' "$ENV_TEXT")
+for key in "${!NEW[@]}"; do [ -n "${DONE[$key]+x}" ] || out+="$key=${NEW[$key]}"$'\n'; done
+# Gravado pelo juimprime: um arquivo novo (600) ao lado, trocado de uma vez; interrompido no meio, o temporário sai e o
+# .env fica como estava.
+printf '%s' "$out" | as_app sh -c 'umask 077; t=$(mktemp "$1.XXXXXX") || exit 1; trap "rm -f -- \"$t\"" EXIT HUP INT TERM; cat > "$t" && mv -f -- "$t" "$1"' sh "$ENV_FILE"
+unset NEW out ENV_TEXT
+echo "gravado (a versão de antes ficou em $backup, só para root)"
 [ -z "$TESTING" ] || exit 0
 
 echo "== Reiniciando o site"

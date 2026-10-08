@@ -8,7 +8,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-const {isProduction, indexableHosts, requestHost} = require('../api/_lib/runtime');
+const {isProduction, canonicalHost, indexableHosts, requestHost} = require('../api/_lib/runtime');
 const {minifyCss} = require('./minify-css.cjs');
 
 const PROJECT = path.join(__dirname, '..');
@@ -46,6 +46,14 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   // Search results only for the shop's own domain and its www/apex sibling (api/_lib/runtime.js), decided per request by
   // the address asked for, not by APP_ENV: the temporary Hostinger domain, localhost and bare IPs stay out.
   const searchHosts = indexableHosts(env);
+  // www → the shop's domain without www (2026-10-08), here and not only in nginx: one address means one session cookie, one
+  // cart and the one origin the forms accept (api/_lib/http.js). Only that exact www name moves; 127.0.0.1/localhost (the
+  // deploy's health checks), the temporary Hostinger domain and the dev server never match it.
+  const mainHost = canonicalHost(env), wwwHost = mainHost && !mainHost.startsWith('www.') ? `www.${mainHost}` : '';
+  // Calls from other servers keep answering on www, as before: no cookie, cart or form origin is involved, and they would
+  // not follow the move (the Mercado Pago webhook wants its 200 and retries otherwise; curl and fetch drop Authorization
+  // when a redirect changes host, so the scheduled /api/fila/rodar would arrive without its secret).
+  const serverToServer = /^\/api\/(?:payments\/webhook|fila\/rodar)\/?$/;
   const handlers = new Map();
   const compressed = new Map();
   let compressedBytes = 0;
@@ -149,6 +157,14 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
 
   function serveStatic(req, res, pathname, search = '') {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
+    // A page address typed with capitals (ADMIN.HTML, Produtos.html, 08/10/2026): every page is lowercase on disk, and the
+    // Linux server would answer 404, so it moves to the lowercase address when that page exists. Only page addresses (some
+    // vendor files have capitals in their names).
+    const lower = pathname.toLowerCase();
+    if (lower !== pathname && /(^|\/)[^./]*$|\.html?$/i.test(pathname) && resolveFile(lower)) {
+      res.statusCode = 301; res.setHeader('Location', lower + search); res.setHeader('Cache-Control', 'private, max-age=86400');
+      return res.end();
+    }
     const found = resolveFile(pathname);
     if (!found) {
       // A page address that does not exist gets the site's own 404 page (404.html, with links back to the showcase); a
@@ -199,6 +215,14 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     try { ({pathname, search} = new URL(req.url, 'http://localhost')); } catch { res.statusCode = 400; return res.end(); }
     for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
     if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    // Same path and query on the domain, with the headers above: 301 for GET/HEAD, 308 (method and body kept) for the rest.
+    // Kept by the browser only: a CDN in front must not hand it to other hosts (X-Forwarded-Host can be forged).
+    if (wwwHost && requestHost(req) === wwwHost && !serverToServer.test(pathname)) {
+      res.statusCode = req.method === 'GET' || req.method === 'HEAD' ? 301 : 308;
+      res.setHeader('Location', `https://${mainHost}${req.url.startsWith('/') ? req.url : pathname + search}`);   // "*" or a full URL: the parsed path
+      res.setHeader('Cache-Control', 'private, max-age=86400');
+      return res.end();
+    }
     try {
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         const handler = apiHandler(pathname);

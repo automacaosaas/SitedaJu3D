@@ -7,6 +7,10 @@ export const COMMERCE = Object.freeze({
   pixDiscountBps: 500,
   // The card (decision of 01/10/2026): up to 3 installments without interest, up to 12 on credit. "Sem juros" is a setting
   // of the Mercado Pago account (the shop pays the fee); the site only shows it and offers at most `maxInstallments`.
+  // interestFreeInstallments is the ONE source of the "3x sem juros" the pages announce (2026-10-08): the bar on top
+  // (announcement-bar.js), the product window (controller.js), the product pages, the home and Contato (written by
+  // node tools/build-product-pages.cjs) and the checkout's card option. To change it: this line (2 to 12), then that command.
+  // The checkout never promises more than the account really gives (/api/payments/config interestFree; MERCADOPAGO-VALIDACAO.md).
   interestFreeInstallments: 3, maxInstallments: 12,
   // o e-mail da Ju: o "entre em contato" das descrições abre ele (contact-link.js)
   contactEmail: 'juimprimepramim@gmail.com',
@@ -30,9 +34,10 @@ export const money = cents => {
   return `${cents < 0 || Object.is(cents, -0) ? '-' : ''}R$ ${whole},${String(value % 100).padStart(2, '0')}`;
 };
 // "3x de R$ 43,00": the amount split into the interest-free installments, with nothing added (rounded down to the cent, as
-// Mercado Pago shows the installment; the last one carries the leftover cents).
-export const installmentCents = cents => Math.floor(cents / COMMERCE.interestFreeInstallments);
-export const installmentLabel = cents => `${COMMERCE.interestFreeInstallments}x de ${money(installmentCents(cents))}`;
+// Mercado Pago shows the installment; the last one carries the leftover cents). `n`: fewer, when the checkout knows the
+// Mercado Pago account gives fewer.
+export const installmentCents = (cents, n = COMMERCE.interestFreeInstallments) => Math.floor(cents / n);
+export const installmentLabel = (cents, n = COMMERCE.interestFreeInstallments) => `${n}x de ${money(installmentCents(cents, n))}`;
 // Pix: the server's rule (api/_lib/catalog.js), rounded per unit, so the page always shows what Mercado Pago will charge.
 export const pixUnitDiscount = unitCents => Math.round(unitCents * COMMERCE.pixDiscountBps / 10000);
 export const pixPercent = COMMERCE.pixDiscountBps / 100;

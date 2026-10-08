@@ -3,7 +3,8 @@
 #   sudo bash setup-servidor.sh
 # Pode rodar de novo, e deve, quando deploy/ mudar no Git (a publicação avisa): reinstala deploy.sh, as unidades do
 # systemd e o sudoers. O .env, o deploy.conf, as chaves, o banco e o nginx (com o domínio e o HTTPS) nunca são
-# sobrescritos. Não mexe em firewall, SSH nem em outros sites. Passo a passo em SERVIDOR-SETUP.md.
+# sobrescritos (o nginx só ganha, uma vez, o include da página "voltamos já": config-nginx.sh). Não mexe em firewall,
+# SSH nem em outros sites. Passo a passo em SERVIDOR-SETUP.md.
 set -euo pipefail
 
 APP_USER=juimprime
@@ -138,7 +139,7 @@ NFE_PROVIDER=
 BLING_CLIENT_ID=
 BLING_CLIENT_SECRET=
 NFE_ENVIRONMENT=
-# Entrar com o Google e com a Apple (opcional; sem eles, os botões não aparecem). APPLE_PRIVATE_KEY: a chave .p8 numa linha só, com \n no lugar das quebras.
+# Entrar com o Google e com a Apple (opcional; sem eles, os botões não aparecem). APPLE_PRIVATE_KEY: a chave .p8 entre aspas duplas, numa linha só, com \n no lugar das quebras (sem as aspas, o systemd apaga a barra).
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 APPLE_CLIENT_ID=
@@ -208,6 +209,10 @@ ln -sfn /etc/nginx/sites-available/juimprime /etc/nginx/sites-enabled/juimprime
 rm -f /etc/nginx/sites-enabled/default
 nginx -t -q && systemctl reload nginx
 echo "ok, $nginx_note"
+
+step "Página \"voltamos já\" no lugar do 502 e registros de acesso por 190 dias (deploy/config-nginx.sh)"
+# o mesmo script que se roda sozinho num servidor que já existe; rodar de novo não duplica nada
+bash "$HERE/config-nginx.sh"
 
 step "Pronto. Falta cadastrar a chave abaixo no GitHub:"
 echo "GitHub → repositório SitedaJu3D → Settings → Deploy keys → Add deploy key"

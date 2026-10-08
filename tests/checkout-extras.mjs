@@ -10,7 +10,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const {freeShippingProgress, freeShippingBar, freeShippingNote} = await site('free-shipping.js');
-const {installmentRows, installmentsTable} = await site('installments.js');
+const {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} = await site('installments.js');
 const {cartSummary} = await site('cart-view.js');
 
 // ── free shipping ─────────────────────────────────────────────────────
@@ -46,6 +46,20 @@ const {cartSummary} = await site('cart-view.js');
   assert.equal(installmentsTable(rows.slice(0, 1)), '', 'one option: nothing to compare');
   assert.deepEqual(installmentRows(null, 100), []); assert.deepEqual(installmentRows([{payment_type_id: 'debit_card', payer_costs: [{installments: 1, installment_amount: 1, total_amount: 1}]}], 100), [], 'debit cards have no installments');
   assert.doesNotMatch(installmentsTable([{installments: 1, eachCents: 1, totalCents: 1, interestCents: 0}, {installments: 2, eachCents: 1, totalCents: 3, interestCents: 2, cet: '<b>9%'}]), /<b>/, 'a label from outside cannot inject markup');
+  // the card option promises "sem juros" only as far as this card's table goes (2026-10-08)
+  assert.equal(interestFreeCount(rows), 2, 'this card: 2x without interest, 3x with');
+  assert.equal(interestFreeCount(rows.slice(0, 1)), 1);
+  assert.equal(interestFreeCount([{installments: 1, interestCents: 0}, {installments: 2, interestCents: 5}, {installments: 3, interestCents: 0}]), 1, 'stops at the first interest');
+  assert.equal(interestFreeCount([]), null); assert.equal(interestFreeCount(null), null, 'no table yet: the account\'s number decides');
+  // what the card option promises (checkout.js cardOffer), with the site announcing 3 — the rule, not its source text
+  for (const [card, account, promised, why] of [[null, 3, 3, 'before the card: the account'], [null, 6, 3, 'never past what the site announces'], [null, 2, 2, 'the account gives fewer'],
+    [null, 0, 0, 'the account charges interest from 2x on'], [null, undefined, 0, 'the account unknown: no promise'], [null, null, 0, 'unknown'],
+    [1, 3, 0, 'the typed card has interest from 2x on, whatever the account says'], [2, 3, 2, 'the typed card gives 2'], [0, 3, 0, 'interest even in 1x'],
+    [12, 0, 3, 'the typed card\'s own table beats the account, still up to the site\'s number'], [3, undefined, 3, 'the typed card, the account unknown'],
+    [null, 2.5, 0, 'not a count'], [null, '3', 0, 'not a count']]) assert.equal(promisedInstallments(card, account, 3), promised, why);
+  assert.equal(promisedInstallments(null, 6, 6), 6); assert.equal(promisedInstallments(null, 3, 1), 0, 'the site announcing less than 2: nothing to promise');
+  // together: a card whose table charges from 3x on promises 2, never the account's 3
+  assert.equal(promisedInstallments(interestFreeCount(rows), 3, 3), 2);
 }
 
 // ── cart summary: estimate by CEP and the free-shipping bar ───────────
@@ -74,6 +88,7 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(account, /input\('password', 'Crie uma senha \(opcional\)', 'password', 'new-password', 'Pelo menos 8 caracteres', true\)/, 'sign-up password is optional');
   assert.match(account, /\$\{optional \? '' : 'required'\}/);
   assert.match(fake, /getInstallments/); assert.match(fake, /onBinChange/);
+  assert.match(fake, /fetch\('\/__fake-mp\/installments\?amount='/, 'the simulated Brick\'s table comes from the same simulated account as the server\'s check');
   // Before going live (2026-10-07): one attempt until a definite answer, the device id, no raw Mercado Pago code on the
   // real site, and a waiting Pix cancelled before a new one is made.
   assert.match(checkout, /if \(!order\.attempt\) order = \{\.\.\.order, attempt: newAttempt\(\)\};/, 'the attempt is kept across retries');

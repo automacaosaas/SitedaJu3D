@@ -5,6 +5,8 @@
 //   node tools/dev-server.cjs --ask-key    → asks for the Resend key (hidden) and sends real e-mails
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
+//   … --fake-mp --sem-juros=3              → the simulated account gives 3 installments without interest (default: none, like an
+//                                            account that has not turned "parcelas sem juros" on); the checkout's card option follows
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
 //   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
 //   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
@@ -17,6 +19,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const {createFakeMercadoPago} = require('./fake-mercadopago.cjs');
 const {createFakeBling} = require('./fake-bling.cjs');
+const {createInterestFree} = require('../api/_lib/interest-free');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
@@ -133,11 +136,13 @@ async function main() {
   };
   const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fakeMpFetch(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
   const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
+  // "Sem juros": how many installments the (simulated or test) account gives without interest, for the checkout and the health
+  const interestFree = createInterestFree({fetchImpl: routed});
   const routes = {
     '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
-    '/api/health': require('../api/health').create({env}),
+    '/api/health': require('../api/health').create({env, interestFree}),
     '/api/email-preview': require('../api/email-preview').create({env}),
-    '/api/payments/config': require('../api/payments/config').create({env}),
+    '/api/payments/config': require('../api/payments/config').create({env, interestFree}),
     '/api/payments/methods': require('../api/payments/methods').create({env, fetchImpl: routed}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
@@ -167,7 +172,8 @@ async function main() {
   const headerRules = readHeaderRules();
   if (fakeMp) {
     // When the simulated customer "pays" a Pix, deliver a properly signed notification to our own webhook, like Mercado Pago would.
-    fake = createFakeMercadoPago({onPaid: async id => {
+    const semJuros = Number((process.argv.find(arg => arg.startsWith('--sem-juros=')) || '').split('=')[1]) || 0;
+    fake = createFakeMercadoPago({interestFree: semJuros, onPaid: async id => {
       const ts = String(Date.now()), requestId = crypto.randomUUID(), sign = crypto.createHmac('sha256', env.MP_WEBHOOK_SECRET).update(`id:${id.toLowerCase()};request-id:${requestId};ts:${ts};`).digest('hex');
       const res = {statusCode: 200, setHeader() {}, end() {}};
       await routes['/api/payments/webhook']({method: 'POST', url: `/api/payments/webhook?data.id=${id}&type=order`, headers: {'x-signature': `ts=${ts},v1=${sign}`, 'x-request-id': requestId}, body: {type: 'order', data: {id}}, socket: {}}, res);
@@ -181,6 +187,8 @@ async function main() {
     try {
       if (routes[url.pathname]) return await routes[url.pathname](req, res);
       if (fake && url.pathname === '/__fake-mp/sdk.js') { res.setHeader('Content-Type', TYPES['.js']); return res.end(fs.readFileSync(path.join(__dirname, 'fake-brick.js'))); }
+      // The simulated Brick's installment table (mp.getInstallments) comes from the same simulated account as the server's check.
+      if (fake && url.pathname === '/__fake-mp/installments') { const answer = await fake.fetchImpl(`https://api.mercadopago.com/v1/payment_methods/installments${url.search}`, {method: 'GET', headers: {Authorization: 'Bearer fake-brick'}}); res.statusCode = answer.status; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(await answer.json())); }
       if (fake && url.pathname === '/__fake-mp/pay') { const ok = await fake.pay(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({paid: ok})); }
       // The simulated Bling "allows" at once and sends the browser back to the panel with a code, like the real page.
       if (fakeBling && url.pathname === '/__fake-bling/authorize') {

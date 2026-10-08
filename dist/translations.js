@@ -783,8 +783,9 @@ Não encontramos esse CEP. Preencha o endereço manualmente.|We could not find t
 Não foi possível buscar o endereço agora. Preencha manualmente.|We could not look up the address right now. Fill it in manually.|No pudimos buscar la dirección ahora. Complétala manualmente.
 Calcule o frete|Calculate shipping|Calcula el envío
 no Pix|with Pix|con Pix
-3X SEM JUROS|3X INTEREST-FREE|3X SIN INTERESES
 ou até 12x no crédito|or up to 12x on credit|o hasta 12 cuotas con crédito
+no crédito|on credit|con crédito
+veja as parcelas ao digitar o cartão|see the installments as you type the card|mira las cuotas al escribir la tarjeta
 No Pix|With Pix|Con Pix
 O pagamento é feito com segurança pelo Mercado Pago.|Payment is processed securely by Mercado Pago.|El pago se procesa de forma segura con Mercado Pago.
 Crédito ou débito|Credit or debit|Crédito o débito
@@ -810,7 +811,6 @@ Cartão escolhido.|Card selected.|Tarjeta elegida.
 ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
 Frete calculado pelo CEP|Shipping calculated by postal code|Envío calculado por código postal
 PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA
-5% off no Pix ou 3x sem juros no cartão|5% off with Pix or 3 interest-free card installments|5% de descuento con Pix o 3 cuotas sin interés con tarjeta
 FEITO SOB ENCOMENDA|MADE TO ORDER|HECHO POR ENCARGO
 Vantagens da loja|Shop highlights|Ventajas de la tienda
 mensagem|message|mensaje
@@ -977,7 +977,6 @@ Ver meus pedidos →|See my orders →|Ver mis pedidos →
 Quais são os cuidados com as peças impressas em 3D?|How should I care for 3D-printed pieces?|¿Qué cuidados necesitan las piezas impresas en 3D?
 Evite deixar as peças no calor forte ou no sol direto por muito tempo, como dentro de um carro estacionado, para preservar o acabamento e o formato. Para limpar, use um pano macio e seco.|Avoid leaving the pieces in strong heat or direct sunlight for long periods, such as inside a parked car, to preserve their finish and shape. To clean them, use a soft, dry cloth.|Evita dejar las piezas con calor fuerte o al sol directo por mucho tiempo, como dentro de un auto estacionado, para conservar el acabado y la forma. Para limpiarlas, usa un paño suave y seco.
 Quais são as formas de pagamento?|Which payment methods do you accept?|¿Cuáles son las formas de pago?
-Pix, com 5% de desconto nas peças, ou cartão de crédito em até 12x, sendo até 3x sem juros. O pagamento é feito pelo Mercado Pago, com segurança.|Pix, with 5% off the pieces, or credit card in up to 12 installments, up to 3 of them interest-free. Payment is processed securely by Mercado Pago.|Pix, con 5% de descuento en las piezas, o tarjeta de crédito en hasta 12 cuotas, hasta 3 sin intereses. El pago lo procesa Mercado Pago, con seguridad.
 O frete é grátis?|Is shipping free?|¿El envío es gratis?
 Nas compras a partir de R$ 500,00 em peças, o envio por PAC é grátis. Abaixo disso, o frete é calculado pelo CEP, e você escolhe entre PAC e SEDEX.|On orders of R$ 500,00 or more in pieces, PAC shipping is free. Below that, shipping is calculated from your CEP and you choose between PAC and SEDEX.|En compras desde R$ 500,00 en piezas, el envío por PAC es gratis. Por debajo de eso, el envío se calcula por el CEP y eliges entre PAC y SEDEX.
 Posso trocar ou devolver uma peça?|Can I exchange or return a piece?|¿Puedo cambiar o devolver una pieza?
@@ -1011,7 +1010,6 @@ De cima|From above|Desde arriba
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
-ou 3x sem juros no cartão|or 3 interest-free card installments|o 3 cuotas sin interés con tarjeta
 Cores originais:|Original colors:|Colores originales:
 Observação:|Note:|Observación:
 Crédito|Credit|Crédito
