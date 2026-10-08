@@ -1,7 +1,8 @@
 import {PRODUCTS, PALETTE, defaults, color, validSelection} from './products.js';
-import {readCart, writeCart, putItem} from './cart-store.js';
+import {readCart, writeCart, putItem, putItems, totals} from './cart-store.js';
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {icon} from './icons.js';
+import {mountKit} from './kit-builder.js';
 
 // Página de cada peça (borboletoscopio.html…, tools/build-product-pages.cjs). A foto dá lugar ao modelo 3D que gira (o
 // mesmo do configurador, viewer.js); "Personalizar o meu" abre a escolha das cores aqui mesmo, e cada cor pinta o modelo
@@ -118,6 +119,18 @@ function setup(root, key) {
       setTimeout(() => openMiniCart({itemId: addedItemId(cart, key, {}), original: true}), reduced.matches ? 0 : 650);
       setTimeout(() => { busy = false; add.classList.remove('is-added'); add.querySelector('span').textContent = 'Adicionar ao carrinho'; }, 2200);
     });
+    // "Monte seu kit" (kit-builder.js), logo depois do botão: as peças do kit entram juntas e o mini-carrinho confirma cada uma
+    // (com o bloco à vista, a frase do kit embaixo do preço sai: ela continua no HTML para quem está sem JavaScript)
+    const kitHost = q('[data-pl-kit]');
+    if (kitHost) {
+      kitHost.hidden = false;
+      const offer = q('.pl-offer'); if (offer) offer.hidden = true;
+      mountKit(kitHost.querySelector('[data-pl-kit-body]'), {current: key, onAdd: async lines => {
+        const before = totals(readCart(), 0).subtotal, cart = writeCart(putItems(readCart(), lines));
+        window.dispatchEvent(new Event('ju:cart'));
+        openMiniCart({itemIds: lines.map(line => addedItemId(cart, line.productId, {})).filter(Boolean), original: true, riseFrom: before});
+      }});
+    }
     return;
   }
 

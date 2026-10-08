@@ -36,6 +36,10 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
     assert(!page.includes('data-pl-customize') && !page.includes('id="pl-custom"'), `${id}: a lamp — nothing to customize`);
     assert(page.includes('<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="' + id + '">') && page.includes('<span>Adicionar ao carrinho</span>'), `${id}: only "Adicionar ao carrinho"`);
     assert(page.includes(`<p class="pl-offer">${kitOffer(id)}</p>`), `${id}: the kit offer`);
+    // 07/10/2026: right after the button, the place of "Monte seu kit" (hidden; product-landing.js mounts it with kit-builder.js)
+    assert(page.includes(`<span>Adicionar ao carrinho</span></button></div>\n          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">pode misturar</span></div><div data-pl-kit-body></div></section>`), `${id}: the kit block after the button`);
+  } else assert(!page.includes('data-pl-kit'), `${id}: no kit block for a piece without a kit`);
+  if (fixed) {
     for (const c of product.colors) assert(page.includes(`<li><span class="pl-dot is-fixed" role="img" title="${c.name}" aria-label="${c.name}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`), `${id}: the dot of ${c.name}`);
     assert(page.includes('nas cores dela. A produção começa'), `${id}: printed in its own colours`);
   } else assert(page.includes(`href="index.html#produto/${id}/personalizar"`), `${id}: "Personalizar o meu" opens the configurator`);
@@ -95,6 +99,10 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(code, /add\.removeAttribute\('data-add-product'\);/, 'from here on the page adds the chosen colors (not catalog.js)');
   assert.match(code, /writeCart\(putItem\(readCart\(\), key, chosen, thumbnail\)\)/);
   assert.match(code, /openMiniCart\(\{itemId: addedItemId\(cart, key, chosen\), original: plain\}\)/);
+  // the lamps: "Monte seu kit" shows (and the kit sentence under the price steps aside), and the kit goes in with one write
+  assert.match(code, /kitHost\.hidden = false;\n      const offer = q\('\.pl-offer'\); if \(offer\) offer\.hidden = true;/);
+  assert.match(code, /openMiniCart\(\{itemIds: lines\.map\(line => addedItemId\(cart, line\.productId, \{\}\)\)\.filter\(Boolean\), original: true, riseFrom: before\}\);/);
+  assert.match(css, /\.pl \.kit \{ --kit-accent: var\(--pl-accent\);/, 'the kit wears the page colors');
   assert.match(code, /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting;/, 'the spin stops off screen');
   assert.match(css, /\.pl-add\.is-added \.pl-check path \{ animation: pl-draw/, 'the check draws itself');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);

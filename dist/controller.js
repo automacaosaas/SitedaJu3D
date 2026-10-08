@@ -1,19 +1,26 @@
-import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection,fixedColors} from './products.js';
+import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection,fixedColors,showcase} from './products.js';
 import {setupCartBridge} from './cart-bridge.js';
-import {COMMERCE,money,installmentLabel,kitOffer} from './commerce-config.js';
+import {COMMERCE,money,installmentLabel,kitOffer,kitOf} from './commerce-config.js';
 import {icon} from './icons.js';
 import {staticViews,createGallery} from './gallery.js';
 import {fillDescription} from './contact-link.js';
 import {setupPurchaseSheet} from './purchase-sheet.js';
+import {journeyColors} from './hero-motion.js';
+import {mountKit} from './kit-builder.js';
+import {readCart,writeCart,putItems,totals} from './cart-store.js';
+import {openMiniCart,addedItemId} from './mini-cart.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
 // Peça de cores fixas à venda (as lâmpadas, data-fixed): as cores dela no lugar das escolhas, com o preço, a oferta do kit e a compra.
 // A aba Foto é uma galeria de fotos reais da peça (frente, três quartos, detalhes…; gallery.js); sem elas, a foto da vitrine.
+// As cores da janela são as da peça aberta (07/10/2026): a vitrine não anda mais quando a peça abre por um card, então a janela não pode
+// herdar as cores da página (journey.js); fillProduct põe nela o --theme-* da própria peça. Ao fechar, o foco volta a quem a abriu.
+// As lâmpadas (um kit em COMMERCE.kits) ganham "Monte seu kit" na área branca (kit-builder.js), e a frase do kit sai da barra de compra.
 const $=selector=>document.querySelector(selector),dialog=$('#product-dialog'),sheet=$('#pdp-sheet'),storageKey='ju.colors.v1';
 let saved={};try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
 const selections=Object.fromEntries(Object.keys(PRODUCTS).map(key=>[key,validSelection(key,saved[key])]));
-let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null;
+let activeProduct=null,selectedPart='body',view='photo',viewer=null,viewerImport=null,request=0,sheetOpener=null,opener=null,trigger=null;
 // na aba Foto não há nota embaixo: as fotos falam por si (o nome de cada uma fica nas miniaturas e nos pontinhos, para leitores de tela)
 const gallery=createGallery($('.image-area'));
 // Combinações prontas: as cores valem para as partes na ordem do produto (corpo, detalhes, motores).
@@ -36,13 +43,18 @@ function hexColors(){if(!selections[activeProduct])return {};return Object.fromE
 function announce(message){$('#color-announcement').textContent=message;}
 function fillProduct(key){
   const p=product(key),soon=!PRODUCTS[key],fixed=fixedColors(key),price=COMMERCE.prices[key];
-  $('#dialog-number').textContent=soon?'Novidade · em breve':fixed?'Novidade':'Ateliê de cores';
+  for(const [name,value] of Object.entries(journeyColors(showcase(key).theme)))dialog.style.setProperty(name,value);
+  // o sobretítulo; `eyebrowEffect: 'rainbow'` (products.js, hoje só o unicórnio) pinta o "Novidade" com o arco-íris (product-page.css)
+  const eyebrow=$('#dialog-number');eyebrow.textContent=soon?'Novidade · em breve':fixed?'Novidade':'Ateliê de cores';eyebrow.classList.toggle('is-rainbow',p.eyebrowEffect==='rainbow');
   $('#dialog-title').textContent=p.title;$('#dialog-subtitle').textContent=p.subtitle;fillDescription($('#dialog-description'),p.description,p.title);
   gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));$('#fixed-note').textContent=soon||fixed?`Cores fixas: ${p.colors.map(c=>c.name).join(', ')}.`:p.fixed;
   if(soon||fixed){$('#fixed-colors').replaceChildren(...p.colors.map(c=>{const s=document.createElement('span');s.className='pdp-fixed-color';const dot=document.createElement('i');dot.style.background=c.hex;dot.setAttribute('aria-hidden','true');s.append(dot,c.name);return s;}));$('#fixed-text').textContent=p.description;}
+  // "Monte seu kit": só nas peças de cores fixas à venda que fazem parte de um kit (as lâmpadas); começa com esta peça, 1 unidade
+  const kitHost=$('#pdp-kit');kitHost.hidden=soon||!fixed||!kitOf(key);mountKit(kitHost.querySelector('.pdp-kit-body'),{current:kitHost.hidden?null:key,onAdd:addKit});
   if(!soon){$('#product-price').textContent=money(price);$('#product-pix').textContent=`${money(pixPrice(price))} no Pix`;$('#product-installments').textContent=`ou ${installmentLabel(price)} sem juros no cartão`;
-    // o 2.º da mesma peça mais barato (COMMERCE.extraPrices: hoje, o avião); as lâmpadas, o kit (COMMERCE.kits: 2 por R$ 160, 3 por R$ 210)
-    const extra=COMMERCE.extraPrices?.[key],kit=kitOffer(key),offer=$('#product-offer');offer.hidden=!extra&&!kit;offer.textContent=extra?`Levando 2, o segundo sai por ${money(extra)}`:kit;}
+    // o 2.º da mesma peça mais barato (COMMERCE.extraPrices: hoje, o avião); as lâmpadas, o kit (COMMERCE.kits: 2 por R$ 160, 3 por R$ 210).
+    // Com o "Monte seu kit" à vista, a frase do kit sai da barra (fica no HTML para quem não tem o bloco).
+    const extra=COMMERCE.extraPrices?.[key],kit=kitOffer(key),offer=$('#product-offer');offer.hidden=!extra&&(!kit||!kitHost.hidden);offer.textContent=extra?`Levando 2, o segundo sai por ${money(extra)}`:kit;}
   $('#pdp-production').textContent=COMMERCE.productionLabel;
   document.title=`${p.title} | Ju imprime pra mim`;$('#share-link').hidden=true;
 }
@@ -56,7 +68,7 @@ function syncProduct(){
   if(shared){selections[key]=shared;save();history.replaceState(null,'',`#produto/${key}/personalizar`);if(key===activeProduct&&dialog.open)updateControls();}
   const changed=key!==activeProduct||!dialog.open;activeProduct=key;dialog.dataset.mode=soon?'preview':'compact';dialog.toggleAttribute('data-fixed',!soon&&fixedColors(key));
   if(changed){fillProduct(key);selectedPart='body';closeSheet(false);if(!soon&&!fixedColors(key))renderControls();}
-  if(!dialog.open)dialog.showModal();lockPage();
+  if(!dialog.open){const focused=document.activeElement;opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;dialog.showModal();}trigger=null;lockPage();
   if(step==='personalizar'||step==='3d'){if(changed||view!=='model')setView('model');if(!soon&&!fixedColors(key))requestAnimationFrame(()=>$('#palette [aria-checked="true"]')?.focus({preventScroll:true}));}
   else if(changed)setView('photo');
 }
@@ -127,7 +139,23 @@ dialog.addEventListener('cancel',e=>{e.preventDefault();if(!sheet.hidden)closeSh
 // Esc com o painel aberto fecha só o painel, mesmo quando o navegador não deixa segurar o "cancel" (sem um clique antes).
 dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden){e.preventDefault();closeSheet();}});
 dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProduct();}});
-dialog.addEventListener('close',()=>{++request;viewer?.hide();closeSheet(false);unlockPage();document.querySelector(`[data-product="${activeProduct}"]`)?.focus({preventScroll:true});});
+dialog.addEventListener('close',()=>{++request;viewer?.hide();closeSheet(false);unlockPage();restoreFocus();});
+// Quem abriu a janela (o card, a vitrine, um link) ganha o foco de volta. O Safari não foca um link no clique: vale o último link
+// #produto/… clicado. Sem nenhum dos dois (a página abriu já na peça), o botão do card da peça ou a peça da frente da vitrine.
+document.addEventListener('click',e=>{const link=e.target.closest?.('a[href*="#produto/"]');trigger=link?{link,at:performance.now()}:null;},true);
+function restoreFocus(){
+  const back=opener;opener=null;
+  if(back?.isConnected&&!back.closest('[inert]')&&back.getClientRects().length){back.focus({preventScroll:true});return;}
+  document.querySelector(`.product-rail-card.is-active[data-product-id="${activeProduct}"] .product-customize, .slot[data-front="true"][data-product="${activeProduct}"]`)?.focus({preventScroll:true});
+}
+// "Adicionar o kit ao carrinho": as peças do kit entram juntas (cart-store.js putItems) e o mini-carrinho confirma cada uma, com o total
+// já no preço do kit. Um erro (carrinho cheio, armazenamento bloqueado) volta para o aviso do próprio kit.
+async function addKit(lines){
+  const before=totals(readCart(),0).subtotal,cart=writeCart(putItems(readCart(),lines));
+  window.dispatchEvent(new Event('ju:cart'));
+  closeProduct();await new Promise(resolve=>requestAnimationFrame(resolve));
+  openMiniCart({itemIds:lines.map(line=>addedItemId(cart,line.productId,{})).filter(Boolean),original:true,riseFrom:before});
+}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 $('#part-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-part]');if(!b)return;selectedPart=b.dataset.part;updateControls();});
 $('#palette').addEventListener('click',e=>{const b=e.target.closest('[data-color]');if(b)chooseColor(b.dataset.color);});

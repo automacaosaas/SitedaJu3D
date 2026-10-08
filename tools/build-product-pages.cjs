@@ -32,7 +32,8 @@ async function site() {
 function page(id, data, base) {
   const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery, fixedColors, kitOffer} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
-  // a peça de cores fixas (as lâmpadas, 07/10/2026): as cores dela, a oferta do kit e só o botão de compra (nada para personalizar)
+  // a peça de cores fixas (as lâmpadas, 07/10/2026): as cores dela, a oferta do kit e só o botão de compra (nada para personalizar);
+  // logo depois do botão, o lugar do "Monte seu kit" (escondido; product-landing.js o monta com kit-builder.js)
   const fixed = fixedColors(id);
   // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
   const [before, phrase, after] = splitContact(product.description);
@@ -79,7 +80,8 @@ ${hasGallery(id) ? `
           <p class="pl-installments">ou ${nbsp(installmentLabel(price))} sem juros no cartão</p>${COMMERCE.extraPrices?.[id] ? `
           <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : kitOffer(id) ? `
           <p class="pl-offer">${esc(kitOffer(id))}</p>` : ''}
-          ${fixed ? `<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar ao carrinho</span></button></div>` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
+          ${fixed ? `<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar ao carrinho</span></button></div>${kitOffer(id) ? `
+          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">pode misturar</span></div><div data-pl-kit-body></div></section>` : ''}` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
           <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>`}
           <div class="pl-facts">
             ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, `Cada peça é impressa depois do pedido, ${fixed ? 'nas cores dela' : 'nas cores escolhidas'}. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>`)}

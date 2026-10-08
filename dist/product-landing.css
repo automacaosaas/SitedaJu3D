@@ -173,6 +173,15 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-acc summary:hover strong { color: var(--pl-accent); }
 }
 .pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: var(--theme-accent, #1f7a4d); }
+/* "Monte seu kit" (as lâmpadas, kit-builder.js; 07/10/2026): logo depois do botão de compra, num cartão que nasce no tom da peça e
+   clareia até o branco. Sem JavaScript fica escondido (a frase do kit, embaixo do preço, continua). A base do kit fica em mini-cart.css. */
+.pl-kit { display: grid; gap: 14px; margin-top: 22px; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--pl-accent) 14%, #ece7e9); border-radius: 24px; background: linear-gradient(180deg, color-mix(in srgb, var(--pl-accent) 6%, #fff) 0%, #fff 62%); box-shadow: 0 18px 38px -30px color-mix(in srgb, var(--pl-accent) 70%, transparent); }
+.pl-kit[hidden] { display: none; }
+.pl-kit-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pl-kit-head h2 { margin: 0; font: 500 24px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.01em; color: var(--pl-ink); }
+.pl-kit-mix { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--pl-accent) 16%, #ece7e9); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--pl-accent); white-space: nowrap; }
+.pl .kit { --kit-accent: var(--pl-accent); --kit-strong: color-mix(in srgb, var(--pl-accent) 80%, #000); --kit-ink: var(--pl-ink); --kit-muted: var(--pl-muted); --kit-line: color-mix(in srgb, var(--pl-accent) 14%, #ece7e9); --kit-tint: color-mix(in srgb, var(--pl-accent) 7%, #fff); }
+@media (max-width: 860px) { .pl-kit { padding: 16px 14px 14px; border-radius: 22px; } .pl-kit-head h2 { font-size: 22px; } }
 @media (max-width: 860px) {
   .pl-main { padding: 0 16px; margin-top: 8px; }
   .pl { grid-template-columns: minmax(0, 1fr); gap: 22px; }

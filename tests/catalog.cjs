@@ -73,15 +73,33 @@ assert.equal(rail.active, 0, 'vertical movement leaves carousel unchanged');
 rail.next.emit('click'); assert.equal(rail.active, 1);
 rail.stage.emit('keydown', {key:'ArrowLeft'}); assert.equal(rail.active, 0);
 assert.ok(rail.track.emit('dragstart').prevented, 'native image dragging is disabled');
-// The home's collection and showcase (carousel.js) show the same piece: a move here tells the showcase, a move there is
-// followed here without echoing back, and the collection starts where the showcase starts.
+// 07/10/2026 (the owner: "ao mudar essa sessão dos produtos, não mudar a vitrine"): a move in the collection tells nobody — only the
+// cards (and the section's colors) change; a move in the showcase (carousel.js) is still followed here, and the collection starts
+// where the showcase starts.
 sent.length = 0;
 const synced = carousel(4);
-synced.next.emit('click');
-assert.deepEqual(sent.map(e => [e.type, e.detail.product, e.detail.source]), [['ju:product-focus', 'p1', 'collection']], 'a move in the collection tells the showcase');
+synced.next.emit('click'); synced.dots.emit('click', {target: {closest: () => ({dataset: {dot: '3'}})}}); drag(synced, -100);
+assert.equal(synced.active, 0, 'arrows, dots and swipes move the collection');
+assert.deepEqual(sent, [], 'a move in the collection does not move the showcase');
 synced.follow('p3'); assert.equal(synced.active, 3, 'the collection follows the showcase');
 synced.follow('nope'); assert.equal(synced.active, 3, 'a piece outside this category is ignored');
-assert.equal(sent.length, 1, 'following does not echo back');
+assert.equal(sent.length, 0, 'following does not echo back');
+const catalogSource = fs.readFileSync(path.join(__dirname, '../dist/catalog.js'), 'utf8');
+assert.ok(!/dispatchEvent\(new CustomEvent\(FOCUS/.test(catalogSource), 'the collection never sends the focus event');
+assert.ok(/if \(event\.detail\?\.source === 'showcase'\) for \(const rail of rails\.values\(\)\) rail\.follow\(event\.detail\?\.product\);/.test(catalogSource), 'only the showcase moves the collection');
+// the section wears the centred card's colors (carousel.css .catalog-home[data-themed])
+{
+  const section = {style: {values: {}, setProperty(name, value) { this.values[name] = value; }}, dataset: {}};
+  const themed = Object.create(context.Carousel.prototype);
+  themed.items = [{id: 'p0'}, {id: 'p1'}]; themed.active = 1; themed.host = {closest: selector => selector === '.catalog-home' ? section : null};
+  context.showcase = id => ({theme: {id}}); context.journeyColors = theme => ({'--theme-text': '#111111', '--theme-muted': '#222222', '--theme-accent': theme.id === 'p1' ? '#336699' : '#000000', '--theme-accent-strong': '#29527a', '--theme-soft': '#cddbe8', '--theme-wash': '#eef3f8'});
+  context.withAlpha = (hex, alpha) => `${hex}/${alpha}`; context.requestAnimationFrame = fn => fn();
+  themed.paintTheme();
+  assert.deepEqual(section.style.values, {'--cat-text': '#111111', '--cat-muted': '#222222', '--cat-accent': '#336699', '--cat-accent-strong': '#29527a', '--cat-soft': '#cddbe8', '--cat-wash': '#eef3f8', '--cat-glow': '#336699/0.32'}, 'the centred card\'s colors go to the section');
+  assert.equal(section.dataset.themed, 'live', 'the first paint is still, then the colors slide');
+  const lone = Object.create(context.Carousel.prototype); lone.host = {closest: () => null}; lone.items = [{id: 'p0'}]; lone.active = 0;
+  assert.doesNotThrow(() => lone.paintTheme(), 'outside the home (no .catalog-home) nothing is painted');
+}
 const items = Array.from({length: 4}, (_, i) => ({id: 'p' + i}));
 context.window.juTheme = {product: () => 'p3'};
 assert.equal(context.startAt(items), 3, 'starts on the piece last seen');

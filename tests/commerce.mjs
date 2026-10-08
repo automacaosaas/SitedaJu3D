@@ -3,7 +3,16 @@ import {readFile} from 'node:fs/promises';
 const files=['products.js','commerce-config.js','cart-store.js','demo-payment.js'];
 const modules={};
 for(const file of files){let source=await readFile(new URL('../dist/'+file,import.meta.url),'utf8');for(const [name,url] of Object.entries(modules))source=source.replaceAll(`'./${name}'`,JSON.stringify(url));modules[file]='data:text/javascript;base64,'+Buffer.from(source).toString('base64');}
-const {readCart,writeCart,putItem,normalizeCart,totals,pixDiscount,priceSegments,lineCents}=await import(modules['cart-store.js']);
+const {readCart,writeCart,putItem,putItems,normalizeCart,totals,pixDiscount,priceSegments,lineCents}=await import(modules['cart-store.js']);
+// "Monte seu kit" (07/10/2026): várias peças numa escrita só; a mesma peça soma na linha que já existe, e o kit sai pelo preço do grupo
+{const kit=putItems([],[{productId:'macacoscopio',quantity:1},{productId:'girafoscopio',quantity:1},{productId:'unicornioscopio',quantity:1}]);
+ assert.equal(kit.length,3);assert.equal(totals(kit,0).subtotal,21000,'three lamps: R$ 210');assert.equal(totals(kit,0).subtotal-pixDiscount(kit),19950,'and R$ 199,50 with Pix');
+ const before=putItem([],'girafoscopio',{}),merged=putItems(before,[{productId:'girafoscopio',quantity:2},{productId:'unicornioscopio',quantity:1}]);
+ assert.equal(merged.length,2);assert.equal(merged[0].id,before[0].id,'the giraffe already in the cart keeps its line');assert.equal(merged[0].quantity,3);
+ assert.equal(totals(merged,0).subtotal,21000+9000,'4 lamps: one group of 3 and one at full price');
+ assert.deepEqual(putItems([],[{productId:'aviaoscopia',quantity:1,selection:{body:'nope'}},{productId:'__proto__',quantity:1},{productId:'missing',quantity:2},{productId:'macacoscopio',quantity:0}]).map(i=>[i.productId,i.quantity,i.selection.body]),[['aviaoscopia',1,'blue']],'only real pieces, with valid colors and at least one unit');
+ assert.equal(putItems([],[{productId:'macacoscopio',quantity:250}])[0].quantity,99,'capped like any line');
+ assert.throws(()=>putItems(kit,[]),/Escolha pelo menos uma peça/);assert.throws(()=>putItems(kit,[{productId:'macacoscopio',quantity:0}]),/Escolha pelo menos uma peça/);}
 const {createDemoOrder,approveDemo,renewDemo,paymentStatus,demoPixCode}=await import(modules['demo-payment.js']);
 const {COMMERCE}=await import(modules['commerce-config.js']);
 let encoded=null;const storage={getItem:()=>encoded,setItem:(key,value)=>{encoded=value;}};
