@@ -103,11 +103,13 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
 }
 
 // ── C11: the strip at the top of the checkout ─────────────────────────
-// Born invisible, already as tall as the test notice (the longest), and shown only when the payment settings answer: the
-// test notice, nothing with real payments, the demonstration notice when payments are off or the answer never comes. A shop
-// with real payments never shows "sem cobranças", not even while the page loads.
+// Born invisible, with the text and height it always had (the demonstration notice, the shortest: with real payments the
+// page moves up no more than before when the strip goes; the test notice would be 72 px instead of 54 on phones up to
+// 400 px), and shown only when the payment settings answer: the test notice, nothing with real payments, the demonstration
+// notice when payments are off or the answer never comes. A shop with real payments never shows "sem cobranças", not even
+// while the page loads.
 {
-  for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`dist/${page}`), /<div class="demo-banner is-pending">AMBIENTE DE TESTE <span>/, `${page}: the strip is born hidden`);
+  for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`dist/${page}`), /<div class="demo-banner is-pending">PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span><\/div>/, `${page}: the strip is born hidden, as tall as always`);
   assert.match(read('dist/commerce.css'), /\n\.demo-banner\.is-pending \{ visibility: hidden; \}\n/, 'hidden, but keeping its height (nothing jumps when it shows)');
   assert.match(read('dist/checkout.js'), /\nelse if \(live\.mode === 'live' && banner\) banner\.remove\(\);\nelse if \(banner\) banner\.innerHTML = 'PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span>';\nbanner\?\.classList\.remove\('is-pending'\);/, 'the right text first, then shown');
 }

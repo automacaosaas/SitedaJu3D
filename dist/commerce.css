@@ -49,5 +49,5 @@
 @keyframes free-ship-shine { to { transform: translateX(100%); } }
 @keyframes free-ship-pop { 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .free-ship.is-rising, .free-ship.is-rising .free-ship-track i::after, .free-ship.is-rising.is-reached strong { animation: none; } }
-/* A faixa do topo nasce invisível, já com a altura do aviso de teste (o mais longo; nada pula): checkout.js põe o texto do ambiente quando a configuração de pagamento chega e só então a mostra (em produção, a tira). */
+/* A faixa do topo nasce invisível, com o texto e a altura de sempre (os do aviso de demonstração, os mais curtos: com pagamentos reais, quando a faixa sai, a página sobe o mesmo que antes): checkout.js põe o texto do ambiente quando a configuração de pagamento chega e só então a mostra (em produção, a tira). */
 .demo-banner.is-pending { visibility: hidden; }
