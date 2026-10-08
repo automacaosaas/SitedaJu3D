@@ -1,5 +1,5 @@
 // Shared loading states are tied to work, never to a fictitious percentage.
-export const logoLoader = () => `<span class="ju-loader" aria-hidden="true"><img src="assets/logo-ju.webp" alt="" width="104" height="104"><span><img src="assets/logo-ju.webp" alt="" width="104" height="104"></span></span>`;
+export const logoLoader = () => `<span class="ju-loader" aria-hidden="true"><img src="assets/logo-ju-224.webp" srcset="assets/logo-ju-224.webp 2x, assets/logo-ju.webp 3x" alt="" width="104" height="104"><span><img src="assets/logo-ju-224.webp" srcset="assets/logo-ju-224.webp 2x, assets/logo-ju.webp 3x" alt="" width="104" height="104"></span></span>`;
 
 export function imageReady(img, timeout = 12000) {
   return new Promise(resolve => {
