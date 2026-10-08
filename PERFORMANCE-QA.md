@@ -67,7 +67,9 @@ com um pagamento de teste, antes de publicar.
 **Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Sem `?v=`, um visitante pode ver a versão
 anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes), o servidor Node manda
 `max-age=31536000, immutable` (07/10/2026): o navegador guarda por um ano sem perguntar de novo, então trocar o arquivo
-sem mudar o `?v=` deixa quem já visitou com o antigo.
+sem mudar o `?v=` deixa quem já visitou com o antigo. Para isso não passar despercebido, `tools/versioned-assets.json`
+guarda o `?v=` e uma impressão digital de cada um desses arquivos: `tests/versioned-assets.mjs` falha se um deles mudar com
+o mesmo `?v=`. Depois de trocar o arquivo e o `?v=`, rode `node tools/sync-versions.cjs`.
 
 ## Testes
 
