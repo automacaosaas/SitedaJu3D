@@ -85,6 +85,15 @@ const dynamic = [
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
   [/^ou (\d+)x de (R\$ [\d.,]+) sem juros no cartão$/, 'or $1 interest-free card installments of $2', 'o $1 cuotas sin interés de $2 con tarjeta'],
+  // the card offer with its number from commerce-config.js (interestFreeInstallments): the bar on top, the home's product
+  // window, the Contato FAQ and the checkout's card option (with the honest "EM ATÉ 12X" when Mercado Pago gives fewer)
+  [/^(\d+)% off no Pix ou (\d+)x sem juros no cartão$/, '$1% off with Pix or $2 interest-free card installments', '$1% de descuento con Pix o $2 cuotas sin interés con tarjeta'],
+  [/^ou (\d+)x sem juros no cartão$/, 'or $1 interest-free card installments', 'o $1 cuotas sin interés con tarjeta'],
+  [/^Pix, com (\d+)% de desconto nas peças, ou cartão de crédito em até (\d+)x, sendo até (\d+)x sem juros\. O pagamento é feito pelo Mercado Pago, com segurança\.$/,
+    'Pix, with $1% off the pieces, or credit card in up to $2 installments, up to $3 of them interest-free. Payment is processed securely by Mercado Pago.',
+    'Pix, con $1% de descuento en las piezas, o tarjeta de crédito en hasta $2 cuotas, hasta $3 sin intereses. El pago lo procesa Mercado Pago, con seguridad.'],
+  [/^(\d+)X SEM JUROS$/, '$1X INTEREST-FREE', '$1X SIN INTERESES'],
+  [/^EM ATÉ (\d+)X$/, 'UP TO $1X', 'HASTA $1 CUOTAS'],
   [/^economize (R\$ [\d.,]+)$/, 'save $1', 'ahorra $1'],
   [/^(R\$ [\d.,]+) no Pix$/, '$1 with Pix', '$1 con Pix'],
   [/^Combinação (.+) aplicada\.$/, (t, name) => `${t(name)} combination applied.`, (t, name) => `Combinación ${t(name)} aplicada.`],

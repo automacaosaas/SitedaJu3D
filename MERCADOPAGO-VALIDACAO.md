@@ -44,12 +44,25 @@ Abra `https://<site>/api/health` depois de cada mudança. Só aparecem "sim/não
 
 | Momento | `payments` | `paymentsBlocked` | `mp` | Outros |
 |---|---|---|---|---|
-| Teste (etapas 3 e 4) | `"test"` | `false` | `token`, `publicKey` e `webhookSecret` todos `true` | `orderMail: true`, `db: "ok"` |
-| Produção ligada (etapa 6) | `"live"` | `false` | todos `true` | `orderMail: true`, `db: "ok"`, `shipping: "correios"`, `nfe` e `bling` como combinado com a contadora |
+| Teste (etapas 3 e 4) | `"test"` | `false` | `token`, `publicKey` e `webhookSecret` todos `true` | `orderMail: true`, `db: "ok"`, `interestFree` com um número (normalmente `0` na conta de teste) |
+| Produção ligada (etapa 6) | `"live"` | `false` | todos `true` | `orderMail: true`, `db: "ok"`, `shipping: "correios"`, `interestFree: 3` (com o 3x sem juros ligado, etapa 4), `nfe` e `bling` como combinado com a contadora |
 | Emergência (etapa 7) | `"off"` | `true` | `token` e `publicKey` `true` | o checkout volta à demonstração |
 | `APP_ENV=production` sem `MP_MODE` | `"off"` | `true` | — | é a trava: nada cobra até você escrever `MP_MODE` |
 
 No servidor próprio aparece também `"release"`: o commit que está no ar (`SERVIDOR-SETUP.md`).
+
+**`interestFree`** (só aparece com os pagamentos ligados): quantas parcelas a **conta do Mercado Pago** dá **sem juros**.
+O site pergunta ao próprio Mercado Pago (as parcelas do preço de uma lâmpada) e guarda a resposta por 6 horas.
+
+| Valor | Quer dizer |
+|---|---|
+| `3` | a conta dá 3x sem juros: o checkout mostra **3X SEM JUROS** |
+| `2`, `4`, `6`… | a conta dá esse número; o checkout promete o menor entre ele e o que o site anuncia (hoje 3) |
+| `0` | juros desde 2x (o "sem juros" ainda não foi ligado na conta): o cartão no checkout diz **EM ATÉ 12X** |
+| `null` | o Mercado Pago ainda não respondeu: abra de novo em alguns segundos. Se continuar `null`, o site tenta de novo a cada 5 minutos; o checkout não promete "sem juros" enquanto isso |
+
+Mudou na conta do Mercado Pago? Reinicie o site (`sudo systemctl restart juimprime.service`; na Hostinger, republicar)
+para ver o número novo na hora. Sem reiniciar, ele se atualiza sozinho em até 6 horas.
 
 ## 3. Testes no ambiente de teste
 
@@ -75,8 +88,8 @@ tela mostrou, o pedido no painel da Ju e os e-mails.
 | Nome do titular | O que o cliente deve ver | Painel da Ju |
 |---|---|---|
 | `APRO`, 1x | "Seu pedido ganhou vida." | o pedido em **Pendentes**; e-mail `[TESTE] Novo pedido pago` para a Ju e o comprovante para o cliente |
-| `APRO`, 3x | igual; a tabela de parcelas mostra 3x **sem juros** (se mostrar juros, falta configurar o "3x sem juros" na conta) | igual, "Cartão de crédito · 3x" |
-| `APRO`, **6x e 12x** (com juros) | igual | **o teste mais importante:** o pedido precisa ir para **Pendentes**. Se ficar esperando pagamento e o histórico do pedido mostrar `payment_mismatch`, pare e chame o técnico: o Mercado Pago somou os juros ao total |
+| `APRO`, 3x | igual; a tabela de parcelas mostra 3x **sem juros** e o cartão diz **3X SEM JUROS** (se a tabela mostrar juros, falta ligar o "3x sem juros" na conta, e o cartão diz **EM ATÉ 12X**, sem prometer) | igual, "Cartão de crédito · 3x" |
+| `APRO`, **6x e 12x** (com juros) | igual | **o teste mais importante:** o pedido precisa ir para **Pendentes**, com o preço da loja (os juros são do Mercado Pago). Se ficar esperando pagamento e o histórico do pedido mostrar `payment_mismatch`, pare e chame o técnico |
 | `CONT` | "Estamos confirmando." (a página confere sozinha a cada 5 segundos) | nada até o Mercado Pago decidir |
 | `OTHE` | "O banco do cartão não aprovou o pagamento. Tente outro cartão ou pague com Pix." | nada (tentativa encerrada) |
 | `FUND` | "O cartão não tem limite disponível para esta compra…" | nada |
@@ -137,7 +150,10 @@ Na conta do Mercado Pago do CNPJ:
 
 - [ ] **Credenciais de produção** ativadas (ramo, site, termos).
 - [ ] **Chave Pix** cadastrada na conta (sem ela não há QR Code de Pix).
-- [ ] **3x sem juros** configurado (o site anuncia "3x sem juros").
+- [ ] **3x sem juros** ligado na conta (o site anuncia "3x sem juros"): **Seu negócio** → **Configurações** →
+  **Oferecer parcelas sem juros** → **Ativar** → em "Quantas parcelas deseja oferecer?" escolha **3** (os nomes dos menus
+  podem mudar um pouco). A loja paga o custo do parcelamento. Depois reinicie o site e confira no `/api/health`:
+  `"interestFree": 3` (etapa 2).
 - [ ] **Nome na fatura** do cartão que o cliente reconheça (por exemplo "JU IMPRIME").
 - [ ] **Taxas** e **prazo de liberação** do dinheiro (Pix e cartão) conferidos.
 - [ ] **Webhook do modo de produção:** Webhooks → **Modo de produção** → URL
@@ -203,11 +219,28 @@ continuam no painel; os estornos voltam a funcionar quando religar.
 **Se o problema for uma versão nova do site** (e não o Mercado Pago): `sudo systemctl start juimprime-rollback.service`
 volta para a versão anterior (`SERVIDOR-SETUP.md`).
 
+## O "3x sem juros" do site: de onde vem e como trocar
+
+- **Uma linha só:** o número que as páginas anunciam é `interestFreeInstallments: 3` em `dist/commerce-config.js`. Para
+  trocar (de 2 a 12): mude essa linha e rode `node tools/build-product-pages.cjs` (ele reescreve as páginas de produto e o
+  "3x" da home e do Contato). A faixa do topo, a janela do produto e o checkout leem o número sozinhos, e o `npm test`
+  falha se alguma cópia ficar para trás.
+- **Tirar o "sem juros" das páginas** (menos de 2) é mudança de texto, não de número: decisão do dono, com o técnico.
+- **O checkout nunca promete mais do que a conta dá.** Antes de digitar o cartão, segue o `interestFree` (etapa 2); com o
+  cartão digitado, a tabela de parcelas daquele cartão. Se a conta der menos (ou o Mercado Pago não responder), o cartão
+  mostra **EM ATÉ 12X · veja as parcelas ao digitar o cartão**, no mesmo espaço (nada pula na tela).
+- **Juros pagos pelo cliente** (6x, 12x…): o pedido e a nota fiscal ficam com o preço da loja; os juros são do Mercado
+  Pago. O site aceita o pagamento se o Mercado Pago mantiver o total do pedido (os juros vão em `paid_amount`, como diz a
+  documentação dele) e também se ele somar os juros ao total, mas só em cartão de crédito em 2x ou mais e até +60% (bem
+  acima dos juros de 12x). Valor menor nunca vale; Pix, débito e 1x precisam bater o valor exato. Quando o total veio com
+  os juros, o histórico do pedido registra `card_interest` (parcelas · juros em centavos).
+
 ## Se algo der errado
 
 | Sintoma | O que fazer |
 |---|---|
-| Parcelado com juros fica esperando e o histórico mostra `payment_mismatch` | Parar a venda em parcelas com juros e chamar o técnico: o total do Mercado Pago veio diferente do pedido. |
+| Parcelado com juros fica esperando e o histórico mostra `payment_mismatch` | Parar a venda em parcelas com juros e chamar o técnico: o total do Mercado Pago veio menor que o pedido ou muito acima de qualquer juro. |
+| O checkout diz "EM ATÉ 12X" em vez de "3X SEM JUROS" | `/api/health` → `interestFree`: `0` = o "sem juros" não está ligado na conta (etapa 4); `null` = o Mercado Pago não respondeu (espere 5 minutos ou reinicie). Ligou agora? Reinicie o site. |
 | Webhook com `401` no histórico do Mercado Pago | `MP_WEBHOOK_SECRET` diferente da assinatura do modo certo (teste ou produção), ou o relógio do servidor errado (`stale_signature` no log). |
 | Webhook com `503` | O banco do site fora do ar: `/api/health` → `db`. O Mercado Pago tenta de novo sozinho. |
 | "Não foi possível carregar as formas de pagamento" | Bloqueador de anúncios ou internet. Se acontecer com todo mundo, olhe o console (etapa 3.6). |

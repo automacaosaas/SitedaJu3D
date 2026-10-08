@@ -15,6 +15,7 @@ const {createBling} = require('./_lib/bling');
 const shipping = require('./_lib/shipping');
 const {queueHeartbeat} = require('./_lib/invoice-queue');
 const {indexable, requestHost} = require('./_lib/runtime');
+const {shared} = require('./_lib/interest-free');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -35,7 +36,9 @@ async function blingState(env, nfe) {
   } catch { return 'error'; }
 }
 
-function createHandler({env = process.env, release = readRelease()} = {}) {
+// `interestFree`: the "sem juros" check (api/_lib/interest-free.js, the same one /api/payments/config uses). The deployed
+// handler (below) has the shared one; a handler made with .create() asks Mercado Pago only when given one.
+function createHandler({env = process.env, release = readRelease(), interestFree = null} = {}) {
   return async function handler(req, res) {
     const settings = config(env), pay = mp.settings(env), nfe = fiscal.nfeSettings(env);
     let dataKeys = 'ok';
@@ -43,7 +46,11 @@ function createHandler({env = process.env, release = readRelease()} = {}) {
     json(res, 200, {
       ok: true, mail: !mailReady(settings) ? 'off' : settings.transport === 'console' ? 'console' : 'resend', secret: Boolean(settings.secret), secretFrom: settings.secretFrom, key: Boolean(settings.apiKey), sender: settings.from.includes('onboarding@resend.dev') ? 'test' : 'custom',
       accounts: storeKind(env), db: await ping(env), dataKeys,
-      payments: pay.mode, paymentsBlocked: pay.blocked, mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
+      payments: pay.mode, paymentsBlocked: pay.blocked,
+      // with payments on: how many installments the Mercado Pago account gives without interest (0, 2 to 12; null = no answer
+      // yet), what the checkout's "sem juros" follows (MERCADOPAGO-VALIDACAO.md)
+      ...(pay.mode !== 'off' ? {interestFree: interestFree ? await interestFree(env) : null} : {}),
+      mp: {token: Boolean(pay.token), publicKey: Boolean(pay.publicKey), webhookSecret: Boolean(pay.webhookSecret)}, orderMail: Boolean(pay.ownerEmail),
       admin: await admin.status(storeFor(env), env),
       shipping: shipping.forEnv(env).status().mode,   // off (no Correios credentials) · pending (shop data incomplete) · correios
       legal: legal.pending() ? 'pending' : 'ok',   // store details still marked [PREENCHER] in api/_lib/legal.js
@@ -62,6 +69,6 @@ function createHandler({env = process.env, release = readRelease()} = {}) {
   };
 }
 
-module.exports = createHandler();
+module.exports = createHandler({interestFree: shared});
 module.exports.create = createHandler;
 module.exports.readRelease = readRelease;

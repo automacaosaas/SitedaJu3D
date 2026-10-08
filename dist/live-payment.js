@@ -51,7 +51,9 @@ export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout =
     const response = await fetchImpl('/api/payments/config', {cache: 'no-store', signal: controller.signal});
     if (!response.ok) return {mode: 'off'};
     const data = await response.json();
-    return (data.mode === 'test' || data.mode === 'live') && typeof data.publicKey === 'string' && data.publicKey ? {mode: data.mode, publicKey: data.publicKey} : {mode: 'off'};
+    // interestFree: the installments the Mercado Pago account gives without interest (0, 2 to 12), only when the server knows it
+    const free = Number.isInteger(data.interestFree) && data.interestFree >= 0 && data.interestFree <= 36 ? {interestFree: data.interestFree} : {};
+    return (data.mode === 'test' || data.mode === 'live') && typeof data.publicKey === 'string' && data.publicKey ? {mode: data.mode, publicKey: data.publicKey, ...free} : {mode: 'off'};
   } catch { return {mode: 'off'}; }
   finally { clearTimeout(timer); }
 }
