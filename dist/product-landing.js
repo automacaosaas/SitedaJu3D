@@ -3,6 +3,7 @@ import {readCart, writeCart, putItem, putItems, totals} from './cart-store.js';
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {icon} from './icons.js';
 import {mountKit} from './kit-builder.js';
+import {wireBadge} from './badge-shine.js';
 
 // Página de cada peça (borboletoscopio.html…, tools/build-product-pages.cjs). A foto dá lugar ao modelo 3D que gira (o
 // mesmo do configurador, viewer.js); "Personalizar o meu" abre a escolha das cores aqui mesmo, e cada cor pinta o modelo
@@ -10,6 +11,8 @@ import {mountKit} from './kit-builder.js';
 // Sem este arquivo a página continua inteira: a foto, o configurador da vitrine e o botão do mini-carrinho (catalog.js).
 const root = document.querySelector('[data-pl]'), key = root?.dataset.pl;
 if (root && PRODUCTS[key]) setup(root, key);
+// o selo "Novidade" brilha duas vezes ao abrir a página e de novo com o mouse por cima ou quando a página volta a aparecer
+wireBadge(document.querySelector('.pl-badge.is-badge'), {onVisible: true});
 
 function setup(root, key) {
   const product = PRODUCTS[key], original = defaults(key), q = selector => root.querySelector(selector);

@@ -9,6 +9,7 @@ import {journeyColors} from './hero-motion.js';
 import {mountKit} from './kit-builder.js';
 import {readCart,writeCart,putItems,totals,DIRECT_KEY} from './cart-store.js';
 import {openMiniCart,addedItemId} from './mini-cart.js';
+import {shineBadge,wireBadge} from './badge-shine.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
@@ -95,7 +96,7 @@ function syncProduct(){
   // começo da entrada, invisível (.is-filling): nunca a foto e o preço da peça de antes debaixo do nome da nova, nem num celular lento.
   // Com movimento reduzido a janela aparece inteira de uma vez, então tudo vem no mesmo quadro.
   const opening=!dialog.open,later=opening&&!calm.matches,asked=request;
-  if(opening){const focused=document.activeElement;opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;dialog.classList.toggle('is-filling',later);dialog.showModal();}trigger=null;
+  if(opening){const focused=document.activeElement;opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;dialog.classList.toggle('is-filling',later);dialog.showModal();}if(opening){const badge=$('#dialog-number');wireBadge(badge);shineBadge(badge);}trigger=null;
   const rest=()=>{
     if(activeProduct!==key||!dialog.open)return;lockPage();
     if(changed){fillProduct(key);if(!soon&&!fixedColors(key))renderControls();}

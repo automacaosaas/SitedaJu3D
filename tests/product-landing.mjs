@@ -106,7 +106,7 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   // the lamps: "Monte seu kit" shows (and the kit sentence under the price steps aside), and the kit goes in with one write
   assert.match(code, /kitHost\.hidden = false;\n      const offer = q\('\.pl-offer'\); if \(offer\) offer\.hidden = true;\n      add\.closest\('\.pl-actions'\)\.hidden = true;/, 'one purchase action: with the kit on screen, the one-unit button steps aside (visual 1)');
   // the badge: the dialog's construction (the gradient over white letters in darken, moving by transform only), still with reduced motion
-  assert.match(css, /\.pl-badge\.is-badge::before \{[^}]*width: 400%; background: var\(--badge-ink\) 0 0 \/ 50% 100% repeat-x; mix-blend-mode: darken; animation: pl-badge-flow 4s linear infinite;/);
+  assert.match(css, /\.pl-badge\.is-badge::before \{[^}]*width: 400%; background: var\(--badge-ink\) 0 0 \/ 50% 100% repeat-x; mix-blend-mode: darken; animation: pl-badge-flow 4s linear 2;/);
   assert(css.includes('@keyframes pl-badge-flow { to { transform: translateX(-50%); } }') && css.includes('@media (prefers-reduced-motion: reduce) { .pl-badge.is-badge::before { animation: none; }'));
   // 320 px (usabilidade 8): the two buttons of a customizable piece wrap instead of running off the screen
   assert(css.includes('@media (max-width: 360px) { .pl-add, .pl-customize { flex-basis: 100%; min-width: 0; padding: 0 14px; white-space: normal;'));
