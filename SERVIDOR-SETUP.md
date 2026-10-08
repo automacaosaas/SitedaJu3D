@@ -200,6 +200,40 @@ vem do `SITE_URL` (quando é um nome público) ou, na falta, do `COMPANY.website
 Depois, no Google Search Console: propriedade de domínio (registro TXT no Registro.br), enviar
 `https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL".
 
+## Cópia do banco na nuvem (Backblaze B2)
+
+Todo dia às 03:30 o servidor faz a cópia do banco (`mariadb-dump`), confere se ela está inteira, tranca com uma chave
+**pública** age e envia para um bucket do Backblaze B2 (`deploy/backup-nuvem.sh`, `juimprime-backup.timer`). Quem
+abre a cópia é só quem tem a chave **privada**, que fica com vocês, fora do servidor: nem quem invadir o servidor nem
+quem tiver acesso ao Backblaze lê os dados dos clientes. A chave do Backblaze que fica no servidor é **só de escrita**:
+daqui ninguém apaga nem lê as cópias. Se o envio falhar, chega um e-mail para `ORDER_NOTIFY_EMAIL` (um por dia). As 10
+cópias mais novas também ficam no servidor, em `shared/backups`.
+
+Ligar (uma vez):
+
+1. **Backblaze:** criar a conta em backblaze.com (B2 Cloud Storage). Em **Buckets → Create a Bucket**: um nome único
+   (por exemplo `juimprime-backup-<algo>`), **Private**, criptografia padrão ligada. Em **Lifecycle Settings** do bucket,
+   regra própria: arquivos ficam 120 dias e depois saem (`daysFromUploadingToHiding` 120, `daysFromHidingToDeleting` 1).
+2. **Chave do servidor:** em **Application Keys → Add a New Application Key**: nome `servidor-juimprime`, acesso só ao
+   bucket acima, **Type of Access: Write Only**. Anote o `keyID` e a `applicationKey` (ela aparece uma vez só). Não
+   mande por chat nem e-mail.
+3. **Chave age (no seu computador):** instale o age (`winget install --id FiloSottile.age`) e rode
+   `age-keygen -o juimprime-backup.key`. Ele mostra a chave pública (`age1…`). Guarde o arquivo `juimprime-backup.key`
+   num gerenciador de senhas e numa segunda cópia (pen drive): **sem ele, as cópias não abrem**.
+4. **No servidor:** `sudo bash /srv/juimprime/current/deploy/setup-servidor.sh` (instala o age, o rclone e o timer) e
+   depois `sudo bash /srv/juimprime/current/deploy/backup-config.sh`: ele pede o nome do bucket, o `keyID`, a
+   `applicationKey` (não aparece na tela) e a chave pública `age1…` (pode pôr uma segunda, por exemplo a da Júlia),
+   testa o envio e faz a primeira cópia.
+
+Conferir: `journalctl -u juimprime-backup -n 20` e a pasta do mês no bucket. Copiar na hora:
+`sudo systemctl start juimprime-backup.service`.
+
+Restaurar (num servidor instalado com o setup): baixar o arquivo do bucket pelo site do Backblaze e rodar, no computador
+que tem a chave privada, `age -d -i juimprime-backup.key diario-<data>.sql.gz.age > copia.sql.gz`. Levar o
+`copia.sql.gz` ao servidor e: `gunzip -c copia.sql.gz | sudo mariadb juimprime`. Os CPFs e telefones gravados só
+voltam a ser lidos com o mesmo `DATA_KEY` e `INDEX_KEY` do `.env` — guarde também uma cópia deles no gerenciador
+de senhas.
+
 ## No lançamento
 
 Junto com o domínio:
@@ -216,8 +250,8 @@ Junto com o domínio:
 
 ## Ainda falta (servidor)
 
-- Cópia de segurança diária do banco (`mariadb-dump` agendado), guardada fora do servidor. Hoje há uma cópia antes de
-  cada versão com migração nova e a cópia na hora (`deploy.sh --backup`), mas ela fica no próprio servidor.
+- Ligar a cópia diária do banco na nuvem (acima, "Cópia do banco na nuvem"): o código está pronto; faltam a conta do
+  Backblaze, a chave só de escrita e a chave age.
 - **Firewall (`deploy/firewall.sh`, aplicar já):** o servidor tem IPv6 público (`2804:2b44:ffff:bebe::80`), e no IPv6
   não há o filtro do encaminhamento de portas. Sem firewall, o SSH fica visível para a internet. O script (nftables):
   - deixa entrar só o site (80 e 443) e o ping;

@@ -21,7 +21,8 @@ const REASONS = {
   backup: 'a cópia do banco antes de uma versão que muda o banco falhou, e a versão não foi publicada',
   saude: 'a versão nova não respondeu no /api/health, e o site voltou para a anterior',
   rollback: 'a volta para a versão anterior não deu certo',
-  erro: 'a publicação parou com um erro inesperado'
+  erro: 'a publicação parou com um erro inesperado',
+  nuvem: 'a cópia diária do banco não chegou ao Backblaze B2 (a cópia na nuvem, deploy/backup-nuvem.sh)'
 };
 
 function read(dir, file, max) {
@@ -39,13 +40,16 @@ async function run({env = process.env, dir = env.APP_DIR || '/srv/juimprime', no
   const settings = config(env), to = String(env.ORDER_NOTIFY_EMAIL || '').trim().toLowerCase();
   if (!mailReady(settings) || !to) { log.error('deploy-alert: e-mail desligado (RESEND_API_KEY ou ORDER_NOTIFY_EMAIL); veja journalctl -u juimprime-deploy'); return {sent: false, reason: 'mail_off', key}; }
 
-  const steps = read(dir, '.deploy-last.log', 3000).trim(), tests = known === 'testes' ? read(dir, '.deploy-tests.log', 2500).trim() : '';
-  const subject = `Publicação do site falhou${sha ? ` (${sha.slice(0, 7)})` : ''}`;
+  // a cópia do banco na nuvem (juimprime-backup.service) usa o mesmo aviso, com o registro dela
+  const cloud = known === 'nuvem';
+  const steps = read(dir, cloud ? '.backup-last.log' : '.deploy-last.log', 3000).trim(), tests = known === 'testes' ? read(dir, '.deploy-tests.log', 2500).trim() : '';
+  const subject = cloud ? 'A cópia do banco de hoje não foi para a nuvem' : `Publicação do site falhou${sha ? ` (${sha.slice(0, 7)})` : ''}`;
   const lines = [
     `No servidor próprio da loja, ${REASONS[known]}.`,
     known === 'saude' || known === 'testes' || known === 'backup' || known === 'guarda' ? 'O site continua no ar com a versão anterior. Esse commit não é tentado de novo: o próximo commit na branch é publicado normalmente.' : 'O servidor tenta de novo a cada minuto; este aviso não se repete para o mesmo problema.',
     'Para ver tudo no servidor: journalctl -u juimprime-deploy -n 80'
   ];
+  if (cloud) lines.splice(1, 2, 'O site continua no ar normalmente; a cópia de hoje ficou só no servidor (shared/backups). A próxima tentativa é amanhã de madrugada, ou na hora com: sudo systemctl start juimprime-backup.service', 'Para ver tudo no servidor: journalctl -u juimprime-backup -n 40');
   const block = (title, text) => text ? `<p style="margin:16px 0 6px;font-weight:600">${esc(title)}</p><pre style="margin:0;padding:12px;background:#f7f1f3;border-radius:8px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word">${esc(text)}</pre>` : '';
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#2b1d24;max-width:620px;margin:0 auto;padding:24px">
   <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.5px;color:#b0476b">SERVIDOR · AVISO DA PUBLICAÇÃO</p>

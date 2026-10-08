@@ -25,7 +25,7 @@ step() { printf '\n== %s\n' "$*"; }
 
 step "Pacotes do sistema"
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates git xz-utils openssl util-linux nginx certbot python3-certbot-nginx mariadb-client >/dev/null
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates git xz-utils openssl util-linux nginx certbot python3-certbot-nginx mariadb-client age rclone >/dev/null
 echo "ok"
 
 step "Node.js $NODE_MAJOR (versão LTS, do site oficial, com o arquivo conferido)"
@@ -168,12 +168,15 @@ if [ ! -f "$CONF_FILE" ]; then
 fi
 echo "publica: $(grep '^BRANCH=' "$CONF_FILE" | cut -d= -f2-)"
 
-step "Serviço do site, publicação automática, volta de versão e aviso por e-mail (systemd)"
+step "Serviço do site, publicação automática, volta de versão, cópia do banco na nuvem e aviso por e-mail (systemd)"
 install -d -m 755 /usr/local/lib/juimprime
 install -m 755 "$HERE/deploy.sh" /usr/local/lib/juimprime/deploy.sh
-install -m 644 "$HERE/juimprime.service" "$HERE/juimprime-deploy.service" "$HERE/juimprime-deploy.timer" "$HERE/juimprime-rollback.service" "$HERE/juimprime-deploy-alert.service" /etc/systemd/system/
+install -m 755 "$HERE/backup-nuvem.sh" /usr/local/lib/juimprime/backup-nuvem.sh
+install -m 644 "$HERE/juimprime.service" "$HERE/juimprime-deploy.service" "$HERE/juimprime-deploy.timer" "$HERE/juimprime-rollback.service" "$HERE/juimprime-deploy-alert.service" "$HERE/juimprime-backup.service" "$HERE/juimprime-backup.timer" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable juimprime.service juimprime-deploy.timer >/dev/null 2>&1
+# a cópia diária do banco na nuvem: o timer liga já; até rodar deploy/backup-config.sh, cada rodada só avisa no journal
+systemctl enable --now juimprime-backup.timer >/dev/null 2>&1
 echo "ok (o site liga na primeira publicação; a publicação automática começa quando a Deploy Key estiver no GitHub)"
 
 step "Permissões sem senha, só para o necessário (sudoers)"
@@ -182,8 +185,8 @@ rules=$(mktemp)
   echo "# deploy/setup-servidor.sh: o site reinicia o próprio serviço ao publicar uma versão nova."
   echo "$APP_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart juimprime.service"
   if [ -n "$OPERATOR" ] && [ "$OPERATOR" != root ]; then
-    echo "# Operador: publicar agora, ligar a publicação automática, voltar a versão anterior e reiniciar o site."
-    echo "$OPERATOR ALL=(root) NOPASSWD: /usr/bin/systemctl start juimprime-deploy.service, /usr/bin/systemctl start juimprime-deploy.timer, /usr/bin/systemctl start juimprime-rollback.service, /usr/bin/systemctl restart juimprime.service"
+    echo "# Operador: publicar agora, ligar a publicação automática, voltar a versão anterior, copiar o banco para a nuvem agora e reiniciar o site."
+    echo "$OPERATOR ALL=(root) NOPASSWD: /usr/bin/systemctl start juimprime-deploy.service, /usr/bin/systemctl start juimprime-deploy.timer, /usr/bin/systemctl start juimprime-rollback.service, /usr/bin/systemctl start juimprime-backup.service, /usr/bin/systemctl restart juimprime.service"
   fi
 } > "$rules"
 visudo -cqf "$rules" || { echo "Regra de sudo inválida: nada foi alterado."; rm -f "$rules"; exit 1; }

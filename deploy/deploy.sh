@@ -9,7 +9,8 @@
 #   deploy.sh --force              publica a ponta da branch mesmo que já esteja no ar, tenha falhado ou esteja segurada
 #   deploy.sh --rollback [commit]  volta para a versão anterior (ou a do commit) e segura a publicação automática até
 #                                  chegar um commit novo na branch (sudo systemctl start juimprime-rollback.service)
-#   deploy.sh --backup             só a cópia do banco, na hora (shared/backups)
+#   deploy.sh --backup [nome]      só a cópia do banco, na hora (shared/backups/<nome>-<data>.sql.gz; nome padrão: manual;
+#                                  "diario" é a da nuvem, deploy/backup-nuvem.sh)
 # Instalado em /usr/local/lib/juimprime/ por setup-servidor.sh. Veja SERVIDOR-SETUP.md.
 set -euo pipefail
 
@@ -37,7 +38,7 @@ BACKUPS="$APP_DIR/shared/backups"
 REPO_DIR="$APP_DIR/repo.git"
 LIB=/usr/local/lib/juimprime
 MODE=${1:-}
-case "$MODE" in ''|--force|--rollback|--backup) ;; *) echo "Uso: deploy.sh [--force | --rollback [commit] | --backup]" >&2; exit 2 ;; esac
+case "$MODE" in ''|--force|--rollback|--backup) ;; *) echo "Uso: deploy.sh [--force | --rollback [commit] | --backup [nome]]" >&2; exit 2 ;; esac
 
 # Uma publicação por vez: o timer não empilha (sai na hora); a volta de versão e a cópia esperam a rodada em curso.
 exec 9>"$APP_DIR/.deploy.lock"
@@ -92,7 +93,8 @@ backup() {
 new_migrations() { comm -13 <(ls -1 "$1/db/migrations" 2>/dev/null | sort) <(ls -1 "$2/db/migrations" 2>/dev/null | sort); }
 
 if [ "$MODE" = --backup ]; then
-  backup manual || { status backup ""; exit 1; }
+  label=${2:-manual}; [[ "$label" =~ ^[a-z0-9-]{1,20}$ ]] || { echo "Nome da cópia inválido: $label" >&2; exit 2; }
+  backup "$label" || { status backup ""; exit 1; }
   exit 0
 fi
 

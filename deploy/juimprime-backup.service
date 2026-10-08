@@ -1,0 +1,22 @@
+# Cópia diária do banco na nuvem (deploy/backup-nuvem.sh): mariadb-dump, conferida, trancada com age e enviada ao
+# Backblaze B2. Chamada pelo juimprime-backup.timer; na hora: sudo systemctl start juimprime-backup.service
+# Se falhar, juimprime-deploy-alert.service manda um e-mail para ORDER_NOTIFY_EMAIL (um por dia).
+[Unit]
+Description=Ju imprime pra mim: cópia do banco na nuvem
+After=network-online.target mariadb.service
+Wants=network-online.target
+OnFailure=juimprime-deploy-alert.service
+
+[Service]
+Type=oneshot
+User=juimprime
+Group=juimprime
+ExecStart=/usr/local/lib/juimprime/backup-nuvem.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=30min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/juimprime
+ProtectHome=yes

@@ -16,13 +16,14 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['deploy.sh', 'firewall.sh', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
 const setup = raw('deploy/setup-servidor.sh'), deploy = raw('deploy/deploy.sh');
 const firewall = raw('deploy/firewall.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall]]) {
+const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -99,6 +100,25 @@ assert.match(deployUnit, /^TimeoutStartSec=25min$/m, 'room for the tests');
 assert.match(setup, /visudo -cqf "\$rules" \|\|/, 'the sudo rule is checked before it is installed');
 assert.match(setup, /GITHUB_FP='SHA256:\+DiY3wvvV6TuJJhbpZisF\/zLDA0zPMSvHdkr4UvCOqU'/, "github.com's published key fingerprint");
 assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the official SHA-256 list');
+
+// The daily copy of the database off the server (08/10/2026: "um dump do banco… numa nuvem"): the same mariadb-dump as
+// the deploy, checked, locked with a PUBLIC age key (the private one stays off the server) and sent to Backblaze B2 with a
+// write-only key; a failure e-mails the shop; the B2 key is typed once, never on a command line.
+{
+  const unit = raw('deploy/juimprime-backup.service'), timer = raw('deploy/juimprime-backup.timer');
+  assert(cloud.includes('/usr/local/lib/juimprime/deploy.sh --backup diario') && deploy.includes('label=${2:-manual}; [[ "$label" =~ ^[a-z0-9-]{1,20}$ ]]'), 'the copy is the deploy\'s own mariadb-dump, named "diario"');
+  assert(cloud.includes('gzip -t "$FILE"') && cloud.includes("tail -n 1 | grep -q 'Dump completed'"), 'checked before it leaves the server');
+  assert(cloud.includes('age -R "$RECIPIENTS" -o "$OUT" "$FILE"') && cloudSetup.includes('^age1[a-z0-9]{50,70}$'), 'locked with public age keys only');
+  assert(cloud.includes('copyto "$OUT" "$DEST" --no-check-dest') && !/rclone[^\n]*\b(delete|purge|sync|lsf?|cat)\b/.test(cloud), 'sent without reading, listing or deleting anything in the bucket (write-only key)');
+  assert(cloud.includes("printf 'nuvem \\n' > \"$STATUS\"") && unit.includes('\nOnFailure=juimprime-deploy-alert.service\n') && unit.includes('\nUser=juimprime\n') && unit.includes('\nProtectSystem=strict\n'), 'a failure e-mails the shop (reason "nuvem")');
+  assert(cloud.includes('Cópia na nuvem ainda não configurada') && cloud.includes('exit 0'), 'before backup-config.sh, it only says so in the journal');
+  assert(timer.includes('OnCalendar=*-*-* 03:30') && timer.includes('Persistent=true'), 'every night, and after a night the server was off');
+  assert(setup.includes('mariadb-client age rclone') && setup.includes('"$HERE/backup-nuvem.sh"') && setup.includes('"$HERE/juimprime-backup.service" "$HERE/juimprime-backup.timer"') && setup.includes('systemctl enable --now juimprime-backup.timer'), 'the setup installs and turns it on');
+  assert(setup.includes('/usr/bin/systemctl start juimprime-backup.service'), 'the operator may run it now');
+  assert(cloudSetup.includes("read -r -s -p \"applicationKey") && cloudSetup.includes("printf '[b2]\\ntype = b2\\naccount = %s\\nkey = %s") && cloudSetup.includes('umask 077') && cloudSetup.includes('chmod 600 "$SHARED/rclone.conf"'), 'the B2 key: typed without echo, written by a shell builtin into a private file');
+  const {REASONS} = require('../tools/deploy-alert.cjs');
+  assert(REASONS.nuvem && raw('tools/deploy-alert.cjs').includes("read(dir, cloud ? '.backup-last.log' : '.deploy-last.log', 3000)"), 'the e-mail says it was the cloud copy, with its own log');
+}
 
 // The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself
 // without a confirmation.
