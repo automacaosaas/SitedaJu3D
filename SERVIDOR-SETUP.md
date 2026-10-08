@@ -200,6 +200,39 @@ vem do `SITE_URL` (quando é um nome público) ou, na falta, do `COMPANY.website
 Depois, no Google Search Console: propriedade de domínio (registro TXT no Registro.br), enviar
 `https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL".
 
+## Página "voltamos já" e registros de acesso
+
+Quando o site (Node) cai ou demora a responder, o nginx mostra a página `deploy/manutencao.html` ("Voltamos já", com os
+contatos da loja) com o código **503** e `Retry-After: 120`, no lugar do "502 Bad Gateway". A página não depende do site
+(o estilo e o logo vão dentro dela) e tenta de novo sozinha a cada minuto. Só os erros do próprio nginx viram essa página:
+as respostas do site, como o 503 do frete, passam como estão.
+
+Instalar ou atualizar (num servidor novo, o `setup-servidor.sh` já roda; pode rodar de novo, nada duplica):
+`sudo bash /srv/juimprime/current/deploy/config-nginx.sh`. Ele:
+
+- copia a página para `/var/www/juimprime-manutencao` e grava `/etc/nginx/snippets/juimprime-manutencao.conf`;
+- põe `include snippets/juimprime-manutencao.conf;` uma vez em cada bloco `server` de
+  `/etc/nginx/sites-available/juimprime` que leva ao site (o da porta 80 e o do 443 do certbot), sem mexer em HTTPS,
+  http2, HSTS nem no `server_name`;
+- guarda antes uma cópia em `/var/backups/juimprime`, confere com `nginx -t` (se falhar, volta a cópia e não recarrega
+  nada) e recarrega o nginx;
+- guarda os registros de acesso do nginx (`/var/log/nginx/*.log`) por **190 dias**, um arquivo por dia, comprimidos: a
+  política de privacidade promete 6 meses (Marco Civil da Internet, art. 15). Quem faz isso é
+  `/etc/logrotate.d/juimprime-nginx`; o `/etc/logrotate.d/nginx` do pacote vira só um aviso (um mesmo log não pode estar
+  em dois arquivos) e o original fica em `/var/backups/juimprime`. Num upgrade do nginx, se o apt perguntar por esse
+  arquivo, responda **N** (manter a versão instalada); na dúvida, rode o script de novo.
+
+Quando a página mudar no Git (por exemplo, um contato novo), rodar o script de novo. Conferir:
+
+- `curl -s http://127.0.0.1/manutencao-previa | head` mostra a página sem derrubar nada (a prévia só abre de dentro do
+  servidor; do computador, por um túnel: `ssh -L 8080:127.0.0.1:80 <usuário>@10.0.100.80` e abrir
+  `http://localhost:8080/manutencao-previa`);
+- de verdade, com o site parado por uns segundos:
+  `sudo systemctl stop juimprime.service; sleep 2; curl -sI http://127.0.0.1/ | head -n 6; sudo systemctl start juimprime.service`
+  mostra `503` e `Retry-After: 120` (depois, `curl -s http://127.0.0.1:3000/api/health` confirma o site de volta);
+- `sudo logrotate -d /etc/logrotate.conf 2>&1 | grep 'nginx/\*.log'` mostra `(190 rotations)` e nenhum
+  `duplicate log entry`; os arquivos ficam em `/var/log/nginx` (`access.log.1`, `access.log.2.gz`…).
+
 ## Cópia do banco na nuvem (Backblaze B2)
 
 Todo dia às 03:30 o servidor faz a cópia do banco (`mariadb-dump`), confere se ela está inteira, tranca com uma chave

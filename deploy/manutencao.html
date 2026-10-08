@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="60">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fbf1f2">
+<title>Voltamos já · Ju, imprime pra mim?</title>
+<meta name="description" content="A loja Ju, imprime pra mim? está passando por um ajuste rápido e volta em alguns minutos.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23b64c68'/%3E%3Ctext x='8' y='46' fill='%23fff7f5' font-family='Georgia,serif' font-weight='700' font-size='42' letter-spacing='-3'%3EJu.%3C/text%3E%3C/svg%3E">
+<!-- Página "voltamos já" (deploy/manutencao.html, instalada por deploy/config-nginx.sh): o nginx a mostra, com o código 503,
+     quando o site (Node) não responde. Nessa hora nada do site está de pé, então tudo vem daqui de dentro: o estilo, o logo
+     (data URI) e as nuvens (SVG). Sem JavaScript e sem fonte baixada (DM Sans e Playfair Display só se já estiverem no
+     aparelho). Cores de dist/theme.css; nuvenzinhas brancas como as da vitrine. Os contatos são os de api/_lib/legal.js
+     (tests/deploy.mjs confere): mudou lá, mude aqui e rode de novo o config-nginx.sh no servidor. -->
+<style>
+:root{color-scheme:light;--ink:#282326;--muted:#6f6369;--rose:#b64c68;--pink:#ee96a5;--blush:#fbeaf0;--line:#65364924;--sans:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--serif:"Playfair Display",Georgia,"Times New Roman",serif}
+*{box-sizing:border-box}
+html{background:#fbf1f2}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:clamp(24px,6vh,56px) 16px;background:#fbf1f2;color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.ceu{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(60% 45% at 12% 8%,#fff 0,#fff0 70%),radial-gradient(55% 45% at 92% 96%,#f3d4e1 0,#f3d4e100 72%),linear-gradient(168deg,#fdf6f6 0%,#f8e6eb 46%,#efe2f6 100%)}
+.ceu svg{position:absolute;display:block;height:auto;overflow:visible}
+.nuvem{opacity:var(--o,.95);animation:deriva var(--d,40s) ease-in-out var(--dl,0s) infinite alternate}
+@keyframes deriva{from{transform:translateX(calc(var(--a,28px) * -1))}to{transform:translateX(var(--a,28px))}}
+.n1{top:6%;left:-2%;width:clamp(140px,21vw,300px);--d:44s}
+.n2{top:17%;right:-3%;width:clamp(110px,16vw,240px);--d:52s;--dl:-14s;--o:.85}
+.n3{top:48%;left:4%;width:clamp(80px,9vw,140px);--d:36s;--dl:-6s;--o:.75}
+.n4{bottom:16%;right:5%;width:clamp(80px,10vw,160px);--d:40s;--dl:-22s;--o:.8}
+.n5{bottom:3%;left:-3%;width:clamp(170px,25vw,360px);--d:58s;--dl:-30s}
+.n6{bottom:-1%;right:-4%;width:clamp(140px,20vw,300px);--d:48s;--dl:-9s;--o:.9}
+.brilho{width:var(--s,14px);fill:var(--pink);animation:pisca var(--d,5s) ease-in-out var(--dl,0s) infinite}
+@keyframes pisca{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:.85;transform:scale(1)}}
+.b1{top:11%;left:28%;--s:14px;--d:5s}
+.b2{top:31%;right:20%;--s:11px;--d:6.5s;--dl:-2s}
+.b3{bottom:24%;left:17%;--s:12px;--d:5.8s;--dl:-3.5s}
+.b4{bottom:10%;right:29%;--s:9px;--d:4.6s;--dl:-1s}
+.cartao{position:relative;z-index:1;width:100%;max-width:560px;padding:36px 44px 28px;text-align:center;background:#fffcfbe6;border:1px solid #fff;border-radius:28px;box-shadow:0 24px 70px #4f22361f,0 4px 14px #4f22360d;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.logo{display:block;width:120px;height:120px;margin:0 auto 20px;border-radius:50%;background:#fef2f2;box-shadow:0 0 0 6px #fff,0 12px 30px #b64c6824}
+.selo{margin:0 0 10px;font-size:12px;font-weight:650;letter-spacing:1.8px;color:var(--rose)}
+h1{margin:0;font-family:var(--serif);font-weight:500;font-size:clamp(40px,10vw,58px);line-height:1.08;letter-spacing:-1.2px}
+h1 em{color:var(--rose)}
+.lead{margin:14px auto 0;max-width:30em;font-size:17px;line-height:1.6;color:#5f525a;text-wrap:pretty}
+.garantia{display:flex;gap:12px;align-items:flex-start;margin:22px 0 0;padding:14px 16px;border-radius:16px;background:var(--blush);color:#4a3a42;font-size:14.5px;line-height:1.5;text-align:left}
+.garantia svg{flex:none;width:22px;height:22px;margin-top:1px;color:var(--rose)}
+.garantia strong{color:var(--ink);font-weight:650}
+.status{margin:16px 0 0;font-size:13px;line-height:1.6;color:var(--muted)}
+.ponto{position:relative;display:inline-block;width:8px;height:8px;margin:-2px 10px 0 0;vertical-align:middle;border-radius:50%;background:var(--rose)}
+.ponto::after{content:"";position:absolute;inset:-5px;border:2px solid var(--pink);border-radius:50%;animation:pulso 2.4s ease-out infinite}
+@keyframes pulso{0%{transform:scale(.4);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.status a{margin-left:4px;color:var(--rose);font-weight:650;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.nowrap{white-space:nowrap}
+.contato{margin:24px 0 0;padding-top:22px;border-top:1px solid var(--line)}
+.contato h2{margin:0 0 14px;font-size:15px;font-weight:600}
+.contato ul{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.contato a{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);text-align:left;text-decoration:none;transition:border-color .2s,background-color .2s}
+.contato a:hover{border-color:#b64c6866;background:#fff7f9}
+.icone{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--blush);color:var(--rose)}
+.icone svg{width:20px;height:20px}
+.contato span{min-width:0}
+.contato strong{display:block;font-size:14px;font-weight:650}
+.contato small{display:block;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.seta{margin-left:auto;padding-left:6px;color:var(--rose);font-size:18px;line-height:1}
+.assinatura{margin:22px 0 0;font-family:var(--serif);font-style:italic;font-size:19px;color:var(--rose)}
+.rodape{margin:2px 0 0;font-size:12px;color:var(--muted)}
+a:focus-visible{outline:2px solid var(--rose);outline-offset:3px}
+@media (min-width:900px){
+.cartao{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);max-width:940px;padding:0;text-align:left}
+.mensagem{padding:46px 44px 42px 52px}
+.logo{margin:0 0 22px}
+.lead{margin-left:0}
+.status{text-align:left}
+.contato{display:flex;flex-direction:column;justify-content:center;margin:0;padding:42px 44px 36px;border-top:0;border-left:1px solid var(--line);border-radius:0 27px 27px 0;background:#fdf3f6b3}
+.contato h2{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.3px}
+.assinatura{margin-top:26px}
+}
+@media (max-width:480px){.cartao{padding:30px 22px 24px;border-radius:24px}.logo{width:112px;height:112px;margin-bottom:18px}.lead{font-size:16px}.garantia{padding:13px 14px;font-size:14px}}
+@media (max-width:360px){.cartao{padding:26px 18px 22px}.contato a{gap:10px;padding:10px 12px}.icone{width:34px;height:34px}.seta{display:none}.contato small{font-size:12px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.ponto::after{display:none}}
+</style>
+</head>
+<body>
+<div class="ceu" aria-hidden="true">
+  <svg width="0" height="0" focusable="false"><defs>
+    <linearGradient id="g-nuvem" gradientUnits="userSpaceOnUse" x1="0" y1="10" x2="0" y2="92"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#f4dde8"/></linearGradient>
+    <symbol id="nuvem-a" viewBox="0 6 220 86"><g fill="url(#g-nuvem)"><rect x="14" y="62" width="192" height="28" rx="14"/><circle cx="50" cy="63" r="26"/><circle cx="92" cy="45" r="34"/><circle cx="140" cy="44" r="30"/><circle cx="177" cy="61" r="24"/></g></symbol>
+    <symbol id="nuvem-b" viewBox="0 18 180 74"><g fill="url(#g-nuvem)"><rect x="10" y="64" width="160" height="26" rx="13"/><circle cx="44" cy="65" r="22"/><circle cx="82" cy="51" r="28"/><circle cx="121" cy="55" r="24"/><circle cx="150" cy="68" r="18"/></g></symbol>
+    <symbol id="brilho" viewBox="0 0 20 20"><path d="M10 1C11 8 12 9 19 10C12 11 11 12 10 19C9 12 8 11 1 10C8 9 9 8 10 1Z"/></symbol>
+  </defs></svg>
+  <svg class="nuvem n1" viewBox="0 6 220 86" focusable="false"><use href="#nuvem-a"/></svg>
+  <svg class="nuvem n2" viewBox="0 18 180 74" focusable="false"><use href="#nuvem-b"/></svg>
+  <svg class="nuvem n3" viewBox="0 18 180 74" focusable="false"><use href="#nuvem-b"/></svg>
+  <svg class="nuvem n4" viewBox="0 6 220 86" focusable="false"><use href="#nuvem-a"/></svg>
+  <svg class="nuvem n5" viewBox="0 6 220 86" focusable="false"><use href="#nuvem-a"/></svg>
+  <svg class="nuvem n6" viewBox="0 18 180 74" focusable="false"><use href="#nuvem-b"/></svg>
+  <svg class="brilho b1" viewBox="0 0 20 20" focusable="false"><use href="#brilho"/></svg>
+  <svg class="brilho b2" viewBox="0 0 20 20" focusable="false"><use href="#brilho"/></svg>
+  <svg class="brilho b3" viewBox="0 0 20 20" focusable="false"><use href="#brilho"/></svg>
+  <svg class="brilho b4" viewBox="0 0 20 20" focusable="false"><use href="#brilho"/></svg>
+</div>
+<main class="cartao">
+  <div class="mensagem">
+    <img class="logo" src="data:image/webp;base64,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" width="120" height="120" alt="Ju, imprime pra mim? Criatividade em 3D">
+    <p class="selo">SÓ UM MINUTINHO</p>
+    <h1>Voltamos <em>já</em></h1>
+    <p class="lead">A loja está passando por um ajuste rápido e volta em alguns minutos. Obrigada pela paciência!</p>
+    <p class="garantia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 9.5 4.1-1.2 7-5.1 7-9.5V6z"/><path d="m9 12 2 2 4-4"/></svg><span><strong>Nenhum pedido ou pagamento se perde.</strong> Tudo o que você já fez continua guardado, com segurança.</span></p>
+    <p class="status"><span class="ponto" aria-hidden="true"></span>Esta página tenta de novo sozinha a cada minuto. <a href="">Tentar agora</a></p>
+  </div>
+  <section class="contato" aria-labelledby="contato-titulo">
+    <h2 id="contato-titulo">Precisa falar com a gente agora?</h2>
+    <ul>
+      <li><a href="https://wa.me/5531991981151" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp (31) 99198-1151, só mensagens (abre em uma nova aba)"><span class="icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M4.5 19.5 5.6 16A8.2 8.2 0 1 1 8.4 18.6Z"/><path d="M9.2 8.6c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.6 1.5c.1.2 0 .4-.1.6l-.5.6c.6 1.1 1.5 2 2.6 2.6l.6-.5c.2-.1.4-.2.6-.1l1.5.6c.3.1.4.3.4.5v.5c0 .3 0 .6-.5.8-.6.3-1.6.4-3-.3a8.6 8.6 0 0 1-3.5-3.5c-.7-1.4-.6-2.4-.3-3Z"/></svg></span><span><strong>WhatsApp</strong><small>(31) 99198-1151 <span class="nowrap">· só mensagens</span></small></span><span class="seta" aria-hidden="true">→</span></a></li>
+      <li><a href="mailto:juimprimepramim@gmail.com"><span class="icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg></span><span><strong>E-mail</strong><small>juimprimepramim<wbr>@gmail.com</small></span><span class="seta" aria-hidden="true">→</span></a></li>
+      <li><a href="https://www.instagram.com/juimprimepramim/" target="_blank" rel="noopener noreferrer" aria-label="Instagram @juimprimepramim (abre em uma nova aba)"><span class="icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg></span><span><strong>Instagram</strong><small>@juimprimepramim</small></span><span class="seta" aria-hidden="true">→</span></a></li>
+    </ul>
+    <p class="assinatura">feito com carinho, pela Ju.</p>
+    <p class="rodape">Ju, imprime pra mim? · Criatividade em 3D</p>
+  </section>
+</main>
+</body>
+</html>
