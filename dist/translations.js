@@ -907,6 +907,7 @@ Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…).|T
 Ficou com alguma dúvida sobre um produto, seu pedido ou deseja algo personalizado? Fale com a gente.|Have a question about a product or your order, or would you like something custom-made? Talk to us.|¿Tienes alguna duda sobre un producto o tu pedido, o quieres algo personalizado? Habla con nosotros.
 Resposta rápida e atendimento direto.|Quick replies and direct support.|Respuesta rápida y atención directa.
 Falar agora no WhatsApp →|Chat on WhatsApp now →|Hablar ahora por WhatsApp →
+· só mensagens, sem ligações|· messages only, no calls|· solo mensajes, sin llamadas
 O número do WhatsApp entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our WhatsApp number is coming soon. Meanwhile, send us a message using the form below.|El número de WhatsApp llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
 Envie sua dúvida ou arquivo.|Send your question or file.|Envía tu duda o archivo.
 Acompanhe os bastidores e novidades da Ju.|Follow Ju's behind-the-scenes and news.|Sigue los bastidores y las novedades de Ju.
