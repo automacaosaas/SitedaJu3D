@@ -145,7 +145,7 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(refs.length >= 8); assert.deepEqual(refs.filter(ref => !inside.test(ref)), [], 'the page asks for nothing outside itself');
   assert.doesNotMatch(page, /url\(\s*['"]?(?!data:|#)/i, 'and no url() leading out');
   const logo = page.match(/<img class="logo" src="(data:image\/webp;base64,[A-Za-z0-9+/=]+)"/);
-  assert(logo && logo[1].length < 15 * 1024, 'the logo inside the page, small');
+  assert(logo && logo[1] === `data:image/webp;base64,${fs.readFileSync(path.join(root, 'dist/assets/logo-ju.webp')).toString('base64')}`, "the logo inside the page is the shop's own (336 px: sharp at 112 px on a 3x phone)");
   for (const piece of ['<html lang="pt-BR">', '<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="robots" content="noindex">', '<meta http-equiv="refresh" content="60">', '<title>Voltamos já', 'html{background:#fbf1f2}']) assert(page.includes(piece), `manutencao.html: ${piece}`);
   assert(page.includes('tenta de novo sozinha a cada minuto') && page.includes('Nenhum pedido ou pagamento se perde'), 'it says it tries again by itself, and that nothing is lost');
   const {COMPANY, WHATSAPP} = require('../api/_lib/legal.js');
@@ -179,7 +179,8 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(nginxSetup.includes(`grep -q '^[^#]*/var/log/nginx/' "$LOGROTATE_PKG"`) && nginxSetup.includes('cp -p "$LOGROTATE_PKG" "$pkg_copy"') && nginxSetup.includes('LOGROTATE_OWN=/etc/logrotate.d/juimprime-nginx'), "the package's /etc/logrotate.d/nginx set aside, its original kept (one log in two blocks is an error)");
   assert(nginxSetup.includes('check=$(logrotate -d /etc/logrotate.conf 2>&1 || true)') && nginxSetup.includes("if grep -q 'duplicate log entry' <<<\"$check\"; then"), 'and checked with logrotate -d');
   for (const other of [/http2/, /ssl_/, /Strict-Transport-Security/, /server_name/]) assert.doesNotMatch(code, other, `config-nginx.sh leaves ${other.source} alone`);
-  assert(pos('code http://127.0.0.1:3000/api/health') && pos('code http://127.0.0.1/manutencao-previa'), 'at the end it checks the site is still there');
+  assert(pos('code http://127.0.0.1:3000/api/health') && pos('code -k "$web/manutencao-previa"'), 'at the end it checks the site is still there');
+  assert(nginxSetup.includes('web=https://127.0.0.1 k=k tunnel=8443:127.0.0.1:443'), 'with HTTPS, the checks and the hints go by 443 (after certbot the block on 80 may only redirect)');
   assert(setup.includes('bash "$HERE/config-nginx.sh"') && setup.indexOf('bash "$HERE/config-nginx.sh"') > setup.indexOf('ln -sfn /etc/nginx/sites-available/juimprime'), 'a new server gets the same from the setup');
 }
 

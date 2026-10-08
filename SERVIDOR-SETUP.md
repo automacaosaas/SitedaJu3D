@@ -212,8 +212,8 @@ Instalar ou atualizar (num servidor novo, o `setup-servidor.sh` já roda; pode r
 
 - copia a página para `/var/www/juimprime-manutencao` e grava `/etc/nginx/snippets/juimprime-manutencao.conf`;
 - põe `include snippets/juimprime-manutencao.conf;` uma vez em cada bloco `server` de
-  `/etc/nginx/sites-available/juimprime` que leva ao site (o da porta 80 e o do 443 do certbot), sem mexer em HTTPS,
-  http2, HSTS nem no `server_name`;
+  `/etc/nginx/sites-available/juimprime` que leva ao site (o do 443 do certbot e o da porta 80, se ele também leva ao
+  site; o que só redireciona para o https fica como está), sem mexer em HTTPS, http2, HSTS nem no `server_name`;
 - guarda antes uma cópia em `/var/backups/juimprime`, confere com `nginx -t` (se falhar, volta a cópia e não recarrega
   nada) e recarrega o nginx;
 - guarda os registros de acesso do nginx (`/var/log/nginx/*.log`) por **190 dias**, um arquivo por dia, comprimidos: a
@@ -224,11 +224,12 @@ Instalar ou atualizar (num servidor novo, o `setup-servidor.sh` já roda; pode r
 
 Quando a página mudar no Git (por exemplo, um contato novo), rodar o script de novo. Conferir:
 
-- `curl -s http://127.0.0.1/manutencao-previa | head` mostra a página sem derrubar nada (a prévia só abre de dentro do
-  servidor; do computador, por um túnel: `ssh -L 8080:127.0.0.1:80 <usuário>@10.0.100.80` e abrir
-  `http://localhost:8080/manutencao-previa`);
+- `curl -sk https://127.0.0.1/manutencao-previa | head` mostra a página sem derrubar nada (a prévia só abre de dentro do
+  servidor; do computador, por um túnel: `ssh -L 8443:127.0.0.1:443 <usuário>@10.0.100.80` e abrir
+  `https://localhost:8443/manutencao-previa`, passando pelo aviso do certificado, que é do domínio). Pelo 443 porque,
+  depois do certbot, o bloco da porta 80 pode só redirecionar para o https; antes do HTTPS, `http://` e a porta 80;
 - de verdade, com o site parado por uns segundos:
-  `sudo systemctl stop juimprime.service; sleep 2; curl -sI http://127.0.0.1/ | head -n 6; sudo systemctl start juimprime.service`
+  `sudo systemctl stop juimprime.service; sleep 2; curl -skI https://127.0.0.1/ | head -n 6; sudo systemctl start juimprime.service`
   mostra `503` e `Retry-After: 120` (depois, `curl -s http://127.0.0.1:3000/api/health` confirma o site de volta);
 - `sudo logrotate -d /etc/logrotate.conf 2>&1 | grep 'nginx/\*.log'` mostra `(190 rotations)` e nenhum
   `duplicate log entry`; os arquivos ficam em `/var/log/nginx` (`access.log.1`, `access.log.2.gz`…).

@@ -5,7 +5,8 @@
 #   nginx mostra essa página com o código 503 e "Retry-After: 120" (pausa curta, para o Google e os navegadores) no lugar
 #   do "502 Bad Gateway". Só os erros do próprio nginx: as respostas do site, como o 503 do frete, passam como estão.
 # - Grava /etc/nginx/snippets/juimprime-manutencao.conf e põe o "include" dele, uma vez, em cada bloco server da
-#   configuração do site que leva ao Node (proxy_pass http://127.0.0.1:3000): o da porta 80 e o do 443 do certbot.
+#   configuração do site que leva ao Node (proxy_pass http://127.0.0.1:3000): o do 443 do certbot e o da porta 80, se
+#   ele também leva ao site (o que só redireciona para o https fica como está).
 # - Guarda os registros de acesso do nginx por 190 dias, um arquivo por dia, comprimidos (a política de privacidade
 #   promete 6 meses: Marco Civil da Internet, art. 15).
 # Antes de mexer, copia o que vai mudar para /var/backups/juimprime; confere com "nginx -t" e, se falhar, volta a cópia
@@ -205,11 +206,18 @@ code() { curl -s -o /dev/null -m 10 -w '%{http_code}' "$@" 2>/dev/null || true; 
 node_code=$(code http://127.0.0.1:3000/api/health)
 http_code=$(code http://127.0.0.1/)
 https_code='' listening=$(ss -ltn 2>/dev/null || true)
-if grep -q ':443 ' <<<"$listening"; then https_code=$(code -k https://127.0.0.1/); fi
+# Com HTTPS, a página se confere pelo 443: depois do certbot, o bloco da porta 80 pode só redirecionar para o https (sem
+# o include; pelo IP ele responde 404), e o do 443 é o do site, também pelo IP (-k: o certificado é do domínio).
+web=http://127.0.0.1 k='' tunnel=8080:127.0.0.1:80 view=http://localhost:8080 cert_note=''
+if grep -q ':443 ' <<<"$listening"; then
+  https_code=$(code -k https://127.0.0.1/)
+  web=https://127.0.0.1 k=k tunnel=8443:127.0.0.1:443 view=https://localhost:8443
+  cert_note='; o navegador avisa que o certificado não é de "localhost": Avançado → continuar'
+fi
 echo "site (Node, 127.0.0.1:3000/api/health): $node_code"
 echo "pelo nginx, porta 80: $http_code${https_code:+ · porta 443: $https_code}"
-echo "a página direto, por fora (tem de ser 404: ela é só interna): $(code http://127.0.0.1/manutencao.html)"
-echo "a prévia, daqui do servidor (200): $(code http://127.0.0.1/manutencao-previa)"
+echo "a página direto, por fora (tem de ser 404: ela é só interna): $(code -k "$web/manutencao.html")"
+echo "a prévia, daqui do servidor (200): $(code -k "$web/manutencao-previa")"
 if [ "$node_code" != 200 ]; then
   echo "O site (Node) não respondeu agora: quem visita vê a página \"voltamos já\" (503). Antes da primeira publicação é"
   echo "normal; depois dela, veja: journalctl -u juimprime -n 40"
@@ -223,11 +231,11 @@ cat <<EOF
 
 Para ver a página:
   - prévia, sem derrubar nada (daqui do servidor):
-      curl -s http://127.0.0.1/manutencao-previa | head -n 12
-    no seu computador, por um túnel SSH (deixe aberto e abra http://localhost:8080/manutencao-previa no navegador):
-      ssh -L 8080:127.0.0.1:80 ${SUDO_USER:-usuario}@10.0.100.80
+      curl -s$k $web/manutencao-previa | head -n 12
+    no seu computador, por um túnel SSH (deixe aberto e abra $view/manutencao-previa no navegador$cert_note):
+      ssh -L $tunnel ${SUDO_USER:-usuario}@10.0.100.80
   - de verdade, parando o site por uns segundos (quem visitar nesse meio-tempo vê a página):
-      sudo systemctl stop juimprime.service; sleep 2; curl -sI http://127.0.0.1/ | head -n 6; sudo systemctl start juimprime.service
-    Espere "HTTP/1.1 503" e "Retry-After: 120". Depois: curl -s http://127.0.0.1:3000/api/health (o site de volta).
+      sudo systemctl stop juimprime.service; sleep 2; curl -s${k}I $web/ | head -n 6; sudo systemctl start juimprime.service
+    Espere o 503 e o Retry-After: 120. Depois: curl -s http://127.0.0.1:3000/api/health (o site de volta).
 Cópias do que mudou: $COPIES
 EOF
