@@ -1,8 +1,7 @@
 // The shop's fonts come from the shop itself (2026-10-07, PageSpeed: the Google Fonts stylesheet blocked the first paint
 // from two other hosts). Every @font-face file exists with its licence, the weights are the ones the Google stylesheet
 // declared (so the browser picks the same face), the fallbacks keep the text in place while a font arrives, no page or
-// policy still names Google Fonts, the pages preload the very DM Sans file theme.css asks for, and the servers keep the
-// files for a year.
+// policy still names Google Fonts, no font preload competes with the first paint, and the servers keep the files for a year.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -53,17 +52,17 @@ for (const file of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWit
     for (const m of css.matchAll(new RegExp(`'${name}'\\s*,\\s*([^;}]*)`, 'g'))) assert(m[1].startsWith(`'${fallback}'`), `${file}: '${name}' followed by '${fallback}' (${m[0].slice(0, 60)})`);
 }
 
-// No page and no policy names Google Fonts any more; every page with the site's styles preloads the DM Sans file of theme.css
-// (same address, so the preload is the file the page uses), before its first stylesheet.
-const dmSans = [...urls].find(u => u.includes('dm-sans'));
+// No page and no policy names Google Fonts any more. And no font preload (2026-10-08): measured on a slow phone (1.6 Mbit/s,
+// CPU 4x), the DM Sans preload took bandwidth from the stylesheets and scripts that hold the first paint — first paint
+// 1.27 s -> 1.50 s on a product page, and on the cart the scripts ran after journey.js's 2 s deadline, so the page showed
+// before the cart and its footer jumped (CLS 0.27 in 3 of 5 runs); without it, the same pages paint sooner and nothing moves.
+// With font-display: swap and the metric fallbacks above, the text is already in place while the font arrives.
 for (const page of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'))) {
   const html = read(`dist/${page}`);
   assert.doesNotMatch(html, /fonts\.(googleapis|gstatic)\.com/, `${page}: nothing from Google Fonts`);
-  if (!html.includes('href="theme.css"')) continue;
-  const preloads = [...html.matchAll(/<link rel="preload"[^>]*as="font"[^>]*>/g)].map(m => m[0]);
-  assert.deepEqual(preloads, [`<link rel="preload" href="${dmSans}" as="font" type="font/woff2" crossorigin>`], `${page}: preloads only DM Sans`);
-  assert(html.indexOf(preloads[0]) < html.indexOf('<link rel="stylesheet"'), `${page}: the preload before the stylesheets`);
+  assert.doesNotMatch(html, /<link rel="preload"[^>]*as="font"/, `${page}: no font preload competing with the first paint`);
 }
+const dmSans = [...urls].find(u => u.includes('dm-sans'));
 assert.doesNotMatch(read('vercel.json'), /fonts\.(googleapis|gstatic)\.com/, 'the policy no longer allows Google Fonts');
 assert.match(read('tools/dev-server.cjs'), /'\.woff2': 'font\/woff2'/, 'the local server knows the type');
 
@@ -81,4 +80,4 @@ try {
   assert.match((await get(`/${dmSans.split('?')[0]}`)).headers['cache-control'], /max-age=86400, stale-while-revalidate/, 'without ?v= the usual asset rule');
 } finally { server.close(); }
 
-console.log('PASS: fonts — DM Sans, Playfair Display, Parisienne and Roboto served by the shop (same files and weights as Google Fonts, OFL licence), metric fallbacks in every stack, DM Sans preloaded on every page, nothing from Google Fonts, a year in the cache.');
+console.log('PASS: fonts — DM Sans, Playfair Display, Parisienne and Roboto served by the shop (same files and weights as Google Fonts, OFL licence), metric fallbacks in every stack, no font preload holding the first paint, nothing from Google Fonts, a year in the cache.');

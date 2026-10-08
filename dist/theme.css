@@ -1,8 +1,9 @@
 /* Fontes da loja servidas daqui, não mais do Google Fonts (2026-10-07; PageSpeed): os mesmos arquivos do subconjunto latino
    (todo o texto do site cabe nele), com os mesmos pesos da folha do Google, para o navegador escolher igual. Licença em
-   assets/fonts/OFL.txt. O ?v= deixa o arquivo no cache por um ano (server/create-server.cjs); arquivo novo, ?v= novo, aqui e no
-   preload das páginas. Os "Fallback" são Arial e Georgia nas medidas da fonte (largura e altura): enquanto ela chega, o texto
-   já ocupa o mesmo espaço e nada pula. */
+   assets/fonts/OFL.txt. O ?v= deixa o arquivo no cache por um ano (server/create-server.cjs); arquivo novo, ?v= novo. Os
+   "Fallback" são Arial e Georgia nas medidas da fonte (largura e altura): enquanto ela chega, o texto já ocupa o mesmo espaço
+   e nada pula — por isso nenhuma página pré-carrega fonte (08/10/2026: o preload tirava banda da primeira pintura num celular
+   lento; tests/fonts.mjs). */
 @font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/dm-sans-latin.woff2?v=1) format('woff2')}
 @font-face{font-family:'DM Sans';font-style:normal;font-weight:450;font-display:swap;src:url(assets/fonts/dm-sans-latin.woff2?v=1) format('woff2')}
 @font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/dm-sans-latin.woff2?v=1) format('woff2')}
