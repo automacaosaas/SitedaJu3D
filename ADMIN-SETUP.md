@@ -110,6 +110,8 @@ hPanel → o site → **Variáveis de ambiente**:
 | `ADMIN_EMAIL` | `powershop.bras@gmail.com` (o e-mail da equipe) | não |
 | `ADMIN_PASSWORD` | uma senha forte, com **12 caracteres ou mais** | **sim** |
 
+**Servidor próprio:** os dois valores entram por `sudo bash /srv/juimprime/current/deploy/config-loja.sh` (opção 1), não pelo hPanel (`SERVIDOR-SETUP.md`).
+
 Essas duas variáveis só criam a **primeira** pessoa do painel, no primeiro login, e só enquanto não existe ninguém no
 banco. Depois disso quem vale é o banco: a senha fica guardada com scrypt (não dá para ler de volta) e trocar
 `ADMIN_PASSWORD` no painel da Hostinger não muda nada. Uma senha com menos de 12 caracteres é recusada, e

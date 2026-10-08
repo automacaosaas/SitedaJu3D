@@ -16,14 +16,15 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-loja.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
 const setup = raw('deploy/setup-servidor.sh'), deploy = raw('deploy/deploy.sh');
 const firewall = raw('deploy/firewall.sh');
 const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh'), payments = raw('deploy/config-pagamentos.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments]]) {
+const shop = raw('deploy/config-loja.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments], ['config-loja.sh', shop]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -128,6 +129,77 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(payments.includes("1) mode=test; label='de TESTE'") && payments.includes("prefix='(TEST-|APP_USR-)'") && payments.includes('[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }') && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'the prefix does not tell test from live (Mercado Pago test keys may start with APP_USR- too): MP_MODE does, after a confirmation');
   assert(payments.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && payments.includes('cp -p "$ENV_FILE" "$backup"') && payments.includes('chmod 600 "$tmp"') && payments.includes('mv -f "$tmp" "$ENV_FILE"'), 'rewritten by builtins, old copy kept, private, swapped at once');
   assert(payments.includes('NEW[APP_ENV]=production') && payments.includes('NEW[SITE_URL]=$DOMAIN') && payments.includes('systemctl restart juimprime.service'), 'production on the shop domain, then the restart');
+}
+
+// config-loja.sh (08/10/2026): the panel's first access (ADMIN_EMAIL/ADMIN_PASSWORD) and the Correios contract, typed into
+// prompts the same way. The password goes without echo, twice, and never with spaces, quotes or a backslash (systemd's
+// EnvironmentFile reads \ and leading quotes as syntax: the saved password would differ from the typed one); numbers keep
+// only their digits, as api/_lib/correios.js reads them; the panel's state is read first, since those two variables only
+// create the first admin.
+{
+  assert(shop.includes('read -r -s -p "$label: " value; echo; value=${value//$\'\\r\'/}') && shop.includes('read -r -s -p "Digite a mesma senha de novo') && shop.includes('if [[ "$value" != "$again" ]]; then') && shop.includes('NEW[ADMIN_PASSWORD]=$value'), 'the password: no echo, typed twice, both the same');
+  assert(shop.includes('[ ${#p} -lt 12 ] || [ ${#p} -gt 128 ]') && shop.includes(String.raw`[[ "$p" == *[\'\"\\]* ]]`) && shop.includes('[[ "$p" == *[[:space:]]* ]]') && shop.includes('password_problem() (\n  LC_ALL=C\n'), '12 to 128 characters, counted the same on any server; no spaces, quotes or backslash');
+  assert(shop.includes('[ -n "$(password_problem "$(current ADMIN_PASSWORD)")" ] || { had=1;'), 'Enter keeps the current password only when it passes the same rules');
+  assert(/ask CORREIOS_CODE "[^"]*" 1 /.test(shop) && shop.includes('if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo;') && /ask ADMIN_EMAIL "[^"]*" 0 /.test(shop), 'the Correios access code without echo; the e-mail visible');
+  assert(/ask SHIP_FROM_CEP "[^"]*" 0 '\^\[0-9\]\{8\}\$' numeros/.test(shop) && shop.includes("SEPARATED='^[0-9./ -]+$'") && shop.includes('d=${value//[!0-9]/}'), 'the CEP as 12345-678 or 12345678, saved as 8 digits (contract, card and DR likewise)');
+  assert(shop.includes(String.raw`fits() { [[ -n "$1" && "$1" =~ $2 && "$1" != *[\'\"\\]* ]]; }`), 'no value with quotes or a backslash reaches the .env');
+  assert(shop.includes('HEALTH=http://127.0.0.1:3000/api/health') && shop.includes('curl -fsS -m 5 "$HEALTH"') && !/curl[^\n]*\s-H\s/.test(shop) && shop.includes(`grep -q '"admin":"ready"' <<<"$body"`) && shop.includes('if [ -n "$panel" ] && [ -z "$TESTING" ]; then'), 'an admin that already exists is pointed out before anything is asked (the local health, no Host header)');
+  assert(shop.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && shop.includes('( umask 077; cp -p "$ENV_FILE" "$backup" )') && shop.includes('chmod 600 "$tmp"; [ -n "$TESTING" ] || chown "$APP_USER:$APP_USER" "$tmp"') && shop.includes('mv -f "$tmp" "$ENV_FILE"') && shop.includes('unset NEW'), 'rewritten by builtins, old copy kept, private, swapped at once');
+  assert(shop.includes('[ -z "$TESTING" ] || exit 0\n\necho "== Reiniciando o site"\nsystemctl restart juimprime.service') && shop.includes(`grep -o '"admin":"[a-z]*"\\|"shipping":"[a-z]*"`) && shop.includes('[ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ]'), 'root, then the restart and what /api/health says about the panel and the shipping');
+  const names = [...shop.matchAll(/^\s*ask ([A-Z][A-Z0-9_]+) /gm)].map(m => m[1]).concat('ADMIN_PASSWORD').sort();
+  assert.deepEqual(names, ['ADMIN_EMAIL', 'ADMIN_PASSWORD', 'CORREIOS_CARD', 'CORREIOS_CODE', 'CORREIOS_CONTRACT', 'CORREIOS_DR', 'CORREIOS_USER', 'SHIP_FROM_CEP']);
+  for (const name of names) assert(listed.has(name) && read.has(name), `${name}: in the .env the setup writes and read by the code`);
+}
+
+// …and run for real (JU_TEST=1: no root, no chown, no restart) on a temporary .env, with the answers on stdin. Only where a
+// bash 4+ that can open this folder exists: the server's tests run with a bare environment, and on Windows the bash found
+// may be WSL's, which cannot see C:/… — then one line says so and the static checks above stand alone.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ju-loja-'));
+  const slash = file => file.split(path.sep).join('/');
+  const script = slash(path.join(root, 'deploy/config-loja.sh')), envFile = slash(path.join(dir, '.env'));
+  const env = {...process.env, JU_TEST: '1', JU_ENV_FILE: envFile};
+  const run = lines => spawnSync('bash', [script], {input: lines.map(line => `${line}\n`).join(''), encoding: 'utf8', env, timeout: 30000});
+  const text = () => fs.readFileSync(envFile, 'utf8');
+  const values = () => Object.fromEntries(text().split('\n').filter(line => /^[A-Z][A-Z0-9_]*=/.test(line)).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
+  const copies = () => fs.readdirSync(dir).filter(name => name.startsWith('.env.antes-')).map(name => fs.readFileSync(path.join(dir, name), 'utf8'));
+  try {
+    const before = '# comentário\nAPP_ENV=preview\nDB_PASSWORD=nao-mexer\nADMIN_EMAIL=\nADMIN_PASSWORD=curta\nCORREIOS_USER=\nCORREIOS_CODE=\nCORREIOS_CONTRACT=\nCORREIOS_CARD=\nSHIP_FROM_CEP=\nMP_MODE=test\n';
+    fs.writeFileSync(envFile, before);
+    const probe = spawnSync('bash', ['-c', '[ "${BASH_VERSINFO[0]}" -ge 4 ] && [ -r "$1" ] && [ -w "$2" ]', 'probe', script, envFile], {encoding: 'utf8', env, timeout: 10000});
+    if (probe.error || probe.status !== 0) console.log('config-loja.sh: sem um bash 4 que abra esta pasta aqui; o teste de comportamento ficou de fora (os estáticos valem).');
+    else {
+      const password = 'Senha-Boa-2026!', code = 'CWS-codigo_teste.0123456789abcdef';
+      // both parts: a bad e-mail, then a short password, quotes, a backslash, a space and a different confirmation before the
+      // right one; a CPF with dots, a short access code, a DR in letters and a 7-digit CEP before the right ones
+      const first = run(['3', 'ju sem arroba', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
+        '123.456.789-01', 'curto', code, '99.1234.5678', '0074512345', 'SE/SPM', '72', '1310-100', '01310-100']);
+      const out = first.stdout + first.stderr;
+      assert.equal(first.status, 0, out);
+      for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'Código com formato inesperado', 'A DR é só o número', 'O CEP tem 8 números']) assert(out.includes(message), `says: ${message}`);
+      assert(!out.includes(password) && !out.includes(code) && !out.includes('Outra-Senha'), 'never prints the password or the access code');
+      const after = values();
+      assert.deepEqual(after, {APP_ENV: 'preview', DB_PASSWORD: 'nao-mexer', ADMIN_EMAIL: 'julia@example.com', ADMIN_PASSWORD: password, CORREIOS_USER: '12345678901', CORREIOS_CODE: code, CORREIOS_CONTRACT: '9912345678', CORREIOS_CARD: '0074512345', SHIP_FROM_CEP: '01310100', MP_MODE: 'test', CORREIOS_DR: '72'});
+      assert(text().startsWith('# comentário\nAPP_ENV=preview\n') && text().endsWith('\nMP_MODE=test\nCORREIOS_DR=72\n'), 'the other lines stay where they were; a missing name goes at the end');
+      assert.deepEqual(copies(), [before], 'the copy of before');
+      if (process.platform !== 'win32') assert.equal(fs.statSync(envFile).mode & 0o777, 0o600, 'only the owner reads it');
+      assert(require('../api/_lib/admin-auth.js').settings(after).bootstrap && require('../api/_lib/correios.js').settings(after).ready, 'what the code reads: the first admin can be created, the Correios are ready');
+      // Enter on every question keeps everything (nine answers: the kept password asks for no confirmation) and writes nothing
+      const kept = run(Array(9).fill(''));
+      assert.equal(kept.status, 0, kept.stdout + kept.stderr); assert.match(kept.stdout, /Nada foi alterado/);
+      assert.deepEqual(values(), after); assert.equal(copies().length, 1);
+      // only the shipping part: the CEP changes, the rest is kept
+      const cep = run(['2', '', '', '', '', '', '04538-133']);
+      assert.equal(cep.status, 0, cep.stdout + cep.stderr);
+      assert.deepEqual(values(), {...after, SHIP_FROM_CEP: '04538133'});
+      // a current password the rules refuse is not kept by Enter (the answers end: nothing is written)
+      fs.writeFileSync(envFile, text().replace(`ADMIN_PASSWORD=${password}`, "ADMIN_PASSWORD=abc'defghijklm"));
+      const saved = text(), refused = run(['1', '', '']);
+      assert.notEqual(refused.status, 0); assert.match(refused.stdout, /A senha precisa ter de 12 a 128 caracteres\./); assert.equal(text(), saved);
+      const wrong = run(['9']);
+      assert.equal(wrong.status, 1); assert.match(wrong.stdout, /Responda 1, 2 ou 3\./);
+    }
+  } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
 
 // The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself

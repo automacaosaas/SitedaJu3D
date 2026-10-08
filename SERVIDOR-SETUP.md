@@ -132,6 +132,29 @@ Hostinger continua sendo o site de teste, pelo `.zip`.
   `Aviso: o kit do servidor mudou no Git`. Rodar `sudo bash /srv/juimprime/current/deploy/setup-servidor.sh` (instala o
   `deploy.sh`, as unidades e o sudoers novos; nada mais é mexido) e conferir com `systemctl list-timers` e o journal.
 
+## Painel da Júlia e frete no servidor
+
+O primeiro acesso do painel e o frete dos Correios entram no `.env` sem abrir o arquivo:
+`sudo bash /srv/juimprime/current/deploy/config-loja.sh`.
+
+- Ele pergunta o que configurar (**1** = Painel da Júlia, **2** = Frete dos Correios, **3** = os dois) e depois cada valor;
+  Enter mantém o que já está certo.
+- **Painel:** o e-mail de entrada e a senha (12 a 128 caracteres, digitada duas vezes, sem espaços, aspas nem barra
+  invertida). Se o painel já tem alguém, ele avisa antes: essas duas variáveis só criam a primeira pessoa (`ADMIN-SETUP.md`).
+- **Frete:** usuário e código de acesso da API, contrato, cartão de postagem, DR e o CEP de onde a Júlia despacha (onde achar
+  cada um: `FRETE-SETUP.md`). Pontos e traços podem ir junto: ficam só os números.
+- A senha e o código de acesso não aparecem na tela. O `.env` de antes fica ao lado (`.env.antes-<data>`, só para root) e
+  o site reinicia sozinho.
+
+No fim ele mostra o que o `/api/health` enxerga:
+
+- `"admin":"bootstrap"`: a Júlia já pode abrir `https://juimprimepramim.com.br/admin.html`, entrar com esse e-mail e senha
+  e ler o QR Code no app autenticador (`"ready"`: o painel já tinha alguém, e vale a senha de quem já entra).
+- `"shipping":"correios"`: frete real ligado. `"pending"`: faltam dados da loja em `api/_lib/shipping-config.js` (chamar
+  quem cuida do código). `"off"`: algum dado dos Correios ficou vazio.
+
+O Mercado Pago e o e-mail da loja entram do mesmo jeito, com `deploy/config-pagamentos.sh`.
+
 ## Se a saída pela porta 22 estiver bloqueada
 
 O servidor fala com o GitHub por SSH na porta 22. Se o provedor bloquear essa saída (o journal mostra `Não consegui

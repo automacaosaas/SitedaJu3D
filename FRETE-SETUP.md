@@ -33,6 +33,8 @@ Correios Empresa; este guia cobre só a **cotação**.
 | `CORREIOS_DR` | DR (Diretoria Regional): a "Unidade Gestora" na tela do contrato (Correios Empresas → Consultar Contratos). **Obrigatória**: a API dos Correios exige a DR junto com o contrato | não |
 | `SHIP_FROM_CEP` | CEP de onde a Ju despacha | não |
 
+**Servidor próprio:** esses valores entram por `sudo bash /srv/juimprime/current/deploy/config-loja.sh` (opção 2), não pelo hPanel (`SERVIDOR-SETUP.md`).
+
 Passo a passo de onde tirar cada dado nos Correios: `FRETE-CORREIOS-passo-a-passo.md`. O código de acesso nunca vai por chat, e-mail
 ou GitHub. Se ele for gerado de novo nos Correios, o site para de cotar até a variável ser atualizada.
 
