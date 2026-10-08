@@ -122,23 +122,29 @@ function roomRec(parts, state, direction) {
   if (direction < 0 && state.lead === 0) { track.prepend(track.lastElementChild); state.lead += 1; }
 }
 
-// Depois de cada desenho do carrinho (checkout.js): a fileira nova começa do primeiro card, e decide se é carrossel (mais peças do que
-// cabem) ou fileira parada.
+// Depois de cada desenho do carrinho (checkout.js), e o carrinho é redesenhado a cada quantidade e a cada frete calculado: a fileira nova
+// continua do card que estava primeiro à vista (sem voltar ao começo), e decide se é carrossel (mais peças do que cabem) ou fileira parada.
 export function updateRecArrows(root) {
   const state = recState(root), parts = recParts(root);
   clearTimeout(state.timer);
-  if (!parts) { state.rail = null; state.watch?.disconnect(); return; }
+  if (!parts) { state.watch?.disconnect(); return; }
   if (state.rail !== parts.rail) {
+    const first = state.rail?.querySelector('[data-rec-track]')?.children[state.lead]?.querySelector('a')?.getAttribute('href');
+    const keep = first && [...parts.track.children].findIndex(slide => slide.querySelector('a')?.getAttribute('href') === first);
+    for (let i = 0; i < keep; i++) parts.track.append(parts.track.firstElementChild);
     state.rail = parts.rail; state.lead = 0; state.anim = null; state.drag = null; state.focus = parts.rail.contains(document.activeElement);
     state.watch?.disconnect();
     if ('IntersectionObserver' in window) { state.watch = new IntersectionObserver(([entry]) => { state.onScreen = entry.isIntersecting; scheduleRec(root); }); state.watch.observe(parts.rail); }
   }
   settleRec(parts, state);
   parts.rail.style.setProperty('--rec-auto', `${AUTO_MS}ms`);
-  state.moving = parts.track.children.length > perView(parts.rail);
+  const k = perView(parts.rail);
+  state.moving = parts.track.children.length > k;
   parts.controls.hidden = !state.moving;
   parts.rail.classList.toggle('is-static', !state.moving);
   if (!state.moving) state.lead = 0;
+  // a tela girou (de 2 para 3 cards à vista) com a fileira perto do fim: o card da frente passa para o fim, sem um buraco no último lugar
+  while (state.moving && state.lead > 0 && state.lead + k > parts.track.children.length) { parts.track.append(parts.track.firstElementChild); state.lead -= 1; }
   placeRec(parts, state); markRec(parts, state); paintToggle(parts, state);
   scheduleRec(root);
 }

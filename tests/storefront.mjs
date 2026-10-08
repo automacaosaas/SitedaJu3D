@@ -95,8 +95,13 @@ const html = string => string.replace(/ /g, '&nbsp;');
   const cartView = read('dist/cart-view.js'), cartCss = read('dist/cart-page.css');
   assert.match(cartView, /const AUTO_MS = 4200;/);
   assert.match(cartView, /slide\.inert = index < state\.lead \|\| index >= state\.lead \+ k;/, 'the cards out of view leave the Tab order');
+  // the cart is redrawn on every quantity and every shipping quote: the row carries on from the card that was first in view; turning a
+  // phone sideways (2 -> 3 in view) near the end of the row leaves no empty place
+  assert.match(cartView, /const first = state\.rail\?\.querySelector\('\[data-rec-track\]'\)\?\.children\[state\.lead\]/, 'a redraw keeps the row where it was');
+  assert.match(cartView, /while \(state\.moving && state\.lead > 0 && state\.lead \+ k > parts\.track\.children\.length\)/, 'no hole after rotating the phone');
   assert.match(cartCss, /\.cart-rec-rail \{ --rec-k: 3; --rec-gap: 16px; display: grid; grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/, 'three cards and "Ver mais" in four columns');
   assert.match(cartCss, /\.cart-rec-rail, \.cart-rec-rail\[data-count\] \{ --rec-k: 2;/, 'two cards on phones');
+  assert.match(cartCss, /\.cart-rec-rail\[data-count="1"\] \{ --rec-k: 1; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); grid-template-areas: "view more"; \}/, 'one suggestion on a phone: the card and "Ver mais +" side by side');
   assert.match(cartCss, /@media \(prefers-reduced-motion: reduce\) \{ \.cart-rec-toggle \{ display: none; \}/, 'no autoplay (nor its pause button) with reduced motion');
   assert.match(cartCss, /\.cart-checkout-bar\.is-at-summary \.cart-summary-balloon \{ opacity: 0; visibility: hidden;/, 'the hidden "Ver resumo" balloon leaves the Tab order');
   // "Ver resumo" (bar at the bottom on phones): a smooth scroll to the summary, which lights up for a moment
@@ -195,6 +200,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // audit L1, then the review of 2026-10-08 (visual 14): side cards recede by scale, with the text and the piece in true colors
   assert.match(read('dist/catalog.css'), /\.product-rail-card\{opacity:1;filter:none\}/, 'side cards: full contrast (audit L1)');
   assert.doesNotMatch(read('dist/catalog.css'), /\.product-rail-card:not\(\.is-active\) \.product-rail-art img\{opacity/, 'side cards: the picture keeps its true colors');
+  // on phones the side cards peek with the photo only: the clip closes under it (no empty white band where the hidden name would be)
+  assert.match(read('dist/catalog.css'), /@media \(max-width: 760px\) \{[^@]*--art-h: 212px; --keep: calc\(var\(--art-h\) \+ 10px\);/, 'phone side cards: just the photo');
   const tools = /<div class="viewer-tools"[^]*?<\/div>/.exec(read('dist/index.html'))[0];
   assert.doesNotMatch(tools, /[↶↷]|>[+−]</, '3D controls are drawn icons, not text characters (audit L2)');
   assert.equal((tools.match(/<svg /g) || []).length, 4);

@@ -73,10 +73,11 @@
   .home .product-carousel-stage { height: 580px; --card-w: min(390px, 38vw); --card-h: 554px; --art-h: 210px; --keep: calc(var(--art-h) + 92px); --slot-w: calc(var(--card-w) * .77); --side-s: .6; --side-y: 60px; }
 }
 @media (max-width: 760px) {
-  /* no celular os vizinhos espiam por trás do card do centro, com o meio da foto à vista; o nome (que sairia cortado) não aparece */
+  /* no celular os vizinhos espiam por trás do card do centro, com o meio da foto à vista; o nome (que sairia cortado) não aparece, e o
+     recorte fecha logo abaixo da foto (sem a faixa branca vazia onde o nome ficaria) */
   .home .product-rail-card:not(.is-active) .product-rail-copy h3 { opacity: 0; transition: opacity .16s ease; }
   .home .product-rail-card.is-active .product-rail-copy h3 { opacity: 1; transition: opacity .32s ease .16s; }
-  .home .product-carousel-stage { height: 540px; --card-w: 68vw; --card-r: 19px; --card-h: 516px; --art-h: 212px; --keep: calc(var(--art-h) + 86px); --slot-w: 44vw; --side-s: .76; --side-y: 48px; }
+  .home .product-carousel-stage { height: 540px; --card-w: 68vw; --card-r: 19px; --card-h: 516px; --art-h: 212px; --keep: calc(var(--art-h) + 10px); --slot-w: 44vw; --side-s: .76; --side-y: 48px; }
 }
 @media (max-width: 390px) {
   .home .product-carousel-stage { height: 532px; --card-w: 70vw; --card-h: 516px; --art-h: 204px; --side-s: .74; }
@@ -86,8 +87,9 @@
 .home .product-carousel-track.is-dragging .product-rail-card { transition: opacity .2s ease, clip-path 560ms cubic-bezier(.22, 1, .36, 1); }
 .home .product-carousel-track.is-dragging .product-rail-card.is-far { opacity: 1; }
 .home .product-carousel-track.is-instant .product-rail-card, .home .product-carousel-track.is-instant .product-rail-card *, .home .product-carousel-track.is-instant .product-rail-card::before, .home .product-rail-card.is-placing { transition: none !important; }
-/* As bordas do palco esmaecem na cor da faixa da seção (--band, carousel.css): um card que sai ou entra some aos poucos, sem corte seco. */
-.home .catalog-home[data-themed] .product-carousel-track::before, .home .catalog-home[data-themed] .product-carousel-track::after { content: ''; position: absolute; top: -24px; bottom: -56px; z-index: 4; width: clamp(20px, 4vw, 64px); pointer-events: none; }
+/* As bordas do palco esmaecem na cor da faixa da seção (--band, carousel.css): um card que sai ou entra some aos poucos, sem corte seco.
+   O que passa da fileira, em cima e embaixo, se dissolve também: embaixo a faixa já começa a sumir e uma ponta lisa viraria um retângulo. */
+.home .catalog-home[data-themed] .product-carousel-track::before, .home .catalog-home[data-themed] .product-carousel-track::after { content: ''; position: absolute; top: -24px; bottom: -56px; z-index: 4; width: clamp(20px, 4vw, 64px); pointer-events: none; -webkit-mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(transparent, #000 24px, #000 calc(100% - 56px), transparent); }
 .home .catalog-home[data-themed] .product-carousel-track::before { left: 0; background: linear-gradient(90deg, var(--band), transparent); }
 .home .catalog-home[data-themed] .product-carousel-track::after { right: 0; background: linear-gradient(270deg, var(--band), transparent); }
 /* Hover só onde há mouse (no toque ele ficava preso); ao apertar, os botões afundam na hora. */

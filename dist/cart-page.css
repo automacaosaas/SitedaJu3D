@@ -69,7 +69,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-rec-rail { --rec-k: 3; --rec-gap: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--rec-gap); align-items: stretch; }
 .cart-rec-rail[data-count="1"] { --rec-k: 1; }
 .cart-rec-rail[data-count="2"] { --rec-k: 2; }
-.cart-rec-viewport { grid-column: span var(--rec-k); min-width: 0; margin: -10px calc(-1 * var(--rec-gap)) -30px; padding: 10px var(--rec-gap) 30px; overflow: hidden; touch-action: pan-y; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
+.cart-rec-viewport { grid-column: span var(--rec-k); min-width: 0; margin: -10px calc(-1 * var(--rec-gap)) -30px; padding: 10px var(--rec-gap) 30px; overflow: hidden; touch-action: pan-y pinch-zoom; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
 .cart-rec-track { display: flex; gap: var(--rec-gap); margin: 0; padding: 0; list-style: none; }
 .cart-rec-rail:not(.is-static) .cart-rec-track { will-change: transform; }
 .cart-rec-slide { flex: 0 0 calc((100% - (var(--rec-k) - 1) * var(--rec-gap)) / var(--rec-k)); min-width: 0; }
@@ -221,6 +221,12 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-rec-more-plus svg { width: 18px; height: 18px; stroke-width: 2; }
   .cart-rec-more-label { font: 650 14px/1 'DM Sans', sans-serif; letter-spacing: .01em; color: var(--rose); }
   .cart-rec-name { font-size: 15px; }
+  /* uma peça só: o card e o "Ver mais +" lado a lado, duas casas iguais (sem meia fileira vazia e o botão sozinho embaixo) */
+  .cart-rec-rail[data-count="1"] { --rec-k: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "view more"; }
+  .cart-rec-rail[data-count="1"] .cart-rec-viewport + .cart-rec-more { grid-area: more; display: grid; align-content: center; justify-items: center; justify-self: stretch; gap: 12px; padding: 18px 10px; border: 1px solid color-mix(in srgb, var(--rose) 20%, transparent); border-radius: 18px; background: linear-gradient(160deg, var(--theme-wash, #f8e4ea), color-mix(in srgb, var(--theme-wash, #f8e4ea) 30%, #fff) 85%); }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-plus { width: 52px; height: 52px; background: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--rose) 18%, transparent); }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-plus svg { width: 24px; height: 24px; stroke-width: 1.8; }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-label { font: 500 18px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.2px; }
   .cart-info-list a { font-size: 13px; }
 }
 @media (hover: hover) {
