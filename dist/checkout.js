@@ -120,7 +120,7 @@ function mobileBar(items) {
 const announce = message => {clearTimeout(noticeTimer);liveRegion.textContent = message;noticeTimer=setTimeout(()=>{liveRegion.textContent='';},7000);};
 const primary = (text, action, extra = '') => `<button class="primary shop-primary" data-action="${action}" ${extra}>${text}<span aria-hidden="true">↗</span></button>`;
 function heading(kicker, title, description) { return `<div class="shop-heading"><p class="eyebrow">${kicker}</p><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`; }
-function chips(item) { return `<ul class="color-chips">${itemColors(item.productId, item.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${c.part ? `${c.part}: ` : ''}<strong>${c.name}</strong></span></li>`).join('')}</ul>`; }
+function chips(item) { return `<ul class="color-chips">${itemColors(item.productId, item.selection).map(c => `<li><i style="--chip:${c.paint}" aria-hidden="true"></i><span>${c.part ? `${c.part}: ` : ''}<strong>${c.name}</strong></span></li>`).join('')}</ul>`; }
 // as linhas de cor de um item no texto do pedido (WhatsApp, copiar): "Corpo: Verde-menta"; na peça de cores fixas, as cores dela
 const colorLines = item => itemColors(item.productId, item.selection).map(c => c.part ? `${c.part}: ${c.name}` : c.name).join('\n');
 function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${(itemColors(item.productId, item.selection)[0]?.hex || '#cccccc')}40"><img src="${esc(item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`)}" alt="${esc(item.title)} — ${item.thumbnail ? 'prévia 3D da combinação' : 'imagem nas cores originais'}"><small>${item.thumbnail ? 'Suas cores' : 'Cores originais'}</small></div>`; }

@@ -156,6 +156,12 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
 .pl-swatch i { width: 100%; height: 100%; border-radius: 50%; background: var(--swatch); border: 1px solid #38232633; box-shadow: inset 0 0 0 2px #ffffff70; }
 .pl-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pl-accent); }
 .pl-swatch:active { transform: scale(.92); }
+.pl-palette-group { flex: 0 0 100%; margin-top: 4px; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--pl-muted, #7b7076); }
+.pl-palette-group:first-child { margin-top: 0; }
+/* as cores com brilho e multicor: o degradê do filamento e um reflexo que passa pela bolinha */
+.pl-swatch[data-finish] i { position: relative; overflow: hidden; }
+.pl-swatch[data-finish] i::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); translate: -60% 0; transition: translate .6s var(--pl-ease); pointer-events: none; }
+.pl-swatch[data-finish]:hover i::before, .pl-swatch[data-finish][aria-checked="true"] i::before { translate: 60% 0; }
 .pl-now { min-height: 20px; margin: 12px 0 0; font-size: 13px; color: var(--muted, #71656c); }
 
 /* ── production, delivery and returns: accordions ── */

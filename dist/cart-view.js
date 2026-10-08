@@ -14,7 +14,7 @@ const formatCep = cep => { const digits = String(cep ?? '').replace(/\D/g, '').s
 function swatches(item) {
   return `<div class="cart-colors"><span>Cores</span><ul aria-label="Cores ${fixedColors(item.productId) ? 'de' : 'escolhidas para'} ${esc(item.title)}">${itemColors(item.productId, item.selection).map(c => {
     const label = c.part ? `${c.part}: ${c.name}` : c.name;
-    return `<li><span class="cart-swatch" style="--chip:${c.hex}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span></li>`;
+    return `<li><span class="cart-swatch" style="--chip:${c.paint}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span></li>`;
   }).join('')}</ul></div>`;
 }
 

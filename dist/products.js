@@ -1,10 +1,42 @@
+// A paleta da personalização (08/10/2026, os filamentos da Ju), em três grupos (PALETTE_GROUPS): as foscas (PLA), as com brilho
+// (pérola, metalizados e seda) e as multicor (seda: o arco-íris e as duais). Cada cor: `hex`, a cor de referência (a das contas de cor,
+// das auras e do pedido); `finish`, como a peça brilha no 3D (asset-models.js: pearl, metal, silk, rainbow, dual; sem ele, fosco);
+// `stops`, as cores de um filamento multicor (no arco-íris, de baixo para cima, como a peça sai da impressora; na dual, os dois lados
+// do fio; na pérola, os tons dos redemoinhos); `swatch`, a bolinha dela em CSS (o degradê dos brilhos e das multicor; sem ele, o hex); `note`, o acabamento, ao lado do nome.
+// As cores medidas nas fotos da Ju; o Azul BIC é o Pantone 2728 C. Os ids das cores que trocaram de nome ficaram (moss: Verde-oliva,
+// blue: Azul BIC, pink: Rosa-bebê): carrinhos, combinações compartilhadas e pedidos já salvos continuam valendo.
+const SHINE = (spot = 'rgba(255,255,255,.9)') => `radial-gradient(circle at 31% 26%, ${spot} 0 9%, rgba(255,255,255,0) 40%)`;
+const DUAL = (a, b) => `${SHINE('rgba(255,255,255,.72)')}, linear-gradient(125deg, ${a} 0 44%, ${b} 56% 100%)`;
 export const PALETTE = [
-  {id:'mint',name:'Verde-menta',hex:'#89cdbc'}, {id:'moss',name:'Verde-musgo',hex:'#616c52'}, {id:'sky',name:'Azul-céu',hex:'#2bb8df'},
-  {id:'blue',name:'Azul-royal',hex:'#183c99'}, {id:'pink',name:'Rosa Ju',hex:'#ee8eaa'},
-  {id:'lilac',name:'Lilás',hex:'#ab91d1'}, {id:'yellow',name:'Amarelo',hex:'#efcf59'}, {id:'cream',name:'Amarelo-claro',hex:'#f0dd7c'},
-  {id:'red',name:'Vermelho',hex:'#db354c'}, {id:'orange',name:'Laranja',hex:'#f29a44'},
-  {id:'white',name:'Branco',hex:'#f4f1ed'}, {id:'black',name:'Preto',hex:'#28292d'}
+  {id:'white',name:'Branco',hex:'#f4f1ed',group:'solid'}, {id:'skin',name:'Pele caucasiana',hex:'#c9a992',group:'solid'},
+  {id:'sand',name:'Areia',hex:'#cbbd93',group:'solid'}, {id:'cream',name:'Amarelo-claro',hex:'#f0dd7c',group:'solid'},
+  {id:'yellow',name:'Amarelo',hex:'#efcf59',group:'solid'}, {id:'orange',name:'Laranja',hex:'#f29a44',group:'solid'},
+  {id:'red',name:'Vermelho',hex:'#db354c',group:'solid'}, {id:'hotpink',name:'Rosa pink',hex:'#ef4183',group:'solid'},
+  {id:'pink',name:'Rosa-bebê',hex:'#ffc5d3',group:'solid'}, {id:'lilac',name:'Lilás',hex:'#ab91d1',group:'solid'},
+  {id:'blue',name:'Azul BIC',hex:'#00249c',group:'solid'}, {id:'sky',name:'Azul-céu',hex:'#2bb8df',group:'solid'},
+  {id:'aqua',name:'Verde-água',hex:'#56dae6',group:'solid'}, {id:'mint',name:'Verde-menta',hex:'#89cdbc',group:'solid'},
+  {id:'moss',name:'Verde-oliva',hex:'#7c8f73',group:'solid'}, {id:'gray',name:'Cinza prime',hex:'#899199',group:'solid'},
+  {id:'black',name:'Preto',hex:'#28292d',group:'solid'},
+  {id:'pearl',name:'Branco pérola',hex:'#eeeae3',group:'shine',finish:'pearl',note:'acabamento perolado',stops:['#f7f7eb','#e6e4e1','#dcd2ca'],
+    swatch:`${SHINE('#fffef6')}, conic-gradient(from 200deg at 56% 60%, #e6e4e1, #f7f7eb, #d6cbc3, #ecebe9, #dcd2ca, #f6f6ec, #e6e4e1)`},
+  {id:'silver',name:'Prata',hex:'#bdbdbd',group:'shine',finish:'metal',note:'acabamento metalizado',
+    swatch:`${SHINE()}, linear-gradient(135deg, #686868 0%, #f4f4f4 32%, #a7a7a7 52%, #e8e8e8 70%, #787878 100%)`},
+  {id:'gold',name:'Dourado',hex:'#dab728',group:'shine',finish:'metal',note:'acabamento metalizado',
+    swatch:`${SHINE('rgba(255,251,214,.95)')}, linear-gradient(135deg, #ac7803 0%, #faed63 32%, #c69a13 52%, #f7e658 70%, #b98808 100%)`},
+  {id:'bronze',name:'Bronze',hex:'#ce8946',group:'shine',finish:'silk',note:'acabamento seda',
+    swatch:`${SHINE('rgba(255,236,210,.85)')}, linear-gradient(135deg, #8e4f1c 0%, #f0b276 32%, #ce8946 55%, #e8a564 72%, #8e4f1c 100%)`},
+  {id:'rainbow',name:'Arco-íris',hex:'#9aa6e0',group:'special',finish:'rainbow',note:'seda multicor',stops:['#fd7ab0','#b689d1','#7b96e2','#75cacf','#6cb089'],
+    swatch:`${SHINE('rgba(255,255,255,.8)')}, linear-gradient(0deg, #fd7ab0, #b689d1 28%, #7b96e2 52%, #75cacf 76%, #6cb089)`},
+  {id:'duopinkblue',name:'Dual rosa e azul',hex:'#e2307a',group:'special',finish:'dual',note:'seda dual',stops:['#e2307a','#1240d8'],swatch:DUAL('#e2307a','#1240d8')},
+  {id:'duogoldorange',name:'Dual dourado e laranja',hex:'#fbaa3c',group:'special',finish:'dual',note:'seda dual',stops:['#fbaa3c','#ef670e'],swatch:DUAL('#fbaa3c','#ef670e')},
+  {id:'duogoldpurple',name:'Dual dourado e roxo',hex:'#921e5b',group:'special',finish:'dual',note:'seda dual',stops:['#e39a44','#921e5b'],swatch:DUAL('#e39a44','#921e5b')},
+  {id:'duobluegreen',name:'Dual azul e verde',hex:'#3c7fc8',group:'special',finish:'dual',note:'seda dual',stops:['#3c7fc8','#7fa35f'],swatch:DUAL('#3c7fc8','#7fa35f')}
 ];
+export const PALETTE_GROUPS = [{id:'solid',name:'Foscas'},{id:'shine',name:'Com brilho'},{id:'special',name:'Multicor'}];
+// A bolinha de uma cor (da paleta ou das cores fixas de uma peça): o degradê dela, ou o hex.
+export const paint = c => c?.swatch || c?.hex || '#cccccc';
+// Cor clara: o ✓ por cima dela vai escuro.
+export const isLight = c => { const n = parseInt(String(c?.hex || '#000000').slice(1), 16); return .2126 * (n >> 16) / 255 + .7152 * ((n >> 8) & 255) / 255 + .0722 * (n & 255) / 255 > .62; };
 export const PRODUCT_CATEGORIES = Object.freeze({
   oftalmologia: Object.freeze({label:'Oftalmologia'}),
   sensoriais: Object.freeze({label:'Sensoriais', emptyMessage:'Novas ideias sensoriais estão chegando.'})
@@ -192,9 +224,9 @@ export const fixedColors=key=>!!PRODUCTS[key]&&!PRODUCTS[key].parts.length;
 // --badge-pill (a pílula) e --badge-glow (o halo). '' para a peça sem selo.
 export function badgeStyle(key){const b=PRODUCTS[key]?.badge;return b?`--badge-ink:linear-gradient(90deg, ${[...b.ink,b.ink[0]].join(', ')});--badge-pill:linear-gradient(135deg, ${b.pill.join(', ')});--badge-glow:${b.glow}`:'';}
 // As cores de um item, para o carrinho, o pedido e os cartões: as escolhidas, parte por parte; na peça de cores fixas, as dela.
-// [{part, name, hex}] (part vazio nas cores fixas)
-export function itemColors(key,selection={}){const p=PRODUCTS[key];if(!p)return [];if(!p.parts.length)return (p.colors||[]).map(c=>({part:'',name:c.name,hex:c.hex}));
-  return p.parts.map(part=>{const c=color(selection?.[part.id]??part.default);return {part:part.name,name:c.name,hex:c.hex};});}
+// [{part, name, hex, paint}] (part vazio nas cores fixas; paint: a bolinha, com o degradê das cores com brilho e multicor)
+export function itemColors(key,selection={}){const p=PRODUCTS[key];if(!p)return [];if(!p.parts.length)return (p.colors||[]).map(c=>({part:'',name:c.name,hex:c.hex,paint:c.hex}));
+  return p.parts.map(part=>{const c=color(selection?.[part.id]??part.default);return {part:part.name,name:c.name,hex:c.hex,paint:paint(c)};});}
 // Cores de fábrica do produto (padrão de cada parte), sem repetir a mesma cor; na peça de cores fixas, as dela.
 export function originalColors(key){if(fixedColors(key))return PRODUCTS[key].colors;const base=defaults(key),seen=new Set();return PRODUCTS[key].parts.map(part=>color(base[part.id])).filter(c=>!seen.has(c.id)&&seen.add(c.id));}
 export function validSelection(key,value){const result=defaults(key);for(const part of PRODUCTS[key].parts){if(PALETTE.some(c=>c.id===value?.[part.id]))result[part.id]=value[part.id];}return result;}

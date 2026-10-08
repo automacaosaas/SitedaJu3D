@@ -678,13 +678,13 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(net.mails.length, 2, 'a notice about an order already recorded as paid sends nothing new');
     const [owner, customer] = [net.mails.find(m => m.to[0] === 'ju@site.test'), net.mails.find(m => m.to[0] === 'ana@example.com')];
     assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('833,00'));
-    assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa Ju') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
+    assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa-bebê') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
     assert(owner.html.includes('Rua da Bahia, 1200') && owner.html.includes('30140-071') && owner.html.includes('wa.me/5531999991234') && owner.html.includes('ana@example.com'), 'and where to send it and how to reach the customer');
     assert(owner.html.includes('NOTA FISCAL') && owner.html.includes(`CPF ${maskCpf(buyer.cpf)}`) && !owner.html.includes(buyer.cpf) && !owner.text.includes(buyer.cpf), 'invoice data for Ju, CPF masked (the full number stays in the panel)');
     assert(owner.html.includes(`Pedido no Mercado Pago: ${card.id}`) && card.id.startsWith('ORD'), 'the Mercado Pago order number, not our internal id');
     assert(owner.html.includes('Cartão de crédito · 3x') && owner.html.includes('Escrever &quot;Ana&quot; na base') && owner.html.includes('AMBIENTE DE TESTE'));
     assert(customer.subject.startsWith('[TESTE] Payment confirmed · JU-'), 'the customer gets it in the language they used');
-    assert(customer.html.includes('Body') && customer.html.includes('Ju pink') && customer.html.includes('Wing details') && customer.html.includes('Credit card · 3x'));
+    assert(customer.html.includes('Body') && customer.html.includes('Baby pink') && customer.html.includes('Wing details') && customer.html.includes('Credit card · 3x'));
 
     const waiting = await notify(handler, pix.id); assert.deepEqual(waiting.json(), {ok: true, paid: false}); assert.equal(net.mails.length, 2, 'an unpaid Pix sends nothing');
     net.pay(pix.id); const bodyOnly = await notify(handler, pix.id, {dataInQuery: false});

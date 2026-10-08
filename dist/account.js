@@ -2,7 +2,7 @@ import {AUTH_MODE, auth, getSession, acceptSession, refreshSession, signOut, rea
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError, missingIdentification} from './identification.js';
 import {icon} from './icons.js';
 import {mountLanguagePicker, getLanguage} from './i18n.js';
-import {PRODUCTS, SOON, color} from './products.js';
+import {PRODUCTS, SOON, color, paint} from './products.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
 const host = document.querySelector('#account-content'), feedback = document.querySelector('#account-feedback');
@@ -59,7 +59,7 @@ const dayText = iso => { const parts = new Intl.DateTimeFormat(getLanguage(), {d
 // The piece: its catalogue thumbnail, the quantity and, as dots, the colours chosen for each part (named in the details).
 const partsOf = item => (PRODUCTS[item.productId]?.parts || []).filter(part => item.selection?.[part.id]);
 const thumb = id => PRODUCTS[id] || SOON[id] ? `<img src="assets/card-preview-${esc(id)}.webp" alt="" width="56" height="56" loading="lazy" decoding="async">` : `<span class="order-thumb-empty">${icon('bag')}</span>`;
-const swatches = item => partsOf(item).length ? `<span class="order-swatches" aria-hidden="true">${partsOf(item).map(part => { const c = color(item.selection[part.id]); return `<i style="--swatch:${esc(c.hex)}" title="${esc(c.name)}"></i>`; }).join('')}</span>` : '';
+const swatches = item => partsOf(item).length ? `<span class="order-swatches" aria-hidden="true">${partsOf(item).map(part => { const c = color(item.selection[part.id]); return `<i style="--swatch:${esc(paint(c))}" title="${esc(c.name)}"></i>`; }).join('')}</span>` : '';
 const itemRow = item => `<li><span class="order-thumb">${thumb(item.productId)}</span><span class="order-item-name"><strong>${Number(item.quantity) || 1}×</strong> <span translate="no">${esc(item.title)}</span></span>${swatches(item)}</li>`;
 // The last thing the Correios said, on the card; every step in the timeline under "Rastrear pacote".
 const lastEvent = o => { const last = o.tracking?.last; return last ? `<p class="order-last">${icon('truck')}<span><span translate="no">${esc(last.description)}</span>${last.place ? ` · <span translate="no">${esc(placeText(last.place))}</span>` : ''} · <time datetime="${esc(last.at)}">${esc(when(last.at))}</time></span></p>` : ''; };

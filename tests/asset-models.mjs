@@ -37,6 +37,34 @@ try{
    for(const [material,previous] of before)assert.equal(material.color.getHexString(),previous.id===part.id?color.hex.slice(1):previous.hex,'Only the selected part changes');
    for(const [material,hex] of fixed)assert.equal(material.color.getHexString(),hex,'Fixed facial/cockpit details keep their colors');
   }
+  // Os acabamentos (products.js › PALETTE, finish; 08/10/2026). O estúdio de reflexos só é pedido quando uma cor com brilho aparece.
+  const studio=new T.Texture();let asked=0;const env=()=>{asked++;return studio;};
+  const pick=finish=>PALETTE.find(c=>c.finish===finish),part=PRODUCTS[key].parts[0].id,materials=[...model.parts.get(part)];
+  model.setColors({[part]:PALETTE.find(c=>!c.finish)},env);
+  assert.equal(asked,0,'matte colors never build the studio');
+  const rainbow=pick('rainbow');model.setColors({[part]:rainbow},env);
+  for(const m of materials){assert.equal(m.vertexColors,true,'rainbow: painted on the vertices');assert.equal(m.color.getHexString(),'ffffff','rainbow: no tint over the painting');assert.equal(m.envMap,studio,'rainbow: silk reflects the studio');}
+  {
+   // de baixo para cima, como sai da impressora: o rosa no pé da parte e o verde no alto
+   model.group.updateMatrixWorld(true);let low={y:Infinity},high={y:-Infinity};const v=new T.Vector3();
+   model.group.traverse(o=>{if(!o.isMesh||!materials.includes(o.material))return;const pos=o.geometry.attributes.position,col=o.geometry.attributes.color;for(let i=0;i<pos.count;i+=7){v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);const c=[col.getX(i),col.getY(i),col.getZ(i)];if(v.y<low.y)low={y:v.y,c};if(v.y>high.y)high={y:v.y,c};}});
+   const first=new T.Color(rainbow.stops[0]),last=new T.Color(rainbow.stops.at(-1));
+   assert.ok(Math.hypot(low.c[0]-first.r,low.c[1]-first.g,low.c[2]-first.b)<.12,`${key}: rainbow starts with ${rainbow.stops[0]} at the bottom`);
+   assert.ok(Math.hypot(high.c[0]-last.r,high.c[1]-last.g,high.c[2]-last.b)<.12,`${key}: rainbow ends with ${rainbow.stops.at(-1)} at the top`);
+  }
+  const dual=pick('dual');model.setColors({[part]:dual},env);
+  {
+   // as duas cores do fio aparecem, cada uma de um lado
+   const [a,b]=dual.stops.map(h=>new T.Color(h));let nearA=0,nearB=0;
+   model.group.traverse(o=>{if(!o.isMesh||!materials.includes(o.material))return;const col=o.geometry.attributes.color;for(let i=0;i<col.count;i+=5){const c=[col.getX(i),col.getY(i),col.getZ(i)];if(Math.hypot(c[0]-a.r,c[1]-a.g,c[2]-a.b)<.05)nearA++;if(Math.hypot(c[0]-b.r,c[1]-b.g,c[2]-b.b)<.05)nearB++;}});
+   assert.ok(nearA>20&&nearB>20,`${key}: dual shows both colors (${nearA}/${nearB})`);
+  }
+  const pearl=pick('pearl');model.setColors({[part]:pearl},env);
+  for(const m of materials){assert.equal(m.vertexColors,true,'pearl: the swirls painted on the vertices');assert.equal(m.color.getHexString(),'ffffff');assert.ok(m.iridescence>0&&m.sheen>0&&m.envMap===studio,'pearl: sheen and iridescence, reflecting the studio');}
+  const metal=pick('metal');model.setColors({[part]:metal},env);
+  for(const m of materials)assert.ok(m.metalness>.8&&m.iridescence===0&&m.envMap===studio&&!m.vertexColors&&m.color.getHexString()===metal.hex.slice(1),'metal: metallic in its own color, reflecting the studio');
+  model.setColors({[part]:'#89cdbc'},env);
+  for(const m of materials){assert.equal(m.envMap,null,'back to matte: no reflection');assert.equal(m.sheen,0);assert.equal(m.iridescence,0);assert.equal(m.vertexColors,false);assert.equal(m.roughness,m.userData.base.roughness,'back to the model\'s own roughness');}
   model.group.updateMatrixWorld(true);
   const bounds=new T.Box3().setFromObject(model.group);
   assert.ok(Math.abs(bounds.min.y+1.9)<.001,'Model rests on the existing pedestal');
@@ -51,7 +79,7 @@ try{
    }
    assert.ok(hits(.27,-.1).length>0,'Solid frame remains around the openings');
   }
-  model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
+  model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors, the finishes (rainbow, dual, pearl, metal) and consistent bounds.`);
  }
  // The pieces in fixed colours with a 3D preview (the lamps: novelties in SOON until 07/10/2026, now on sale): nothing selectable,
  // the same fit on the pedestal as the products.

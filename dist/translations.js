@@ -425,6 +425,31 @@ Amarelo-claro|Light yellow|Amarillo claro
 Azul-céu|Sky blue|Azul cielo
 Azul-royal|Royal blue|Azul real
 Rosa Ju|Ju pink|Rosa Ju
+Pele caucasiana|Caucasian skin|Piel caucásica
+Areia|Sand|Arena
+Rosa pink|Hot pink|Rosa fucsia
+Rosa-bebê|Baby pink|Rosa bebé
+Azul BIC|BIC blue|Azul BIC
+Verde-água|Aqua green|Verde agua
+Verde-oliva|Olive green|Verde oliva
+Cinza prime|Prime gray|Gris prime
+Branco pérola|Pearl white|Blanco perla
+Prata|Silver|Plata
+Dourado|Gold|Dorado
+Bronze|Bronze|Bronce
+Arco-íris|Rainbow|Arcoíris
+Dual rosa e azul|Dual pink and blue|Dual rosa y azul
+Dual dourado e laranja|Dual gold and orange|Dual dorado y naranja
+Dual dourado e roxo|Dual gold and purple|Dual dorado y morado
+Dual azul e verde|Dual blue and green|Dual azul y verde
+Foscas|Matte|Mates
+Com brilho|With shine|Con brillo
+Multicor|Multicolor|Multicolor
+acabamento perolado|pearl finish|acabado perlado
+acabamento metalizado|metallic finish|acabado metalizado
+acabamento seda|silk finish|acabado seda
+seda multicor|multicolor silk|seda multicolor
+seda dual|dual silk|seda dual
 Lilás|Lilac|Lila
 Amarelo|Yellow|Amarillo
 Vermelho|Red|Rojo

@@ -64,7 +64,7 @@ function order(over = {}) {
   assert.equal(i.destination, '1'); assert.equal(i.items[0].cfop, '5101', 'same state');
   assert.equal(i.recipient.address.cityCode, '3106200', 'IBGE code from the CEP lookup');
   assert.deepEqual(i.items.map(x => [x.code, x.quantity, x.unitCents, x.totalCents, x.ncm]), [['borboletoscopio', 2, 12900, 25800, '39269090'], ['aviaoscopia', 1, 15900, 15900, '39269090']]);
-  assert.equal(i.items[0].description, 'Borboletoscópio (Corpo: Rosa Ju, Detalhes das asas: Lilás)', 'the colors go on the invoice line');
+  assert.equal(i.items[0].description, 'Borboletoscópio (Corpo: Rosa-bebê, Detalhes das asas: Lilás)', 'the colors go on the invoice line');
   assert.deepEqual(i.totals, {productsCents: 41700, freightCents: 1800, discountCents: 0, totalCents: 43500});
   const pix = buildInvoice({order: order({method: 'pix', totalCents: 41700 - 2085 + 1800}), city: BH, environment: 'homologacao', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.equal(pix.totals.discountCents, 2085, 'the Pix 5% goes on the note as a discount'); assert.equal(pix.payment.cents, 41415); assert.equal(pix.payment.code, '17');

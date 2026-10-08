@@ -27,6 +27,32 @@ export const modelURL=key=>ASSETS[key];
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).
 export const PRESENTATION_SCALE={borboletoscopio:1.25};
 
+// Os acabamentos dos filamentos (products.js › PALETTE, `finish`). Sem acabamento é o PLA fosco de sempre: a rugosidade e o metal do
+// próprio modelo, sem reflexo de ambiente (o visual de antes). Os outros refletem o estúdio do visualizador (viewer.js › studio): seda
+// e metal com o brilho acetinado dos filamentos silk; a pérola com brilho de tecido, uma iridescência leve e os redemoinhos creme,
+// cinza-frio e bege da foto pintados nos vértices, como o arco-íris e as duais (paintVertices). Sem verniz (clearcoat): nas bordas finas
+// dos modelos ele deixava pontinhos escuros.
+const FINISHES={
+  silk:{metalness:.45,roughness:.3},
+  metal:{metalness:.9,roughness:.26},
+  pearl:{metalness:.12,roughness:.24,sheen:.8,sheenRoughness:.4,sheenColor:'#f6eadb',iridescence:.6,iridescenceIOR:1.32,iridescenceThicknessRange:[160,420]},
+  rainbow:{metalness:.4,roughness:.3},
+  dual:{metalness:.42,roughness:.3}
+};
+const PAINTED=['rainbow','dual','pearl'];
+// Quantas voltas o fio dual dá do pé ao topo da parte (as faixas em diagonal do vaso da foto).
+const DUAL_TWIST=.75;
+// A parte que se escolhe vira MeshPhysicalMaterial (verniz, brilho de tecido, iridescência); no fosco ele desenha igual ao do modelo.
+function physical(source){
+  const keep=['color','roughness','metalness','map','normalMap','normalScale','aoMap','emissive','emissiveIntensity','side','transparent','opacity','alphaTest','flatShading'];
+  const params=Object.fromEntries(keep.filter(k=>source[k]!==undefined&&source[k]!==null).map(k=>[k,source[k]?.clone?source[k].clone():source[k]]));
+  const material=new T.MeshPhysicalMaterial({...params,name:source.name});
+  material.userData.base={roughness:material.roughness,metalness:material.metalness};
+  source.dispose();
+  return material;
+}
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t);};
+
 export function disposeAsset(group){
   const geometries=new Set(),materials=new Set(),textures=new Set(),images=new Set();
   group.traverse(object=>{
@@ -53,19 +79,81 @@ export async function createAssetModel(key,colors,signal){
   const center=bounds.getCenter(new T.Vector3()),scale=4.1*(PRESENTATION_SCALE[key]||1)/size.y;
   const wrapper=new T.Group();wrapper.name=key;wrapper.add(group);
   wrapper.scale.setScalar(scale);wrapper.position.set(-center.x*scale,-1.9-bounds.min.y*scale,-center.z*scale);
-  const parts=new Map();
+  const parts=new Map(),meshes=new Map(),upgraded=new Map(),shared=new Set();
   group.traverse(object=>{
     // Dense, thin Rodin surfaces produce shadow-map acne. Keep their pedestal
     // shadows, while lighting the model itself without the coarse shadow map.
     if(!object.isMesh)return;object.castShadow=true;object.receiveShadow=false;
-    for(const material of Array.isArray(object.material)?object.material:[object.material]){
+    const list=Array.isArray(object.material)?object.material:[object.material];
+    list.forEach((material,i)=>{
       const part=material.name.replace(/\.\d+$/,'');
-      if(['body','details','engines'].includes(part)){
-        if(!parts.has(part))parts.set(part,new Set());parts.get(part).add(material);
+      if(!['body','details','engines'].includes(part))return;
+      if(!upgraded.has(material))upgraded.set(material,physical(material));
+      const next=upgraded.get(material);
+      if(Array.isArray(object.material))object.material[i]=next;else object.material=next;
+      if(!parts.has(part)){parts.set(part,new Set());meshes.set(part,[]);}
+      parts.get(part).add(next);
+      // a pintura nos vértices é de cada peça: uma geometria repetida (os dois motores) ganha a sua cópia
+      if(shared.has(object.geometry))object.geometry=object.geometry.clone();
+      shared.add(object.geometry);
+      if(!meshes.get(part).includes(object))meshes.get(part).push(object);
+    });
+  });
+  // O arco-íris muda com a altura da parte, camada por camada, como a peça sai da impressora (de baixo para cima, `stops`); a dual,
+  // com o lado para onde cada face olha (o fio tem uma cor de cada lado e gira devagar ao subir); a pérola, em redemoinhos suaves
+  // (senos que se dobram uns sobre os outros, no tamanho da parte) entre o creme, o cinza-frio e o bege. Feito uma vez por cor e guardado.
+  const at=new T.Vector3(),facing=new T.Vector3(),normalMatrix=new T.Matrix3(),mixed=new T.Color();
+  function paintVertices(part,c){
+    const list=meshes.get(part)||[],stops=c.stops.map(hex=>new T.Color(hex));
+    wrapper.updateMatrixWorld(true);
+    const box=new T.Box3();
+    for(const mesh of list){const position=mesh.geometry.attributes.position;for(let i=0;i<position.count;i++)box.expandByPoint(at.fromBufferAttribute(position,i).applyMatrix4(mesh.matrixWorld));}
+    const low=box.min.y,span=box.max.y-low||1,center=box.getCenter(new T.Vector3()),size=Math.max(...box.getSize(new T.Vector3()).toArray())||1;
+    const ramp=x=>{const k=Math.min(stops.length-2,Math.floor(x*(stops.length-1)));return mixed.copy(stops[k]).lerp(stops[k+1],smooth(0,1,x*(stops.length-1)-k));};
+    for(const mesh of list){
+      const geometry=mesh.geometry,cache=geometry.userData.paints||(geometry.userData.paints={});
+      if(!cache[c.id]){
+        if(!geometry.attributes.normal)geometry.computeVertexNormals();
+        const position=geometry.attributes.position,normal=geometry.attributes.normal,out=new Float32Array(position.count*3);
+        normalMatrix.getNormalMatrix(mesh.matrixWorld);
+        for(let i=0;i<position.count;i++){
+          const h=(at.fromBufferAttribute(position,i).applyMatrix4(mesh.matrixWorld).y-low)/span;
+          if(c.finish==='rainbow')ramp(h);
+          else if(c.finish==='pearl'){
+            const x=(at.x-center.x)/size,y=(at.y-center.y)/size,z=(at.z-center.z)/size;
+            ramp(smooth(.15,.85,.5+.5*Math.sin(5.1*x+2.6*Math.sin(4.2*y+1.3)+1.9*Math.sin(3.7*z+2.1*x))*Math.cos(2.3*y-1.4*z+.7)));
+          }
+          else{
+            facing.fromBufferAttribute(normal,i).applyMatrix3(normalMatrix).normalize();
+            // nas faces de cima (o topo da peça) as duas cores se misturam, como as linhas do preenchimento
+            const side=Math.min(1,Math.hypot(facing.x,facing.z)*1.6),wave=.5+.5*Math.sin(Math.atan2(facing.z,facing.x)+h*Math.PI*2*DUAL_TWIST)*side;
+            mixed.copy(stops[0]).lerp(stops[1],smooth(.36,.64,wave));
+          }
+          out[i*3]=mixed.r;out[i*3+1]=mixed.g;out[i*3+2]=mixed.b;
+        }
+        cache[c.id]=new T.BufferAttribute(out,3);
+      }
+      geometry.setAttribute('color',cache[c.id]);
+    }
+  }
+  // selection: {parte: cor}, a cor como hex (sempre fosco) ou como a cor da paleta (com o acabamento dela); env: o estúdio do
+  // visualizador (ou a função que o faz: só é feito quando uma cor com brilho aparece).
+  function setColors(selection,env=null){
+    let studio;const reflection=()=>studio===undefined?(studio=(typeof env==='function'?env():env)||null):studio;
+    for(const [part,materials] of parts){
+      const value=selection[part];if(!value)continue;
+      const c=typeof value==='string'?{hex:value}:value,finish=FINISHES[c.finish],painted=!!(finish&&c.stops&&PAINTED.includes(c.finish));
+      if(painted)paintVertices(part,c);
+      for(const m of materials){
+        m.roughness=finish?.roughness??m.userData.base.roughness;m.metalness=finish?.metalness??m.userData.base.metalness;
+        m.sheen=finish?.sheen||0;if(finish?.sheen){m.sheenRoughness=finish.sheenRoughness;m.sheenColor.set(finish.sheenColor);}
+        m.iridescence=finish?.iridescence||0;if(finish?.iridescence){m.iridescenceIOR=finish.iridescenceIOR;m.iridescenceThicknessRange=[...finish.iridescenceThicknessRange];}
+        const reflect=finish?reflection():null;
+        if(m.vertexColors!==painted||m.envMap!==reflect){m.vertexColors=painted;m.envMap=reflect;m.needsUpdate=true;}
+        m.color.set(painted?'#ffffff':c.hex);
       }
     }
-  });
-  function setColors(selection){for(const [part,materials] of parts){if(selection[part])materials.forEach(m=>m.color.set(selection[part]));}}
+  }
   setColors(colors);
   return {group:wrapper,parts,setColors,dispose(){disposeAsset(wrapper);}};
 }

@@ -1,4 +1,4 @@
-import {PRODUCTS, PALETTE, defaults, color, validSelection} from './products.js';
+import {PRODUCTS, PALETTE, PALETTE_GROUPS, defaults, color, paint as swatchOf, isLight, validSelection} from './products.js';
 import {readCart, writeCart, putItem, putItems, totals} from './cart-store.js';
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {icon} from './icons.js';
@@ -24,7 +24,8 @@ function setup(root, key) {
   let selection = {...original}, part = product.parts[0]?.id, view = 'photo', viewer = null, viewerImport = null, request = 0;
   let spinning = !reduced.matches, onScreen = true, busy = false;
   const isOriginal = () => product.parts.every(p => selection[p.id] === original[p.id]);
-  const hex = () => Object.fromEntries(Object.entries(selection).map(([id, value]) => [id, color(value).hex]));
+  // as cores escolhidas como as da paleta (com o acabamento: o 3D brilha como o filamento)
+  const chosen = () => Object.fromEntries(Object.entries(selection).map(([id, value]) => [id, color(value)]));
 
   // O botão do mini-carrinho do catalog.js só conhece as cores originais: daqui em diante esta página adiciona as escolhidas.
   add.removeAttribute('data-add-product');
@@ -50,7 +51,7 @@ function setup(root, key) {
       const {ProductViewer} = await viewerImport;
       if (id !== request) return;
       if (!viewer) { viewer = new ProductViewer(host, fail); tune(viewer); }
-      const shown = await viewer.show(key, hex(), product.title);
+      const shown = await viewer.show(key, chosen(), product.title);
       if (!shown || id !== request) return;
       status.hidden = true; stage.classList.add('is-3d-ready');
       viewer.setAuto(spinning && onScreen);
@@ -144,12 +145,13 @@ function setup(root, key) {
     <div class="pl-custom-head"><p>Escolha a cor de cada parte</p><button type="button" class="pl-reset" data-pl-reset>Restaurar cores</button></div>
     <div class="pl-tabs" role="group" aria-label="Partes da peça">${product.parts.map(p => `<button type="button" data-pl-tab="${p.id}" aria-pressed="false"><i aria-hidden="true"></i><span></span></button>`).join('')}</div>
     <p class="pl-hint" data-pl-hint></p>
-    <div class="pl-palette" role="radiogroup" aria-label="Cores">${PALETTE.map(c => `<button type="button" class="pl-swatch" role="radio" aria-checked="false" data-pl-color="${c.id}" style="--swatch:${c.hex}"><i aria-hidden="true"></i></button>`).join('')}</div>
+    <div class="pl-palette" role="radiogroup" aria-label="Cores">${PALETTE_GROUPS.map(g => `<span class="pl-palette-group" aria-hidden="true" data-pl-group="${g.id}"></span>` + PALETTE.filter(c => c.group === g.id).map(c => `<button type="button" class="pl-swatch" role="radio" aria-checked="false" data-pl-color="${c.id}"${c.finish ? ` data-finish="${c.finish}"` : ''} style="--swatch:${swatchOf(c)};--check:${isLight(c) ? '#332b32' : '#fff'}"><i aria-hidden="true"></i></button>`).join('')).join('')}</div>
     <p class="pl-now" data-pl-now aria-live="polite"></p>
   </div></div>`;
   // nomes por textContent/atributo (vêm dos dados, e o i18n.js traduz)
   product.parts.forEach(p => { panel.querySelector(`[data-pl-tab="${p.id}"] span`).textContent = p.name; });
   PALETTE.forEach(c => { const b = panel.querySelector(`[data-pl-color="${c.id}"]`); b.title = c.name; b.setAttribute('aria-label', c.name); });
+  PALETTE_GROUPS.forEach(g => { panel.querySelector(`[data-pl-group="${g.id}"]`).textContent = g.name; });
 
   // As bolinhas no canto da peça: na foto, as cores originais (é o que ela mostra); no 3D, as escolhidas, mudando na hora.
   function paintDots() {
@@ -157,7 +159,7 @@ function setup(root, key) {
     dots.setAttribute('aria-label', shown === original || isOriginal() ? 'Cores originais' : 'Suas cores');
     dots.querySelectorAll('[data-pl-part]').forEach(dot => {
       const p = product.parts.find(item => item.id === dot.dataset.plPart), c = color(shown[p.id]), i = dot.querySelector('i');
-      if (i.style.getPropertyValue('--chip') !== c.hex) { i.style.setProperty('--chip', c.hex); if (!reduced.matches) { dot.classList.remove('is-changed'); void dot.offsetWidth; dot.classList.add('is-changed'); } }
+      if (i.style.getPropertyValue('--chip') !== swatchOf(c)) { i.style.setProperty('--chip', swatchOf(c)); if (!reduced.matches) { dot.classList.remove('is-changed'); void dot.offsetWidth; dot.classList.add('is-changed'); } }
       dot.title = `${p.name}: ${c.name}`; dot.setAttribute('aria-label', dot.title);
       dot.setAttribute('aria-pressed', String(!panel.hidden && p.id === part));
     });
@@ -165,13 +167,13 @@ function setup(root, key) {
   function paint(message) {
     const current = product.parts.find(p => p.id === part);
     paintDots();
-    panel.querySelectorAll('[data-pl-tab]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plTab === part)); b.querySelector('i').style.background = color(selection[b.dataset.plTab]).hex; });
+    panel.querySelectorAll('[data-pl-tab]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plTab === part)); b.querySelector('i').style.background = swatchOf(color(selection[b.dataset.plTab])); });
     panel.querySelectorAll('[data-pl-color]').forEach(b => { const on = b.dataset.plColor === selection[part]; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; });
     panel.querySelector('[data-pl-hint]').textContent = current.hint;
     panel.querySelector('[data-pl-reset]').hidden = isOriginal();
     if (!add.classList.contains('is-added')) add.querySelector('span').textContent = isOriginal() ? 'Adicionar nas cores originais' : 'Adicionar com estas cores';
     if (message) panel.querySelector('[data-pl-now]').textContent = message;
-    viewer?.update(hex());
+    viewer?.update(chosen());
   }
   function openPanel(open, focusPart) {
     if (focusPart) part = focusPart;
@@ -218,7 +220,7 @@ function setup(root, key) {
   // A foto mostra só as cores originais: ao escolher uma cor, a peça passa para o 3D.
   function choose(id) {
     selection = validSelection(key, {...selection, [part]: id});
-    paint(`${product.parts.find(p => p.id === part).name}: ${color(id).name}.`);
+    paint(`${product.parts.find(p => p.id === part).name}: ${color(id).name}${color(id).note ? ` · ${color(id).note}` : ''}.`);
     if (view !== '3d') setView('3d');
   }
   // ativo (cores abertas), o botão se pinta com as cores e mostra um × pequeno: clicar de novo fecha

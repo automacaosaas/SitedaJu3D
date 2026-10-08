@@ -31,11 +31,28 @@ export class ProductViewer{
       if(version!==this.loadVersion){model.dispose();return false;}
       this.model=model;this.scene.add(model.group);this.key=key;this.reset();
     }
-    this.model.setColors(this.colors);
+    this.model.setColors(this.colors,()=>this.studio());
     this.renderer.domElement.setAttribute('aria-label',`Modelo 3D de ${title}`);
     this.renderer.domElement.hidden=false;this.active=true;this.resize();this.render();this.loop();return true;
   }
-  update(colors){this.colors=colors;this.model?.setColors(colors);this.render();}
+  update(colors){this.colors=colors;this.model?.setColors(colors,()=>this.studio());this.render();}
+  // O estúdio que os acabamentos com brilho refletem (asset-models.js › FINISHES; o fosco não reflete nada): uma cúpula de branco quente
+  // em cima a um cinza-lilás embaixo (o chão) e caixas de luz — a principal no alto à esquerda, como a luz da cena, uma faixa alta à
+  // direita, um contraluz atrás e um rebatedor embaixo. Feito uma vez, só quando a primeira cor com brilho aparece.
+  studio(){
+    if(this.environment)return this.environment;
+    const scene=new T.Scene(),made=[];
+    const add=(geometry,material,place=()=>{})=>{const mesh=new T.Mesh(geometry,material);place(mesh);scene.add(mesh);made.push(geometry,material);};
+    add(new T.SphereGeometry(20,48,24),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:{top:{value:new T.Color('#fffaf4')},bottom:{value:new T.Color('#8f8794')}},
+      vertexShader:'varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader:'uniform vec3 top;uniform vec3 bottom;varying vec3 v;void main(){gl_FragColor=vec4(mix(bottom,top,smoothstep(-.35,.6,v.y)),1.);}'}));
+    const panel=(w,h,power,x,y,z)=>add(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({color:new T.Color(power,power,power),side:T.DoubleSide}),mesh=>{mesh.position.set(x,y,z);mesh.lookAt(0,0,0);});
+    panel(9,6,6,-8,10,8);panel(3,12,3.5,11,3,-2);panel(12,2.5,2.5,0,4,-12);panel(6,6,1.2,4,-6,9);
+    const pmrem=new T.PMREMGenerator(this.renderer);
+    this.environment=pmrem.fromScene(scene,.03).texture;
+    pmrem.dispose();made.forEach(item=>item.dispose());
+    return this.environment;
+  }
   resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;const changed=w!==this.width||h!==this.height;this.width=w;this.height=h;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();if(changed)this.fit();this.render();}
   fit(){
     if(!this.model)return;
@@ -77,5 +94,5 @@ export class ProductViewer{
     finally{this.renderer.setSize(this.width,this.height,false);this.render();}
   }
   hide(){this.loadVersion=(this.loadVersion||0)+1;this.loadController?.abort();this.active=false;this.stop();this.renderer.domElement.hidden=true;}
-  dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+  dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }

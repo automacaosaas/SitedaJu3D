@@ -22,7 +22,7 @@ const {translate} = await site('i18n-core.js');
   const html = miniCartBody({cart, itemId: id, freeShipping: {fromCents: 50000, label: 'PAC'}});
   assert.match(html, /Adicionado ao carrinho/);
   assert.match(html, /<h3>Borboletoscópio<\/h3>/);
-  assert.match(html, /Corpo: <strong>Rosa Ju<\/strong>/, 'the colors chosen, by part');
+  assert.match(html, /Corpo: <strong>Rosa-bebê<\/strong>/, 'the colors chosen, by part');
   assert.match(html, /<dt>1 peça no carrinho<\/dt><dd>R\$\s?265,00<\/dd>/);
   assert.match(html, /<dt>No Pix<\/dt><dd>R\$\s?251,75<\/dd>/, 'the Pix total, with the shop rule');
   assert.match(html, /Faltam <strong>R\$\s?235,00<\/strong> para o frete grátis \(PAC\)/, 'how far the free delivery is');

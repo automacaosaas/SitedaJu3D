@@ -171,6 +171,18 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
+- **Paleta de cores nova, com acabamentos no 3D (08/10/2026):** 26 cores em três grupos (`PALETTE_GROUPS` em `products.js`): 17
+  foscas, 4 com brilho (Branco pérola, Prata, Dourado, Bronze) e 5 multicor de seda (Arco-íris e as duais rosa e azul, dourado e
+  laranja, dourado e roxo, azul e verde). As cores foram medidas nas fotos que a Ju mandou; o Azul BIC é o Pantone 2728 C (#00249c) e o
+  Rosa-bebê é um rosa pastel (#ffc5d3), os dois sem foto de referência. Os ids das que trocaram de nome ficaram (`moss` = Verde-oliva,
+  `blue` = Azul BIC, `pink` = Rosa-bebê): carrinhos, links de combinação e pedidos salvos continuam valendo. O corpo do Dinossauroscópio
+  passou a abrir em Verde-oliva e o do avião em Azul BIC no 3D, mas as fotos dos dois ainda são das cores antigas. No 3D
+  (`asset-models.js`), as partes que se escolhem viram `MeshPhysicalMaterial` (no fosco desenham igual a antes); `finish` dá o acabamento:
+  seda e metal refletem um estúdio feito na hora (`viewer.js › studio`, só quando aparece uma cor com brilho), o arco-íris muda com a
+  altura da parte, a dual com o lado para onde cada face olha, e a pérola tem redemoinhos creme, cinza-frio e bege, brilho de tecido e
+  iridescência. Sem `clearcoat`, porque deixava pontinhos escuros nas bordas finas. As bolinhas de cor de todo o site usam `paint(c)` (o
+  degradê das cores com brilho e multicor); `tests/asset-models.mjs` confere os acabamentos. A cópia do servidor
+  (`api/_lib/catalog.js › COLORS`) tem as mesmas cores, na mesma ordem, em PT, EN e ES.
 - **Vitrine de novidade das lâmpadas de fenda (08/10/2026):** `fenda.html` (endereço curto `/fenda`, que o servidor abre como
   `fenda.html`) e o banner "Novidade · Lâmpada de fenda" da home (entre a vitrine e "Nossa coleção", entre `<!-- novidade -->` e
   `<!-- /novidade -->` no `index.html`). Marcação em `dist/fenda-stage.js`, gravada por `node tools/build-product-pages.cjs`; movimento em

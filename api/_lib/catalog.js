@@ -9,9 +9,16 @@ const MAX_LINES = 60, MAX_QUANTITY = 99;
 
 // Color and part names in the three site languages (same wording as dist/translations.js).
 const COLORS = Object.freeze({
-  mint: ['Verde-menta', 'Mint green', 'Verde menta'], moss: ['Verde-musgo', 'Moss green', 'Verde musgo'], sky: ['Azul-céu', 'Sky blue', 'Azul cielo'], blue: ['Azul-royal', 'Royal blue', 'Azul real'],
-  pink: ['Rosa Ju', 'Ju pink', 'Rosa Ju'], lilac: ['Lilás', 'Lilac', 'Lila'], yellow: ['Amarelo', 'Yellow', 'Amarillo'], cream: ['Amarelo-claro', 'Light yellow', 'Amarillo claro'],
-  red: ['Vermelho', 'Red', 'Rojo'], orange: ['Laranja', 'Orange', 'Naranja'], white: ['Branco', 'White', 'Blanco'], black: ['Preto', 'Black', 'Negro']
+  white: ['Branco', 'White', 'Blanco'], skin: ['Pele caucasiana', 'Caucasian skin', 'Piel caucásica'], sand: ['Areia', 'Sand', 'Arena'],
+  cream: ['Amarelo-claro', 'Light yellow', 'Amarillo claro'], yellow: ['Amarelo', 'Yellow', 'Amarillo'], orange: ['Laranja', 'Orange', 'Naranja'],
+  red: ['Vermelho', 'Red', 'Rojo'], hotpink: ['Rosa pink', 'Hot pink', 'Rosa fucsia'], pink: ['Rosa-bebê', 'Baby pink', 'Rosa bebé'],
+  lilac: ['Lilás', 'Lilac', 'Lila'], blue: ['Azul BIC', 'BIC blue', 'Azul BIC'], sky: ['Azul-céu', 'Sky blue', 'Azul cielo'],
+  aqua: ['Verde-água', 'Aqua green', 'Verde agua'], mint: ['Verde-menta', 'Mint green', 'Verde menta'], moss: ['Verde-oliva', 'Olive green', 'Verde oliva'],
+  gray: ['Cinza prime', 'Prime gray', 'Gris prime'], black: ['Preto', 'Black', 'Negro'],
+  pearl: ['Branco pérola', 'Pearl white', 'Blanco perla'], silver: ['Prata', 'Silver', 'Plata'], gold: ['Dourado', 'Gold', 'Dorado'], bronze: ['Bronze', 'Bronze', 'Bronce'],
+  rainbow: ['Arco-íris', 'Rainbow', 'Arcoíris'], duopinkblue: ['Dual rosa e azul', 'Dual pink and blue', 'Dual rosa y azul'],
+  duogoldorange: ['Dual dourado e laranja', 'Dual gold and orange', 'Dual dorado y naranja'], duogoldpurple: ['Dual dourado e roxo', 'Dual gold and purple', 'Dual dorado y morado'],
+  duobluegreen: ['Dual azul e verde', 'Dual blue and green', 'Dual azul y verde']
 });
 const PARTS = Object.freeze({
   body: ['Corpo', 'Body', 'Cuerpo'],

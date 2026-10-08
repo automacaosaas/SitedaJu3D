@@ -39,8 +39,8 @@ export function miniCartBody({cart, itemId, itemIds = null, original = false, fr
   const inCart = id => cart.filter(i => signature(i.productId, i.selection) === signature(id, defaults(id))).reduce((sum, i) => sum + i.quantity, 0);
   // a piece in its own colours (the lamps) shows them as one row of dots (the names stay for screen readers); a customized one, part by part
   const colorsOf = line => fixedColors(line.productId)
-    ? `<ul class="mini-cart-colors is-dots" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span class="sr-only">${esc(c.name)}</span></li>`).join('')}</ul>`
-    : `<ul class="mini-cart-colors" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId, line.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`;
+    ? `<ul class="mini-cart-colors is-dots" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId).map(c => `<li><i style="--chip:${c.paint}" aria-hidden="true"></i><span class="sr-only">${esc(c.name)}</span></li>`).join('')}</ul>`
+    : `<ul class="mini-cart-colors" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId, line.selection).map(c => `<li><i style="--chip:${c.paint}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`;
   const added = shown.map(line => `<article class="mini-cart-item"><img src="${esc(picture(line))}" alt="" width="96" height="96" style="--thumb-wash:${wash(line.productId)}"><div><h3>${esc(line.title)}</h3>`
     + colorsOf(line)
     + `<p>${priceSegments(cart).filter(s => s.item === line).map(s => `${s.quantity} × ${money(s.unitCents)}`).join(' + ')}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>`).join('');

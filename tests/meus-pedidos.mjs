@@ -8,9 +8,9 @@ import vm from 'node:vm';
 const source = fs.readFileSync(new URL('../dist/account.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const start = source.indexOf('// "Meus pedidos": the account\'s orders'), end = source.indexOf('// A panel under a card');
 assert(start > 0 && end > start, 'the "Meus pedidos" block is where the test expects it');
-const {PRODUCTS, SOON, color} = await import(new URL('../dist/products.js', import.meta.url).href);
+const {PRODUCTS, SOON, color, paint} = await import(new URL('../dist/products.js', import.meta.url).href);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
-const context = vm.createContext({esc, icon: name => `<svg data-icon="${name}"></svg>`, money: cents => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`, getLanguage: () => 'pt-BR', PRODUCTS, SOON, color, Intl, Date});
+const context = vm.createContext({esc, icon: name => `<svg data-icon="${name}"></svg>`, money: cents => `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`, getLanguage: () => 'pt-BR', PRODUCTS, SOON, color, paint, Intl, Date});
 vm.runInContext(source.slice(start, end) + '\nObject.assign(globalThis, {orderCard, demoCard, filterBar, noOrders, setFilter: value => { orderFilter = value; }});', context);
 const {orderCard, demoCard, filterBar, noOrders, setFilter} = context;
 

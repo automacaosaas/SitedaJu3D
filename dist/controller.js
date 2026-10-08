@@ -1,4 +1,4 @@
-import {PRODUCTS,SOON,PALETTE,ALIASES,defaults,color,validSelection,fixedColors,showcase,badgeStyle} from './products.js';
+import {PRODUCTS,SOON,PALETTE,PALETTE_GROUPS,ALIASES,defaults,color,paint,isLight,validSelection,fixedColors,showcase,badgeStyle} from './products.js';
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money,installmentLabel,kitOffer,kitOf} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -43,7 +43,8 @@ export const comboPath=(key,selection)=>`#produto/${key}/personalizar/${PRODUCTS
 export function comboFrom(key,text){if(!PRODUCTS[key])return null;const ids=String(text||'').split('.');if(!ids[0])return null;return validSelection(key,Object.fromEntries(PRODUCTS[key].parts.map((part,i)=>[part.id,ids[i]])));}
 function save(){try{localStorage.setItem(storageKey,JSON.stringify(selections));}catch{}}
 const product=key=>PRODUCTS[key]||SOON[key],preview=()=>!PRODUCTS[activeProduct]&&!!SOON[activeProduct];
-function hexColors(){if(!selections[activeProduct])return {};return Object.fromEntries(Object.entries(selections[activeProduct]).map(([id,value])=>[id,color(value).hex]));}
+// as cores escolhidas, parte por parte, como as cores da paleta (com o acabamento de cada uma: o 3D brilha como o filamento)
+function chosenColors(){if(!selections[activeProduct])return {};return Object.fromEntries(Object.entries(selections[activeProduct]).map(([id,value])=>[id,color(value)]));}
 function announce(message){$('#color-announcement').textContent=message;}
 // O topo da janela (as cores da peça, o sobretítulo, o nome): é o que aparece no primeiro quadro, antes do showModal (movimento 8).
 function fillHead(key){
@@ -142,7 +143,7 @@ async function setView(next){
     viewerImport??=import('./viewer.js');const {ProductViewer}=await viewerImport;
     if(id!==request||!dialog.open||view!=='model')return;
     viewer??=new ProductViewer($('#viewer-host'),viewerError);
-    const shown=await viewer.show(activeProduct,hexColors(),product(activeProduct).title);
+    const shown=await viewer.show(activeProduct,chosenColors(),product(activeProduct).title);
     if(!shown||id!==request||!dialog.open||view!=='model')return;
     $('.viewer-message').hidden=true;$('.viewer-tools').hidden=false;
   }catch(error){
@@ -153,17 +154,19 @@ async function setView(next){
 function renderControls(){
   const p=PRODUCTS[activeProduct];
   $('#part-tabs').replaceChildren(...p.parts.map(part=>{const b=document.createElement('button');b.type='button';b.dataset.part=part.id;b.innerHTML='<span class="part-dot" aria-hidden="true"></span><span></span>';b.lastElementChild.textContent=part.name;return b;}));
-  $('#palette').replaceChildren(...PALETTE.map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',value.hex);b.style.setProperty('--check',['yellow','cream','mint','white'].includes(value.id)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');b.append(swatch);return b;}));
-  $('#presets').replaceChildren(...PRESETS.filter(preset=>preset.id!=='surpresa').map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=color(id).hex;dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
+  // as cores em grupos (foscas, com brilho, multicor), o nome de cada grupo antes das bolinhas dele; a bolinha é o degradê do filamento
+  $('#palette').replaceChildren(...PALETTE_GROUPS.flatMap(group=>{const label=document.createElement('span');label.className='palette-group';label.setAttribute('aria-hidden','true');label.textContent=group.name;
+    return [label,...PALETTE.filter(value=>value.group===group.id).map(value=>{const b=document.createElement('button');b.type='button';b.className='swatch';b.dataset.color=value.id;if(value.finish)b.dataset.finish=value.finish;b.setAttribute('role','radio');b.setAttribute('aria-label',value.name);b.title=value.name;b.style.setProperty('--swatch',paint(value));b.style.setProperty('--check',isLight(value)?'#332b32':'#fff');const swatch=document.createElement('i');swatch.setAttribute('aria-hidden','true');b.append(swatch);return b;})];}));
+  $('#presets').replaceChildren(...PRESETS.filter(preset=>preset.id!=='surpresa').map(preset=>{const b=document.createElement('button');b.type='button';b.dataset.preset=preset.id;const dots=document.createElement('span');dots.className='preset-dots';dots.setAttribute('aria-hidden','true');if(preset.id!=='surpresa')for(const id of Object.values(presetSelection(activeProduct,preset))){const i=document.createElement('i');i.style.background=paint(color(id));dots.append(i);}else dots.textContent='✦';const label=document.createElement('span');label.textContent=preset.name;b.append(dots,label);return b;}));
   updateControls();
 }
 function updateControls(){
   const s=selections[activeProduct],p=PRODUCTS[activeProduct],part=p.parts.find(item=>item.id===selectedPart);
-  document.querySelectorAll('#part-tabs [data-part]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.part===selectedPart));b.querySelector('.part-dot').style.background=color(s[b.dataset.part]).hex;});
+  document.querySelectorAll('#part-tabs [data-part]').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.part===selectedPart));b.querySelector('.part-dot').style.background=paint(color(s[b.dataset.part]));});
   document.querySelectorAll('#palette [data-color]').forEach(b=>{const on=b.dataset.color===s[selectedPart];b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;});
-  $('#selected-color').textContent=`${part.name}: ${color(s[selectedPart]).name}`;$('#part-hint').textContent=part.hint;
-  $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=color(s[item.id]).hex;i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
-  viewer?.update(hexColors());revealSwatch();
+  const chosen=color(s[selectedPart]);$('#selected-color').textContent=`${part.name}: ${chosen.name}${chosen.note?` · ${chosen.note}`:''}`;$('#part-hint').textContent=part.hint;
+  $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=paint(color(s[item.id]));i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
+  viewer?.update(chosenColors());revealSwatch();
 }
 // No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista. Só lá a fileira rola (product-page.css,
 // até 600 px), e a medida fica para o quadro seguinte: lida logo depois das escritas da janela, ela refazia o layout no meio da
@@ -172,7 +175,7 @@ const swatchRow=matchMedia('(max-width: 600px)');let swatchFrame=0;
 function revealSwatch(){if(!swatchRow.matches)return;cancelAnimationFrame(swatchFrame);swatchFrame=requestAnimationFrame(()=>{const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});}
 // As fotos mostram só as cores da vitrine: ao escolher uma cor, a prévia passa para o 3D.
 function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
-function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
+function chooseColor(id){const c=color(id);applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${c.name}${c.note?` · ${c.note}`:''}.`);}
 
 // ── Painel "Sobre a peça" (abas) ──
 const tabs=[...sheet.querySelectorAll('[role="tab"]')],panels=[...sheet.querySelectorAll('[role="tabpanel"]')];

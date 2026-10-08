@@ -151,6 +151,14 @@
 #product-dialog .swatch[aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pd-accent); animation: pd-pick .32s var(--pd-ease); }
 #product-dialog .swatch[aria-checked=true] i::after { content: '✓'; }
 #product-dialog .swatch:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 0; }
+/* Os grupos da paleta (products.js › PALETTE_GROUPS): o nome de cada um numa linha, antes das bolinhas dele. As cores com brilho e
+   as multicor trazem o degradê do filamento na bolinha (--swatch) e um reflexo que passa por ela ao chegar perto. */
+#product-dialog #palette .palette-group { flex: 0 0 calc(100% - 8px); margin: 8px 4px 0; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#product-dialog #palette .palette-group:first-child { margin-top: 0; }
+#product-dialog .swatch[data-finish] i { position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+#product-dialog .swatch[data-finish] i::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); translate: -60% 0; transition: translate .6s var(--pd-ease); pointer-events: none; }
+#product-dialog .swatch[data-finish]:hover i::before, #product-dialog .swatch[data-finish][aria-checked=true] i::before { translate: 60% 0; }
+#product-dialog .swatch[data-finish][aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pd-accent); }
 @keyframes pd-pick { 40% { transform: scale(1.16); } }
 #product-dialog .part-hint { margin: -6px 0 0; font-size: 12.5px; color: var(--pd-muted); }
 
@@ -313,6 +321,9 @@
   #product-dialog #palette { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; margin: -4px 0 -4px -16px; padding: 4px 4px 4px 12px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
   #product-dialog #palette::-webkit-scrollbar { display: none; }
   #product-dialog .swatch { scroll-snap-align: start; }
+  /* na fileira que rola, o nome do grupo fica antes das bolinhas dele, separado das do grupo anterior por um traço */
+  #product-dialog #palette .palette-group { flex: none; align-self: center; margin: 0 2px 0 8px; padding-left: 10px; border-left: 1px solid var(--line, #e6dde0); white-space: nowrap; }
+  #product-dialog #palette .palette-group:first-child { margin-left: 4px; padding-left: 0; border-left: 0; }
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }
@@ -374,7 +385,7 @@
 /* Celular e tablet: na barra do 3D ficam "Girar", aproximar, afastar e "Início" (arrastar gira a peça; pinça também aproxima). */
 @media (max-width: 900px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools > span { display: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .pdp-sheet, #product-dialog .swatch i { transition: none; }
+  .pdp-sheet, #product-dialog .swatch i, #product-dialog .swatch[data-finish] i::before { transition: none; }
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
 /* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */
