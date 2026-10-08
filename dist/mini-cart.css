@@ -22,7 +22,7 @@
 .mini-cart-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line, #eadde1); }
 /* a miniatura no tom da própria peça (mini-cart.js --thumb-wash), não num rosa fixo */
 .mini-cart-item img { width: 96px; height: 96px; object-fit: contain; border-radius: 14px; background: var(--thumb-wash, #fbf0f1); }
-.mini-cart-item h3 { margin: 0 0 6px; font: 500 20px/1.2 'Playfair Display', Georgia, serif; }
+.mini-cart-item h3 { margin: 0 0 6px; font: 500 20px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
 .mini-cart-colors { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 3px; font-size: 12px; color: var(--muted, #71656c); }
 .mini-cart-colors li { display: flex; align-items: center; gap: 6px; }
 .mini-cart-colors i { width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; background: var(--chip); border: 1px solid #38232630; }

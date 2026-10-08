@@ -95,15 +95,15 @@
 
 /* Textos e paleta do produto ativo (um bloco por produto, empilhados na mesma célula) */
 .copy, .palette { grid-area: 1 / 1; will-change: transform, opacity; }
-.copy-category { margin: 0; font: 650 clamp(12px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
-.copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
+.copy-category { margin: 0; font: 650 clamp(12px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
 /* O subtítulo em linhas equilibradas (sem palavra sozinha embaixo) e cada bloco alinhado pelo pé: o preço fica no mesmo lugar de
    peça para peça, colado aos botões (no celular, ao palco). */
 .copy { align-self: end; }
-.copy-sub { margin: 0; max-width: 18em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', sans-serif; color: var(--muted); text-wrap: balance; }
+.copy-sub { margin: 0; max-width: 18em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--muted); text-wrap: balance; }
 .copy-price { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: clamp(12px, calc(var(--u) * 0.012), 20px) 0 0; color: var(--text); }
-.copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', sans-serif; font-variant-numeric: tabular-nums; }
-.copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', sans-serif; letter-spacing: .02em; }
+.copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', 'DM Sans Fallback', sans-serif; font-variant-numeric: tabular-nums; }
+.copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .02em; }
 /* As duas ações lado a lado (07/10/2026: "deixar mais dinâmico o botão… integrar no nosso universo visual"): a principal, cheia, na cor
    da peça, e "Ver encaixado", de vidro, com a borda na mesma cor; as duas na mesma altura e em pílula, como as setas e os selos. */
 .palette { display: flex; flex-direction: row; align-items: center; gap: 12px; width: max-content; max-width: 100%; }
@@ -115,7 +115,7 @@
    cores à esquerda e, na ponta, um círculo branco com a seta (para onde o clique leva). De tempos em tempos um brilho atravessa
    o botão (chama o clique sem piscar). No hover sobe em direção a quem olha (3% maior, sombra mais espalhada), a paleta balança
    de leve e a seta anda; no clique, afunda. */
-.palette-button { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 6px 6px 6px 1.35em; border: 0; border-radius: 999px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
+.palette-button { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 6px 6px 6px 1.35em; border: 0; border-radius: 999px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
   box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s cubic-bezier(.25, .8, .25, 1), filter .3s ease; }
 .palette-button:not(:has(.palette-go)) { padding: 0 1.6em 0 1.35em; }
 .palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
@@ -129,11 +129,11 @@
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 /* Secundária, só nas peças com demonstração: "Ver encaixado" com o olho (ver a peça montada), em vidro translúcido sobre o banner,
    com a borda e o texto na cor da peça; no hover fica branca, a borda acende e o olho cresce. */
-.hero-demo-button { display: inline-flex; align-items: center; justify-content: center; gap: .5em; min-height: 52px; padding: 0 1.3em; border: 1.5px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--accent); font: 650 clamp(14px, calc(var(--u) * 0.0106), 16px) / 1 'DM Sans', sans-serif; letter-spacing: .02em; cursor: pointer;
+.hero-demo-button { display: inline-flex; align-items: center; justify-content: center; gap: .5em; min-height: 52px; padding: 0 1.3em; border: 1.5px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--accent); font: 650 clamp(14px, calc(var(--u) * 0.0106), 16px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .02em; cursor: pointer;
   box-shadow: 0 8px 20px -12px rgba(20, 30, 40, .3); transition: background .3s ease, border-color .3s ease, color .3s ease, transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s ease; }
 .hero-demo-button svg { width: 1.3em; height: 1.3em; flex: none; stroke-width: 1.7; transition: transform .3s ease; }
 /* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
-.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
+.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .01em; white-space: nowrap; }
 /* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
 .copy-price .palette-soon { min-height: 34px; padding: 0 1em; font-size: clamp(12px, calc(var(--u) * .009), 14px); letter-spacing: .04em; }
 .slot[data-front=true] { cursor: pointer; }
@@ -158,6 +158,8 @@
 .slot[data-front=true] .piece { perspective: 1100px; }
 .piece img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .4s ease, transform .5s cubic-bezier(.22, 1, .36, 1); }
 .piece img.is-loaded { opacity: 1; }
+/* a primeira foto aparece inteira, sem esmaecer (é ela que a página espera para aparecer, carousel.js .is-drawn) */
+.showcase:not(.is-drawn) .piece img { transition: none; }
 .slot:focus-visible { outline: 2px solid var(--rose); outline-offset: 6px; }
 
 /* Setas: vidro translúcido nas bordas do banner e chevron fino. No hover o vidro clareia e o chevron anda 3 px para onde aponta. */

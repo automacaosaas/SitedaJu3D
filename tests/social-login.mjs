@@ -293,7 +293,9 @@ store = createMemoryStore();
   const css = read('dist/account.css');
   assert.match(css, /\.social-google \{ background: #fff; color: #1f1f1f; border: 1px solid #747775; font-family: 'Roboto'/, 'Google: white, #747775 outline, Roboto');
   assert.match(css, /\.social-apple \{ background: #000; color: #fff;/, 'Apple: white on black');
-  assert.match(page, /family=Roboto:wght@500/, 'Roboto Medium for the Google button');
+  // Roboto Medium for the Google button: served by the shop since 2026-10-07 (theme.css, which this page loads; tests/fonts.mjs)
+  assert.match(read('dist/theme.css'), /@font-face\{font-family:'Roboto';font-style:normal;font-weight:500;font-display:swap;src:url\(assets\/fonts\/roboto-500-latin\.woff2\?v=\d+\)/, 'Roboto Medium for the Google button');
+  assert.match(page, /<link rel="stylesheet" href="theme\.css">/);
   // Back from the provider: a new account is welcomed (only what is missing); a problem is explained.
   assert.match(account, /else if \(routeName === 'bem-vindo' && getSession\(\)\) \{/);
   assert.match(account, /identificationForm\(\{profile: details, submitLabel: 'Salvar e continuar', formId: 'welcome-form', only: missing\}\)/);

@@ -16,6 +16,7 @@ import {withAlpha} from './hero-motion.js';
 import {imageReady} from './loading-ui.js';
 import {icon} from './icons.js';
 import {artSrcset, DEMO_SIZES, fixedColors} from './products.js';
+import {lateCss} from './late-css.js';
 
 const PERSPECTIVE = 1600;
 // uma entrada interrompida volta de trás para frente em no máximo ~0,6 s (e nunca mais devagar que 1,35×)
@@ -400,7 +401,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (!ready) return;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
     region.setAttribute('aria-busy', 'true');
-    const loaded = await ready;
+    // with its stylesheet applied (the home loads hero-demo.css after the first paint, late-css.js)
+    const [loaded] = await Promise.all([ready, lateCss]);
     region.removeAttribute('aria-busy');
     if (state !== 'opening') return;
     if (!loaded) { prepared = -1; finish(); status.textContent = 'Não foi possível carregar a demonstração. Tente novamente.'; return; }

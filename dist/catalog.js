@@ -17,6 +17,11 @@ const cardArt = Object.freeze({
   girafoscopio: 'card-girafoscopio.webp',
   unicornioscopio: 'card-unicornioscopio.webp'
 });
+// The card photo comes in two sizes (card-preview-<id> 384 px, card-<id> 768 px) and the browser picks one: the picture shows at
+// most 212 px tall in the card (catalog.css --art-h), so a 1x computer takes the 384 and phones and 2x screens the 768 — one
+// file per card, not the preview and then the sharp one (PageSpeed, 2026-10-08).
+const CARD_SIZES = '212px';
+const cardSources = (preview, full) => preview === full ? `src="assets/${full}"` : `src="assets/${full}" srcset="assets/${preview} 384w, assets/${full} 768w" sizes="${CARD_SIZES}"`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
 // "Ver encaixado": a vitrine vai para a peça e abre a demonstração (carousel.js, #produto/<peça>/encaixe).
@@ -38,14 +43,14 @@ const railTone = id => {
 function colorsFor(id, product) { if (fixedColors(id)) return product.colors; const selection = defaults(id); return product.parts.map(part => color(selection[part.id])); }
 function soonCard({id, product}) {
   const categoryLabel = category(product.category).label, href = demoHref(id);
-  return `<article class="product-rail-card is-soon" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${href}" aria-label="Ver o ${product.title} encaixado"><img src="assets/card-preview-${id}.webp" data-full-src="assets/card-${id}.webp" alt="${product.title}" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${href}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${product.colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><span class="product-soon">Em breve</span></div><div class="product-rail-actions is-single"><a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="${productHref(id)}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></div></article>`;
+  return `<article class="product-rail-card is-soon" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${href}" aria-label="Ver o ${product.title} encaixado"><img ${cardSources(`card-preview-${id}.webp`, `card-${id}.webp`)} alt="${product.title}" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${href}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${product.colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><span class="product-soon">Em breve</span></div><div class="product-rail-actions is-single"><a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="${productHref(id)}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></div></article>`;
 }
 function productCard({id, product}) {
   if (product.soon) return soonCard({id, product});
   const colors = colorsFor(id, product), categoryLabel = category(product.category).label, fixed = fixedColors(id);
   const fullArt = cardArt[id] || product.catalogImage || product.image;
   const previewArt = cardArt[id] ? `card-preview-${id}.webp` : fullArt;
-  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${productHref(id)}" aria-label="${fixed ? 'Ver' : 'Personalizar'} ${product.title}"><img src="assets/${previewArt}" data-full-src="assets/${fullArt}" alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note" role="status"></span><span class="product-rail-pix">${money(pixPrice(COMMERCE.prices[id]))} no Pix</span></div><div class="product-rail-actions">${fixed ? `<a class="product-customize" href="${productHref(id)}">Ver e comprar</a>` : `<a class="product-customize" href="${productHref(id)}/personalizar">Personalizar o meu</a>`}<button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho${fixed ? '' : ' nas cores originais'}" title="${fixed ? 'Adicionar ao carrinho' : 'Adicionar nas cores originais'}">${icon('cart')}</button></div></div></article>`;
+  return `<article class="product-rail-card" data-product-id="${id}" tabindex="-1" style="${railTone(id)}"><a class="product-rail-art" href="${productHref(id)}" aria-label="${fixed ? 'Ver' : 'Personalizar'} ${product.title}"><img ${cardSources(previewArt, fullArt)} alt="${product.title} nas cores originais" width="768" height="768" loading="lazy" decoding="async"></a><div class="product-rail-copy"><p class="product-rail-category">${categoryLabel}</p><h3><a href="${productHref(id)}">${product.title}</a></h3><p class="product-rail-subtitle">${product.subtitle}</p><div class="product-rail-active-details" aria-hidden="true"><div><span>Categoria</span><strong>${categoryLabel}</strong></div><div><span>Cores</span><span class="product-swatches">${colors.map(item => `<i style="--swatch:${item.hex}" title="${item.name}"></i>`).join('')}</span></div></div><div class="product-rail-bottom"><strong>${money(COMMERCE.prices[id])}</strong><span class="product-rail-price-note" role="status"></span><span class="product-rail-pix">${money(pixPrice(COMMERCE.prices[id]))} no Pix</span></div><div class="product-rail-actions">${fixed ? `<a class="product-customize" href="${productHref(id)}">Ver e comprar</a>` : `<a class="product-customize" href="${productHref(id)}/personalizar">Personalizar o meu</a>`}<button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho${fixed ? '' : ' nas cores originais'}" title="${fixed ? 'Adicionar ao carrinho' : 'Adicionar nas cores originais'}">${icon('cart')}</button></div></div></article>`;
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 
@@ -74,24 +79,12 @@ class ProductCarousel {
     this.cards = [...this.track.children];
     this.cards.forEach(card => {
       const img = card.querySelector('img');
-      // Keep the small artwork visible until the sharper version is decoded.
+      // Near the screen, the photo is asked for (srcset: the size this screen needs, cardSources); one that fails says so.
       const begin = async () => {
         img.loading = 'eager';
-        let ok = await imageReady(img);
-        if (!ok && img.dataset.fullSrc) {
-          img.src = img.dataset.fullSrc;
-          ok = await imageReady(img);
-        }
-        if (!ok) {
-          img.hidden = true;
-          img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');
-          return;
-        }
-        if (!img.dataset.fullSrc || img.src.endsWith(img.dataset.fullSrc)) return;
-        const sharp = new Image();
-        sharp.decoding = 'async';
-        sharp.src = img.dataset.fullSrc;
-        if (await imageReady(sharp) && img.isConnected) img.src = sharp.src;
+        if (await imageReady(img)) return;
+        img.hidden = true;
+        img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');
       };
       if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(entries => {if(entries.some(entry => entry.isIntersecting)){observer.disconnect();begin();}}, {rootMargin:'240px'});

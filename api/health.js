@@ -14,6 +14,7 @@ const fiscal = require('./_lib/fiscal');
 const {createBling} = require('./_lib/bling');
 const shipping = require('./_lib/shipping');
 const {queueHeartbeat} = require('./_lib/invoice-queue');
+const {indexable, requestHost} = require('./_lib/runtime');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -53,6 +54,9 @@ function createHandler({env = process.env, release = readRelease()} = {}) {
       // NF-e queue of this process: its timer on, and when its last round ended (BLING-RESILIENCIA.md).
       uptime: Math.round(process.uptime()),
       ...(nfe.mode !== 'off' ? {queue: queueHeartbeat()} : {}),
+      // Whether search engines may index the address this request came by (the shop's domain, not the temporary one;
+      // api/_lib/runtime.js). Only for a real request, which has a Host.
+      ...(req?.headers?.host || req?.headers?.['x-forwarded-host'] ? {indexable: indexable(env, requestHost(req))} : {}),
       ...(release ? {release} : {})   // the published commit (12 characters), only where a REVISION file exists
     });
   };

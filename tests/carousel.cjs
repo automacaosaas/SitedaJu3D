@@ -172,7 +172,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   const tail = css.match(/--tail:\s*clamp\((\d+)px,[^,]+,\s*(\d+)px\)/);
   assert.ok(tail && Number(tail[1]) >= 300 && Number(tail[2]) <= 800, 'a dissolução do banner cobre o título e o começo dos cards');
   assert.ok(/\.scenery-mist \{[^}]*mask-image/.test(css) && !/\.clouds\b|\.cloud \{|class="clouds"/.test(css + read('hero-scenery.js')), 'as silhuetas dos cantos esmaecem antes do limite do banner (sem os discos chapados de antes)');
-  assert.ok(js.includes("page.style.setProperty('--hero-h'"), 'altura do banner medida no JS');
+  assert.ok(js.includes("put(page, '--hero-h', height + 'px');"), 'altura do banner medida no JS');
   // Card central limpo: nada de sombra cortada pela borda do palco nem brilho no alto.
   assert.ok(/@supports \(overflow: clip\) \{ \.home \.product-carousel-stage \{ overflow-x: clip; overflow-y: visible; \} \}/.test(css), 'o palco só recorta na horizontal (a sombra não é cortada em retângulo)');
   const cardShadows = css.match(/\.home \.product-rail-card(\.is-active)? \{[^}]*box-shadow:[^;]*;/g);
@@ -306,7 +306,9 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
 
   // ── a demonstração pré-montada no ocioso só com conexão boa; em 3G/2G ou economia de dados, ao primeiro sinal de interesse ──
   assert.ok(js.includes("roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''))"), 'economia de dados e 3G/2G não pré-carregam a demonstração');
-  assert.ok(js.includes("if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});"), 'mouse, foco ou toque na vitrine preparam a demonstração antes do clique');
+  assert.ok(js.includes("for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});"), 'mouse, foco ou toque na vitrine preparam a demonstração antes do clique, em qualquer conexão');
+  // 08/10/2026 (PageSpeed): com conexão boa, só depois que a página carregou e ficou ociosa, mais 3 s — nunca nos primeiros segundos
+  assert.ok(js.includes("const later = () => idle(() => setTimeout(() => idle(early), 3000));") && js.includes("if (document.readyState === 'complete') later(); else addEventListener('load', later, {once: true});") && !/requestIdleCallback\(early, \{timeout: 1500\}\)/.test(js), 'a demonstração nunca disputa a banda com a página');
 
   // ── fundo da vitrine em silhuetas brancas de nuvem (08/10/2026: "usando as nuvens BRANCAS… só silhuetas de características que
   //    lembram [cada peça], limpas e otimizadas"; antes, 07/10, cada peça tinha um desenho colorido) ──
@@ -389,7 +391,11 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   const sceneryJs = read('hero-scenery.js'), renderJs = js.slice(js.indexOf('function render()'), js.indexOf('function report('));
   const reportJs = js.slice(js.indexOf('function report('), js.indexOf('// ── Movimento'));
   assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(js + sceneryJs), 'vitrine e desenhos sem nome de produto (o desenho vem de SHOWCASE)');
-  assert.ok(js.includes("page.style.setProperty('--stage-x'") && js.includes("page.style.setProperty('--stage-top'") && js.includes("page.style.setProperty('--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
+  assert.ok(js.includes("put(page, '--stage-x'") && js.includes("put(page, '--stage-top'") && js.includes("put(page, '--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
+  // 08/10/2026 (PageSpeed): medir não força layout — todas as leituras antes das escritas, chamado pelo ResizeObserver, nunca na montagem
+  const measureJs = js.slice(js.indexOf('function measure()'), js.indexOf('// Um estilo só é escrito quando muda'));
+  assert.ok(measureJs.indexOf('getBoundingClientRect') < measureJs.indexOf('put(page') && measureJs.indexOf('offsetHeight') < measureJs.indexOf('put(page'), 'todas as leituras antes das escritas');
+  assert.ok(js.includes("const sizes = new ResizeObserver(() => measure()); sizes.observe(shell); sizes.observe(slots[0]);") && js.includes('setActive(initial); render(); report();') && !/measure\(\); report\(\);/.test(js), 'a primeira medida vem do ResizeObserver, não da montagem');
   assert.ok(!/--scn-x/.test(js + css), 'sem a variável herdada --scn-x (cada escrita recalculava as seis camadas inteiras)');
   assert.ok(renderJs.includes("bgLayers[i].classList.toggle('is-off', !shown)") && renderJs.includes('if (!shown) continue;') && renderJs.includes("put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`)") && renderJs.includes("put(edges[i], 'translate',"), 'camadas apagadas fora da pintura; na à vista, o desenho e os cantos acompanham a peça');
   assert.ok(/function put\(element, name, value\) \{[^]*?if \(seen\[name\] === value\) return;/.test(js) && !/\.style\.(setProperty|transform|opacity|visibility|zIndex)\b/.test(renderJs), 'no laço de quadros, nada é escrito sem mudar');

@@ -135,7 +135,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 4. Antes de cada etapa, `git fetch` e conte o que mudou no GitHub. Relate todo commit seu (hash e mensagem).
 5. Rode `npm test` antes de cada commit. Se mexer em páginas, Termos/legal, política de segurança (CSP) ou produtos, rode
    também `node tools/sync-legal.cjs`, `node tools/sync-meta.cjs`, `node tools/sync-csp.cjs` e
-   `node tools/build-product-pages.cjs` (os testes falham se estiverem desatualizados).
+   `node tools/build-product-pages.cjs` (os testes falham se estiverem desatualizados). Mexeu nos imports dos módulos da home
+   ou em `products.js`/`hero-motion.js`: `node tools/sync-modulepreload.cjs` e `node tools/sync-entry.cjs` (PageSpeed, 08/10/2026).
+   Trocou um arquivo pedido com `?v=` (modelo 3D, vista da galeria, fonte): mude o `?v=` e rode `node tools/sync-versions.cjs`
+   (com `?v=` o navegador guarda o arquivo por um ano; `tests/versioned-assets.mjs` falha se o `?v=` não mudar).
 6. Estilo: o repositório usa CRLF no disco (não normalize), com diff mínimo. Texto da loja em português, com tradução EN/ES em
    `dist/translations.js` (linhas `PT|EN|ES`) e regras dinâmicas em `dist/i18n-core.js`. Texto visível com no mínimo 12 px.
    Sem dependências novas. Sem scripts inline (CSP): só o import map (com hash) e blocos JSON-LD.

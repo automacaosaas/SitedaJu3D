@@ -99,6 +99,9 @@ if [ ! -f "$ENV_FILE" ]; then
 APP_ENV=preview
 # Endereço do site, sem barra no fim. Trocar pelo domínio (https://...) quando ele apontar para cá.
 SITE_URL=http://10.0.100.80
+# Google: só o domínio da loja (o do SITE_URL ou, enquanto ele for IP, juimprimepramim.com.br) e o www dele entram na busca.
+# Opcional: outros endereços que podem ser indexados, separados por vírgula.
+INDEX_HOSTS=
 HOST=127.0.0.1
 PORT=3000
 

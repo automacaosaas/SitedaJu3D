@@ -45,7 +45,7 @@ Primeira visita à home no computador: as imagens caem de cerca de 3,2 MB para c
 A CSP libera só o que o site usa:
 
 - scripts do próprio site, o import map pelo hash exato e `wasm-unsafe-eval` (o decodificador Meshopt usa WebAssembly);
-- estilos do site e do Google Fonts, com arquivos de fonte do `fonts.gstatic.com`;
+- estilos e fontes do próprio site (desde 07/10/2026 as fontes saem de `dist/assets/fonts/`, não do Google Fonts);
 - imagens do site, `data:` e `blob:` (miniaturas do carrinho e texturas 3D) e do site público, de onde vem o logo dos e-mails;
 - `frame-ancestors 'self'`: nenhum outro site pode exibir a loja dentro de uma moldura.
 
@@ -64,8 +64,12 @@ com um pagamento de teste, antes de publicar.
 
 **Ao mudar para a Hostinger**, os mesmos cabeçalhos vão para o servidor Node.
 
-**Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Com o cache novo, um visitante pode ver a versão
-anterior por até um dia.
+**Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Sem `?v=`, um visitante pode ver a versão
+anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes), o servidor Node manda
+`max-age=31536000, immutable` (07/10/2026): o navegador guarda por um ano sem perguntar de novo, então trocar o arquivo
+sem mudar o `?v=` deixa quem já visitou com o antigo. Para isso não passar despercebido, `tools/versioned-assets.json`
+guarda o `?v=` e uma impressão digital de cada um desses arquivos: `tests/versioned-assets.mjs` falha se um deles mudar com
+o mesmo `?v=`. Depois de trocar o arquivo e o `?v=`, rode `node tools/sync-versions.cjs`.
 
 ## Testes
 
@@ -174,3 +178,67 @@ rodadas de cada):
 avião e o macaco foram refeitos depois que os originais foram guardados. Reduzidas e gravadas em WebP com perda, qualidade 80,
 pelo codificador do Chrome (libwebp). `tests/assets.mjs` limita cada versão de 768 px a 80 KB, e `tests/storefront.mjs`
 confere o `srcset` e os `sizes` em todos os lugares.
+
+## 08/10/2026: PageSpeed do domínio oficial (branch `trabalho/pagespeed2`)
+
+O PageSpeed de `www.juimprimepramim.com.br` dava celular 75 / computador 90 e SEO 66 (o `X-Robots-Tag: noindex` de
+`APP_ENV=preview`). Base: `5465b26` (vitrine de nuvens, demonstração nova, janela da peça e carrosséis), com o trabalho de
+`trabalho/pagespeed` (SEO por endereço, fontes da própria loja, CSS fora da primeira pintura) juntado e terminado.
+
+**Medido no caminho de produção** (`APP_ENV=production SITE_URL=https://juimprimepramim.com.br node server.cjs`, endereço
+`juimprimepramim.com.br`), Chrome sem interface emulando um celular médio: 412×823, densidade 2,6, CPU 4× mais lenta,
+1,6 Mbit/s com 150 ms de ida e volta, sem cache, perfil novo a cada rodada. Rodadas alternadas antes/depois (a mesma carga na
+máquina), mediana:
+
+| Página | | FCP | LCP | CLS | TBT | Bytes | Pedidos |
+|---|---|---|---|---|---|---|---|
+| Home (7 rodadas) | antes | 1,65 s | 7,27 s | 0 | 2,02 s | 893 KiB | 62 |
+| | depois | 1,50 s | 5,36 s | 0 | 1,41 s | 770 KiB | 61 |
+| Página da peça (5) | antes | 1,20 s | 2,85 s | 0 | 86 ms | 404 KiB | 43 |
+| | depois | 1,26 s | 3,35 s* | 0 | 164 ms | 402 KiB | 43 |
+| Carrinho (5) | antes | 1,06 s | 2,70 s | 0,011 | 274 ms | 343 KiB | 43 |
+| | depois | 1,12 s | 2,31 s | 0 | 297 ms | 344 KiB | 43 |
+
+Na home, toda rodada melhorou o LCP (de 1,6 a 2,9 s); as animações fora do compositor na carga caíram de 1 para 0 e os
+reflows forçados de 10 para 1 (a leitura de `document.fonts`, ~5 ms). *Na página da peça o LCP oscila entre o logo e a foto
+nas duas versões (às vezes a foto nem entra como candidata); os arquivos chegam nos mesmos tempos. A diferença que sobra vem
+de o servidor de teste ser HTTP/1.1: as fontes agora dividem as 6 conexões com os scripts da própria loja (antes vinham do
+Google, por outras conexões). Com o HTTP/2 no nginx (SERVIDOR-SETUP.md) isso some. Os números do PageSpeed (Lighthouse com
+rede simulada, outra máquina) não são estes; servem para comparar antes e depois.
+
+**O que mudou:**
+
+- **SEO:** indexável o domínio da loja e o `www` (em `preview` e em `production`); qualquer outro endereço (temporário da
+  Hostinger, `localhost`, IP) segue com `noindex`. `/api/health` diz `indexable`. `<link rel="canonical">` nas páginas do
+  sitemap. 301 de `www` para o domínio sem `www` documentado em `SERVIDOR-SETUP.md` (passo do dono no nginx).
+- **Fontes da loja** (`dist/assets/fonts/`, OFL), `font-display: swap` e fallbacks métricos; **sem preload**: medido, o
+  preload do DM Sans tirava banda da primeira pintura (página da peça 1,27 → 1,50 s) e, no carrinho, fazia os scripts
+  passarem do prazo de 2 s do `journey.js`, que mostrava a página antes do carrinho (rodapé pulando, CLS 0,27 em 3 de 5).
+- **Cabeça das páginas:** `<meta charset>` primeiro, import map antes do primeiro módulo; na home, `modulepreload` de todo o
+  grafo estático (gerado: `tools/sync-modulepreload.cjs`) e as folhas que a primeira pintura não usa (`product-page.css`,
+  `mobile-modal.css`, `hero-demo.css`, `mini-cart.css`, `commerce.css`) em `media="print"`, ligadas por `late-css.js`, com
+  cópia em `<noscript>`. A janela da peça, a demonstração e o mini-carrinho só abrem com elas aplicadas, inclusive pelos
+  endereços `#produto/<peça>`, `/personalizar`, `/3d` e `/encaixe` na chegada; sem prazo (no celular lento abre um pouco depois,
+  nunca sem estilo). Conferido: as folhas tardias não mudam nada visível na home antes de abrir algo.
+- **Abertura:** a página aparece quando a foto da frente está decodificada e a vitrine medida (fontes: no máximo 150 ms a
+  mais); sem resposta, 2,5 s depois dos scripts, 7,5 s no máximo. Só a foto da frente tem `src` na montagem; a primeira entra
+  sem esmaecer; o loader sai só por opacidade. `page-entry.js` pré-carrega qualquer uma das seis peças com o mesmo `srcset`
+  (dados gerados de `products.js` por `tools/sync-entry.cjs`, que também escreve as cores iniciais do `journey.js`).
+- **Imagens:** versões de 768 px da girafa e do unicórnio; cards da coleção com `srcset` 384w/768w; `card-borboletoscopio`,
+  `retinoscopio` e `aviaoscopia-ruler` recodificados (WebP q78 no Chrome, ruído invisível do alfa limpo; 82 → 42, 95 → 48 e
+  76 → 66 KB, iguais à vista); a demonstração se prepara no primeiro sinal de interesse ou bem depois da carga.
+- **Main thread:** preços sem `Intl` (o primeiro `Intl.NumberFormat` custava ~130 ms no celular lento; mesmo texto);
+  `header-scroll.js`, vitrine e galeria medem pelo `ResizeObserver`; o carrossel de sugestões do carrinho não lê o layout
+  logo depois de desenhar.
+- **Servidor:** Brotli 11 em segundo plano para o site inteiro (nunca no laço de eventos; arquivo grande sai sem compressão
+  só na primeira resposta); CSS minificado na hora de servir (`server/minify-css.cjs`, 396 → 329 KB antes da compressão;
+  `tests/css-minify.mjs` confere token a token); `?v=` com um ano de cache (`immutable`), os outros como antes.
+
+**Ficou de fora, de propósito:** carimbar `?v=<hash>` em todo JS e CSS (cache de um ano para eles). Exige reescrever o import
+map de todas as páginas (e o hash dele na CSP) a cada mudança de qualquer arquivo — conflito garantido entre as branches que
+correm em paralelo. Dá para fazer no servidor, na hora de servir, se valer a pena depois do lançamento.
+
+**Capturas de antes e depois** (home no computador e no celular, coleção, página da peça, carrinho, janela da peça, kit,
+demonstração, contato, Produtos; com e sem movimento reduzido): idênticas pixel a pixel, menos as mudanças pretendidas —
+a demonstração por `#produto/<peça>/encaixe` (antes a janela da peça abria por cima), a borda das fotos dos cards (agora a de
+384 px no computador 1x) e o corpo do unicórnio na demonstração (a foto de 768 px).

@@ -19,7 +19,8 @@ medidas de `fotos.json` (recortes, chão, áreas) continuam em pixels da **origi
    com o nome `<fonte sem extensão>-x4.webp`.
 4. Registrar em `fotos.json`, `_ampliadas`: `"<fonte>": {"arquivo": "ampliadas/<nome>-x4.webp", "fator": 4, "encolher": 0.5}`
    (`encolher` tira o fio escuro do fundo preto na beirada; nas fotos de fundo claro, sem ele).
-5. `node tools/galeria-vistas/gerar.cjs <peça>`, subir `VIEWS_VERSION` em `dist/gallery.js` e `node tools/build-product-pages.cjs`.
+5. `node tools/galeria-vistas/gerar.cjs <peça>`, subir `VIEWS_VERSION` em `dist/gallery.js`, `node tools/build-product-pages.cjs` e
+   `node tools/sync-versions.cjs` (as vistas vão com um ano de cache; `tests/versioned-assets.mjs`).
 
 Confira sempre o resultado de perto: o modelo não inventa peças, mas pode alisar detalhes muito pequenos (os números da régua
 do avião continuam, em relevo discreto).

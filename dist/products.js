@@ -49,7 +49,9 @@ export const ART_768 = Object.freeze({
   'product-borboletoscopio-cutout.webp': 'product-borboletoscopio-cutout-768.webp',
   'product-dinossauroscopio-cutout.webp': 'product-dinossauroscopio-cutout-768.webp',
   'product-aviaoscopia-cutout.webp': 'product-aviaoscopia-cutout-768.webp',
-  'product-macacoscopio-cutout.webp': 'product-macacoscopio-cutout-768.webp'
+  'product-macacoscopio-cutout.webp': 'product-macacoscopio-cutout-768.webp',
+  'product-girafoscopio-cutout.webp': 'product-girafoscopio-cutout-768.webp',
+  'product-unicornioscopio-cutout.webp': 'product-unicornioscopio-cutout-768.webp'
 });
 export const artSmall = file => ART_768[file] || file;
 export const artSrcset = file => ART_768[file] ? `assets/${ART_768[file]} 768w, assets/${file} 1254w` : '';

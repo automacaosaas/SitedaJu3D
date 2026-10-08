@@ -169,14 +169,20 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.doesNotMatch(home, /<link rel="preload" as="image"[^>]*cutout/, 'no fixed preload of one piece');
   const entryCode = read('dist/page-entry.js');
   assert.ok(entryCode.includes(`const HERO_SIZES = '${HERO_SIZES}';`), 'page-entry.js sizes the preload like the showcase');
-  const pieces = JSON.parse(/const PIECES = (\[[^\]]+\]);/.exec(entryCode)[1].replace(/'/g, '"'));
-  assert.deepEqual(pieces.map(key => `product-${key}-cutout.webp`).sort(), Object.keys(ART_768).sort(), 'every showcase photo with a 768 px version, by the same names');
-  assert.equal(pieces[0], 'borboletoscopio', 'the butterfly when there is no piece to open on');
-  assert.match(entryCode, /const piece = \[routed, saved\]\.find\(key => PIECES\.includes\(key\)\) \|\| PIECES\[0\]/, 'the address first, then the remembered piece');
-  assert.match(entryCode, /preload\.setAttribute\('imagesrcset', `\$\{file\}-768\.webp 768w, \$\{file\}\.webp 1254w`\);/);
+  // 2026-10-08: every piece of the showcase, with its own photo and srcset, written from products.js (tools/sync-entry.cjs,
+  // checked in tests/pagespeed.mjs); the address may use an alias.
+  const pieces = JSON.parse(/const PIECES = (\{[^\n]+\});/.exec(entryCode)[1].replace(/'/g, '"'));
+  assert.deepEqual(Object.values(pieces).map(([file]) => file.slice('assets/'.length)).sort(), Object.keys(ART_768).sort(), 'every showcase photo with a 768 px version, by the same names');
+  for (const [key, [file, srcset]] of Object.entries(pieces)) assert.equal(srcset, artSrcset(file.slice('assets/'.length)), `${key}: the srcset carousel.js gives it`);
+  assert.equal(Object.keys(pieces)[0], 'borboletoscopio', 'the butterfly when there is no piece to open on');
+  assert.match(entryCode, /const piece = \[asked, saved\]\.find\(key => Object\.hasOwn\(PIECES, key \|\| ''\)\) \|\| Object\.keys\(PIECES\)\[0\]/, 'the address first (or its alias), then the remembered piece');
+  assert.match(entryCode, /if \(srcset\) \{ preload\.setAttribute\('imagesrcset', srcset\); preload\.setAttribute\('imagesizes', HERO_SIZES\); \}/);
   assert.ok(entryCode.indexOf('document.head.append(preload)') < entryCode.indexOf('if (seen) {'), 'on every visit, first or later');
   assert.match(experience, /\.ju-opening \.hero-fallback,\.ju-returning \.hero-fallback \{ display:none; \}/);
-  assert.match(showcase, /const set = artSrcset\(product\.catalogImage \|\| product\.image\), sources = set \? ` sizes="\$\{HERO_SIZES\}" \$\{near \? '' : 'data-'\}srcset="\$\{set\}"` : '';/);
+  // 2026-10-08: only the piece in front gets its photo while the showcase is built; the neighbours right after it shows
+  assert.match(showcase, /const set = artSrcset\(product\.catalogImage \|\| product\.image\), sources = set \? ` sizes="\$\{HERO_SIZES\}" \$\{first \? '' : 'data-'\}srcset="\$\{set\}"` : '';/);
+  assert.match(showcase, /const first = i === initial, src = /);
+  assert.match(showcase, /drawn\.then\(\(\) => \{[^]*?preloadAround\(active\);/, 'the neighbours after the first draw');
   assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
   assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');
   for (const file of ['dist/mini-cart.js', 'dist/cart-view.js']) assert.match(read(file), /artSmall\(/, `${file}: the light photo for the small pictures`);
@@ -187,7 +193,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
     else assert.ok(photo.includes(`srcset="${artSrcset(`product-${id}-cutout.webp`)}"`) && photo.includes(`sizes="${PHOTO_SIZES}"`), `${id}.html: the photo picks its size`);
   }
   assert.match(read('tools/build-product-pages.cjs'), /data\.artSrcset\(product\.catalogImage \|\| product\.image\) \? ` srcset=/, 'a piece without gallery photos keeps the srcset');
-  assert.equal(Object.keys(ART_768).length, 4);
+  // 2026-10-08: the giraffe and the unicorn too — every piece of the showcase has its 768 px photo
+  assert.deepEqual(Object.keys(ART_768).sort(), Object.keys(PRODUCTS).map(id => PRODUCTS[id].catalogImage || PRODUCTS[id].image).sort());
   // C6: one label for the action that opens the configurator
   for (const file of ['dist/catalog.js', 'dist/produtos.html', 'dist/hero-demo.js', 'dist/index.html', 'dist/carousel.js']) assert.doesNotMatch(read(file), /Personalize o seu|PERSONALIZE O SEU/, `${file}: "Personalizar o meu"`);
   assert.match(read('dist/catalog.js'), /class="product-customize" href="\$\{productHref\(id\)\}\/personalizar">Personalizar o meu</, 'the card button opens the configurator');
@@ -252,6 +259,21 @@ const html = string => string.replace(/ /g, '&nbsp;');
     for (const tag of ['og:title', 'og:description', 'og:url', 'og:image', 'og:image:width', 'og:image:height']) assert.match(page, new RegExp(`<meta property="${tag}" content="[^"]+">`), `${name}: ${tag}`);
     assert.match(page, new RegExp(`<meta property="og:image" content="${COMPANY.website.replace(/[.]/g, '\\.')}/assets/og-ju\\.jpg">`), `${name}: absolute image address on the store's domain`);
   }
+  // Search engines (2026-10-07): every page of sitemap.xml names itself on the shop's domain (apex) with one canonical link;
+  // the pages kept out of the index (meta robots noindex) never carry one.
+  const listed = [...read('dist/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+  assert(listed.length >= 14 && listed.every(url => url.startsWith(`${COMPANY.website}/`)), 'the sitemap lists the domain addresses');
+  for (const url of listed) {
+    const page = read(`dist/${url.slice(COMPANY.website.length + 1) || 'index.html'}`);
+    assert.deepEqual([...page.matchAll(/<link rel="canonical" href="([^"]+)">/g)].map(m => m[1]), [url], `${url}: one canonical link, to itself`);
+    assert.doesNotMatch(page, /<meta name="robots" content="noindex/, `${url}: listed, so indexable`);
+  }
+  for (const name of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'))) {
+    const page = read('dist/' + name);
+    if (/<meta name="robots" content="noindex/.test(page)) assert.doesNotMatch(page, /rel="canonical"/, `${name}: noindex, so no canonical`);
+  }
+  assert.match(read('dist/robots.txt'), new RegExp(`^Sitemap: ${COMPANY.website.replace(/[.]/g, '\\.')}/sitemap\\.xml$`, 'm'));
+  assert.doesNotMatch(read('dist/robots.txt'), /^Disallow: \/$/m, 'robots.txt never blocks the whole site');
   const jpeg = fs.readFileSync(path.join(root, 'dist', IMAGE.path));
   assert.equal(jpeg.readUInt16BE(0), 0xffd8, 'the preview is a JPEG (the format every app reads)');
   assert(jpeg.length < 300 * 1024, 'and small enough for WhatsApp');

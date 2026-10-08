@@ -101,9 +101,11 @@ const recParts = root => {
 const reduceRec = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const perView = rail => Math.max(1, Math.round(parseFloat(getComputedStyle(rail).getPropertyValue('--rec-k')) || 3));
 const stepOf = track => { const first = track.firstElementChild; return first ? first.getBoundingClientRect().width + (parseFloat(getComputedStyle(track).columnGap) || 0) : 0; };
+// (a largura do passo só é lida quando a fileira está deslocada: no começo, logo depois de desenhar o carrinho, ler o layout
+// obrigava o navegador a calcular a página inteira ali mesmo — PageSpeed, 08/10/2026)
 function placeRec(parts, state, offset = 0) {
-  const {track} = parts, step = stepOf(track);
-  track.style.transform = state.moving && (state.lead || offset) ? `translate3d(${(-state.lead * step + offset).toFixed(2)}px, 0, 0)` : '';
+  const {track} = parts, shifted = state.moving && (state.lead || offset);
+  track.style.transform = shifted ? `translate3d(${(-state.lead * stepOf(track) + offset).toFixed(2)}px, 0, 0)` : '';
 }
 function markRec(parts, state) {
   const k = state.moving ? perView(parts.rail) : Infinity;
@@ -161,9 +163,11 @@ function scheduleRec(root) {
   clearTimeout(state.timer);
   if (!parts || parts.rail !== state.rail) return;
   const on = playingRec(state);
-  // o anel do botão de pausa recomeça a cada card (a animação dele dura AUTO_MS)
+  // o anel do botão de pausa recomeça a cada card (a animação dele dura AUTO_MS); o reflow que o reinicia só quando ele já
+  // estava rodando (uma fileira recém-desenhada começa sem ele: nada de layout forçado na carga)
+  const restart = parts.rail.classList.contains('is-playing');
   parts.rail.classList.remove('is-playing');
-  if (on) { void parts.rail.offsetWidth; parts.rail.classList.add('is-playing'); state.timer = setTimeout(() => { if (playingRec(state)) goRec(root, 1, true); else scheduleRec(root); }, AUTO_MS); }
+  if (on) { if (restart) void parts.rail.offsetWidth; parts.rail.classList.add('is-playing'); state.timer = setTimeout(() => { if (playingRec(state)) goRec(root, 1, true); else scheduleRec(root); }, AUTO_MS); }
   else if (state.moving && Date.now() < state.heldUntil) state.timer = setTimeout(() => scheduleRec(root), state.heldUntil - Date.now() + 30);
 }
 // Anda um card. `offset` é onde a fileira está (no arraste); `auto` é a passagem sozinha, mais lenta e macia; a das setas, rápida.

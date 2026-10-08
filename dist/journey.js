@@ -1,7 +1,10 @@
 // Runs before styles: carry only validated theme colours across documents.
 (() => {
   const root = document.documentElement, key = 'ju:theme';
-  const defaults = {'--theme-text':'#10281e','--theme-muted':'#356650','--theme-accent':'#25664c','--theme-wash':'#e5f5ec','--theme-soft':'#cfe1d8','--theme-accent-strong':'#1e523d'};
+  // The colours of the piece the showcase opens on, exactly as it computes them: nothing changes colour (and transitions) at load.
+  // <entry-data> written by tools/sync-entry.cjs from products.js — do not edit by hand
+  const defaults = {'--theme-text':'#10281e', '--theme-muted':'#356650', '--theme-accent':'#25664c', '--theme-wash':'#e4f5ec', '--theme-soft':'#cfddd8', '--theme-accent-strong':'#1e523d'};
+  // </entry-data>
   const apply = values => {
     for (const name of Object.keys(defaults)) {
       const value = values?.[name];

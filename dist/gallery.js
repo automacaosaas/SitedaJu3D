@@ -44,7 +44,8 @@ export function createGallery(root,{onChange}={}){
   // Arrastar (ou a rolagem lateral do touchpad) muda a vista; durante uma rolagem pedida por botão, só vale a de destino.
   track.addEventListener('scroll',()=>{const w=track.clientWidth;if(!w)return;const i=Math.round(track.scrollLeft/w);if(target!==null){if(i!==target)return;target=null;}if(i!==index&&i<items.length){index=i;mark();}},{passive:true});
   // Quem volta da aba 3D (ou muda o tamanho da janela) continua na mesma vista.
-  new ResizeObserver(()=>{if(track.clientWidth)track.scrollTo({left:index*track.clientWidth,behavior:'instant'});}).observe(track);
+  // (a janela fechada mede 0 pelo próprio observador: nada é lido do layout, que a página pode estar montando)
+  new ResizeObserver(([entry])=>{if(entry.contentRect.width&&track.clientWidth)track.scrollTo({left:index*track.clientWidth,behavior:'instant'});}).observe(track);
   track.addEventListener('keydown',e=>{const step={ArrowLeft:-1,ArrowRight:1}[e.key];if(step){e.preventDefault();go(index+step);}else if(e.key==='Home'||e.key==='End'){e.preventDefault();go(e.key==='Home'?0:items.length-1);}});
   for(const b of [prev,next])b.addEventListener('click',()=>go(index+Number(b.dataset.step)));
   for(const list of [rail,dots])list.addEventListener('click',e=>{const b=e.target.closest('button');if(b)go([...list.children].indexOf(b));});

@@ -1,35 +1,62 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval' https://sdk.mercadopago.com https://http2.mlstatic.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://http2.mlstatic.com; font-src 'self' https://fonts.gstatic.com https://http2.mlstatic.com; img-src 'self' data: blob: https://wheat-llama-936569.hostingersite.com https://*.mlstatic.com https://www.mercadolibre.com https://www.mercadolivre.com https://*.mercadopago.com https://lh3.googleusercontent.com; connect-src 'self' https://api.mercadopago.com https://api-static.mercadopago.com https://secure-fields.mercadopago.com https://api.mercadolibre.com https://www.mercadolibre.com https://http2.mlstatic.com https://events.mercadopago.com https://www.mercadopago.com; frame-src 'self' https://*.mercadopago.com https://www.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <script src="journey.js"></script>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6p13ug9Y/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM=' 'wasm-unsafe-eval' https://sdk.mercadopago.com https://http2.mlstatic.com https://www.mercadopago.com; style-src 'self' 'unsafe-inline' https://http2.mlstatic.com; font-src 'self' https://http2.mlstatic.com; img-src 'self' data: blob: https://wheat-llama-936569.hostingersite.com https://*.mlstatic.com https://www.mercadolibre.com https://www.mercadolivre.com https://*.mercadopago.com https://lh3.googleusercontent.com; connect-src 'self' https://api.mercadopago.com https://api-static.mercadopago.com https://secure-fields.mercadopago.com https://api.mercadolibre.com https://www.mercadolibre.com https://http2.mlstatic.com https://events.mercadopago.com https://www.mercadopago.com; frame-src 'self' https://*.mercadopago.com https://www.mercadopago.com.br https://*.mercadolibre.com https://*.mercadolivre.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <script src="journey.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fff7f5">
   <meta name="description" content="Conheça a primeira coleção da Ju imprime pra mim. Peças feitas em impressão 3D.">
   <title>Ju imprime pra mim • Coleção 3D</title>
   <script src="page-entry.js"></script>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&amp;family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=Parisienne&amp;display=swap">
   <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="experience.css">
   <link rel="stylesheet" href="carousel.css">
-  <link rel="stylesheet" href="hero-demo.css">
-  <link rel="stylesheet" href="mobile-modal.css">
-  <link rel="stylesheet" href="product-page.css">
-  <link rel="stylesheet" href="commerce.css">
+  <link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>
+  <link rel="stylesheet" href="mobile-modal.css" media="print" data-late-css><noscript><link rel="stylesheet" href="mobile-modal.css"></noscript>
+  <link rel="stylesheet" href="product-page.css" media="print" data-late-css><noscript><link rel="stylesheet" href="product-page.css"></noscript>
+  <link rel="stylesheet" href="commerce.css" media="print" data-late-css><noscript><link rel="stylesheet" href="commerce.css"></noscript>
   <link rel="stylesheet" href="shopping.css">
   <link rel="stylesheet" href="catalog.css">
-  <link rel="stylesheet" href="mini-cart.css">
+  <link rel="stylesheet" href="mini-cart.css" media="print" data-late-css><noscript><link rel="stylesheet" href="mini-cart.css"></noscript>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
+  <!-- modulepreload -->
+  <link rel="modulepreload" href="late-css.js">
+  <link rel="modulepreload" href="icons.js">
+  <link rel="modulepreload" href="i18n.js">
+  <link rel="modulepreload" href="cart-store.js">
+  <link rel="modulepreload" href="auth-service.js">
+  <link rel="modulepreload" href="header-scroll.js">
+  <link rel="modulepreload" href="announcement-bar.js">
+  <link rel="modulepreload" href="products.js">
+  <link rel="modulepreload" href="company.js">
+  <link rel="modulepreload" href="analytics-config.js">
+  <link rel="modulepreload" href="shopping-navigation.js">
+  <link rel="modulepreload" href="account-drawer.js">
+  <link rel="modulepreload" href="mini-cart.js">
+  <link rel="modulepreload" href="product-grid.js">
+  <link rel="modulepreload" href="commerce-config.js">
+  <link rel="modulepreload" href="loading-ui.js">
+  <link rel="modulepreload" href="hero-motion.js">
+  <link rel="modulepreload" href="hero-scenery.js">
+  <link rel="modulepreload" href="hero-demo.js">
+  <link rel="modulepreload" href="cart-bridge.js">
+  <link rel="modulepreload" href="gallery.js">
+  <link rel="modulepreload" href="contact-link.js">
+  <link rel="modulepreload" href="purchase-sheet.js">
+  <link rel="modulepreload" href="kit-builder.js">
+  <link rel="modulepreload" href="shipping-client.js">
+  <link rel="modulepreload" href="free-shipping.js">
+  <link rel="modulepreload" href="motion-timeline.js">
+  <!-- /modulepreload -->
   <script type="module" src="site-shell.js"></script>
   <script type="module" src="catalog.js"></script>
   <script type="module" src="carousel.js"></script>
-  <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
   <script type="module" src="controller.js"></script>
   <link rel="stylesheet" href="journey.css">
   <!-- og -->
+  <link rel="canonical" href="https://juimprimepramim.com.br/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Ju, imprime pra mim?">
   <meta property="og:locale" content="pt_BR">
