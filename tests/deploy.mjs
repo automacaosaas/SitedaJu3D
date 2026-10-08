@@ -122,13 +122,26 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
 }
 
 // config-pagamentos.sh (08/10/2026): the owner pastes the Mercado Pago and Resend keys into prompts (secret ones without
-// echo), only those lines of the .env change (first occurrence, by bash builtins: no value on a command line), a copy of
+// echo), only those lines of the .env change (by bash builtins: no value on a command line), a copy of
 // the old .env stays beside it, and a test key can never stay in live mode.
 {
   assert(payments.includes('read -r -s -p "$label: " value') && payments.includes('ask MP_ACCESS_TOKEN') && payments.includes('ask RESEND_API_KEY') && /ask MP_ACCESS_TOKEN "[^"]*" 1 /.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 /.test(payments), 'secret keys are read without echo');
   assert(payments.includes("1) mode=test; label='de TESTE'") && payments.includes("prefix='(TEST-|APP_USR-)'") && payments.includes('[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }') && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'the prefix does not tell test from live (Mercado Pago test keys may start with APP_USR- too): MP_MODE does, after a confirmation');
-  assert(payments.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && payments.includes('cp -p "$ENV_FILE" "$backup"') && payments.includes('chmod 600 "$tmp"') && payments.includes('mv -f "$tmp" "$ENV_FILE"'), 'rewritten by builtins, old copy kept, private, swapped at once');
   assert(payments.includes('NEW[APP_ENV]=production') && payments.includes('NEW[SITE_URL]=$DOMAIN') && payments.includes('systemctl restart juimprime.service'), 'production on the shop domain, then the restart');
+}
+
+// Both scripts write the .env the same way (08/10/2026, review). Root runs them, but the .env lives in juimprime's folder:
+// root reads and writes there only as juimprime (runuser), so a symbolic link left in that folder never leads root to a
+// system file; the copy of before goes to a root-only folder outside /srv/juimprime (newest 10 kept). A repeated name, or
+// one with spaces around it, keeps only the new value (systemd's EnvironmentFile uses the last line) and current() reads
+// the last line, as systemd does. Values only through bash builtins and stdin, never on a command line.
+for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.sh', shop]]) {
+  assert(script.includes('as_app() { if [ -n "$TESTING" ]; then "$@"; else runuser -u "$APP_USER" -- "$@"; fi; }') && script.includes('ENV_TEXT=$(as_app cat -- "$ENV_FILE")'), `${name}: reads the .env as juimprime`);
+  assert(script.includes(`printf '%s' "$out" | as_app sh -c 'umask 077; t=$(mktemp "$1.XXXXXX") || exit 1; trap "rm -f -- \\"$t\\"" EXIT HUP INT TERM; cat > "$t" && mv -f -- "$t" "$1"' sh "$ENV_FILE"`), `${name}: written as juimprime, a new private file swapped at once, the temporary removed if interrupted`);
+  assert(!/^[^#\n]*\b(cp|chmod|chown|mv|ln)\b[^\n]*\$(ENV_FILE|tmp)\b/m.test(script.replace(/as_app sh -c '[^\n]*/, '')), `${name}: root never copies, moves or changes a path in juimprime's folder`);
+  assert(script.includes('BACKUP_DIR=/var/backups/juimprime; [ -z "$TESTING" ] || BACKUP_DIR=$(dirname -- "$ENV_FILE")') && script.includes('[ -n "$TESTING" ] || install -d -o root -g root -m 700 "$BACKUP_DIR"') && script.includes('backup=$(mktemp "$BACKUP_DIR/env.antes-$(date +%Y%m%d-%H%M%S)-XXXXXX")') && script.includes('for ((i = 0; i < ${#olds[@]} - 10; i++)); do rm -f -- "${olds[i]}"; done'), `${name}: the copy of before only for root, the newest 10`);
+  assert(script.includes(`re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"`) && script.includes("ASSIGN='^[[:space:]]*([A-Z][A-Z0-9_]*)[[:space:]]*='") && script.includes('if [ -z "${DONE[$key]+x}" ]; then out+="$key=${NEW[$key]}"$\'\\n\'; DONE[$key]=1; fi'), `${name}: the last line counts, repeated lines go`);
+  assert(script.includes(String.raw`'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'`) && script.includes('read -r -e -p "$label: " value'), `${name}: e-mails in visible ASCII (an arrow key typed without readline would leave ESC [ D in it)`);
 }
 
 // config-loja.sh (08/10/2026): the panel's first access (ADMIN_EMAIL/ADMIN_PASSWORD) and the Correios contract, typed into
@@ -141,17 +154,18 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(shop.includes('[ ${#p} -lt 12 ] || [ ${#p} -gt 128 ]') && shop.includes(String.raw`[[ "$p" == *[\'\"\\]* ]]`) && shop.includes('[[ "$p" == *[[:space:]]* ]]') && shop.includes('password_problem() (\n  LC_ALL=C\n'), '12 to 128 characters, counted the same on any server; no spaces, quotes or backslash');
   assert(shop.includes('[ -n "$(password_problem "$(current ADMIN_PASSWORD)")" ] || { had=1;'), 'Enter keeps the current password only when it passes the same rules');
   assert(/ask CORREIOS_CODE "[^"]*" 1 /.test(shop) && shop.includes('if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo;') && /ask ADMIN_EMAIL "[^"]*" 0 /.test(shop), 'the Correios access code without echo; the e-mail visible');
-  assert(/ask SHIP_FROM_CEP "[^"]*" 0 '\^\[0-9\]\{8\}\$' numeros/.test(shop) && shop.includes("SEPARATED='^[0-9./ -]+$'") && shop.includes('d=${value//[!0-9]/}'), 'the CEP as 12345-678 or 12345678, saved as 8 digits (contract, card and DR likewise)');
+  assert(shop.includes(`ask SHIP_FROM_CEP "CEP de onde a Júlia despacha (12345-678)" 0 '^(0[1-9]|[1-9][0-9])[0-9]{6}$' numeros`) && shop.includes(`'^[0-9]{10}$' numeros`) && shop.includes("SEPARATED='^[0-9./ -]+$'") && shop.includes('d=${value//[!0-9]/}'), 'the CEP as 12345-678 or 12345678, saved as 8 digits and never 00000-000 (contract, card and DR likewise; the card has 10, so a CNPJ is no card)');
   assert(shop.includes(String.raw`fits() { [[ -n "$1" && "$1" =~ $2 && "$1" != *[\'\"\\]* ]]; }`), 'no value with quotes or a backslash reaches the .env');
   assert(shop.includes('HEALTH=http://127.0.0.1:3000/api/health') && shop.includes('curl -fsS -m 5 "$HEALTH"') && !/curl[^\n]*\s-H\s/.test(shop) && shop.includes(`grep -q '"admin":"ready"' <<<"$body"`) && shop.includes('if [ -n "$panel" ] && [ -z "$TESTING" ]; then'), 'an admin that already exists is pointed out before anything is asked (the local health, no Host header)');
-  assert(shop.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && shop.includes('( umask 077; cp -p "$ENV_FILE" "$backup" )') && shop.includes('chmod 600 "$tmp"; [ -n "$TESTING" ] || chown "$APP_USER:$APP_USER" "$tmp"') && shop.includes('mv -f "$tmp" "$ENV_FILE"') && shop.includes('unset NEW'), 'rewritten by builtins, old copy kept, private, swapped at once');
-  assert(shop.includes('[ -z "$TESTING" ] || exit 0\n\necho "== Reiniciando o site"\nsystemctl restart juimprime.service') && shop.includes(`grep -o '"admin":"[a-z]*"\\|"shipping":"[a-z]*"`) && shop.includes('[ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ]'), 'root, then the restart and what /api/health says about the panel and the shipping');
+  assert(shop.includes('unset NEW out ENV_TEXT') && shop.includes('[ "$fixed" = "$had" ] || NEW[$var]=$fixed; return 0;'), 'the values leave memory once written; Enter keeps the cleaned form of the current value');
+  assert(shop.includes('[ -z "$TESTING" ] || exit 0\n\necho "== Reiniciando o site"\nsystemctl restart juimprime.service') && shop.includes(`[ -z "$panel" ] || grep -o '"admin":"[a-z]*"' <<<"$body" || true\n[ -z "$ship" ] || grep -o '"shipping":"[a-z]*"' <<<"$body" || true`) && shop.includes('[ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ]'), 'root, then the restart and what /api/health says about the part that was set up');
+  assert(shop.includes('mas os Correios só conferem na primeira cotação') && !shop.includes('Frete real ligado'), '"correios" only means the data is complete: the owner is told to quote once, and what a refusal does to the checkout');
   const names = [...shop.matchAll(/^\s*ask ([A-Z][A-Z0-9_]+) /gm)].map(m => m[1]).concat('ADMIN_PASSWORD').sort();
   assert.deepEqual(names, ['ADMIN_EMAIL', 'ADMIN_PASSWORD', 'CORREIOS_CARD', 'CORREIOS_CODE', 'CORREIOS_CONTRACT', 'CORREIOS_DR', 'CORREIOS_USER', 'SHIP_FROM_CEP']);
   for (const name of names) assert(listed.has(name) && read.has(name), `${name}: in the .env the setup writes and read by the code`);
 }
 
-// …and run for real (JU_TEST=1: no root, no chown, no restart) on a temporary .env, with the answers on stdin. Only where a
+// …and run for real (JU_TEST=1: no root, no runuser, no restart) on a temporary .env, with the answers on stdin. Only where a
 // bash 4+ that can open this folder exists: the server's tests run with a bare environment, and on Windows the bash found
 // may be WSL's, which cannot see C:/… — then one line says so and the static checks above stand alone.
 {
@@ -162,7 +176,10 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   const run = lines => spawnSync('bash', [script], {input: lines.map(line => `${line}\n`).join(''), encoding: 'utf8', env, timeout: 30000});
   const text = () => fs.readFileSync(envFile, 'utf8');
   const values = () => Object.fromEntries(text().split('\n').filter(line => /^[A-Z][A-Z0-9_]*=/.test(line)).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-  const copies = () => fs.readdirSync(dir).filter(name => name.startsWith('.env.antes-')).map(name => fs.readFileSync(path.join(dir, name), 'utf8'));
+  const copies = () => fs.readdirSync(dir).filter(name => name.startsWith('env.antes-')).map(name => fs.readFileSync(path.join(dir, name), 'utf8'));
+  // what systemd's EnvironmentFile hands to the site: spaces around the name are fine, and the last line of a name counts
+  const effective = () => { const out = {}; for (const line of text().split('\n')) { const m = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line); if (m) out[m[1]] = m[2]; } return out; };
+  const leftovers = () => fs.readdirSync(dir).filter(name => name !== '.env' && !name.startsWith('env.antes-'));
   try {
     const before = '# comentário\nAPP_ENV=preview\nDB_PASSWORD=nao-mexer\nADMIN_EMAIL=\nADMIN_PASSWORD=curta\nCORREIOS_USER=\nCORREIOS_CODE=\nCORREIOS_CONTRACT=\nCORREIOS_CARD=\nSHIP_FROM_CEP=\nMP_MODE=test\n';
     fs.writeFileSync(envFile, before);
@@ -170,18 +187,22 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
     if (probe.error || probe.status !== 0) console.log('config-loja.sh: sem um bash 4 que abra esta pasta aqui; o teste de comportamento ficou de fora (os estáticos valem).');
     else {
       const password = 'Senha-Boa-2026!', code = 'CWS-codigo_teste.0123456789abcdef';
-      // both parts: a bad e-mail, then a short password, quotes, a backslash, a space and a different confirmation before the
-      // right one; a CPF with dots, a short access code, a DR in letters and a 7-digit CEP before the right ones
-      const first = run(['3', 'ju sem arroba', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
-        '123.456.789-01', 'curto', code, '99.1234.5678', '0074512345', 'SE/SPM', '72', '1310-100', '01310-100']);
+      // both parts: a bad e-mail and one with the arrow keys in it, then a short password, quotes, a backslash, a space and a
+      // different confirmation before the right one; a CPF with dots missing a digit, a short access code, a CNPJ as the card,
+      // a DR in letters, a 7-digit CEP and 00000-000 before the right ones
+      const first = run(['3', 'ju sem arroba', 'julia@gmial\x1b[D\x1b[Dail.com', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
+        '123.456.789-0', '123.456.789-01', 'curto', code, '99.1234.5678', '67.771.044/0001-96', '0074512345', 'SE/SPM', '72', '1310-100', '00000-000', '01310-100']);
       const out = first.stdout + first.stderr;
       assert.equal(first.status, 0, out);
-      for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'Código com formato inesperado', 'A DR é só o número', 'O CEP tem 8 números']) assert(out.includes(message), `says: ${message}`);
+      for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'CPF tem 11 números e CNPJ 14', 'Código com formato inesperado', 'O cartão de postagem tem 10 números', 'A DR é só o número', 'O CEP tem 8 números']) assert(out.includes(message), `says: ${message}`);
+      assert.equal(out.split('E-mail com formato inesperado').length, 3, 'the e-mail with ESC [ D in it is refused too');
+      assert.equal(out.split('O CEP tem 8 números').length, 3, '00000-000 is no CEP');
       assert(!out.includes(password) && !out.includes(code) && !out.includes('Outra-Senha'), 'never prints the password or the access code');
       const after = values();
       assert.deepEqual(after, {APP_ENV: 'preview', DB_PASSWORD: 'nao-mexer', ADMIN_EMAIL: 'julia@example.com', ADMIN_PASSWORD: password, CORREIOS_USER: '12345678901', CORREIOS_CODE: code, CORREIOS_CONTRACT: '9912345678', CORREIOS_CARD: '0074512345', SHIP_FROM_CEP: '01310100', MP_MODE: 'test', CORREIOS_DR: '72'});
       assert(text().startsWith('# comentário\nAPP_ENV=preview\n') && text().endsWith('\nMP_MODE=test\nCORREIOS_DR=72\n'), 'the other lines stay where they were; a missing name goes at the end');
       assert.deepEqual(copies(), [before], 'the copy of before');
+      assert.deepEqual(leftovers(), [], 'no temporary file left beside the .env');
       if (process.platform !== 'win32') assert.equal(fs.statSync(envFile).mode & 0o777, 0o600, 'only the owner reads it');
       assert(require('../api/_lib/admin-auth.js').settings(after).bootstrap && require('../api/_lib/correios.js').settings(after).ready, 'what the code reads: the first admin can be created, the Correios are ready');
       // Enter on every question keeps everything (nine answers: the kept password asks for no confirmation) and writes nothing
@@ -198,6 +219,25 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
       assert.notEqual(refused.status, 0); assert.match(refused.stdout, /A senha precisa ter de 12 a 128 caracteres\./); assert.equal(text(), saved);
       const wrong = run(['9']);
       assert.equal(wrong.status, 1); assert.match(wrong.stdout, /Responda 1, 2 ou 3\./);
+      // a name repeated by hand at the end (with spaces around it): Enter offers the value the site uses (the last one), a
+      // new value replaces every line of that name, and Enter keeps a user saved with dots in its clean form
+      const messy = `ADMIN_EMAIL=\nADMIN_PASSWORD=\nCORREIOS_USER=67.771.044/0001-96\nCORREIOS_CODE=${code}\nCORREIOS_CONTRACT=9912345678\nCORREIOS_CARD=0074512345\nCORREIOS_DR=72\nSHIP_FROM_CEP=01310100\n  ADMIN_EMAIL = velho@x.com\nADMIN_PASSWORD=Senha-Velha-2025!\n`;
+      fs.writeFileSync(envFile, messy);
+      const both = run(['3', '', 'Senha-Nova-2026!', 'Senha-Nova-2026!', '', '', '', '', '', '']);
+      assert.equal(both.status, 0, both.stdout + both.stderr);
+      assert.equal(text(), `ADMIN_EMAIL=\nADMIN_PASSWORD=Senha-Nova-2026!\nCORREIOS_USER=67771044000196\nCORREIOS_CODE=${code}\nCORREIOS_CONTRACT=9912345678\nCORREIOS_CARD=0074512345\nCORREIOS_DR=72\nSHIP_FROM_CEP=01310100\n  ADMIN_EMAIL = velho@x.com\n`);
+      assert.equal(effective().ADMIN_EMAIL, 'velho@x.com'); assert.equal(effective().ADMIN_PASSWORD, 'Senha-Nova-2026!', 'the new password is the one in effect');
+      const email = run(['1', 'julia@example.com', '']);
+      assert.equal(email.status, 0, email.stdout + email.stderr);
+      assert(text().startsWith('ADMIN_EMAIL=julia@example.com\nADMIN_PASSWORD=Senha-Nova-2026!\n') && !text().includes('velho'), 'the repeated line goes');
+      assert.equal(effective().ADMIN_EMAIL, 'julia@example.com');
+      assert.deepEqual(leftovers(), []);
+      // config-pagamentos.sh writes the same way: a mode left at the end by hand ("live") never outlives the one chosen
+      fs.writeFileSync(envFile, 'APP_ENV=preview\nMP_PUBLIC_KEY=\nMP_ACCESS_TOKEN=\nMP_WEBHOOK_SECRET=\nMP_MODE=\nORDER_NOTIFY_EMAIL=\nRESEND_API_KEY=\nMP_MODE = live\n');
+      const pay = spawnSync('bash', [slash(path.join(root, 'deploy/config-pagamentos.sh'))], {input: ['1', 's', 'APP_USR-12345678-1234-1234-1234-123456789012', 'APP_USR-1234567890123456-100000-abcdefabcdefabcdefabcdef-123456789', 'abcdef0123456789abcdef0123456789', 'ju@example.com', 're_abcdefghijklmnop', 'n', ''].join('\n'), encoding: 'utf8', env, timeout: 30000});
+      assert.equal(pay.status, 0, pay.stdout + pay.stderr);
+      assert.equal(effective().MP_MODE, 'test'); assert(!text().includes('live'), 'config-pagamentos.sh: the repeated line goes');
+      assert.equal(effective().ORDER_NOTIFY_EMAIL, 'ju@example.com'); assert.deepEqual(leftovers(), []);
     }
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }

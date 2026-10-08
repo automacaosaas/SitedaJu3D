@@ -14,8 +14,21 @@ HEALTH=http://127.0.0.1:3000/api/health
 TESTING=${JU_TEST:-}
 [ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ] || { echo "Rode com sudo: sudo bash $0"; exit 1; }
 [ -f "$ENV_FILE" ] || { echo "Não achei $ENV_FILE (rode antes o setup-servidor.sh)."; exit 1; }
+# O .env fica numa pasta do juimprime: root só lê e grava ali como o próprio juimprime (runuser), para um link simbólico
+# deixado na pasta nunca levar a leitura ou a gravação a um arquivo do sistema. A cópia de antes vai para uma pasta só de
+# root, fora de /srv/juimprime (no teste, ao lado do .env).
+BACKUP_DIR=/var/backups/juimprime; [ -z "$TESTING" ] || BACKUP_DIR=$(dirname -- "$ENV_FILE")
+as_app() { if [ -n "$TESTING" ]; then "$@"; else runuser -u "$APP_USER" -- "$@"; fi; }
+load() { ENV_TEXT=$(as_app cat -- "$ENV_FILE") || { echo "Não consegui ler $ENV_FILE como $APP_USER."; exit 1; }; }
+load
 
-current() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
+# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, e, com o nome
+# repetido, fica com a ÚLTIMA linha.
+current() {
+  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"
+  while IFS= read -r line; do if [[ "$line" =~ $re ]]; then value=${BASH_REMATCH[1]}; fi; done <<<"$ENV_TEXT"
+  printf '%s' "${value%"${value##*[![:space:]]}"}"
+}
 # Números escritos com pontos, traços, barras ou espaços (01310-100, 99.1234.5678): o site lê só os dígitos (digits() em
 # api/_lib/correios.js), então só os dígitos vão para o .env. No usuário, só um CPF (11) ou CNPJ (14) assim vira números.
 SEPARATED='^[0-9./ -]+$'
@@ -23,7 +36,8 @@ tidy() {  # tidy <como: texto|numeros|usuario> <valor>
   local kind=$1 value=$2 d
   if [ "$kind" != texto ] && [[ "$value" =~ $SEPARATED ]]; then
     d=${value//[!0-9]/}
-    if [ "$kind" = numeros ] || [ ${#d} -eq 11 ] || [ ${#d} -eq 14 ]; then value=$d; fi
+    if [ "$kind" = numeros ] || [ ${#d} -eq 11 ] || [ ${#d} -eq 14 ]; then value=$d
+    elif [ "$value" != "$d" ]; then value=''; fi   # um CPF/CNPJ com pontos e um número a mais ou a menos: digitar de novo
   fi
   printf '%s' "$value"
 }
@@ -31,13 +45,13 @@ tidy() {  # tidy <como: texto|numeros|usuario> <valor>
 fits() { [[ -n "$1" && "$1" =~ $2 && "$1" != *[\'\"\\]* ]]; }
 declare -A NEW=()
 ask() {  # ask <VAR> <pergunta> <secreto 0|1> <regex> [como: texto|numeros|usuario] [aviso]
-  local var=$1 label=$2 secret=$3 re=$4 kind=${5:-texto} hint=${6:-'Valor com formato inesperado; confira e digite de novo.'} value had
-  # Enter só mantém o atual quando ele já serve
-  had=$(current "$var"); fits "$(tidy "$kind" "$had")" "$re" || had=''; [ -n "$had" ] && label="$label [Enter mantém o atual]"
+  local var=$1 label=$2 secret=$3 re=$4 kind=${5:-texto} hint=${6:-'Valor com formato inesperado; confira e digite de novo.'} value had fixed
+  # Enter só mantém o atual quando ele já serve, e aí grava a forma limpa (um CPF com pontos vira só os números)
+  had=$(current "$var"); fixed=$(tidy "$kind" "$had"); fits "$fixed" "$re" || had=''; [ -n "$had" ] && label="$label [Enter mantém o atual]"
   while :; do
-    if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo; else read -r -p "$label: " value; fi
+    if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo; else read -r -e -p "$label: " value; fi
     value=${value//$'\r'/}; value="${value#"${value%%[![:space:]]*}"}"; value="${value%"${value##*[![:space:]]}"}"
-    if [ -z "$value" ] && [ -n "$had" ]; then return 0; fi
+    if [ -z "$value" ] && [ -n "$had" ]; then [ "$fixed" = "$had" ] || NEW[$var]=$fixed; return 0; fi
     value=$(tidy "$kind" "$value")
     if fits "$value" "$re"; then NEW[$var]=$value; return 0; fi
     echo "  $hint"
@@ -57,7 +71,7 @@ password_problem() (
   fi
 )
 ask_password() {
-  local value again problem had='' label="Senha do painel (12 a 128 caracteres, sem espaços, aspas nem barra invertida; não aparece na tela)"
+  local value again problem had='' label="Senha do painel (12 a 128 caracteres, sem espaços, aspas, barra invertida, acentos nem ç; não aparece na tela)"
   # Enter só mantém a atual quando ela já passa nas regras; aí não há o que confirmar
   [ -n "$(password_problem "$(current ADMIN_PASSWORD)")" ] || { had=1; label="$label [Enter mantém a atual]"; }
   while :; do
@@ -92,7 +106,7 @@ fi
 
 if [ -n "$panel" ]; then
   echo "== Painel da Júlia (primeiro acesso)"
-  ask ADMIN_EMAIL "E-mail com que a Júlia vai entrar no painel" 0 '^[^[:space:]@<>]+@[^[:space:]@<>]+\.[A-Za-z]{2,}$' texto \
+  ask ADMIN_EMAIL "E-mail com que a Júlia vai entrar no painel" 0 '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' texto \
     "E-mail com formato inesperado (exemplo: nome@gmail.com); digite de novo."
   ask_password
 fi
@@ -100,47 +114,54 @@ fi
 if [ -n "$ship" ]; then
   echo "== Frete dos Correios (dados do contrato da Júlia; o passo a passo está em FRETE-SETUP.md)"
   ask CORREIOS_USER "Usuário da API (o login do Meu Correios: CPF/CNPJ só com números ou o nome de usuário)" 0 '^[A-Za-z0-9._@-]{3,80}$' usuario \
-    "Use só letras, números e . _ @ - (de 3 a 80); confira e digite de novo."
+    "Use só letras, números e . _ @ - (de 3 a 80); CPF tem 11 números e CNPJ 14. Confira e digite de novo."
   ask CORREIOS_CODE "Código de acesso da API (CWS → Gestão de acesso a API's → Gerar código; não aparece na tela)" 1 '^[A-Za-z0-9._-]{16,200}$' texto \
     "Código com formato inesperado (letras, números e . _ -, pelo menos 16); copie de novo do CWS e cole."
   ask CORREIOS_CONTRACT "Número do contrato (Correios Empresas → Consultar Contratos)" 0 '^[0-9]{6,12}$' numeros \
     "O contrato tem de 6 a 12 números; confira e digite de novo."
-  ask CORREIOS_CARD "Número do cartão de postagem (Correios Empresas → Cartões de Postagem)" 0 '^[0-9]{6,14}$' numeros \
-    "O cartão de postagem tem de 6 a 14 números; confira e digite de novo."
+  ask CORREIOS_CARD "Número do cartão de postagem (Correios Empresas → Cartões de Postagem)" 0 '^[0-9]{10}$' numeros \
+    "O cartão de postagem tem 10 números (com os zeros da frente); confira e digite de novo."
   ask CORREIOS_DR "DR: o número da \"Unidade Gestora\" na tela do contrato (por exemplo 72)" 0 '^[0-9]{1,3}$' numeros \
     "A DR é só o número da Unidade Gestora (1 a 3 números); confira e digite de novo."
-  ask SHIP_FROM_CEP "CEP de onde a Júlia despacha (12345-678)" 0 '^[0-9]{8}$' numeros \
+  ask SHIP_FROM_CEP "CEP de onde a Júlia despacha (12345-678)" 0 '^(0[1-9]|[1-9][0-9])[0-9]{6}$' numeros \
     "O CEP tem 8 números (12345-678); confira e digite de novo."
 fi
 
 [ ${#NEW[@]} -gt 0 ] || { echo "Nada foi alterado (os valores ficaram como estavam)."; exit 0; }
 
-# Troca só as linhas pedidas (a primeira de cada nome; a que faltar entra no fim), com comandos internos do bash: os
-# valores nunca passam pela linha de comando de outro programa. A cópia de antes fica ao lado, só para root.
-backup="$ENV_FILE.antes-$(date +%Y%m%d-%H%M%S)"
-( umask 077; cp -p "$ENV_FILE" "$backup" )
-tmp=$(mktemp "$ENV_FILE.XXXXXX")
+# Troca só as linhas pedidas, com comandos internos do bash (os valores nunca passam pela linha de comando de outro
+# programa): o valor novo entra na primeira linha do nome, as repetidas saem (o systemd ficaria com a última) e o nome que
+# faltar entra no fim. Antes, a cópia do .env de antes, só para root (ficam as 10 mais novas).
+load
+[ -n "$TESTING" ] || install -d -o root -g root -m 700 "$BACKUP_DIR"
+backup=$(mktemp "$BACKUP_DIR/env.antes-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+printf '%s\n' "$ENV_TEXT" > "$backup"
+olds=("$BACKUP_DIR"/env.antes-*); for ((i = 0; i < ${#olds[@]} - 10; i++)); do rm -f -- "${olds[i]}"; done
+ASSIGN='^[[:space:]]*([A-Z][A-Z0-9_]*)[[:space:]]*='
 declare -A DONE=()
+out=''
 while IFS= read -r line || [ -n "$line" ]; do
-  key=${line%%=*}
-  if [[ "$line" == *=* && "$key" =~ ^[A-Z][A-Z0-9_]*$ && -n "${NEW[$key]+x}" && -z "${DONE[$key]+x}" ]]; then
-    printf '%s=%s\n' "$key" "${NEW[$key]}"; DONE[$key]=1
+  key=''; if [[ "$line" =~ $ASSIGN ]]; then key=${BASH_REMATCH[1]}; fi
+  if [ -n "$key" ] && [ -n "${NEW[$key]+x}" ]; then
+    if [ -z "${DONE[$key]+x}" ]; then out+="$key=${NEW[$key]}"$'\n'; DONE[$key]=1; fi
   else
-    printf '%s\n' "$line"
+    out+="$line"$'\n'
   fi
-done < "$ENV_FILE" > "$tmp"
-for key in "${!NEW[@]}"; do [ -n "${DONE[$key]+x}" ] || printf '%s=%s\n' "$key" "${NEW[$key]}" >> "$tmp"; done
-chmod 600 "$tmp"; [ -n "$TESTING" ] || chown "$APP_USER:$APP_USER" "$tmp"
-mv -f "$tmp" "$ENV_FILE"
-unset NEW
-echo "gravado (a versão de antes ficou em $backup)"
+done < <(printf '%s' "$ENV_TEXT")
+for key in "${!NEW[@]}"; do [ -n "${DONE[$key]+x}" ] || out+="$key=${NEW[$key]}"$'\n'; done
+# Gravado pelo juimprime: um arquivo novo (600) ao lado, trocado de uma vez; interrompido no meio, o temporário sai e o
+# .env fica como estava.
+printf '%s' "$out" | as_app sh -c 'umask 077; t=$(mktemp "$1.XXXXXX") || exit 1; trap "rm -f -- \"$t\"" EXIT HUP INT TERM; cat > "$t" && mv -f -- "$t" "$1"' sh "$ENV_FILE"
+unset NEW out ENV_TEXT
+echo "gravado (a versão de antes ficou em $backup, só para root)"
 [ -z "$TESTING" ] || exit 0
 
 echo "== Reiniciando o site"
 systemctl restart juimprime.service
 for i in $(seq 1 30); do body=$(curl -fsS -m 5 "$HEALTH" 2>/dev/null || true); grep -q '"ok":true' <<<"$body" && break; sleep 1; done
 grep -q '"ok":true' <<<"$body" || { echo "O site não respondeu: journalctl -u juimprime -n 40"; exit 1; }
-grep -o '"admin":"[a-z]*"\|"shipping":"[a-z]*"\|"missing":\[[^]]*\]' <<<"$body" || true
+[ -z "$panel" ] || grep -o '"admin":"[a-z]*"' <<<"$body" || true
+[ -z "$ship" ] || grep -o '"shipping":"[a-z]*"' <<<"$body" || true
 state() { grep -o "\"$1\":\"[a-z]*\"" <<<"$body" | cut -d'"' -f4 || true; }
 if [ -n "$panel" ]; then
   case "$(state admin)" in
@@ -152,7 +173,9 @@ if [ -n "$panel" ]; then
 fi
 if [ -n "$ship" ]; then
   case "$(state shipping)" in
-    correios) echo "Frete real ligado: o checkout já cota PAC e SEDEX pelo contrato. Faça uma cotação de teste com um CEP." ;;
+    correios) echo "Dados dos Correios completos: o checkout passa a cotar pelo contrato, mas os Correios só conferem na primeira cotação."
+      echo "Faça agora uma cotação no carrinho com um CEP. Sem PAC e SEDEX, os Correios recusaram o usuário, o código ou o cartão,"
+      echo "e o checkout não fecha pedidos até corrigir: rode de novo, opção 2 (o motivo: journalctl -u juimprime -n 50 | grep shipping)." ;;
     pending) echo "Os dados dos Correios estão gravados, mas falta dado da loja em api/_lib/shipping-config.js (caixas, prazos ou serviços): me chame." ;;
     *) echo "Frete real desligado: algum dado dos Correios ficou vazio. Rode de novo, opção 2." ;;
   esac

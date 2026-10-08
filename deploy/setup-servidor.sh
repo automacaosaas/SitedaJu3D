@@ -138,7 +138,7 @@ NFE_PROVIDER=
 BLING_CLIENT_ID=
 BLING_CLIENT_SECRET=
 NFE_ENVIRONMENT=
-# Entrar com o Google e com a Apple (opcional; sem eles, os botões não aparecem). APPLE_PRIVATE_KEY: a chave .p8 numa linha só, com \n no lugar das quebras.
+# Entrar com o Google e com a Apple (opcional; sem eles, os botões não aparecem). APPLE_PRIVATE_KEY: a chave .p8 entre aspas duplas, numa linha só, com \n no lugar das quebras (sem as aspas, o systemd apaga a barra).
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 APPLE_CLIENT_ID=
