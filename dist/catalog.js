@@ -98,6 +98,7 @@ class ProductCarousel {
     this.bind(); this.render(false);
   }
   bind() {
+    if ('IntersectionObserver' in window) new IntersectionObserver(([entry]) => { this.visible = entry.isIntersecting; }).observe(this.stage);
     this.host.querySelector('.product-carousel-prev').addEventListener('click', () => this.move(-1));
     this.host.querySelector('.product-carousel-next').addEventListener('click', () => this.move(1));
     this.dots.addEventListener('click', event => { const button = event.target.closest('[data-dot]'); if (button) this.goTo(Number(button.dataset.dot)); });
@@ -149,7 +150,10 @@ class ProductCarousel {
   // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine). Com a seção fora da tela, de uma vez:
   // cards e cores trocam sem transição (nada fica animando longe dos olhos).
   follow(id) { const index = this.items.findIndex(item => item.id === id); if (index < 0 || index === this.active) return; this.active = index; this.quiet = !this.onScreen(); this.render(false); this.quiet = false; }
-  onScreen() { const box = this.stage.getBoundingClientRect?.(); return !!box && box.bottom > 0 && box.top < innerHeight; }
+  // Na tela ou não, pelo IntersectionObserver (bind): medir aqui, no fim de cada passagem da vitrine e logo depois de ela pintar o
+  // banner com a cor nova, obrigava o navegador a recalcular o estilo da página inteira no meio do script (até 430 ms com a CPU 4x
+  // mais lenta, 08/10/2026). A medida direta fica só para antes da primeira resposta do observador.
+  onScreen() { if (typeof this.visible === 'boolean') return this.visible; const box = this.stage.getBoundingClientRect?.(); return !!box && box.bottom > 0 && box.top < innerHeight; }
   // Cada card guarda onde está desenhado (this.slots) e anda o mesmo tanto que a coleção. O que dá a volta não atravessa o palco: se
   // vai ficar escondido, fica do lado por onde saiu; se vai aparecer, entra pela borda certa. Os de longe ficam inertes (fora do Tab).
   render(announce) {

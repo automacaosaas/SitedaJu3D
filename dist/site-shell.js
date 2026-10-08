@@ -90,6 +90,19 @@ function setupMobileDrawer() {
   });
 }
 
+// "Pular para o conteúdo": o primeiro Tab da página, antes da barra de avisos e dos itens do cabeçalho (eram 10 paradas até a vitrine).
+// Na home o conteúdo é a vitrine; nas outras páginas, o <main>. O alvo recebe o foco sem mudar o endereço (a home lê o # para abrir peças).
+function mountSkipLink() {
+  const target = document.querySelector('.home .showcase') || document.querySelector('main');
+  if (!target || document.querySelector('.skip-link')) return;
+  if (!target.id) target.id = 'conteudo';
+  target.dataset.skipTarget = '';
+  const link = document.createElement('a');
+  link.className = 'skip-link'; link.href = `#${target.id}`; link.textContent = 'Pular para o conteúdo';
+  link.addEventListener('click', event => { event.preventDefault(); if (!target.hasAttribute('tabindex')) target.tabIndex = -1; target.focus(); });
+  document.body.prepend(link);
+}
+
 export function refreshHeader() {
   const quantity = readCart().reduce((sum, item) => sum + item.quantity, 0);
   document.querySelectorAll('[data-cart-count]').forEach(el => { el.textContent = quantity; el.hidden = !quantity; });
@@ -122,6 +135,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
 }
 // The session is an HttpOnly cookie; ask the server who is signed in so a new tab shows the right name in the menu.
 refreshSession();
+mountSkipLink();
 setupMobileDrawer();
 // The rotating bar is for the shop pages; cart, checkout and account keep the buyer focused on finishing.
 if (!document.body.matches('.commerce-page, .account-page')) mountAnnouncementBar();

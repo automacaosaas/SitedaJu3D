@@ -165,8 +165,11 @@ function updateControls(){
   $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=color(s[item.id]).hex;i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
   viewer?.update(hexColors());revealSwatch();
 }
-// No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista.
-function revealSwatch(){const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+// No celular as cores ficam numa fileira que rola de lado: a escolhida fica sempre à vista. Só lá a fileira rola (product-page.css,
+// até 600 px), e a medida fica para o quadro seguinte: lida logo depois das escritas da janela, ela refazia o layout no meio da
+// abertura (150 ms com a CPU 4x mais lenta, 08/10/2026).
+const swatchRow=matchMedia('(max-width: 600px)');let swatchFrame=0;
+function revealSwatch(){if(!swatchRow.matches)return;cancelAnimationFrame(swatchFrame);swatchFrame=requestAnimationFrame(()=>{const row=$('#palette'),b=row.querySelector('[aria-checked="true"]');if(!b||row.scrollWidth<=row.clientWidth+1)return;row.scrollTo({left:Math.max(0,b.offsetLeft-(row.clientWidth-b.offsetWidth)/2),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});}
 // As fotos mostram só as cores da vitrine: ao escolher uma cor, a prévia passa para o 3D.
 function applyColors(next,message){selections[activeProduct]=validSelection(activeProduct,next);updateControls();save();announce(message);if(view!=='model')setView('model');}
 function chooseColor(id){applyColors({...selections[activeProduct],[selectedPart]:id},`${PRODUCTS[activeProduct].parts.find(p=>p.id===selectedPart).name}: ${color(id).name}.`);}
