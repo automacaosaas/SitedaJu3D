@@ -205,7 +205,11 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // 2026-10-08: only the piece in front gets its photo while the showcase is built; the neighbours right after it shows
   assert.match(showcase, /const set = artSrcset\(product\.catalogImage \|\| product\.image\), sources = set \? ` sizes="\$\{HERO_SIZES\}" \$\{first \? '' : 'data-'\}srcset="\$\{set\}"` : '';/);
   assert.match(showcase, /const first = i === initial, src = /);
-  assert.match(showcase, /drawn\.then\(\(\) => \{[^]*?preloadAround\(active\);/, 'the neighbours after the first draw');
+  assert.match(showcase, /drawn\.then\(\(\) => \{[^]*?ready\[initial\]\.then\(state => state === 'slow' && waitImage\(images\[initial\], 15000\)\)\.then\(\(\) => preloadAround\(active\)\);/, 'the neighbours after the first draw; with the photo in front late, once it arrives (or 15 s later)');
+  // 2026-10-08: a photo later than 6.5 s (cards: 12 s) shows up when it arrives; "Imagem indisponível" only for a real failure
+  assert.match(showcase, /return revealImage\(img, \{limit: 6500,/);
+  assert.match(read('dist/catalog.js'), /revealImage\(img, \{/);
+  for (const file of ['dist/carousel.js', 'dist/catalog.js']) assert.doesNotMatch(read(file), /imageReady/, `${file}: no late photo hidden as unavailable`);
   assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
   assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');
   for (const file of ['dist/mini-cart.js', 'dist/cart-view.js']) assert.match(read(file), /artSmall\(/, `${file}: the light photo for the small pictures`);

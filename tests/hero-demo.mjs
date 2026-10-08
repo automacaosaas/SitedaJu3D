@@ -71,6 +71,11 @@ assert.ok(!/borboletosc|dinossaurosc|aviaosc|retinosc/i.test(demo + timeline), '
 // a folha da demonstração chega depois da primeira pintura (late-css.js; tests/pagespeed.mjs) e a abertura espera por ela
 assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>'));
 assert.ok(demo.includes("import {lateCss} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, lateCss]);'), 'a demonstração só aparece com o estilo dela');
+// 2026-10-08: um preparo que deu "não" (o equipamento passou dos 6,5 s numa rede lenta) não fica guardado: o clique confere de novo,
+// e com as imagens já chegadas o 1º toque em "Ver encaixado" abre (antes, só o 2º)
+assert.ok(/\} else if \(dom\.failed\) check\(\);/.test(demo) && /if \(dom\.ready === ready\) dom\.failed = !ok;/.test(demo), 'a demonstração lenta abre no 1º toque');
+assert.ok(/imageReady\(img, 6500\)/.test(demo), 'e o clique não espera (com a vitrine travada) mais que antes');
+assert.ok(/function check\(\) \{\r?\n    for \(const img of \[\.\.\.dom\.images, dom\.castImage\]\) if \(img\.complete && !img\.naturalWidth && img\.getAttribute\('src'\)\) img\.src = img\.getAttribute\('src'\);/.test(demo), 'a imagem que falhou de verdade é pedida de novo no clique');
 assert.ok(carousel.includes("import {createHeroDemo} from './hero-demo.js';"));
 assert.ok(/if \(locked \|\| !e\.isPrimary/.test(carousel) && /if \(locked \|\| gesture/.test(carousel) && /if \(!locked && \(e\.key === 'ArrowLeft'/.test(carousel), 'arraste, setas e teclado travados durante a demonstração');
 assert.ok(/performance\.now\(\) < suppressUntil[\s\S]{0,420}demo\.open\(index\)/.test(carousel), 'um arraste nunca abre a demonstração (o filtro de clique vem antes)');
