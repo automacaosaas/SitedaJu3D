@@ -51,12 +51,12 @@ function apiError(status, data) {
 
 // `sessionId`: the buyer's device id (security.js on the checkout pages), sent as X-meli-session-id for Mercado Pago's
 // fraud checks. Every error carries Mercado Pago's own x-request-id (`requestId`), for the logs and for their support.
-async function call({settings: s, fetchImpl = globalThis.fetch, method, path, body, idempotencyKey, sessionId}) {
+async function call({settings: s, fetchImpl = globalThis.fetch, method, path, body, idempotencyKey, sessionId, timeout = TIMEOUT_MS}) {
   const response = await fetchImpl(API + path, {
     method,
     headers: {Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json', Accept: 'application/json', ...(idempotencyKey ? {'X-Idempotency-Key': idempotencyKey} : {}), ...(sessionId ? {'X-meli-session-id': sessionId} : {})},
     ...(body ? {body: JSON.stringify(body)} : {}),
-    ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(TIMEOUT_MS)} : {})
+    ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(timeout)} : {})
   });
   const requestId = String(response.headers?.get?.('x-request-id') || '').replace(/[^\w.:-]/g, '').slice(0, 80);
   const data = await response.json().catch(() => ({}));
@@ -77,6 +77,25 @@ async function paymentMethods({settings: s, fetchImpl}) {
   const data = await call({settings: s, fetchImpl, method: 'GET', path: '/v1/payment_methods'});
   return (Array.isArray(data) ? data : []).filter(m => m && m.status === 'active' && PAYMENT_TYPES.has(m.payment_type_id) && (m.payment_type_id !== 'bank_transfer' || m.id === 'pix'))
     .map(m => ({id: String(m.id).slice(0, 40), name: String(m.name || m.id).slice(0, 60), type: m.payment_type_id, thumbnail: MP_PICTURE.test(String(m.secure_thumbnail || '')) ? String(m.secure_thumbnail) : ''}));
+}
+// The account's installment plans for a card brand and an amount (GET /v1/payment_methods/installments): per card, payer_costs
+// with installments, installment_rate, installment_rate_collector, installment_amount and total_amount, as the account is set up
+// (with "parcelas sem juros" turned on, the first ones come at rate 0). Read for the "sem juros" check (interest-free.js).
+const installmentOptions = ({settings: s, fetchImpl, amountCents, paymentMethodId}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/payment_methods/installments?${new URLSearchParams({amount: amount(amountCents), payment_method_id: paymentMethodId})}`, timeout: 8000});
+// How many installments such an answer gives without interest: its plans from 1x on, in order, until the first one with interest.
+// A plan is interest-free when Mercado Pago adds nothing to the price: installment_rate 0, collected by Mercado Pago itself (a
+// "THIRD_PARTY" collector alone means the card's bank adds its own interest; the rule of Mercado Pago's own WooCommerce plugin)
+// and a total that does not pass the amount asked. Every card of the answer must give it (the smallest count wins); 1x alone is
+// 0 (nothing to announce). null when the answer holds no credit plan at all.
+const freePlan = (cost, amountCents) => Number(cost.installment_rate) === 0 && (!Array.isArray(cost.installment_rate_collector) || cost.installment_rate_collector.includes('MERCADOPAGO')) && Math.round(Number(cost.total_amount) * 100) <= amountCents;
+function interestFreeCount(answer, amountCents) {
+  const counts = (Array.isArray(answer) ? answer : []).filter(option => option?.payment_type_id !== 'debit_card' && Array.isArray(option?.payer_costs))
+    .map(option => option.payer_costs.filter(cost => Number.isInteger(cost?.installments) && cost.installments >= 1).sort((a, b) => a.installments - b.installments))
+    .filter(plans => plans.length)
+    .map(plans => { let n = 0; for (const cost of plans) { if (!freePlan(cost, amountCents)) break; n = cost.installments; } return n; });
+  if (!counts.length) return null;
+  const n = Math.min(...counts, MAX_INSTALLMENTS);
+  return n >= 2 ? n : 0;
 }
 const createOrder = ({settings: s, fetchImpl, payload, idempotencyKey, sessionId}) => call({settings: s, fetchImpl, method: 'POST', path: '/v1/orders', body: payload, idempotencyKey, sessionId});
 const getOrder = ({settings: s, fetchImpl, id}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/orders/${encodeURIComponent(id)}`});
@@ -226,4 +245,4 @@ function signatureTime(signature) {
   return found ? Number(found[1]) * (found[1].length >= 12 ? 1 : 1000) : null;
 }
 
-module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, paymentMethods, createOrder, getOrder, cancelOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, signatureTime, deviceId, refusalReason, REFUSAL_REASONS, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};
+module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, paymentMethods, installmentOptions, interestFreeCount, createOrder, getOrder, cancelOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, signatureTime, deviceId, refusalReason, REFUSAL_REASONS, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};

@@ -10,7 +10,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const {freeShippingProgress, freeShippingBar, freeShippingNote} = await site('free-shipping.js');
-const {installmentRows, installmentsTable} = await site('installments.js');
+const {installmentRows, installmentsTable, interestFreeCount} = await site('installments.js');
 const {cartSummary} = await site('cart-view.js');
 
 // ── free shipping ─────────────────────────────────────────────────────
@@ -46,6 +46,11 @@ const {cartSummary} = await site('cart-view.js');
   assert.equal(installmentsTable(rows.slice(0, 1)), '', 'one option: nothing to compare');
   assert.deepEqual(installmentRows(null, 100), []); assert.deepEqual(installmentRows([{payment_type_id: 'debit_card', payer_costs: [{installments: 1, installment_amount: 1, total_amount: 1}]}], 100), [], 'debit cards have no installments');
   assert.doesNotMatch(installmentsTable([{installments: 1, eachCents: 1, totalCents: 1, interestCents: 0}, {installments: 2, eachCents: 1, totalCents: 3, interestCents: 2, cet: '<b>9%'}]), /<b>/, 'a label from outside cannot inject markup');
+  // the card option promises "sem juros" only as far as this card's table goes (2026-10-08)
+  assert.equal(interestFreeCount(rows), 2, 'this card: 2x without interest, 3x with');
+  assert.equal(interestFreeCount(rows.slice(0, 1)), 1);
+  assert.equal(interestFreeCount([{installments: 1, interestCents: 0}, {installments: 2, interestCents: 5}, {installments: 3, interestCents: 0}]), 1, 'stops at the first interest');
+  assert.equal(interestFreeCount([]), null); assert.equal(interestFreeCount(null), null, 'no table yet: the account\'s number decides');
 }
 
 // ── cart summary: estimate by CEP and the free-shipping bar ───────────
@@ -74,6 +79,7 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(account, /input\('password', 'Crie uma senha \(opcional\)', 'password', 'new-password', 'Pelo menos 8 caracteres', true\)/, 'sign-up password is optional');
   assert.match(account, /\$\{optional \? '' : 'required'\}/);
   assert.match(fake, /getInstallments/); assert.match(fake, /onBinChange/);
+  assert.match(fake, /fetch\('\/__fake-mp\/installments\?amount='/, 'the simulated Brick\'s table comes from the same simulated account as the server\'s check');
   // Before going live (2026-10-07): one attempt until a definite answer, the device id, no raw Mercado Pago code on the
   // real site, and a waiting Pix cancelled before a new one is made.
   assert.match(checkout, /if \(!order\.attempt\) order = \{\.\.\.order, attempt: newAttempt\(\)\};/, 'the attempt is kept across retries');

@@ -300,6 +300,11 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-off strong { font-size: 13px; letter-spacing: .06em; }
 .card-off { background: #edf3ef; color: var(--theme-accent, #25664c); }
 .card-off strong { font-size: 12px; letter-spacing: .05em; }
+/* As duas promessas do cartão no mesmo lugar ("3X SEM JUROS" e "EM ATÉ 12X", checkout.js cardOffer): a maior dá o tamanho e só uma
+   aparece, então a troca (quando o Mercado Pago dá menos parcelas sem juros para o cartão digitado) não empurra o Brick. */
+.card-off { display: grid; grid-template-columns: minmax(0, 1fr); }
+.card-offer { grid-area: 1 / 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.card-offer[aria-hidden="true"] { visibility: hidden; }
 .amounts .pix-discount dd { color: #13864a; font-weight: 650; }
 .amounts .pix-hint { color: #13864a; font-size: 13px; }
 .amounts .pix-hint dd { font-weight: 650; }

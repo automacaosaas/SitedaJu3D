@@ -6,14 +6,11 @@
   // Stand-in for the device id that https://www.mercadopago.com/v2/security.js sets on the real checkout (the site then
   // does not load that script here, and the simulated Mercado Pago sees it as X-meli-session-id).
   window.MP_DEVICE_SESSION_ID = window.MP_DEVICE_SESSION_ID || 'fake-device-' + Math.random().toString(36).slice(2, 12);
-  // Like mp.getInstallments: 1x without interest, 2x to 12x at 2.99% a month (Price table), with a CET label.
+  // Like mp.getInstallments: the simulated account's plans for this amount (tools/fake-mercadopago.cjs, through the local
+  // server): 1x without interest, 2x to 12x at 2.99% a month with a CET label, except the first ones with --sem-juros=N.
   MercadoPago.prototype.getInstallments = function (params) {
-    var amount = Number(params && params.amount) || 0, rate = 0.0299, costs = [];
-    for (var n = 1; n <= 12; n++) {
-      var each = n === 1 ? amount : amount * rate / (1 - Math.pow(1 + rate, -n)), total = Math.round(each * n * 100) / 100;
-      costs.push({installments: n, installment_rate: n === 1 ? 0 : rate * 100, installment_amount: Math.round(each * 100) / 100, total_amount: total, labels: n === 1 ? ['recommended_installment'] : ['CFT_' + (Math.pow(1 + rate, 12) * 100 - 100).toFixed(2).replace('.', ',') + '%|TEA_' + (Math.pow(1 + rate, 12) * 100 - 100).toFixed(2).replace('.', ',') + '%']});
-    }
-    return Promise.resolve([{payment_method_id: 'master', payment_type_id: 'credit_card', issuer: {id: 24, name: 'Mastercard'}, payer_costs: costs}]);
+    return fetch('/__fake-mp/installments?amount=' + encodeURIComponent((params && params.amount) || '') + '&bin=' + encodeURIComponent((params && params.bin) || ''))
+      .then(function (response) { if (!response.ok) throw new Error('installments ' + response.status); return response.json(); });
   };
   MercadoPago.prototype.bricks = function () {
     return {

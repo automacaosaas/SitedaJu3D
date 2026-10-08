@@ -156,13 +156,75 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
   assert.equal(mp.settings({...hostinger, APP_ENV: 'production', MP_MODE: 'test'}).mode, 'test');
   assert.equal(mp.settings(ENV).ownerEmail, 'ju@site.test');
   const res = makeRes(); configHandler.create({env: ENV})({method: 'GET'}, res);
-  assert.deepEqual(res.json(), {mode: 'test', publicKey: 'TEST-public-key-111'}); assert(!res.body.includes('secret-token') && !res.body.includes('whsec'));
+  assert.deepEqual(res.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: null}, 'without a "sem juros" check (the default export has one) the number is unknown'); assert(!res.body.includes('secret-token') && !res.body.includes('whsec'));
   const off = makeRes(); configHandler.create({env: {}})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
   const blocked = makeRes(); configHandler.create({env: {...ENV, VERCEL_ENV: 'production'}})({method: 'GET'}, blocked); assert.deepEqual(blocked.json(), {mode: 'off'}, 'the public key is not even exposed while blocked');
   const post = makeRes(); configHandler.create({env: ENV})({method: 'POST'}, post); assert.equal(post.statusCode, 405);
   const h = makeRes(); await health.create({env: ENV})({}, h);
   assert.deepEqual(h.json().mp, {token: true, publicKey: true, webhookSecret: true}); assert.equal(h.json().payments, 'test'); assert.equal(h.json().orderMail, true);
   for (const secret of SECRETS) assert(!h.body.includes(secret), 'health never prints a secret');
+}
+
+// ── "sem juros": what the Mercado Pago account really gives (2026-10-08) ─
+{
+  const {createInterestFree, REFERENCE_CENTS} = require('../api/_lib/interest-free');
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  assert.equal(REFERENCE_CENTS, Math.min(...Object.values(COMMERCE.prices)), 'asked for the cheapest piece, a lamp');
+  // A plan is interest-free with rate 0, collected by Mercado Pago, and a total that does not pass the amount.
+  const plan = (installments, extra = {}) => ({installments, installment_rate: 0, installment_rate_collector: ['MERCADOPAGO'], installment_amount: 90 / installments, total_amount: 90, ...extra});
+  const interest = (installments, total) => plan(installments, {installment_rate: Number(((total / 90 - 1) * 100).toFixed(2)), total_amount: total});
+  const card = (costs, extra = {}) => ({payment_method_id: 'master', payment_type_id: 'credit_card', payer_costs: costs, ...extra});
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2), plan(3), interest(4, 95.5), interest(12, 110)])], 9000), 3);
+  assert.equal(mp.interestFreeCount([card([interest(3, 95), plan(2), plan(1)])], 9000), 2, 'in order of installments, whatever order they come in');
+  assert.equal(mp.interestFreeCount([card([plan(1), interest(2, 92.9)])], 9000), 0, 'interest from 2x on: nothing to announce');
+  assert.equal(mp.interestFreeCount([card([plan(1)])], 9000), 0, '1x alone is not "sem juros"');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {installment_rate_collector: ['THIRD_PARTY']})])], 9000), 0, 'rate 0 but the bank\'s own interest');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {total_amount: 110.97})])], 9000), 0, 'a total above the price is interest, whatever the rate says');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {installment_rate: undefined})])], 9000), 0, 'no rate: not promised');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2), plan(3)]), card([plan(1), plan(2), interest(3, 95)], {payment_method_id: 'visa'})], 9000), 2, 'every card must give it');
+  assert.equal(mp.interestFreeCount([card(Array.from({length: 18}, (_, i) => plan(i + 1)))], 9000), 12, 'never past the 12 the checkout offers');
+  for (const answer of [null, {}, [], [card([])], [card('x')], [card([{installments: 'x'}])], [{payment_type_id: 'debit_card', payer_costs: [plan(1)]}]]) assert.equal(mp.interestFreeCount(answer, 9000), null, `nothing to count: ${JSON.stringify(answer)?.slice(0, 40)}`);
+
+  // Through the simulated account: the reference amount, the two brands, the Access Token, and the answer kept for hours.
+  let clock = 0;
+  const watch = (fake, {fail = false, slow = 0} = {}) => {
+    const calls = [];
+    return {calls, fetchImpl: async (url, init) => { calls.push({url: String(url), auth: init.headers.Authorization}); if (slow) await new Promise(resolve => setTimeout(resolve, slow)); if (fail) throw new Error('offline'); return fake.fetchImpl(url, init); }};
+  };
+  const three = watch(createFakeMercadoPago({interestFree: 3}));
+  const check = createInterestFree({fetchImpl: three.fetchImpl, now: () => clock});
+  assert.equal(await check({}), null, 'payments off: unknown, and nothing is asked');
+  assert.equal(three.calls.length, 0);
+  assert.equal(await check(ENV), 3);
+  assert.deepEqual(three.calls.map(c => c.url).sort(), ['https://api.mercadopago.com/v1/payment_methods/installments?amount=90.00&payment_method_id=master', 'https://api.mercadopago.com/v1/payment_methods/installments?amount=90.00&payment_method_id=visa']);
+  assert(three.calls.every(c => c.auth === `Bearer ${ENV.MP_ACCESS_TOKEN}`), 'asked with the Access Token, on the server');
+  clock += 5 * 60 * 60 * 1000; assert.equal(await check(ENV), 3); assert.equal(three.calls.length, 2, 'kept for hours');
+  clock += 2 * 60 * 60 * 1000; assert.equal(await check(ENV), 3); assert.equal(three.calls.length, 4, 'asked again after 6 hours');
+  assert.equal(await check({...ENV, MP_ACCESS_TOKEN: 'TEST-other-token'}), 3); assert.equal(three.calls.length, 6, 'other credentials, asked again');
+  assert.equal(await createInterestFree({fetchImpl: watch(createFakeMercadoPago()).fetchImpl})(ENV), 0, 'an account that did not turn it on: 0');
+  assert.equal(await createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 6})).fetchImpl})(ENV), 6);
+  // Mercado Pago down: unknown (never an error), asked again after a few minutes.
+  const down = watch(createFakeMercadoPago({interestFree: 3}), {fail: true});
+  const failing = createInterestFree({fetchImpl: down.fetchImpl, now: () => clock});
+  assert.equal(await failing(ENV), null); assert.equal(await failing(ENV), null); assert.equal(down.calls.length, 2, 'not asked again at once');
+  clock += 6 * 60 * 1000; await failing(ENV); assert.equal(down.calls.length, 4, 'asked again after 5 minutes');
+  const refused = createInterestFree({fetchImpl: async () => ({ok: false, status: 401, headers: {get: () => null}, json: async () => ({message: 'invalid credentials'})})});
+  assert.equal(await refused(ENV), null, 'refused credentials: unknown');
+  // A slow answer never holds the request: unknown for now, the number on the next one.
+  const slow = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3}), {slow: 80}).fetchImpl, wait: 10});
+  assert.equal(await slow(ENV), null);
+  await new Promise(resolve => setTimeout(resolve, 150));
+  assert.equal(await slow(ENV), 3);
+
+  // /api/payments/config and /api/health hand over the number, never anything else.
+  const known = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3})).fetchImpl});
+  const cfg = makeRes(); await configHandler.create({env: ENV, interestFree: known})({method: 'GET'}, cfg);
+  assert.deepEqual(cfg.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: 3});
+  const off = makeRes(); await configHandler.create({env: {}, interestFree: known})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
+  const h = makeRes(); await health.create({env: ENV, interestFree: known})({}, h); assert.equal(h.json().interestFree, 3);
+  for (const secret of SECRETS) assert(!h.body.includes(secret) && !cfg.body.includes(secret));
+  const plain = makeRes(); await health.create({env: ENV})({}, plain); assert.equal(plain.json().interestFree, null, 'no check given: unknown, and no network');
+  const quiet = makeRes(); await health.create({env: {}, interestFree: known})({}, quiet); assert(!('interestFree' in quiet.json()), 'payments off: not shown');
 }
 
 // ── Brick data → Orders API ───────────────────────────────────────────
@@ -619,6 +681,22 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(tampered.status, 'aguardando_pagamento', 'a different amount is not a payment of this order');
     assert((await store.orders.events(tampered.id)).some(e => e.kind === 'payment_mismatch'));
 
+    // A card in 6x with interest (2026-10-08): whether Mercado Pago keeps total_amount as asked and puts the interest in
+    // paid_amount (the documented way) or raises total_amount by it, the order is paid, at our price.
+    for (const raised of [false, true]) {
+      const six = (await call(create, {body: request({payment: brickCard('CONT' + 'j'.repeat(28), {installments: 6})}), ...as(buyer)})).json();
+      assert.equal(six.state, 'in_review');
+      const remote = net.orders.get(six.id), withInterest = (Number(remote.total_amount) * 1.1612).toFixed(2);
+      Object.assign(remote, raised ? {total_amount: withInterest, total_paid_amount: withInterest} : {total_paid_amount: withInterest});
+      remote.transactions.payments[0].paid_amount = withInterest;
+      net.pay(six.id); await notify(handler, six.id);
+      const ours = await store.orders.findByMpId(six.id);
+      assert.equal(ours.status, 'pendente', raised ? 'total raised by the interest: paid' : 'interest only in paid_amount: paid');
+      assert.equal(ours.totalCents, 83300, 'the order keeps the price'); assert.equal(ours.installments, 6);
+      const kinds = (await store.orders.events(ours.id)).map(e => e.kind);
+      assert(!kinds.includes('payment_mismatch')); assert.equal(kinds.includes('card_interest'), raised, 'the interest is noted when the total carried it');
+    }
+
     // What can never be one of our orders answers 200, so Mercado Pago stops retrying (2026-10-07).
     const unknown = await notify(handler, 'ORD01DOESNOTEXIST999');
     assert.equal(unknown.statusCode, 200, 'an order Mercado Pago does not know (the panel\'s "Simular notificação") is not retried forever'); assert.equal(unknown.json().ignored, 'not_found');
@@ -695,12 +773,42 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert(owner.html.includes('wa.me/5531999991234'));
 }
 
+// ── what Mercado Pago charged against what we asked (2026-10-08) ──────
+{
+  const store = createMemoryStore(), orders = createOrders({store, env: ENV});
+  let serial = 0;
+  const settle = async (total, method, totalCents = 9000) => {
+    const {order} = await store.orders.create({id: crypto.randomUUID(), reference: `JU-JUROS${++serial}`, customerId: 'c1', source: 'test', status: 'aguardando_pagamento', subtotalCents: totalCents, shippingCents: 0, totalCents, buyer: {name: 'Ana Souza', email: 'ana@example.com'}, items: []});
+    const {order: after, newlyPaid} = await orders.applyPayment(order, {id: `ORD01JUROS${serial}`, reference: order.reference, state: 'approved', total, method});
+    return {after, newlyPaid, events: (await store.orders.events(order.id)).map(e => [e.kind, e.detail])};
+  };
+  const credit = installments => ({id: 'master', type: 'credit_card', installments});
+  // The documented way: total_amount stays what we asked (the interest goes to paid_amount). Paid, nothing else to say.
+  let r = await settle(9000, credit(6));
+  assert.equal(r.after.status, 'pendente'); assert(r.newlyPaid); assert(!r.events.some(([kind]) => kind === 'payment_mismatch' || kind === 'card_interest'));
+  // A total raised by the interest the buyer chose: paid too; the order keeps the price, the interest is noted.
+  r = await settle(10612, credit(6));
+  assert.equal(r.after.status, 'pendente'); assert.equal(r.after.totalCents, 9000, 'the interest is Mercado Pago\'s financing, not the shop\'s sale');
+  assert.deepEqual(r.events.find(([kind]) => kind === 'card_interest'), ['card_interest', '6x · 1612']);
+  assert.equal((await settle(14400, credit(12))).after.status, 'pendente', '12x at the highest rates (+60%)');
+  // Never: less, a larger total without installments (1x, Pix, debit), or far beyond any interest.
+  for (const [total, method, why] of [[8999, credit(6), 'one cent less'], [100, credit(3), 'much less'], [9500, credit(1), 'a card in 1x has no interest'], [9500, {id: 'master', type: 'credit_card'}, 'no installments said: 1x'],
+    [9500, {id: 'pix', type: 'bank_transfer'}, 'Pix has no interest'], [9500, {id: 'debelo', type: 'debit_card', installments: 3}, 'nor debit'], [14401, credit(12), 'beyond +60%'], [NaN, credit(6), 'no total at all']]) {
+    r = await settle(total, method);
+    assert.equal(r.after.status, 'aguardando_pagamento', why); assert(!r.newlyPaid, why); assert(r.events.some(([kind]) => kind === 'payment_mismatch'), `${why}: recorded`);
+  }
+}
+
 // ── browser module: configuration, messages, safe values ──────────────
 {
   const client = await site('live-payment.js');
   const cfg = (response, options) => client.loadPaymentConfig({fetchImpl: async () => response, ...options});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc'})}), {mode: 'test', publicKey: 'TEST-abc'});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'live', publicKey: 'APP_USR-x', token: 'must-not-leak'})}), {mode: 'live', publicKey: 'APP_USR-x'}, 'only mode and the public key are kept');
+  // the installments the account gives without interest, only when the server knows it
+  assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 3})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 3});
+  assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 0})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 0});
+  for (const odd of [null, '3', 2.5, -1, 99]) assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: odd})}), {mode: 'test', publicKey: 'TEST-abc'}, `unknown: ${odd}`);
   for (const bad of [{ok: false}, {ok: true, json: async () => ({mode: 'off'})}, {ok: true, json: async () => ({mode: 'test'})}, {ok: true, json: async () => ({mode: 'weird', publicKey: 'k'})}, {ok: true, json: async () => ({mode: 'test', publicKey: 42})}, {ok: true, json: async () => { throw new Error('not json'); }}]) assert.deepEqual(await cfg(bad), {mode: 'off'}, 'anything unexpected keeps the demo');
   assert.deepEqual(await client.loadPaymentConfig({fetchImpl: async () => { throw new Error('offline'); }}), {mode: 'off'}, 'offline / no API (static hosting) keeps the demo');
   assert.deepEqual(await client.loadPaymentConfig({timeout: 30, fetchImpl: (url, {signal}) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))}), {mode: 'off'}, 'a hanging API cannot freeze the checkout');

@@ -7,6 +7,8 @@
 //   required_call_for_authorize, LOCK card_disabled, ATTE max_attempts_exceeded, INST invalid_installments, BLAC
 //   high_risk, OTHE and the rest rejected_by_issuer). Pix always waits for payment, until paid, expired or cancelled.
 //   The device id (X-meli-session-id) of each order is kept in `deviceIds`.
+//   Installment plans (GET /v1/payment_methods/installments): 2x to 12x with interest, except the first `interestFree` ones
+//   (an account with "parcelas sem juros" turned on); by default none, like an account that has not turned it on.
 const zlib = require('node:zlib');
 
 const crc = (() => { const table = Array.from({length: 256}, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }); return buffer => { let c = 0xffffffff; for (const byte of buffer) c = table[(c ^ byte) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }; })();
@@ -28,10 +30,26 @@ const durationMs = text => { const m = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(String(
 
 const REFUSALS = {FUND: 'insufficient_amount', SECU: 'bad_filled_card_data', EXPI: 'bad_filled_card_data', FORM: 'bad_filled_card_data', CALL: 'required_call_for_authorize', LOCK: 'card_disabled', ATTE: 'max_attempts_exceeded', INST: 'invalid_installments', BLAC: 'high_risk'};
 
-function createFakeMercadoPago({now = () => Date.now(), onPaid} = {}) {
+function createFakeMercadoPago({now = () => Date.now(), onPaid, interestFree = 0} = {}) {
   const orders = new Map(), keys = new Map(), deviceIds = new Map();
   const reply = (status, body) => ({ok: status < 400, status, headers: {get: name => String(name).toLowerCase() === 'x-request-id' ? 'fake-req-' + (orders.size + 1) : null}, json: async () => body});
   const error = (status, code, message, extra = {}) => reply(status, {errors: [{code, message, ...extra}]});
+
+  // The plans for an amount, 1x to 12x, in the shape of the real answer: without interest 1x and the first `interestFree` ones
+  // (installment_rate 0, the shop pays), the others at 2.99% a month (Price table) with the CET label.
+  function installments(query) {
+    const amount = Number(query.get('amount')), rate = 0.0299, cet = (Math.pow(1 + rate, 12) * 100 - 100).toFixed(2).replace('.', ',');
+    if (!(amount > 0)) return error(400, 'invalid_parameter', 'amount is required');
+    const reais = value => 'R$ ' + value.toFixed(2).replace('.', ',');
+    const costs = Array.from({length: 12}, (_, i) => {
+      const n = i + 1, free = n === 1 || n <= interestFree;
+      const each = free ? Math.floor(amount * 100 / n) / 100 : Math.round(amount * rate / (1 - Math.pow(1 + rate, -n)) * 100) / 100;
+      const total = free ? amount : Math.round(each * n * 100) / 100;
+      return {installments: n, installment_rate: free ? 0 : Number(((total / amount - 1) * 100).toFixed(2)), discount_rate: 0, installment_rate_collector: ['MERCADOPAGO'], labels: [free ? 'CFT_0,00%|TEA_0,00%' : `CFT_${cet}%|TEA_${cet}%`],
+        min_allowed_amount: 1, max_allowed_amount: 100000, recommended_message: `${n} parcela${n > 1 ? 's' : ''} de ${reais(each)}${free ? (n > 1 ? ' sem juros' : '') : ` (${reais(total)})`}`, installment_amount: each, total_amount: total};
+    });
+    return reply(200, [{payment_method_id: query.get('payment_method_id') || 'master', payment_type_id: 'credit_card', issuer: {id: 24, name: 'Mastercard'}, processing_mode: 'aggregator', payer_costs: costs}]);
+  }
 
   const refusal = order => error(402, 'failed', 'The following transactions failed', {details: [`${order.transactions.payments[0].id}: ${order.transactions.payments[0].status_detail}`]});
   function create(body, key, sessionId) {
@@ -102,6 +120,7 @@ function createFakeMercadoPago({now = () => Date.now(), onPaid} = {}) {
     if (refunding && init.method === 'POST') return refund(refunding[1], init.headers['X-Idempotency-Key']);
     const cancelling = path.match(/^\/v1\/orders\/([^/?]+)\/cancel$/);
     if (cancelling && init.method === 'POST') return cancel(cancelling[1], init.headers['X-Idempotency-Key']);
+    if (path.startsWith('/v1/payment_methods/installments?') && (init.method || 'GET') === 'GET') return installments(new URL(url).searchParams);
     // GET /v1/payment_methods: a Brazilian account's usual list (Pix, the credit cards, the Caixa virtual debit card), plus the
     // boleto and lottery ones the checkout does not offer, so the filter is exercised.
     if (path === '/v1/payment_methods' && (init.method || 'GET') === 'GET') return reply(200, [

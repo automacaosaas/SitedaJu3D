@@ -7,7 +7,7 @@
 // peça" (description, original colors and what keeps its color). Also writes sitemap.xml and
 // robots.txt. Built from the shop's own data (products.js, commerce-config.js), from produtos.html (head, header and
 // footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the page
-// Escolha o seu (escolha.html) from dist/escolha.js.
+// Escolha o seu (escolha.html) from dist/escolha.js, and the "3x sem juros" of index.html and contato.html (cardOffer).
 // Run: node tools/build-product-pages.cjs   (or --check to only report; tests/product-landing.mjs fails when stale)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -129,8 +129,15 @@ async function build() {
   // produtos.html: the grid of products (audit B2), the same markup product-grid.js draws in the browser.
   const base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n')
     .replace(/(<div class="product-grid" data-product-grid data-category="([a-z]+)"[^>]*><!-- grid -->)[^]*?(<!-- \/grid -->)/, (all, open, key, close) => open + data.productGrid(key) + close);
-  return [{name: 'produtos.html', text: base}, {name: 'escolha.html', text: choosePage(data, base)}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()}];
+  return [{name: 'produtos.html', text: base}, {name: 'escolha.html', text: choosePage(data, base)}, ...ids.map(id => ({name: `${id}.html`, text: page(id, data, base)})), {name: 'sitemap.xml', text: sitemap(ids)}, {name: 'robots.txt', text: robots()},
+    {name: 'index.html', text: cardOffer('index.html', data.COMMERCE)}, {name: 'contato.html', text: cardOffer('contato.html', data.COMMERCE)}];
 }
+// The card offer of two pages not built here, from the same numbers as the product pages (commerce-config.js: the ONE source of
+// the "3x sem juros", interestFreeInstallments, and maxInstallments): the home's product window before controller.js paints it,
+// and the Contato FAQ. Only those words change; the rest of each page stays as it is.
+const cardOffer = (name, commerce) => fs.readFileSync(path.join(DIST, name), 'utf8').replace(/\r\n/g, '\n')
+  .replace(/(<span id="product-installments">ou )\d+(x sem juros no cartão<\/span>)/, (all, before, after) => before + commerce.interestFreeInstallments + after)
+  .replace(/(cartão de crédito em até )\d+(x, sendo até )\d+(x sem juros\.)/, (all, before, middle, after) => before + commerce.maxInstallments + middle + commerce.interestFreeInstallments + after);
 
 if (require.main === module) {
   (async () => {

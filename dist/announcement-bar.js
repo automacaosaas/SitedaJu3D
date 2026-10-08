@@ -16,9 +16,10 @@ const ICONS = {
 };
 const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[name]}</svg>`;
 
+// The "3x sem juros" and the production time come from commerce-config.js (interestFreeInstallments, productionLabel).
 export const MESSAGES = Object.freeze([
   {icons: ['truck'], title: 'ENVIO PARA TODO O BRASIL', text: 'Frete calculado pelo CEP'},
-  {icons: ['pix', 'card'], title: 'PIX E CARTÃO', text: '5% off no Pix ou 3x sem juros no cartão'},
+  {icons: ['pix', 'card'], title: 'PIX E CARTÃO', text: `5% off no Pix ou ${COMMERCE.interestFreeInstallments}x sem juros no cartão`},
   {icons: ['clock'], title: 'FEITO SOB ENCOMENDA', text: `Produção em ${COMMERCE.productionLabel}`}
 ]);
 export const INTERVAL_MS = 5000;

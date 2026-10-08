@@ -22,6 +22,15 @@ export function installmentRows(answer, amountCents) {
   return rows.sort((a, b) => a.installments - b.installments).filter((row, i, all) => i === 0 || row.installments !== all[i - 1].installments);
 }
 
+// How many installments of this card come without interest, exactly as the table shows them: the rows from 1x on, until the
+// first one with interest. The card option of the checkout promises "sem juros" only that far. null without rows.
+export function interestFreeCount(rows) {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  let n = 0;
+  for (const row of rows) { if (row.interestCents) break; n = row.installments; }
+  return n;
+}
+
 // The table under the payment form. Nothing when there is only one way to pay (no installments to compare).
 export function installmentsTable(rows) {
   if (!Array.isArray(rows) || rows.length < 2) return '';
