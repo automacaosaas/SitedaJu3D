@@ -26,7 +26,7 @@ subject.traverse(o => {
   // tint=coat:#e8b616,…: the colour of a material only in the picture (the showcase photo's yellow, more lemon than the satin plastic of
   // the 3D under this light), the model unchanged
   const tint = Object.fromEntries((P.tint || '').split(',').filter(Boolean).map(t => t.split(':')));
-  const src = o.material, dark = src.name === 'features'; o.userData.matName = src.name;
+  const src = o.material, dark = src.name === 'features' || src.name === 'eyes'; o.userData.matName = src.name;
   o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: dark ? .28 : .46, clearcoat: dark ? .8 : .28, clearcoatRoughness: dark ? .12 : .4, envMapIntensity: .9, side: THREE.DoubleSide});
   // flat=1 (checking the paint): the bare colours, no light — a border that leaks shows as it is, not as a shadow
   if (P.flat) o.material = new THREE.MeshBasicMaterial({color: src.color.clone(), side: THREE.DoubleSide});

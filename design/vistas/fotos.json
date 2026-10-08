@@ -61,15 +61,7 @@
       {"de": "#2c2e55", "faixa": 70, "para": "#687560", "croma_min": 0.004},
       {"de": "#84b24f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05}
     ],
-    "frente": {
-      "fonte": "dinossauroscopio-girando.mp4",
-      "t": 0.0167,
-      "recorte": [560, 200, 800, 1520],
-      "fundo": "recortar",
-      "matte": "cobertura",
-      "limiar": 14,
-      "encolher": 1.2
-    },
+    "frente": {"fonte": "design/vistas/dinossauroscopio-3d-frente.png", "fundo": "transparente"},
     "tres-quartos": {
       "fonte": "dinossauroscopio-girando.mp4",
       "t": 1.6167,
@@ -90,17 +82,7 @@
       "encolher": 1.2,
       "buracos": 0.002
     },
-    "detalhe": {
-      "fonte": "dinossauroscopio-girando.mp4",
-      "t": 0.0167,
-      "recorte": [640, 250, 640, 800],
-      "fundo": "recortar",
-      "matte": "cobertura",
-      "limiar": 14,
-      "cor_fundo": "#000000",
-      "detalhe": true,
-      "encolher": 1.2
-    }
+    "detalhe": {"fonte": "design/vistas/dinossauroscopio-3d-rosto.png", "recorte": [300, 200, 1400, 1750], "fundo": "transparente", "detalhe": true}
   },
   "aviaoscopia": {
     "_fontes": "O avião de frente e a cabine de perto saem da foto da vitrine (dist/assets/product-aviaoscopia-cutout.webp, ampliada 4x: design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp; 07/10/2026: \"a imagem de frente, você pode usar simplesmente a que está na vitrine e depois pintar as outras imagens na respectiva cor dessa original\"). As de três quartos e de costas são as fotos reais, pintadas como a vitrine: o painel creme fica azul, as janelas da cabine (azuis na peça da foto) ficam brancas, os motores ficam amarelo-alaranjados e as estrelas e o bico, vermelhos. Na \"transparente\", o recorte é em pixels da própria fonte.",

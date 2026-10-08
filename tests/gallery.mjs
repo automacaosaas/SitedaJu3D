@@ -37,8 +37,8 @@ for (const key of Object.keys(GALLERY)) {
   // e a cabine de perto (07/10/2026: "a imagem de frente, você pode usar simplesmente a que está na vitrine"): a foto da vitrine,
   // ampliada, já sem fundo.
   // A girafa (07/10/2026): renders do modelo 3D com a pintura corrigida (as imagens que o dono mandou tinham as manchas vazadas).
-  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : key === 'unicornioscopio' ? ['frente'] : [];
-  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'dist/assets/product-unicornioscopio-cutout.webp' : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
+  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : key === 'unicornioscopio' ? ['frente'] : key === 'dinossauroscopio' ? ['frente', 'detalhe'] : [];
+  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'dist/assets/product-unicornioscopio-cutout.webp' : key === 'dinossauroscopio' ? `design/vistas/dinossauroscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
   const photo = id => key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : key === 'unicornioscopio' ? `unicornioscopio-${id === 'detalhe' ? 'rosto' : id}.webp` : `${key}-3-vistas.webp`;
   assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === source(id)
     : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === photo(id)), `${key}: as fotos, recortadas`);
@@ -75,7 +75,10 @@ assert(page.includes('while(j<floor.length-1&&sx>floor[j][0])j++;'), 'chão por 
 // O dino (07/10/2026: "a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado"): do vídeo do render
 // girando que o dono mandou, no fundo preto liso, sem chão nem reflexo — a abertura embaixo da boca, as paredes de dentro, os pés e o olho
 // de costas saem como no render (um quadro por vista).
-assert(['frente', 'tres-quartos', 'costas', 'detalhe'].every(id => typeof fotos.dinossauroscopio[id].t === 'number' && fotos.dinossauroscopio[id].chao === undefined), 'dino: quadros do vídeo, sem chão');
+assert(['tres-quartos', 'costas'].every(id => typeof fotos.dinossauroscopio[id].t === 'number' && fotos.dinossauroscopio[id].chao === undefined), 'dino: quadros do vídeo, sem chão');
+// de frente e o rosto de perto (08/10/2026: "antes de colocar a bolinha estava sem bugs ou pontos pretos… altíssima qualidade"): renders do 3D,
+// com o disco branco nos olhos e sem o serrilhado da recoloração do vídeo
+assert(['frente', 'detalhe'].every(id => fotos.dinossauroscopio[id].fundo === 'transparente' && /dinossauroscopio-3d-/.test(fotos.dinossauroscopio[id].fonte)), 'dino: frente e rosto do 3D');
 // O dino (07/10/2026: "a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado"): os cantos da
 // abertura embaixo da boca e o olho que aparece de costas ficam inteiros (polígonos "manter").
 assert(page.includes('for(const poly of opts.manter||[])') && fotos.aviaoscopia['tres-quartos'].manter.length === 1, '"manter": o creme claro do avião inteiro');
