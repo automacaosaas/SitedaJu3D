@@ -205,6 +205,9 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   // 08/10/2026: a mesma caixa em todos os cards; os dos lados menores só pela escala (--side-s), nada pula na troca. Segunda volta: o do
   // centro uns 8% menor e os vizinhos (só a peça e o nome) maiores; no tablet e no celular, no meio da sobra de cada lado
   assert.ok(/--card-w: min\(342px, 35vw\);[^}]*--slot-w: clamp\(270px, 24vw, 340px\); --side-s: \.82;/.test(css) && /scale\(var\(--side-s\)\)/.test(css) && /--slot-w: calc\(var\(--card-w\) \* \.8\)/.test(catalog) && /--slot-w: 41vw/.test(catalog), 'cards dos lados menores, ao lado do central (desktop, tablet e celular)');
+  // revisão: de 901 a 1023 px a sobra é estreita; os vizinhos chegam mais perto do centro e encolhem um pouco (a peça não passa por baixo
+  // da seta, o nome não some no esmaecido da borda e fica em 18 px)
+  assert.ok(/@media \(min-width: 901px\) and \(max-width: 1023px\) \{\r?\n  \.home \.product-carousel-stage \{ --slot-w: 25\.8vw; --side-s: \.72; \}\r?\n\}/.test(css), 'notebook pequeno: os vizinhos entre o card e as setas');
   assert.ok(/\.palette-button:active \{ transform: scale\(\.98\);/.test(css), 'no clique o botão afunda');
   assert.ok(/\.palette-button \{[^}]*box-shadow: [^;]*0 10px 25px var\(--glow\)/.test(css), 'sombra viva no tom do botão');
   assert.ok(js.includes("data-demo-open>${icon('eye')}<span>Ver encaixado</span>"), '"Ver encaixado" com o olho (ver a peça montada)');

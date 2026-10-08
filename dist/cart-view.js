@@ -239,8 +239,14 @@ export function wireRecArrows(root) {
   root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && inRecs(event.target) && !inRecs(event.relatedTarget)) { recState(root).hover = false; scheduleRec(root); } });
   // no celular, o dedo na seção segura enquanto estiver lá, também rolando a página por cima dela (os eventos de toque seguem durante a
   // rolagem, os de ponteiro não); ao soltar, mais HOLD_MS. O fim do toque é ouvido no próprio alvo: se o carrinho se redesenhar no meio,
-  // o alvo sai da página e o evento não chegaria até aqui.
-  const lift = event => { const state = recState(root); if (!state.touching || event.touches.length) return; state.touching = false; holdRec(root); };
+  // o alvo sai da página e o evento não chegaria até aqui. Com outro dedo ainda na seção, segue segurando e volta a ouvir o alvo (o
+  // ouvinte é de uma vez só e o segundo dedo pode ter começado no mesmo lugar).
+  const lift = event => {
+    const state = recState(root);
+    if (!state.touching) return;
+    if ([...event.touches].some(touch => inRecs(touch.target))) { event.currentTarget.addEventListener(event.type, lift, {once: true, passive: true}); return; }
+    state.touching = false; holdRec(root);
+  };
   root.addEventListener('touchstart', event => {
     if (!inRecs(event.target)) return;
     const state = recState(root);

@@ -67,12 +67,13 @@
 .home .product-rail-card:not(.is-active) :is(.product-rail-category, .product-rail-copy h3, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 0; visibility: hidden; transition: opacity .16s ease, visibility 0s .16s; }
 .home .product-rail-card.is-active :is(.product-rail-category, .product-rail-copy h3, .product-rail-subtitle, .product-rail-active-details, .product-rail-bottom, .product-rail-actions) { opacity: 1; visibility: visible; transition: opacity .32s ease .16s; }
 /* Os vizinhos, mais simples que o do centro (segunda volta, 08/10/2026): sem caixa, a peça recortada (fundo transparente) flutua num
-   halo claro, com a borda na cor da peça do centro (--theme-accent, que desliza com a seção), e uma sombra de chão macia; o nome fica
+   brilho claro e leve (sem virar um disco: revisão), com a borda na cor da peça do centro (--theme-accent, que desliza com a seção), e
+   uma sombra de chão macia; o nome fica
    embaixo, centralizado (.product-rail-name, catalog.js). O halo (::after do card) e o chão (::before do texto) ficam atrás da peça,
    presos ao card e fora do link da foto (catalog.js railArt); só a peça flutua. */
 .home .product-rail-float { display: block; width: 100%; height: 100%; }
 .home .product-rail-card::after, .home .product-rail-copy::before { content: ''; position: absolute; left: 50%; z-index: -1; border-radius: 50%; translate: -50% 0; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
-.home .product-rail-card::after { top: calc(var(--art-h) * -.14); width: calc(var(--art-h) * 1.28); aspect-ratio: 1; background: radial-gradient(closest-side, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, .72) 34%, color-mix(in srgb, color-mix(in srgb, var(--theme-wash, #f4e4e7) 88%, var(--theme-accent, #b64c68)) 70%, transparent) 60%, transparent 100%); }
+.home .product-rail-card::after { top: calc(var(--art-h) * -.14); width: calc(var(--art-h) * 1.28); aspect-ratio: 1; background: radial-gradient(closest-side, rgba(255, 255, 255, .8) 0%, rgba(255, 255, 255, .46) 38%, color-mix(in srgb, var(--theme-accent, #b64c68) 8%, transparent) 66%, transparent 100%); }
 .home .product-rail-copy::before { top: calc(var(--art-h) * .91); width: calc(var(--art-h) * .5); height: calc(var(--art-h) * .1); background: radial-gradient(closest-side, color-mix(in srgb, var(--theme-text, #282326) 26%, transparent), transparent); }
 .home .product-rail-card:not(.is-active)::after, .home .product-rail-card:not(.is-active) .product-rail-copy::before { opacity: 1; }
 .home .product-rail-name { position: absolute; left: -12%; right: -12%; top: calc(var(--art-h) + 14px); overflow: hidden; color: var(--theme-text, var(--ink)); font: 500 25px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.3px; text-align: center; text-overflow: ellipsis; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity .16s ease, visibility 0s .16s; }

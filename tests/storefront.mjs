@@ -113,6 +113,10 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(cartCss, /@keyframes rec-half-a \{ 50%, 100% \{ transform: rotate\(405deg\); \} \}\r?\n@keyframes rec-half-b \{ 0%, 50% \{ transform: rotate\(45deg\); \} 100% \{ transform: rotate\(225deg\); \} \}/, 'the ring moves by transform only');
   assert.doesNotMatch(cartCss, /stroke-dashoffset/, 'no painted ring');
   assert.match(cartCss, /\.cart-rec-rail\.is-held \.cart-rec-dot i \{ animation-play-state: paused; \}/, 'held: the ring freezes where it is');
+  // review: the slide of each change holds the count too, but the dot does not dim then (it would blink at every card); a second finger
+  // still on the section keeps holding, and the once-only listener is armed again on the lifted target
+  assert.match(cartCss, /\.cart-rec-rail\.is-held:not\(\.is-moving\) \.cart-rec-dot \{ opacity: \.55; \}/);
+  assert.match(cartView, /if \(\[\.\.\.event\.touches\]\.some\(touch => inRecs\(touch\.target\)\)\) \{ event\.currentTarget\.addEventListener\(event\.type, lift, \{once: true, passive: true\}\); return; \}/);
   assert.match(cartView, /slide\.inert = index < state\.lead \|\| index >= state\.lead \+ k;/, 'the cards out of view leave the Tab order');
   // the cart is redrawn on every quantity and every shipping quote: the row carries on from the card that was first in view; turning a
   // phone sideways (2 -> 3 in view) near the end of the row leaves no empty place

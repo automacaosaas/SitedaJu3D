@@ -97,7 +97,8 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   const cat = read('dist/catalog.css');
   assert.match(catalog, /const railArt = \(href, label, title, img\) => `<a class="product-rail-art" href="\$\{href\}" aria-label="\$\{label\}"><span class="product-rail-float">\$\{img\}<\/span><\/a><span class="product-rail-name" aria-hidden="true">\$\{title\}<\/span>`;/);
   assert.equal((catalog.match(/\$\{railArt\(/g) || []).length, 2, 'peças e novidades');
-  assert.match(cat, /\.home \.product-rail-card::after \{[^}]*background: radial-gradient\(closest-side, rgba\(255, 255, 255, \.95\)[^}]*var\(--theme-wash, #f4e4e7\)[^}]*var\(--theme-accent, #b64c68\)/, 'o halo na cor da peça do centro');
+  // revisão: um brilho leve, não um disco branco atrás da peça (a dona pediu fundo transparente)
+  assert.match(cat, /\.home \.product-rail-card::after \{[^}]*background: radial-gradient\(closest-side, rgba\(255, 255, 255, \.8\) 0%, rgba\(255, 255, 255, \.46\) 38%, color-mix\(in srgb, var\(--theme-accent, #b64c68\) 8%, transparent\) 66%, transparent 100%\);/, 'o halo na cor da peça do centro');
   assert.match(cat, /\.home \.product-rail-card:not\(\.is-active\)::after, \.home \.product-rail-card:not\(\.is-active\) \.product-rail-copy::before \{ opacity: 1; \}/);
   assert.doesNotMatch(cat, /\.product-rail-art::(before|after) \{/, 'nada que leia as cores da seção dentro do link');
   assert.match(cat, /\.home \.product-rail-card:not\(\.is-active\) :is\(\.product-rail-category, \.product-rail-copy h3, \.product-rail-subtitle,/, 'nos vizinhos, só a peça e o nome');

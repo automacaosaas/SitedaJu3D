@@ -74,6 +74,11 @@
   .home .product-rail-active-details > div { min-height: 33px; }
   .home .product-rail-actions { margin-top: 12px; }
 }
+/* De 901 a 1023 px (tablet deitado, notebook pequeno) a sobra de cada lado é estreita: os vizinhos um pouco menores e mais perto do
+   centro, para a peça não passar por baixo da seta nem o nome sumir no esmaecido da borda (revisão, 08/10/2026). */
+@media (min-width: 901px) and (max-width: 1023px) {
+  .home .product-carousel-stage { --slot-w: 25.8vw; --side-s: .72; }
+}
 /* Header da home: mesma estrutura, fundo transparente sobre a faixa de tema. */
 .home .site-header { grid-area: 1 / 1; position: relative; z-index: 2; padding-inline: var(--inset); background: transparent; border-bottom: 0; }
 .home .site-header .brand img { mix-blend-mode: normal; }
