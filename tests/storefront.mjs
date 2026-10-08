@@ -234,6 +234,21 @@ const html = string => string.replace(/ /g, '&nbsp;');
     for (const tag of ['og:title', 'og:description', 'og:url', 'og:image', 'og:image:width', 'og:image:height']) assert.match(page, new RegExp(`<meta property="${tag}" content="[^"]+">`), `${name}: ${tag}`);
     assert.match(page, new RegExp(`<meta property="og:image" content="${COMPANY.website.replace(/[.]/g, '\\.')}/assets/og-ju\\.jpg">`), `${name}: absolute image address on the store's domain`);
   }
+  // Search engines (2026-10-07): every page of sitemap.xml names itself on the shop's domain (apex) with one canonical link;
+  // the pages kept out of the index (meta robots noindex) never carry one.
+  const listed = [...read('dist/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+  assert(listed.length >= 14 && listed.every(url => url.startsWith(`${COMPANY.website}/`)), 'the sitemap lists the domain addresses');
+  for (const url of listed) {
+    const page = read(`dist/${url.slice(COMPANY.website.length + 1) || 'index.html'}`);
+    assert.deepEqual([...page.matchAll(/<link rel="canonical" href="([^"]+)">/g)].map(m => m[1]), [url], `${url}: one canonical link, to itself`);
+    assert.doesNotMatch(page, /<meta name="robots" content="noindex/, `${url}: listed, so indexable`);
+  }
+  for (const name of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'))) {
+    const page = read('dist/' + name);
+    if (/<meta name="robots" content="noindex/.test(page)) assert.doesNotMatch(page, /rel="canonical"/, `${name}: noindex, so no canonical`);
+  }
+  assert.match(read('dist/robots.txt'), new RegExp(`^Sitemap: ${COMPANY.website.replace(/[.]/g, '\\.')}/sitemap\\.xml$`, 'm'));
+  assert.doesNotMatch(read('dist/robots.txt'), /^Disallow: \/$/m, 'robots.txt never blocks the whole site');
   const jpeg = fs.readFileSync(path.join(root, 'dist', IMAGE.path));
   assert.equal(jpeg.readUInt16BE(0), 0xffd8, 'the preview is a JPEG (the format every app reads)');
   assert(jpeg.length < 300 * 1024, 'and small enough for WhatsApp');

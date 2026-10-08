@@ -164,6 +164,41 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
    - rodar `sudo certbot --nginx -d juimprimepramim.com.br -d www.juimprimepramim.com.br`. Ele emite o certificado
      gratuito, liga o HTTPS e renova sozinho.
 5. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
+6. **Recomendado: `www` → domínio sem `www` (301).** O endereço oficial das páginas (o `<link rel="canonical">`, o
+   `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Depois do
+   certbot, acrescentar em `/etc/nginx/sites-available/juimprime` um bloco só para o `www`, que manda tudo (sem exceção)
+   para o mesmo caminho no domínio sem `www`, e tirar o `www` do `server_name` do bloco principal:
+
+   ```nginx
+   server {
+       listen 443 ssl;
+       listen [::]:443 ssl;
+       server_name www.juimprimepramim.com.br;
+       ssl_certificate /etc/letsencrypt/live/juimprimepramim.com.br/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/juimprimepramim.com.br/privkey.pem;
+       return 301 https://juimprimepramim.com.br$request_uri;
+   }
+   ```
+
+   (o certbot já cria o redirecionamento de `http://` para `https://`.) Conferir com `sudo nginx -t` e
+   `sudo systemctl reload nginx`; depois `curl -sI https://www.juimprimepramim.com.br/produtos.html` responde `301` com
+   `location: https://juimprimepramim.com.br/produtos.html`. Aproveitar para conferir se o bloco do `443` tem HTTP/2
+   (`listen 443 ssl http2;` ou `http2 on;`): a home pede umas 40 folhas de estilo e scripts, e o HTTP/1.1 enfileira.
+   O `deploy/nginx-juimprime.conf` do repositório é só o ponto de partida do setup; a configuração viva é a do servidor.
+
+### Google (indexação)
+
+O site sai do Google pelo cabeçalho `X-Robots-Tag: noindex, nofollow`, decidido **pelo endereço pedido**, não pelo
+`APP_ENV` (`api/_lib/runtime.js`): o domínio da loja (`juimprimepramim.com.br` e `www`) pode ser indexado mesmo com o
+servidor ainda em `APP_ENV=preview`; o domínio temporário da Hostinger, `localhost` e o IP puro continuam fora. O domínio
+vem do `SITE_URL` (quando é um nome público) ou, na falta, do `COMPANY.website` de `api/_lib/legal.js`; `INDEX_HOSTS`
+(opcional, separado por vírgulas) acrescenta outros. Conferir:
+
+- `curl -sI https://juimprimepramim.com.br/ | grep -i x-robots-tag` não mostra nada;
+- `curl -s https://juimprimepramim.com.br/api/health` mostra `"indexable":true` (e `false` pelo endereço temporário).
+
+Depois, no Google Search Console: propriedade de domínio (registro TXT no Registro.br), enviar
+`https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL".
 
 ## No lançamento
 

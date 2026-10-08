@@ -8,7 +8,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-const {isProduction} = require('../api/_lib/runtime');
+const {isProduction, indexableHosts, requestHost} = require('../api/_lib/runtime');
 
 const PROJECT = path.join(__dirname, '..');
 
@@ -32,8 +32,9 @@ function readHeaderRules(file = path.join(PROJECT, 'vercel.json')) {
 
 function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PROJECT, 'api'), rules = readHeaderRules(), env = process.env, log = console} = {}) {
   root = path.resolve(root);
-  // Test deployments live at public addresses; keep them out of search results until APP_ENV=production.
-  const hideFromSearch = !isProduction(env);
+  // Search results only for the shop's own domain and its www/apex sibling (api/_lib/runtime.js), decided per request by
+  // the address asked for, not by APP_ENV: the temporary Hostinger domain, localhost and bare IPs stay out.
+  const searchHosts = indexableHosts(env);
   const handlers = new Map();
   const compressed = new Map();
   let compressedBytes = 0;
@@ -119,7 +120,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     let pathname;
     try { pathname = new URL(req.url, 'http://localhost').pathname; } catch { res.statusCode = 400; return res.end(); }
     for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
-    if (hideFromSearch) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     try {
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         const handler = apiHandler(pathname);

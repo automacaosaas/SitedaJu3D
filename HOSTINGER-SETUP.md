@@ -50,7 +50,7 @@ hPanel → o site → **Variáveis de ambiente**. Salvar republica o app.
 
 | Nome | Valor no site de teste | Para quê |
 |---|---|---|
-| `APP_ENV` | `preview` | Modo de teste. Em `production`, os caminhos de teste fecham e o site volta a aparecer no Google. |
+| `APP_ENV` | `preview` | Modo de teste. Em `production`, os caminhos de teste fecham. O Google não depende dele: só o domínio da loja (`juimprimepramim.com.br` e `www`) pode ser indexado; o endereço temporário fica sempre fora (`X-Robots-Tag`). |
 | `SITE_URL` | `https://<endereço temporário>` (sem barra no fim) | Links dos e-mails e a proteção de origem dos formulários. Sem ela, criar conta falha. |
 | `DB_HOST` | o host do passo 3 | Endereço do banco. |
 | `DB_NAME` | o nome do banco | |

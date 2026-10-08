@@ -13,16 +13,18 @@ const IMAGE = {path: 'assets/og-ju.jpg', width: 1200, height: 630, alt: 'Borbole
 const SITE = 'Ju, imprime pra mim?';
 const SHOP = 'Mais cor na consulta, mais encanto em cada olhar: capas para retinoscópio e avião para régua de grau, impressos em 3D nas cores que você escolher.';
 
-// Every page a person may share. Pages only for signed-in steps get the shop's general preview.
+// Every page a person may share. Pages only for signed-in steps get the shop's general preview. canonical: the page's own
+// address on the shop's domain (apex), for search engines (2026-10-07): the pages listed in sitemap.xml; never on the pages
+// marked noindex (Sobre while empty, account and checkout), whose og:url points elsewhere.
 const PAGES = {
-  'index.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
-  'produtos.html': {title: 'Produtos · Ju, imprime pra mim?', description: 'Borboletoscópio, Dinossauroscópio e Aviãoscopia: peças impressas em 3D para a consulta, personalizadas nas cores que você escolher.'},
+  'index.html': {url: '', canonical: true, title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
+  'produtos.html': {canonical: true, title: 'Produtos · Ju, imprime pra mim?', description: 'Borboletoscópio, Dinossauroscópio e Aviãoscopia: peças impressas em 3D para a consulta, personalizadas nas cores que você escolher.'},
   'sobre.html': {title: 'Sobre a Ju · Ju, imprime pra mim?', description: SHOP},
-  'contato.html': {title: 'Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?', description: `Fale com a Ju pelo ${contact().whatsapp ? 'WhatsApp, pelo ' : ''}formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.`},
-  'termos.html': {title: 'Termos de Uso · Ju, imprime pra mim?', description: 'Termos de Uso da loja Ju, imprime pra mim?: conta, pedidos sob encomenda, pagamento, produção, entrega e seus direitos.'},
-  'privacidade.html': {title: 'Política de Privacidade · Ju, imprime pra mim?', description: 'Política de Privacidade da loja Ju, imprime pra mim?: quais dados coletamos, para quê, com quem compartilhamos e como exercer seus direitos (LGPD).'},
-  'trocas.html': {title: 'Trocas e Devoluções · Ju, imprime pra mim?', description: 'Trocas e Devoluções da loja Ju, imprime pra mim?: desistência em 7 dias, peças com defeito e como o valor é devolvido.'},
-  'envio.html': {title: 'Envio e prazos · Ju, imprime pra mim?', description: 'Envio e prazos da loja Ju, imprime pra mim?: produção sob encomenda em 3 a 5 dias úteis, frete pelos Correios calculado pelo CEP e frete grátis a partir de R$ 500,00.'},
+  'contato.html': {canonical: true, title: 'Fale com a Ju · Contato e perguntas frequentes | Ju, imprime pra mim?', description: `Fale com a Ju pelo ${contact().whatsapp ? 'WhatsApp, pelo ' : ''}formulário, e-mail ou Instagram, e veja as respostas sobre prazos, pagamento, frete, trocas e peças personalizadas.`},
+  'termos.html': {canonical: true, title: 'Termos de Uso · Ju, imprime pra mim?', description: 'Termos de Uso da loja Ju, imprime pra mim?: conta, pedidos sob encomenda, pagamento, produção, entrega e seus direitos.'},
+  'privacidade.html': {canonical: true, title: 'Política de Privacidade · Ju, imprime pra mim?', description: 'Política de Privacidade da loja Ju, imprime pra mim?: quais dados coletamos, para quê, com quem compartilhamos e como exercer seus direitos (LGPD).'},
+  'trocas.html': {canonical: true, title: 'Trocas e Devoluções · Ju, imprime pra mim?', description: 'Trocas e Devoluções da loja Ju, imprime pra mim?: desistência em 7 dias, peças com defeito e como o valor é devolvido.'},
+  'envio.html': {canonical: true, title: 'Envio e prazos · Ju, imprime pra mim?', description: 'Envio e prazos da loja Ju, imprime pra mim?: produção sob encomenda em 3 a 5 dias úteis, frete pelos Correios calculado pelo CEP e frete grátis a partir de R$ 500,00.'},
   'checkout.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'comprar-agora.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'conta.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP}
@@ -33,9 +35,10 @@ const base = () => String(COMPANY.website).replace(/\/+$/, '');
 
 // The tags of one page. jsonLd: structured data for search engines (schema.org), written as a data block that is never
 // executed (so the Content-Security-Policy has nothing to allow). extra: more <meta> lines (product price, for instance).
-function tags({url, title, description, image = IMAGE, type = 'website', extra = [], jsonLd = null}) {
+function tags({url, title, description, image = IMAGE, type = 'website', extra = [], jsonLd = null, canonical = false}) {
   return [
     '<!-- og -->',
+    ...(canonical ? [`<link rel="canonical" href="${esc(url)}">`] : []),
     `<meta property="og:type" content="${esc(type)}">`,
     `<meta property="og:site_name" content="${esc(SITE)}">`,
     '<meta property="og:locale" content="pt_BR">',
@@ -64,7 +67,7 @@ function organization() {
 
 function block(name) {
   const page = PAGES[name];
-  return tags({url: `${base()}/${page.url ?? name}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null});
+  return tags({url: `${base()}/${page.url ?? name}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null, canonical: Boolean(page.canonical)});
 }
 
 function sync(html, name) {

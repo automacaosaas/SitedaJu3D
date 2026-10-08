@@ -107,12 +107,38 @@ try {
   assert.equal(config({APP_ENV: 'production', SITE_URL: 'https://juimprimepramim.com.br', MAIL_TRANSPORT: 'console'}).transport, 'resend', 'console e-mail never in production');
   assert.equal(config({APP_ENV: 'production', SITE_URL: 'https://juimprimepramim.com.br/'}).siteUrl, 'https://juimprimepramim.com.br');
 
-  // In production the site is indexable again.
-  const live = createServer({env: {APP_ENV: 'production'}});
+  // Search engines (2026-10-07): decided by the address asked for, not by APP_ENV. The shop's domain (and www) can be
+  // indexed even while the server still runs as preview; the temporary domain, localhost and bare IPs never.
+  const robots = async (headers, target = raw) => (await target('/', {headers})).headers['x-robots-tag'];
+  for (const host of ['juimprimepramim.com.br', 'www.juimprimepramim.com.br', 'JuImprimePraMim.com.br.:443']) assert.equal(await robots({host}), undefined, `indexable: ${host}`);
+  assert.equal(await robots({host: 'wheat-llama-936569.hostingersite.com', 'x-forwarded-host': 'juimprimepramim.com.br, outro.com'}), undefined, 'the first X-Forwarded-Host wins (a CDN in front rewrites Host)');
+  for (const host of ['wheat-llama-936569.hostingersite.com', '201.77.147.3', 'localhost:3000', '[::1]:3000', 'juimprimepramim.com.br.evil.com', 'outro-site.com.br'])
+    assert.equal(await robots({host}), 'noindex, nofollow', `stays out of search results: ${host}`);
+  assert.equal(await robots({host: 'wheat-llama-936569.hostingersite.com', 'x-forwarded-host': 'wheat-llama-936569.hostingersite.com'}), 'noindex, nofollow');
+  const healthBy = async host => JSON.parse((await raw('/api/health', {headers: {host}})).body).indexable;
+  assert.equal(await healthBy('juimprimepramim.com.br'), true, '/api/health says the domain can be indexed');
+  assert.equal(await healthBy('wheat-llama-936569.hostingersite.com'), false);
+  assert.equal(await healthBy('127.0.0.1'), false);
+
+  const runtime = require('../api/_lib/runtime.js');
+  assert.equal(runtime.normalizeHost('WWW.Site.com.br.:8080'), 'www.site.com.br');
+  assert.equal(runtime.normalizeHost('[2804:2b44::80]:443'), '2804:2b44::80');
+  assert.equal(runtime.canonicalHost({SITE_URL: 'https://juimprimepramim.com.br/'}), 'juimprimepramim.com.br');
+  assert.equal(runtime.canonicalHost({SITE_URL: 'https://www.juimprimepramim.com.br'}), 'www.juimprimepramim.com.br');
+  for (const SITE_URL of ['https://wheat-llama-936569.hostingersite.com', 'http://10.0.100.80', 'http://201.77.147.3', 'http://localhost:3000', '', 'nada'])
+    assert.equal(runtime.canonicalHost({SITE_URL}), 'juimprimepramim.com.br', `a test or machine address in SITE_URL falls back to COMPANY.website: ${SITE_URL || '(vazio)'}`);
+  assert.deepEqual([...runtime.indexableHosts({SITE_URL: 'https://www.juimprimepramim.com.br'})], ['www.juimprimepramim.com.br', 'juimprimepramim.com.br'], 'www and apex both ways');
+  assert.deepEqual([...runtime.indexableHosts({INDEX_HOSTS: 'Loja.Outra.com, outra.com.br'})], ['juimprimepramim.com.br', 'www.juimprimepramim.com.br', 'loja.outra.com', 'outra.com.br'], 'INDEX_HOSTS adds more');
+  assert.equal(runtime.requestHost({headers: {host: 'a.com', 'x-forwarded-host': ' B.com , c.com'}}), 'b.com');
+  assert.equal(runtime.indexable({}, ''), false);
+
+  // Production with the domain in SITE_URL: the same rule.
+  const live = createServer({env: {APP_ENV: 'production', SITE_URL: 'https://juimprimepramim.com.br'}});
   await new Promise(resolve => live.listen(0, '127.0.0.1', resolve));
-  const liveHome = await new Promise((resolve, reject) => http.get(`http://127.0.0.1:${live.address().port}/`, resolve).on('error', reject));
-  liveHome.resume();
-  assert.equal(liveHome.headers['x-robots-tag'], undefined, 'production pages can be indexed');
+  const liveGet = (path, {headers = {}} = {}) => new Promise((resolve, reject) => http.get({host: '127.0.0.1', port: live.address().port, path, headers}, res => { res.resume(); resolve({headers: res.headers}); }).on('error', reject));
+  assert.equal(await robots({host: 'juimprimepramim.com.br'}, liveGet), undefined, 'production pages on the domain can be indexed');
+  assert.equal(await robots({host: 'wheat-llama-936569.hostingersite.com'}, liveGet), 'noindex, nofollow', 'the temporary domain stays out after launch too');
+  assert.equal(await robots({}, liveGet), 'noindex, nofollow', 'and a bare IP');
   live.close();
 } finally {
   server.close();
@@ -145,4 +171,4 @@ try {
   }
 }
 
-console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, and blocks traversal, dot-files and api/_lib.');
+console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, keeps every address but the shop\'s domain out of search results, and blocks traversal, dot-files and api/_lib.');
