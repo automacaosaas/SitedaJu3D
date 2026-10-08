@@ -151,6 +151,14 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
 
   function serveStatic(req, res, pathname, search = '') {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
+    // A page address typed with capitals (ADMIN.HTML, Produtos.html, 08/10/2026): every page is lowercase on disk, and the
+    // Linux server would answer 404, so it moves to the lowercase address when that page exists. Only page addresses (some
+    // vendor files have capitals in their names).
+    const lower = pathname.toLowerCase();
+    if (lower !== pathname && /(^|\/)[^./]*$|\.html?$/i.test(pathname) && resolveFile(lower)) {
+      res.statusCode = 301; res.setHeader('Location', lower + search); res.setHeader('Cache-Control', 'private, max-age=86400');
+      return res.end();
+    }
     const found = resolveFile(pathname);
     if (!found) {
       // A page address that does not exist gets the site's own 404 page (404.html, with links back to the showcase); a
