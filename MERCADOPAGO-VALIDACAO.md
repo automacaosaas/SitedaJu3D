@@ -141,8 +141,8 @@ Na conta do Mercado Pago do CNPJ:
 - [ ] **Nome na fatura** do cartão que o cliente reconheça (por exemplo "JU IMPRIME").
 - [ ] **Taxas** e **prazo de liberação** do dinheiro (Pix e cartão) conferidos.
 - [ ] **Webhook do modo de produção:** Webhooks → **Modo de produção** → URL
-  `https://juimprimepramim.com.br/api/payments/webhook`, **só "Order"**. Copie a assinatura secreta (se for diferente
-  da de teste, a de produção vale).
+  `https://juimprimepramim.com.br/api/payments/webhook` (sem `www`), **só "Order"**. Copie a assinatura secreta (se for
+  diferente da de teste, a de produção vale).
 
 No site:
 

@@ -12,8 +12,8 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 
 // Raw request: fetch() would normalize "/../" before sending, which is exactly what an attacker would not do.
-const raw = (path, {method = 'GET', headers = {}} = {}) => new Promise((resolve, reject) => {
-  const req = http.request(base + '/', {method, path, headers}, res => { const chunks = []; res.on('data', c => chunks.push(c)); res.on('end', () => resolve({status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks)})); });
+const raw = (path, {method = 'GET', headers = {}, at = base} = {}) => new Promise((resolve, reject) => {
+  const req = http.request(at + '/', {method, path, headers}, res => { const chunks = []; res.on('data', c => chunks.push(c)); res.on('end', () => resolve({status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks)})); });
   req.on('error', reject); req.end();
 });
 
@@ -154,10 +154,55 @@ try {
   await new Promise(resolve => live.listen(0, '127.0.0.1', resolve));
   const liveGet = (path, {headers = {}} = {}) => new Promise((resolve, reject) => http.get({host: '127.0.0.1', port: live.address().port, path, headers}, res => { res.resume(); resolve({headers: res.headers}); }).on('error', reject));
   assert.equal(await robots({host: 'juimprimepramim.com.br'}, liveGet), undefined, 'production pages on the domain can be indexed');
-  assert.equal(await robots({host: 'www.juimprimepramim.com.br'}, liveGet), undefined, 'and on www (nginx may 301 it to the apex)');
+  assert.equal(await robots({host: 'www.juimprimepramim.com.br'}, liveGet), undefined, 'and on www (its 301 to the apex carries no noindex)');
   assert.equal(await robots({host: 'wheat-llama-936569.hostingersite.com'}, liveGet), 'noindex, nofollow', 'the temporary domain stays out after launch too');
   assert.equal(await robots({}, liveGet), 'noindex, nofollow', 'and a bare IP');
+
+  // www → the domain without www, in the Node server itself (2026-10-08): one session cookie, one cart and one origin for the
+  // forms. Same path and query, the same security headers, no body; GET/HEAD 301, any other method 308 (keeps the body).
+  const at = `http://127.0.0.1:${live.address().port}`, www = {host: 'www.juimprimepramim.com.br'};
+  const page = await raw('/produtos.html?cor=rosa&utm_source=insta', {headers: www, at});
+  assert.equal(page.status, 301);
+  assert.equal(page.headers.location, 'https://juimprimepramim.com.br/produtos.html?cor=rosa&utm_source=insta', 'path and query string intact');
+  assert.equal(page.body.length, 0, 'no body');
+  assert.match(page.headers['content-security-policy'] || '', /default-src 'self'/, 'the redirect carries the vercel.json headers');
+  assert.equal(page.headers['x-frame-options'], 'SAMEORIGIN'); assert.match(page.headers['strict-transport-security'] || '', /max-age=/);
+  for (const path of ['/produtos.html', '/assets/logo-ju.webp?v=2'])
+    assert.equal((await raw(path, {headers: www, at})).headers['cache-control'], 'private, max-age=86400', `${path}: kept by the browser, never by a shared cache`);
+  const headWww = await raw('/', {method: 'HEAD', headers: www, at});
+  assert.equal(headWww.status, 301); assert.equal(headWww.headers.location, 'https://juimprimepramim.com.br/'); assert.equal(headWww.body.length, 0);
+  for (const method of ['POST', 'PUT', 'DELETE', 'OPTIONS']) {
+    const moved = await raw('/api/auth/start?lang=en', {method, headers: {...www, 'content-type': 'application/json'}, at});
+    assert.equal(moved.status, 308, `${method}: 308 keeps the method and the body`);
+    assert.equal(moved.headers.location, 'https://juimprimepramim.com.br/api/auth/start?lang=en');
+  }
+  assert.equal((await raw('/api/health', {headers: www, at})).headers.location, 'https://juimprimepramim.com.br/api/health');
+  // Calls from other servers are the exception: the Mercado Pago webhook and the scheduled task reach their handler on www
+  // and answer as on the domain (a 308 would never be followed: no 200 for Mercado Pago, no Authorization for the cron).
+  for (const path of ['/api/payments/webhook?data.id=ORD01ABCDEFGH&type=order', '/api/fila/rodar', '/api/fila/rodar/']) {
+    const [onWww, onDomain] = await Promise.all([www, {host: 'juimprimepramim.com.br'}].map(headers => raw(path, {method: 'POST', headers: {...headers, 'content-type': 'application/json'}, at})));
+    assert.equal(onWww.headers.location, undefined, `${path}: not moved`);
+    assert.deepEqual([onWww.status, onWww.body.toString()], [onDomain.status, onDomain.body.toString()], `${path}: the handler answers on www as on the domain`);
+  }
+  assert.equal((await raw('/api/payments/status?ref=x', {headers: www, at})).status, 301, 'the other payment routes still move');
+  for (const headers of [{host: 'WWW.JuImprimePraMim.com.br.:443'}, {host: '127.0.0.1', 'x-forwarded-host': 'www.juimprimepramim.com.br, outro.com'}])
+    assert.equal((await raw('/conta.html?x=1', {headers, at})).headers.location, 'https://juimprimepramim.com.br/conta.html?x=1', `moved: ${JSON.stringify(headers)}`);
+  for (const host of ['juimprimepramim.com.br', '127.0.0.1', `127.0.0.1:${live.address().port}`, 'localhost:3000', 'wheat-llama-936569.hostingersite.com', 'www.juimprimepramim.com.br.evil.com', 'www.outro-site.com.br']) {
+    const stays = await raw('/?x=1', {headers: {host}, at});
+    assert.equal(stays.status, 200, `not moved: ${host}`); assert.equal(stays.headers.location, undefined);
+  }
+  assert.equal((await raw('/api/health', {headers: {host: '127.0.0.1:3000'}, at})).status, 200, "the deploy's health check (127.0.0.1) is never moved");
+  assert.equal((await raw('/', {method: 'POST', headers: {host: 'juimprimepramim.com.br'}, at})).status, 405, 'the domain itself answers as before');
   live.close();
+  // The default server (no SITE_URL, as in development or on the test site) sends only the shop's www there; its own
+  // address stays. A domain that is itself www never moves.
+  assert.equal((await raw('/', {headers: www})).headers.location, 'https://juimprimepramim.com.br/');
+  for (const host of ['localhost:3000', '127.0.0.1', 'wheat-llama-936569.hostingersite.com']) assert.equal((await raw('/', {headers: {host}})).status, 200, `not moved: ${host}`);
+  const wwwSite = createServer({env: {APP_ENV: 'production', SITE_URL: 'https://www.juimprimepramim.com.br'}});
+  await new Promise(resolve => wwwSite.listen(0, '127.0.0.1', resolve));
+  for (const host of ['www.juimprimepramim.com.br', 'juimprimepramim.com.br'])
+    assert.equal((await raw('/', {headers: {host}, at: `http://127.0.0.1:${wwwSite.address().port}`})).status, 200, `SITE_URL with www: ${host} is not moved`);
+  wwwSite.close();
 } finally {
   server.close();
 }
@@ -189,4 +234,4 @@ try {
   }
 }
 
-console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, keeps every address but the shop\'s domain out of search results, and blocks traversal, dot-files and api/_lib.');
+console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, keeps every address but the shop\'s domain out of search results, moves www to the domain without www (301/308), and blocks traversal, dot-files and api/_lib.');
