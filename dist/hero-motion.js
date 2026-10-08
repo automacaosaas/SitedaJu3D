@@ -74,12 +74,14 @@ export function lightTint(hex, floor) {
   for (let k = 0; k <= 100; k++) { const tint = mixColor(hex, '#ffffff', k / 100); if (luminance(tint) >= target) return tint; }
   return '#ffffff';
 }
-// O sombreado (o lado na sombra de cada forma e os detalhes) é a cor do texto do tema a no máximo 8%: dá volume sem tirar contraste.
-export const SCENERY_SHADE = .08;
-// Profundidade no arraste: o desenho do fundo acompanha a peça a 12% do caminho dela (pose(d).x); parado no movimento reduzido.
-export const SCENERY_PARALLAX = .12;
-export function sceneryShift(distance, travel, {reduced = false} = {}) {
-  return reduced ? 0 : pose(distance).x * travel * SCENERY_PARALLAX + 0;   // + 0: nunca -0
+// O sombreado (os detalhes miúdos, como o cabinho das bananas) é a cor do texto do tema a 7% (no máximo 8%): marca sem tirar contraste
+// (com o céu do avião, 8% já deixava o apoio e o destaque abaixo de 4,5:1).
+export const SCENERY_SHADE = .07;
+// Profundidade no arraste: o desenho do fundo acompanha a peça a 12% do caminho dela (pose(d).x) e as silhuetas dos cantos, mais
+// longe, a 5% (depth); tudo parado no movimento reduzido.
+export const SCENERY_PARALLAX = .12, SCENERY_EDGE = .05;
+export function sceneryShift(distance, travel, {reduced = false, depth = SCENERY_PARALLAX} = {}) {
+  return reduced ? 0 : pose(distance).x * travel * depth + 0;   // + 0: nunca -0
 }
 // As cores do desenho de uma peça, como variáveis CSS da camada, todas opacas: --scn-tN (a cor N clareada), --scn-hN (o lado da
 // luz, mais branco) e --scn-sN (o lado da sombra e os detalhes). Com menos de quatro cores, a última se repete; sem cores, o tom do meio.
@@ -100,15 +102,23 @@ export function layerMix(position, total) {
   return {from: mod(lo, total), to: mod(lo + 1, total), t: position - lo};
 }
 
-// Mesma regra de gesto da vitrine anterior: soltar além do limiar avança um produto.
-export function swipeTarget({anchor, dx, stride, cancelled = false}) {
+// Soltar o arraste. Um peteleco (velocity, em px/ms do dedo, acima de FLICK) segue para o lado dele a partir de onde a vitrine está
+// (position): um movimento rápido e curto troca de peça, e um peteleco de volta desfaz o arraste. Sem impulso, vale a distância
+// (o limiar). Nunca mais de uma peça a partir da âncora.
+export const FLICK = .35;
+export function swipeTarget({anchor, dx, stride, velocity = 0, position = anchor - dx / stride, cancelled = false}) {
   if (cancelled) return anchor;
+  const base = Math.round(anchor);
+  if (Math.abs(velocity) > FLICK) return clamp(velocity < 0 ? Math.floor(position + 1e-6) + 1 : Math.ceil(position - 1e-6) - 1, base - 1, base + 1);
   const threshold = Math.min(40, stride * .18);
-  return Math.abs(dx) >= threshold ? Math.round(anchor) + (dx < 0 ? 1 : -1) : anchor;
+  return Math.abs(dx) >= threshold ? base + (dx < 0 ? 1 : -1) : anchor;
 }
 
-export function settleDuration(distance, {reduced = false} = {}) {
+// Duração do assentar, pela distância. Ao soltar um arraste (velocity + stride, o curso de uma peça em px), a curva sai na velocidade
+// do dedo, sem tranco: a ease-out EASE começa a EASE[1]/EASE[0] (~4,5×) a velocidade média; entre 320 ms e FULL_DURATION.
+export function settleDuration(distance, {reduced = false, velocity = null, stride = 0} = {}) {
   if (reduced) return 320;
+  if (velocity != null && stride > 0) return Math.round(clamp(EASE[1] / EASE[0] * Math.abs(distance) * stride / Math.max(.4, Math.abs(velocity)), 320, FULL_DURATION));
   return Math.round(clamp(FULL_DURATION * (.55 + .45 * Math.abs(distance)), 320, 1100));
 }
 

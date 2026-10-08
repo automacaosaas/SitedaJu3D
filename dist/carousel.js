@@ -3,7 +3,7 @@
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES, fixedColors} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, SCENERY_EDGE} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -48,7 +48,8 @@ function init() {
   // ── Estrutura ────────────────────────────────────────────────────────────────
   // Cada camada de fundo: o degradê do tema e o desenho da peça (hero-scenery.js), com as cores dela já clareadas (sceneryVars).
   const lookVars = (theme, look) => Object.entries(sceneryVars(theme, look)).map(([name, value]) => `${name}:${value}`).join(';');
-  bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer" style="--stops:${theme.bannerStops};${lookVars(theme, look)}">${scenery(look, i)}</div>`).join('');
+  // Só a camada da peça de abertura entra na pintura; as outras nascem fora dela (.is-off) até a vez delas.
+  bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer${i === initial ? '' : ' is-off'}" style="--stops:${theme.bannerStops};${lookVars(theme, look)}">${scenery(look, i)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
   region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price, soon}) =>
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : soon ? '<p class="copy-price"><span class="palette-soon">Novidade · em breve</span></p>' : ''}</div>`).join('');
@@ -67,6 +68,10 @@ function init() {
 
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
   const bgLayers = [...bgHost.querySelectorAll('.hero-layer')], bandLayers = [...shell.querySelectorAll('[data-hero-band] .hero-layer')];
+  // O desenho em volta da peça e as silhuetas dos cantos de cada camada: o parallax do arraste escreve `translate` direto neles.
+  const motifs = bgLayers.map(layer => layer.querySelector('.scenery-back')), edges = bgLayers.map(layer => layer.querySelector('.scenery-mist'));
+  // No meio da troca as cores do tema vão só para o header e as setas (o resto do banner e o rodapé recebem a cor final em report()).
+  const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);
   const images = slots.map(slot => slot.querySelector('img'));
   const stage = region.querySelector('[data-hero-stage]');
   // Produto com `demo` em SHOWCASE: o clique na peça vira a demonstração na própria vitrine (hero-demo.js).
@@ -134,34 +139,53 @@ function init() {
     rise = Math.max(8, pedestal * .035);
     render();
   }
+  // Um estilo só é escrito quando muda: a cada quadro quase nada muda (as peças longe, as camadas apagadas, a cor já certa).
+  const written = new WeakMap();
+  function put(element, name, value) {
+    let seen = written.get(element);
+    if (!seen) written.set(element, seen = {});
+    if (seen[name] === value) return;
+    seen[name] = value;
+    if (name.startsWith('--')) element.style.setProperty(name, value); else element.style[name] = value;
+  }
+  let themeNow = {};
+  // Enquanto a vitrine anda, as nuvenzinhas e os cantos param (o parallax já os move; assim os quadros não recalculam as animações).
+  const moving = on => bgHost.classList.toggle('is-moving', on);
   function render() {
     const motion = {reduced: reduced.matches};
     for (let i = 0; i < total; i++) {
       const d = wrapDistance(i, position, total), p = pose(d, motion), t = textPose(d, motion), slot = slots[i];
-      slot.style.transform = `translate3d(${(p.x * travel).toFixed(2)}px,${(p.y * rise).toFixed(2)}px,0) scale(${p.scale.toFixed(4)})`;
-      slot.style.opacity = p.opacity.toFixed(3);
-      slot.style.visibility = p.opacity < .005 ? 'hidden' : 'visible';
-      slot.style.zIndex = String(Math.round((1 - p.a) * 10));
+      put(slot, 'transform', `translate3d(${(p.x * travel).toFixed(2)}px,${(p.y * rise).toFixed(2)}px,0) scale(${p.scale.toFixed(4)})`);
+      put(slot, 'opacity', p.opacity.toFixed(3));
+      put(slot, 'visibility', p.opacity < .005 ? 'hidden' : 'visible');
+      put(slot, 'zIndex', String(Math.round((1 - p.a) * 10)));
       for (const block of [copies[i], palettes[i]]) {
-        block.style.opacity = t.opacity.toFixed(3);
-        block.style.visibility = t.opacity < .005 ? 'hidden' : 'visible';
-        block.style.transform = `translate3d(${(t.x * TEXT_SHIFT).toFixed(2)}px,${(t.y * TEXT_DROP).toFixed(2)}px,0)`;
+        put(block, 'opacity', t.opacity.toFixed(3));
+        put(block, 'visibility', t.opacity < .005 ? 'hidden' : 'visible');
+        put(block, 'transform', `translate3d(${(t.x * TEXT_SHIFT).toFixed(2)}px,${(t.y * TEXT_DROP).toFixed(2)}px,0)`);
       }
     }
     const mix = layerMix(position, total);
     for (let i = 0; i < total; i++) {
-      const opacity = i === mix.from ? 1 : i === mix.to ? mix.t : 0, z = i === mix.to ? '2' : '1';
-      for (const layer of [bgLayers[i], bandLayers[i]]) { layer.style.opacity = opacity.toFixed(3); layer.style.zIndex = z; }
-      // camada apagada sai da pintura; o desenho dela acompanha a peça a 12% do caminho (profundidade), parado no movimento reduzido
-      bgLayers[i].style.visibility = opacity < .005 ? 'hidden' : 'visible';
-      bgLayers[i].style.setProperty('--scn-x', `${sceneryShift(wrapDistance(i, position, total), travel, motion).toFixed(1)}px`);
+      const opacity = i === mix.from ? 1 : i === mix.to ? mix.t : 0, z = i === mix.to ? '2' : '1', shown = opacity >= .005;
+      for (const layer of [bgLayers[i], bandLayers[i]]) { put(layer, 'opacity', opacity.toFixed(3)); put(layer, 'zIndex', z); }
+      // a camada apagada sai da pintura e para de animar (.is-off: visibility e content-visibility); na que aparece, o desenho
+      // acompanha a peça a 12% do caminho e os cantos a 5% (profundidade), cada um no seu translate, parados no movimento reduzido
+      if (bgLayers[i].classList.contains('is-off') === shown) bgLayers[i].classList.toggle('is-off', !shown);
+      if (!shown) continue;
+      const d = wrapDistance(i, position, total);
+      if (motifs[i]) put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`);
+      if (edges[i]) put(edges[i], 'translate', `${Math.round(sceneryShift(d, travel, {...motion, depth: SCENERY_EDGE}))}px 0`);
     }
     const a = entries[mix.from].theme, b = entries[mix.to].theme, accent = mixColor(a.accentColor, b.accentColor, mix.t);
-    const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
-    for (const element of themed) for (const name in vars) element.style.setProperty(name, vars[name]);
+    themeNow = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};
+    for (const element of live) for (const name in themeNow) put(element, name, themeNow[name]);
   }
   function report({announce = true} = {}) {
     const i = mod(Math.round(target), total), {key, colors} = entries[i];
+    // assentada a peça, a cor do tema vai para o banner inteiro e o rodapé (variáveis herdadas: uma escrita por troca, não por quadro)
+    for (const element of themed) for (const name in themeNow) put(element, name, themeNow[name]);
+    moving(false);
     window.juTheme?.save(key, colors);
     status.textContent = announce ? `${entries[i].product.title}, produto ${i + 1} de ${total}.` : '';   // vazio não fica desatualizado
     // A coleção (catalog.js) acompanha a vitrine; só quando a peça muda, não a cada relatório da mesma peça.
@@ -170,15 +194,15 @@ function init() {
 
   // ── Movimento ────────────────────────────────────────────────────────────────
   function stop() { cancelAnimationFrame(frame); frame = 0; }
-  function settle(next, {announce = true} = {}) {
-    stop(); target = next;
+  function settle(next, {announce = true, velocity = null} = {}) {
+    stop(); target = next; moving(true);
     // #produto/<peça> diz por onde se chegou (Ver encaixado, Produtos, carrinho). Trocada a peça, o endereço sai já: senão o
     // "Continuar escolhendo" do carrinho e o recarregar voltavam à peça antiga (e, se à venda, abriam a janela dela).
     const routed = fromHash();
     if (routed >= 0 && routed !== mod(Math.round(target), total)) history.replaceState(history.state, '', location.pathname + location.search);
     setActive(mod(Math.round(target), total));
     preloadAround(active);
-    const from = position, start = performance.now(), duration = settleDuration(target - from, {reduced: reduced.matches});
+    const from = position, start = performance.now(), duration = settleDuration(target - from, {reduced: reduced.matches, velocity, stride: travel});
     if (from === target) { render(); report({announce}); return; }
     function tick(now) {
       const progress = Math.min(1, (now - start) / duration);
@@ -219,15 +243,17 @@ function init() {
   region.addEventListener('pointerdown', e => {
     if (locked || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0) || gesture || total < 2 || e.target.closest('.hero-arrow')) return;
     suppressUntil = 0;
-    gesture = {id: e.pointerId, x: e.clientX, y: e.clientY, base: position, anchor: target, horizontal: false, vertical: false, moved: false};
+    gesture = {id: e.pointerId, x: e.clientX, y: e.clientY, base: position, anchor: target, horizontal: false, vertical: false, moved: false, lx: e.clientX, lt: e.timeStamp, v: 0};
   });
   region.addEventListener('pointermove', e => {
     if (!gesture || e.pointerId !== gesture.id) return;
-    const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+    const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y, dt = e.timeStamp - gesture.lt;
+    // a velocidade do dedo (px/ms), suavizada: decide o peteleco e a duração do assentar ao soltar
+    if (dt > 0) { gesture.v = .8 * (e.clientX - gesture.lx) / dt + .2 * gesture.v; gesture.lx = e.clientX; gesture.lt = e.timeStamp; }
     if (Math.hypot(dx, dy) > 8) gesture.moved = true;
     if (!gesture.horizontal && !gesture.vertical && Math.max(Math.abs(dx), Math.abs(dy)) > 8) {
       if (Math.abs(dx) > Math.abs(dy) * 1.2) {
-        gesture.horizontal = true; stop(); gesture.base = position;
+        gesture.horizontal = true; stop(); moving(true); gesture.base = position;
         region.setPointerCapture(e.pointerId); region.classList.add('is-dragging');
       } else if (Math.abs(dy) > Math.abs(dx)) gesture.vertical = true;
     }
@@ -235,11 +261,11 @@ function init() {
   });
   function finish(e, cancelled = false) {
     if (!gesture || e.pointerId !== gesture.id) return;
-    const g = gesture, dx = e.clientX - g.x;
+    const g = gesture, dx = e.clientX - g.x, velocity = cancelled || e.timeStamp - g.lt > 90 ? 0 : g.v;   // parou antes de soltar: sem impulso
     gesture = null; region.classList.remove('is-dragging');
     if (g.moved) suppressUntil = performance.now() + 650;
     if (region.hasPointerCapture(e.pointerId)) region.releasePointerCapture(e.pointerId);
-    if (g.horizontal) settle(swipeTarget({anchor: g.anchor, dx, stride: travel, cancelled}));
+    if (g.horizontal) settle(swipeTarget({anchor: g.anchor, dx, stride: travel, velocity, position, cancelled}), {velocity});
   }
   region.addEventListener('pointerup', e => finish(e));
   region.addEventListener('pointercancel', e => finish(e, true));
@@ -296,7 +322,12 @@ function init() {
   addEventListener('resize', measure);
   if ('ResizeObserver' in window) new ResizeObserver(() => measure()).observe(shell);
   reduced.addEventListener('change', () => { stop(); position = target; render(); report(); });
+  // As nuvenzinhas e os cantos do fundo só se mexem com o banner na tela e a aba aberta (carousel.css › .hero-bg.is-still).
+  let onScreen = true;
+  const rest = () => bgHost.classList.toggle('is-still', document.hidden || !onScreen);
+  if ('IntersectionObserver' in window) new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; rest(); }).observe(shell);
   document.addEventListener('visibilitychange', () => {
+    rest();
     if (document.hidden) { stop(); gesture = null; region.classList.remove('is-dragging'); position = target; render(); report(); }
   });
   // Voltar (Back) restaura a home como estava: a peça à vista volta a ser a guardada, mesmo que outra página tenha guardado outra.

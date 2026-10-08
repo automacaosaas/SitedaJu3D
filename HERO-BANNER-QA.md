@@ -179,6 +179,8 @@ Aviãoscopia sem “Ver encaixado”. Não houve teste em aparelho físico. As m
 
 ## Fundos temáticos em sombreado de nuvens (07/10/2026)
 
+> Substituído em 08/10/2026 pelas silhuetas brancas de nuvem (seção seguinte). Fica o registro.
+
 Pedido do dono: "Na vitrine, detalhar individualmente para cada objeto, em sombreado de nuvens". Atrás de cada peça há agora
 um desenho próprio, claro e macio, nas cores da própria peça:
 
@@ -209,3 +211,47 @@ um desenho próprio, claro e macio, nas cores da própria peça:
   câmera até ficar atrás da peça montada.
 - Conferido no Chrome headless em 390 (celular, 2x), 360, 800, 901, 1024, 1101, 1280, 1366 e 1920 px, no meio de um arraste,
   com movimento reduzido e na demonstração do unicórnio e do dinossauro. Não testado em aparelho físico.
+
+## Silhuetas brancas de nuvem (08/10/2026)
+
+Pedido do dono (sobre a versão de 07/10): "Não gostei desse novo fundo da vitrine. Queria sombreamento com referências de luz,
+usando as nuvens BRANCAS que ficam nos cantos." Na girafa ele gostou do capim alto, da nuvenzinha branca no alto à direita e da
+árvore, mas tudo em forma de nuvem: só silhuetas das características de cada peça, limpas, otimizadas e integradas à dinâmica da
+página. Nada de ilustração colorida detalhada (a pata laranja com garras cinza do dinossauro saiu).
+
+| Peça | Cantos (`side`) | Em volta da peça (`motif`) |
+| --- | --- | --- |
+| GiraffeLamp | `grass`: o capim alto de que o dono gostou | `acacia`: o sol, a acácia com a copa em camadas de nuvem, uma acácia pequena ao longe e capim no pé da pilastra |
+| MonkeyLamp | `palms`: folhas de palmeira arqueando dos cantos | `bananas`: um cacho de bananas deitado numa nuvem (e uma menor do outro lado), com o cabinho e as pontinhas no tom da peça |
+| UnicornLamp | `puffs`: nuvens fofas baixas | `rainbow`: arco-íris de faixas de nuvem, brancas com um fio das cores da peça, nuvens fofas nos pés e brilhos |
+| Borboletoscópio | `daisies`: margaridas de pétalas brancas | `flowers`: margaridas dos dois lados, os miolos num amarelo bem claro, as hastes nascendo de nuvens |
+| Dinossauroscópio | `ferns`: samambaias pré-históricas | `tracks`: a pegada de três dedos do T-rex, macia como nuvem, e outra menor adiante (o rastro); samambaias à esquerda |
+| Aviãoscopia | `towers`: cúmulos altos em camadas | `sky`: cúmulos em camadas e o rastro pontilhado de um voo que dá uma volta no alto (antes era a única cena sem desenho) |
+
+- **Linguagem:** tudo branco translúcido, com degradês (branco no alto, a base se dissolvendo) e as bordas apagadas pela máscara.
+  O tom da peça só entra, bem de leve, nas sombras (`--scn-tN`, nunca mais escuro que o meio do degradê do banner) e em detalhes
+  miúdos. SVG em linha, sem filtros, 14 a 34 formas por cena (60 a 90 nós por camada, antes cerca de 170). `tests/carousel.cjs` confere: só branco ou degradês da própria
+  camada, paradas brancas ou no tom da peça, sem as classes dos desenhos coloridos de antes, e o contraste dos textos.
+- **Dinâmica:** em cada cena, duas ou três nuvenzinhas deslizam 9 px para cada lado em voltas de 19 a 27 s, os cantos balançam
+  4 px em 13 s e duas estrelinhas cintilam (opacity e scale, 5 a 7 s). Cada uma é um `<svg>` pequeno e próprio, então o navegador
+  só desliza a camada (sem redesenhar). Tudo para com o banner fora da tela, com a aba escondida (`.hero-bg.is-still`), enquanto a
+  vitrine anda (`.is-moving`) e na camada apagada (`.is-off`). No arraste o desenho acompanha a peça a 12% do caminho e os cantos
+  a 5%. Com movimento reduzido nada se mexe (só o cruzamento de opacidade entre as cenas).
+- **Celular:** até 760 px as setas de vidro alcançam o desenho. Cada cena tem uma arrumação própria nessas telas (CSS:
+  `[data-motif] .scn-*` e `--cx/--cy` das nuvenzinhas), sem nada atrás das setas nem do preço.
+- **Laço de quadros mais leve (revisão "movimento" 1):** o parallax escreve `translate` direto no desenho e nos cantos, só nas
+  duas camadas à vista (antes era a variável herdada `--scn-x` nas seis). As camadas apagadas saem da pintura com
+  `content-visibility: hidden` e só a camada da abertura nasce na pintura. Cada estilo só é escrito quando muda. As cores do tema,
+  no meio da troca, vão só para o header e as setas; o banner inteiro e o rodapé recebem a cor final quando a peça assenta. O
+  brilho do botão principal só corre no botão da peça à vista. Medido no Chrome headless, só durante o arraste (30 movimentos):
+  celular 390 px a 3x com a CPU 4x mais lenta, recálculo de estilo de 4,7 a 8,2 s para 1,4 a 2,0 s; desktop 1440 px, de 0,5 a
+  1,0 s para 0,1 a 0,3 s.
+- **Peteleco (revisão "movimento" 14):** soltar com o dedo rápido (acima de 0,35 px/ms) troca de peça mesmo num arraste curto, e
+  um peteleco de volta desfaz o arraste. A duração do assentar sai da velocidade do dedo (a curva começa na mesma velocidade, entre
+  320 e 780 ms), sem o tranco depois de um arraste lento.
+- **Acabamento (revisão "visual" 13 e 20):** o subtítulo quebra em linhas equilibradas (`text-wrap: balance`, até 18em) e cada
+  bloco de texto se alinha pelo pé, então o preço fica no mesmo lugar de peça para peça. Em telas mais largas que 1560 px as setas
+  acompanham a margem do contêiner (em 1920 px ficam a 55 px do texto, antes a mais de 250 px).
+- Conferido no Chrome headless em 360 e 390 (celular, 2x), 680, 768, 1024, 1366 e 1920 px nas seis peças, no meio de um arraste
+  (mouse e toque), em "Ver encaixado" (girafa, dinossauro, avião e unicórnio) e com movimento reduzido. Não testado em aparelho
+  físico.
