@@ -5,7 +5,10 @@
 //  · a compra: "Comprar" leva a peça direto para a compra (comprar-agora.html, como o "Comprar agora" da janela da peça) e "Adicionar ao
 //    carrinho" é o do site (catalog.js › data-add-product, que abre o mini-carrinho);
 //  · as ofertas, que entram ao rolar: escolher um cartão monta o kit com aquele tanto de peças (kit-builder.js), que vai para o carrinho
-//    ("Adicionar ao carrinho") ou direto para a compra ("Comprar agora");
+//    ("Adicionar ao carrinho") ou direto para a compra ("Comprar agora"). O kit chega com a faixa mais vantajosa e o cartão dela marcado;
+//    no celular, os cartões são uma fileira com setas e pontos;
+//  · o "Voltar" do alto, que volta para onde a pessoa estava (o banner da home, rolado até ele) ou, sem página anterior do site, abre
+//    a home no banner (index.html#novidade);
 //  · o convite discreto para um colega no WhatsApp, com o endereço desta página.
 // Sem este arquivo a página continua útil: a primeira peça, o preço, "Adicionar ao carrinho" e "Ver detalhes" como o link da peça.
 import {PRODUCTS, showcase, badgeStyle} from './products.js';
@@ -15,6 +18,7 @@ import {mountKit, kitPreset} from './kit-builder.js';
 import {readCart, writeCart, putItem, putItems, totals, DIRECT_KEY} from './cart-store.js';
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {wireBadge, shineBadge} from './badge-shine.js';
+import {localDestination} from './shopping-navigation.js';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const smooth = () => (reduced.matches ? 'auto' : 'smooth');
@@ -25,6 +29,11 @@ function buyNow(lines, status) {
   catch { if (status) status.textContent = translate('Não foi possível preparar a compra. Verifique o armazenamento do navegador.'); }
 }
 
+// ── "Voltar": a página de onde a pessoa veio, na mesma altura (o navegador guarda); sem ela, o link (a home no banner da novidade) ──
+for (const back of document.querySelectorAll('[data-nv-return]')) back.addEventListener('click', event => {
+  if (localDestination(document.referrer, location.href) && history.length > 1) { event.preventDefault(); history.back(); }
+});
+
 // ── convite para um colega no WhatsApp (o endereço desta página, na língua escolhida) ──
 const here = () => { const url = new URL(location.href); url.search = ''; return url.href; };
 for (const share of document.querySelectorAll('[data-nv-share]')) {
@@ -34,12 +43,20 @@ for (const share of document.querySelectorAll('[data-nv-share]')) {
 
 // ── as ofertas: os cartões das faixas e o "Monte seu kit" ──
 const kitHost = document.querySelector('[data-nv-kit]'), kitBuy = document.querySelector('[data-nv-kit-buy]');
+const tierButtons = [...document.querySelectorAll('[data-nv-tier]')];
+// o kit chega com a faixa mais vantajosa (o último cartão, "Mais vantajoso"), como o banner da home a mostra
+let units = Number(document.querySelector('.nv-tier.is-best [data-nv-tier]')?.dataset.nvTier) || 1;
 let kit = null, kitTouched = false, kitLinesNow = [];
+// o cartão do kit de agora fica marcado ("No seu kit")
+const markTier = count => tierButtons.forEach(button => {
+  const on = Number(button.dataset.nvTier) === count;
+  button.setAttribute('aria-pressed', String(on)); button.closest('.nv-tier')?.classList.toggle('is-picked', on);
+});
 function mountOffers(key) {
   if (!kitHost) return;
   kit = mountKit(kitHost, {
     current: key,
-    onChange: quote => { kitLinesNow = quote.lines; if (kitBuy) kitBuy.setAttribute('aria-disabled', String(!quote.lines.length)); },
+    onChange: quote => { kitLinesNow = quote.lines; markTier(quote.units); if (kitBuy) kitBuy.setAttribute('aria-disabled', String(!quote.lines.length)); },
     onAdd: async lines => {
       const before = totals(readCart(), 0).subtotal, cart = writeCart(putItems(readCart(), lines));
       window.dispatchEvent(new Event('ju:cart'));
@@ -50,6 +67,7 @@ function mountOffers(key) {
     document.querySelector('[data-nv-kit-fallback]')?.setAttribute('hidden', '');
     if (kitBuy) kitBuy.hidden = false;
     kitHost.addEventListener('click', () => { kitTouched = true; });
+    kit.set(kitPreset(key, units));
   }
 }
 kitBuy?.addEventListener('click', () => {
@@ -58,12 +76,27 @@ kitBuy?.addEventListener('click', () => {
 });
 // escolher um cartão: o kit com aquele tanto de peças, começando pela peça do palco, e a página desce até ele
 let stageKey = () => document.querySelector('[data-nv-key]')?.dataset.nvKey;
-for (const button of document.querySelectorAll('[data-nv-tier]')) button.addEventListener('click', () => {
-  const units = Number(button.dataset.nvTier), key = stageKey();
+for (const button of tierButtons) button.addEventListener('click', () => {
+  const key = stageKey(); units = Number(button.dataset.nvTier);
   if (!kit) return void (location.href = `${key}.html`);
   kit.set(kitPreset(key, units)); kitTouched = true;
   document.getElementById('nv-kit')?.scrollIntoView({behavior: smooth(), block: 'center'});
 });
+// no celular os cartões são uma fileira que corre de lado: as setas andam um cartão e os pontos dizem em qual se está
+const row = document.querySelector('[data-nv-tiers]');
+if (row) {
+  const steps = [...document.querySelectorAll('[data-nv-tiers-step]')], dots = [...document.querySelectorAll('.nv-tiers-dots i')];
+  const pitch = () => { const [a, b] = row.children; return b ? b.offsetLeft - a.offsetLeft : row.clientWidth; };
+  const sync = () => {
+    const max = row.scrollWidth - row.clientWidth, scrolls = max > 4, at = Math.round(row.scrollLeft / pitch());
+    row.parentElement.toggleAttribute('data-scrolls', scrolls);
+    for (const step of steps) { step.hidden = !scrolls; step.disabled = Number(step.dataset.nvTiersStep) < 0 ? row.scrollLeft < 4 : row.scrollLeft > max - 4; }
+    dots.forEach((dot, i) => dot.classList.toggle('is-on', i === Math.min(dots.length - 1, at)));
+  };
+  for (const step of steps) step.addEventListener('click', () => row.scrollBy({left: Number(step.dataset.nvTiersStep) * pitch(), behavior: smooth()}));
+  row.addEventListener('scroll', () => requestAnimationFrame(sync), {passive: true});
+  new ResizeObserver(sync).observe(row);
+}
 // os cartões e o kit entram ao rolar (sem IntersectionObserver ou com movimento reduzido, já estão à vista)
 const reveals = [...document.querySelectorAll('[data-nv-reveal]')];
 if ('IntersectionObserver' in window && !reduced.matches && reveals.length) {
@@ -103,8 +136,8 @@ function setup(stage) {
     stage.style.setProperty('--nv-accent', theme.accentColor); stage.style.setProperty('--nv-ink', theme.textColor); stage.style.setProperty('--nv-muted', theme.mutedColor);
     if (badge) { badge.setAttribute('style', badgeStyle(key)); badge.dataset.effect = PRODUCTS[key].eyebrowEffect || 'shine'; }
     window.juTheme?.save(key, journeyColors(theme));
-    // o kit acompanha a peça do palco enquanto a pessoa não mexeu nele
-    if (kit && !kitTouched) kit.set(kitPreset(key, 1));
+    // o kit acompanha a peça do palco (é a primeira dele) enquanto a pessoa não mexeu nele
+    if (kit && !kitTouched) kit.set(kitPreset(key, units));
   }
   function go(i, {announce = true} = {}) {
     if (open) close(false);
@@ -174,4 +207,6 @@ function setup(stage) {
   mountOffers(keys[active]);
   paint(); measure();
   wireBadge(badge, {onVisible: true});
+  // vindo do banner da home (fenda.html#ofertas): as ofertas no alto, depois que o palco ganhou a altura dele
+  if (location.hash === '#ofertas') requestAnimationFrame(() => document.getElementById('ofertas')?.scrollIntoView({block: 'start'}));
 }

@@ -33,6 +33,17 @@ Escolha a sua|Pick yours|Elige la tuya
 Mais vantajoso|Best value|Más conveniente
 Enviar para um colega pelo WhatsApp|Send to a colleague on WhatsApp|Enviar a un colega por WhatsApp
 Ver as ofertas|See the offers|Ver las ofertas
+Escolha os seus: quanto mais peças, menor o preço de cada uma.|Pick yours: the more pieces, the lower the price of each.|Elige los tuyos: cuantas más piezas, menor el precio de cada una.
+Escolha os seus|Pick yours|Elige los tuyos
+escolha os seus|pick yours|elige los tuyos
+Escolher os meus|Pick mine|Elegir los míos
+No seu kit|In your kit|En tu kit
+Oferta anterior|Previous offer|Oferta anterior
+Próxima oferta|Next offer|Siguiente oferta
+Leve mais, pague menos|Buy more, pay less|Lleva más, paga menos
+Novas peças.|New pieces.|Nuevas piezas.
+Para a lâmpada de fenda.|For the slit lamp.|Para la lámpara de hendidura.
+Capas impressas em 3D que encaixam na lâmpada de fenda portátil, para acompanhar o olhar dos pequenos.|3D-printed covers that fit the handheld slit lamp, to keep the little ones company.|Fundas impresas en 3D que encajan en la lámpara de hendidura portátil, para acompañar la mirada de los pequeños.
 Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça:|Look how cute: 3D-printed covers for the handheld slit lamp, by Ju, imprime pra mim? Take a look:|Mira qué lindo: fundas impresas en 3D para la lámpara de hendidura portátil, de Ju, imprime pra mim? Conócelas:
 Olá, Ju! Vi as novidades para a lâmpada de fenda e tenho uma dúvida.|Hi, Ju! I saw the new slit lamp pieces and I have a question.|¡Hola, Ju! Vi las novedades para la lámpara de hendidura y tengo una duda.
 MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.

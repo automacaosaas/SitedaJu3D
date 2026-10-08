@@ -141,7 +141,9 @@ function fendaPage(data, base) {
   const header = /<header class="header">[^]*?<\/header>/.exec(base)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(base)[0];
   const share = `https://wa.me/?text=${encodeURIComponent(`Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça: ${short}`)}`;
+  // "Voltar" no alto: sem JavaScript, a home no banner da novidade; com ele, a página de onde a pessoa veio, na mesma altura (fenda.js)
   const main = `<main class="nv-main" id="conteudo">
+      <a class="nv-return" href="index.html#novidade" data-nv-return>${icon('arrow')}<span>Voltar</span></a>
       ${data.noveltyStage(FENDA)}
       ${data.noveltyOffers(FENDA)}
       <section class="nv-foot" aria-label="Como funciona">

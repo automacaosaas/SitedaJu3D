@@ -5,9 +5,10 @@
 //    escolha.js › fitFigure, com o próprio enquadramento), as vizinhas dos lados, o selo "Novidade" e a lista à esquerda, o nome grande,
 //    o preço e a compra (Comprar e Adicionar) embaixo; "Ver detalhes" leva a peça para a esquerda e abre o preço, as cores em aletas e a
 //    descrição. O fundo de cada peça é o da vitrine da home (o degradê e as silhuetas dela, hero-scenery.js), trocado devagar;
-//  · as ofertas, que aparecem ao rolar: um cartão por faixa do kit (1, 2 e 3 peças, cada um nas cores de uma peça) e o "Monte seu kit"
-//    (kit-builder.js) com "Comprar agora";
-//  · o banner da home, que entra ao rolar da vitrine: as peças lado a lado nas cores delas, as faixas do kit e o convite.
+//  · as ofertas, que aparecem ao rolar: um cartão por faixa do kit (1, 2 e 3 peças, cada um nas cores de uma peça; no celular, uma
+//    fileira com setas) e o "Monte seu kit" (kit-builder.js) com "Comprar agora", que já chega com a faixa mais vantajosa;
+//  · o banner da home, uma faixa que se funde à vitrine de cima e à coleção de baixo: o título da seção, as peças lado a lado nas cores
+//    delas (cada uma abre a vitrine nela), as faixas do kit com a mais vantajosa marcada e o convite para as ofertas.
 import {PRODUCTS, FAMILIES, showcase, badgeStyle, artSmall} from './products.js';
 import {COMMERCE, money, pixPrice, pixPercent, installmentLabel, kitOffer} from './commerce-config.js';
 import {kitTiers} from './kit-builder.js';
@@ -81,7 +82,8 @@ export function noveltyStage(family) {
 }
 
 // As ofertas, depois do palco: um cartão por faixa do kit (o preço, o de cada peça, quanto economiza e as peças), cada um nas cores de
-// uma peça, e o "Monte seu kit" — escolher um cartão já monta o kit com aquele tanto de peças (fenda.js).
+// uma peça, e o "Monte seu kit" — escolher um cartão monta o kit com aquele tanto de peças (fenda.js). O cartão do kit de agora fica
+// marcado ("No seu kit"); a faixa mais vantajosa (a última) é a que vem escolhida. No celular os cartões viram uma fileira com setas.
 export function noveltyOffers(family) {
   const items = noveltyItems(family), first = items[0], tiers = kitTiers(first), full = COMMERCE.prices[first];
   if (tiers.length < 2) return '';
@@ -93,12 +95,18 @@ export function noveltyOffers(family) {
       + `<h3 class="nv-tier-n">${tier.units === 1 ? '1 peça' : `${tier.units} peças`}</h3>`
       + `<p class="nv-tier-price"><strong>${nbsp(short(tier.cents))}</strong>${tier.units > 1 ? `<span>${nbsp(short(tier.each))} cada</span>` : '<span>a peça</span>'}</p>`
       + `<p class="nv-tier-save">${saving > 0 ? `Economize ${nbsp(short(saving))}` : 'Escolha a sua'}</p>`
-      + `<button type="button" class="nv-tier-cta" data-nv-tier="${tier.units}">${tier.units === 1 ? 'Escolher 1 peça' : `Escolher ${tier.units} peças`}</button></article>`; }).join('');
+      + `<button type="button" class="nv-tier-cta" data-nv-tier="${tier.units}" aria-pressed="false"><span class="nv-tier-pick">${tier.units === 1 ? 'Escolher 1 peça' : `Escolher ${tier.units} peças`}</span>`
+      + `<span class="nv-tier-on">${icon('check')}<span>No seu kit</span></span></button></article>`; }).join('');
+  const arrow = (step, label, path) => `<button type="button" class="hero-arrow nv-tiers-arrow" data-nv-tiers-step="${step}" aria-label="${label}" aria-controls="nv-tiers" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg></button>`;
   return `<section class="nv-offers" id="ofertas" aria-labelledby="nv-offers-title">
-        <header class="nv-offers-head" data-nv-reveal><p class="nv-kicker">Ofertas da novidade</p><h2 id="nv-offers-title">Leve mais, <em>pague menos.</em></h2><p>${esc(kitOffer(first))}. <span>Vale para ${items.map(key => esc(PRODUCTS[key].title)).join(', ').replace(/, ([^,]*)$/, ' e $1')}.</span></p></header>
-        <div class="nv-tiers">${cards}</div>
+        <header class="nv-offers-head" data-nv-reveal><p class="nv-kicker">Ofertas da novidade</p><h2 id="nv-offers-title">Leve mais, <em>pague menos.</em></h2><p>Escolha os seus: quanto mais peças, menor o preço de cada uma.</p></header>
+        <div class="nv-tiers-wrap">
+          <div class="nv-tiers" id="nv-tiers" data-nv-tiers>${cards}</div>
+          ${arrow(-1, 'Oferta anterior', 'm15 5-7 7 7 7')}${arrow(1, 'Próxima oferta', 'm9 5 7 7-7 7')}
+          <p class="nv-tiers-dots" aria-hidden="true">${tiers.map((t, i) => `<i${i ? '' : ' class="is-on"'}></i>`).join('')}</p>
+        </div>
         <div class="nv-kit-panel" id="nv-kit" data-nv-reveal>
-          <div class="pl-kit-head"><h3>Monte seu kit</h3><span class="pl-kit-mix">pode misturar</span></div>
+          <div class="pl-kit-head"><h3>Monte seu kit</h3><span class="pl-kit-mix">escolha os seus</span></div>
           <div data-nv-kit></div>
           <button type="button" class="nv-kit-buy" data-nv-kit-buy hidden>${icon('bag')}<span>Comprar agora</span></button>
           <p class="nv-kit-fallback" data-nv-kit-fallback>${items.map(key => `<a href="${key}.html">${esc(PRODUCTS[key].title)}</a>`).join('')}</p>
@@ -106,20 +114,24 @@ export function noveltyOffers(family) {
       </section>`;
 }
 
-// O banner da home, entre a vitrine e "Nossa coleção" (entra ao rolar da vitrine, catalog.css): o selo, a família, as faixas do kit e o
-// convite; à direita, as peças lado a lado, nítidas, cada uma com o nome, o preço e a luz da cor dela, sobre o degradê das três.
+// O banner da home, entre a vitrine e "Nossa coleção" (catalog.css): uma faixa no degradê das três peças que nasce da vitrine de cima e
+// se desfaz na coleção de baixo, sem borda. O título da seção como o de "Nossa coleção" (o selo "Novidade" no lugar do sobrescrito); as
+// peças lado a lado, cada uma abrindo a vitrine nela (fenda.html#<peça>); e as faixas do kit com a mais vantajosa já marcada, a nota e
+// o convite, que leva direto às ofertas (fenda.html#ofertas). O endereço index.html#novidade traz de volta até aqui (o "Voltar" da vitrine).
 export function noveltyBanner(family) {
   const items = noveltyItems(family), tool = FAMILIES[family].tool;
   if (!items.length) return '';
   // a primeira peça da família no meio (o macaco, a primeira a chegar), as duas seguintes dos lados
-  const middle = items[0], order = [items[1], middle, items[2]].filter(Boolean), tiers = kitTiers(middle);
-  const art = order.map(key => `<span class="nvb-pick${key === middle ? ' is-main' : ''}" style="--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span class="nvb-tag"><b>${esc(PRODUCTS[key].title)}</b>${nbsp(short(COMMERCE.prices[key]))}</span></span>`).join('');
-  const stops = order.map(mid);
-  return `<section class="nvb" aria-labelledby="nvb-title"><a class="nvb-link" href="fenda.html" style="--nvb-a:${stops[0]};--nvb-b:${stops[1]};--nvb-c:${stops[2] || stops[1]};${css(tone(middle))}">`
-    + `<span class="nvb-copy"><span class="nvb-badge is-badge" data-effect="${esc(PRODUCTS[middle].eyebrowEffect || 'shine')}" style="${esc(badgeStyle(middle))}">Novidade</span>`
-    + `<span class="nvb-kicker">Encaixe para</span><span class="nvb-title" id="nvb-title">${esc(tool)}</span>`
-    + `<span class="nvb-tiers">${tiers.map(t => `<span><b>${t.units}</b> por ${nbsp(short(t.cents))}</span>`).join('')}</span>`
-    + `<span class="nvb-note">Pode misturar · ${pixPercent}% off no Pix</span>`
-    + `<span class="nvb-cta"><span>Ver as ofertas</span>${icon('arrow')}</span></span>`
-    + `<span class="nvb-art" aria-hidden="true">${art}</span></a></section>`;
+  const middle = items[0], order = [items[1], middle, items[2]].filter(Boolean), tiers = kitTiers(middle), stops = order.map(mid);
+  const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" style="--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda.html#${key}">`
+    + `<img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span>${esc(PRODUCTS[key].title)}</span></a></li>`).join('');
+  const ladder = tiers.map((t, i) => `<li${i === tiers.length - 1 ? ' class="is-best"' : ''}><b>${t.units}</b><span>por ${nbsp(short(t.cents))}</span></li>`).join('');
+  return `<section class="nvb" id="novidade" aria-labelledby="nvb-title" style="--nvb-a:${stops[0]};--nvb-b:${stops[1]};--nvb-c:${stops[2] || stops[1]};${css(tone(middle))}">`
+    + `<div class="nvb-head"><div><p class="nvb-eyebrow"><span class="nvb-badge is-badge" data-effect="${esc(PRODUCTS[middle].eyebrowEffect || 'shine')}" style="${esc(badgeStyle(middle))}">Novidade</span></p>`
+    + `<h2 id="nvb-title">Novas peças.<br><em>Para a ${esc(tool.toLowerCase())}.</em></h2></div>`
+    + `<p>Capas impressas em 3D que encaixam na ${esc(tool.toLowerCase())} portátil, para acompanhar o olhar dos pequenos.</p></div>`
+    + `<div class="nvb-body"><ul class="nvb-art">${art}</ul>`
+    + `<div class="nvb-offer"><p class="nvb-offer-k">Leve mais, pague menos</p><ul class="nvb-tiers">${ladder}</ul>`
+    + `<p class="nvb-note">Escolha os seus · ${pixPercent}% off no Pix</p>`
+    + `<a class="nvb-cta" href="fenda.html#ofertas"><span>Escolher os meus</span>${icon('arrow')}</a></div></div></section>`;
 }

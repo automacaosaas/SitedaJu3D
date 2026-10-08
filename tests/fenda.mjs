@@ -45,7 +45,9 @@ assert(page.includes(`style="${badgeStyle(items[0]).replace(/"/g, '&quot;')}"`) 
 const tiers = kitTiers(items[0]);
 assert(page.includes(noveltyOffers('lampada')) && page.indexOf('id="ofertas"') > page.indexOf('<section class="nv-stage"'), 'offers below the stage (fenda-stage.js › noveltyOffers)');
 assert(tiers.length >= 3 && (page.match(/<article class="nv-tier\b/g) || []).length === tiers.length, 'one card per tier');
-for (const {units} of tiers) assert(page.includes(`data-nv-tier="${units}"`), `card for ${units}`);
+for (const {units} of tiers) assert(page.includes(`data-nv-tier="${units}" aria-pressed="false"`), `card for ${units}`);
+assert(page.includes('data-nv-tiers-step="-1"') && page.includes('data-nv-tiers-step="1"') && /class="nv-tiers-dots"/.test(page), 'arrows and dots for the row of cards on phones');
+assert(/let units = Number\(document\.querySelector\('\.nv-tier\.is-best \[data-nv-tier\]'\)/.test(js) && js.includes("classList.toggle('is-picked', on)"), 'the kit comes with the best value tier, its card marked');
 assert(page.includes('class="nv-tier is-best"') && page.includes('--tier-stops:'), 'each card in its piece colors, the best one marked');
 assert(page.includes('<div data-nv-kit></div>') && js.includes("import {mountKit, kitPreset} from './kit-builder.js';"), '"Monte seu kit" below the cards');
 assert(page.includes('data-nv-kit-buy hidden') && page.includes('data-nv-kit-fallback'), 'the kit goes straight to the purchase; without JavaScript, links to the pieces');
@@ -62,6 +64,8 @@ assert(page.includes(`<meta property="og:image" content="${BASE}/assets/og-fenda
 assert(read('dist/sitemap.xml').includes(`<loc>${BASE}/fenda.html</loc>`), 'listed for search engines');
 assert(page.includes(kitOffer(items[0])), 'the kit offer below the stage');
 assert(page.indexOf('class="nv-share"') > page.indexOf('id="ofertas"'), 'the WhatsApp invite, discreet, at the bottom');
+assert(page.includes('<a class="nv-return" href="index.html#novidade" data-nv-return>') && page.indexOf('data-nv-return') < page.indexOf('<section class="nv-stage"'), '"Voltar" above the stage: back to the home banner');
+assert(js.includes('history.back()') && js.includes("import {localDestination} from './shopping-navigation.js';"), '"Voltar" returns to the page the person came from, at the same height');
 const share = new URL(page.match(/<a class="nv-share" href="([^"]+)"/)[1].replace(/&amp;/g, '&'));
 assert.equal(share.origin + share.pathname, 'https://wa.me/', '"Enviar a um colega" opens WhatsApp to pick a contact');
 assert(share.searchParams.get('text').endsWith(` ${BASE}/fenda`), 'the message carries the short link (server/create-server.cjs opens /fenda as fenda.html)');
@@ -78,8 +82,11 @@ assert(/prefers-reduced-motion: reduce/.test(css));
 // O banner da home, entre a vitrine e "Nossa coleção", gravado como fenda-stage.js o desenha.
 assert(home.includes(`<!-- novidade -->${noveltyBanner('lampada')}<!-- /novidade -->`), 'home banner (run node tools/build-product-pages.cjs)');
 assert(home.indexOf('<!-- novidade -->') < home.indexOf('class="catalog catalog-home"'), 'between the showcase and the collection');
-assert(/<a class="nvb-link" href="fenda.html"/.test(home) && (home.match(/class="nvb-pick/g) || []).length === Math.min(3, items.length), 'the three pieces, the whole card is the link');
-assert(/--nvb-a:#[0-9a-f]{6};--nvb-b:#[0-9a-f]{6};--nvb-c:#[0-9a-f]{6}/.test(home), 'the card blends the three pieces\' palettes');
+assert(home.includes('<section class="nvb" id="novidade"') && (home.match(/class="nvb-pick/g) || []).length === Math.min(3, items.length), 'the three pieces; index.html#novidade comes back here');
+for (const key of items.slice(0, 3)) assert(home.includes(`<a href="fenda.html#${key}">`), `${key}: opens the showcase on it`);
+assert(home.includes('<a class="nvb-cta" href="fenda.html#ofertas">') && /<li class="is-best"><b>3<\/b>/.test(home), 'the best tier marked and the invite straight to the offers');
+assert(/--nvb-a:#[0-9a-f]{6};--nvb-b:#[0-9a-f]{6};--nvb-c:#[0-9a-f]{6}/.test(home), 'the band blends the three pieces\' palettes');
+assert(/\.nvb::before\{[^}]*mask-image:linear-gradient\(to bottom,transparent/.test(read('dist/catalog.css')), 'the band fades into the showcase above and the collection below');
 assert(/animation-timeline: *view\(\)/.test(read('dist/catalog.css')), 'the pieces come in from the sides on scroll (where the browser supports it)');
 assert(/loading="lazy"/.test(noveltyBanner('lampada')), 'below the first screen: lazy pictures');
 assert(read('dist/catalog.css').includes('.nvb-badge::before'), 'its styles ride on catalog.css (no new stylesheet on the home)');

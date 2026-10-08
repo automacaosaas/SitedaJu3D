@@ -4,12 +4,21 @@
    (product-landing.css, mini-cart.css .kit). As cores vêm da peça do centro (--nv-accent, --nv-ink, --nv-muted, trocadas por fenda.js);
    --nv-fh é a altura da figura (a lâmpada inteira), --fig-h a proporção dela (altura ÷ largura, de fenda-stage.js) e --nv-w a largura. */
 .fenda-page { --nv-ease: cubic-bezier(.22, 1, .36, 1); --nv-green: #1f7a4d; }
-.nv-main { max-width: 1240px; margin: 18px auto 56px; }
-.nv-stage { --nv-fh: clamp(340px, 50vh, 450px); --nv-w: calc(var(--nv-fh) / var(--fig-h, 2.2)); --nv-top: 30px; --scn-ped: calc(var(--nv-w) * 1.4); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 28px; border-radius: 32px; overflow: hidden; color: var(--nv-ink); touch-action: pan-y; }
+.nv-main { max-width: 1240px; margin: 14px auto 56px; }
+/* "Voltar", no alto: para onde a pessoa estava (fenda.js) */
+.nv-return { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 0 16px 0 11px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--panel, #fff) 72%, transparent); color: var(--ink); font-size: 14px; font-weight: 650; text-decoration: none; transition: background-color .2s ease, box-shadow .2s ease; }
+.nv-return .icon { width: 18px; height: 18px; transform: rotate(180deg); transition: transform .25s var(--nv-ease); }
+.nv-return:hover { background: var(--panel, #fff); box-shadow: 0 8px 20px -14px rgba(40, 30, 20, .5); }
+.nv-return:hover .icon { transform: rotate(180deg) translateX(3px); }
+.nv-return:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
+/* O palco: um cartão que começa arredondado e se desfaz embaixo, na página (--nv-fade: a altura da passagem; o fundo some, a compra não) */
+.nv-stage { --nv-fh: clamp(340px, 50vh, 450px); --nv-w: calc(var(--nv-fh) / var(--fig-h, 2.2)); --nv-top: 30px; --nv-fade: 190px; --scn-ped: calc(var(--nv-w) * 1.4); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 64px; border-radius: 32px 32px 0 0; overflow: hidden; color: var(--nv-ink); touch-action: pan-y; }
 .nv-stage :is(a, button):focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
+/* a peça é tocável mas fica fora do Tab (as setas e a lista fazem o mesmo): sem moldura de foco em volta dela */
+.nv-stage .nv-art:focus { outline: none; }
 
 /* O fundo: o degradê e as silhuetas de cada peça, trocados devagar (as mesmas camadas da vitrine da home) */
-.nv-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.nv-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--nv-fade)), rgba(0, 0, 0, .55) calc(100% - var(--nv-fade) * .5), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - var(--nv-fade)), rgba(0, 0, 0, .55) calc(100% - var(--nv-fade) * .5), transparent); }
 .nv-layer { position: absolute; inset: 0; opacity: 0; visibility: hidden; background: radial-gradient(80% 72% at 50% 40%, var(--stops)); transition: opacity .9s var(--nv-ease), visibility 0s .9s; }
 .nv-layer.is-on { opacity: 1; visibility: visible; transition: opacity .9s var(--nv-ease), visibility 0s; }
 .nv-layer .hero-scenery { height: 100%; }
@@ -55,6 +64,13 @@
 .nv-stage > .nv-arrow { position: absolute; grid-area: auto; top: calc(var(--stage-top) + var(--nv-fh) + 58px); translate: 0 -50%; margin: 0; }
 .nv-prev { left: clamp(12px, 2vw, 28px); }
 .nv-next { right: clamp(12px, 2vw, 28px); }
+/* um empurrãozinho na seta da direita, duas vezes, para mostrar que há mais peças */
+@media (prefers-reduced-motion: no-preference) {
+  .nv-next { animation: nv-nudge 1.4s var(--nv-ease) 1.4s 2; }
+  .nv-next svg { animation: nv-nudge-chevron 1.4s var(--nv-ease) 1.4s 2; }
+}
+@keyframes nv-nudge { 40% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--nv-accent) 16%, transparent), 0 8px 24px -12px rgba(30, 50, 60, .28); } }
+@keyframes nv-nudge-chevron { 40% { translate: 4px 0; opacity: 1; } }
 .nv-arrow, .nv-back { transition: opacity .3s ease; }
 .nv-back { position: absolute; z-index: 4; top: 24px; left: 32px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 13px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgba(255, 255, 255, .6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--nv-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
 .nv-back .icon { width: 18px; height: 18px; transform: rotate(180deg); }
@@ -88,7 +104,7 @@
 .nv-stage.is-detail .fit-float { animation-play-state: paused; }
 
 /* As ofertas, ao rolar: um cartão por faixa do kit, cada um nas cores de uma peça, e o "Monte seu kit" */
-.nv-offers { margin-top: 64px; scroll-margin-top: 24px; }
+.nv-offers { margin-top: 8px; scroll-margin-top: 24px; }
 .nv-offers-head { max-width: 640px; margin: 0 auto 28px; text-align: center; }
 .nv-offers-head h2 { margin: 6px 0 10px; font: 500 clamp(32px, 3.4vw, 48px)/1.08 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
 .nv-offers-head h2 em { color: var(--theme-accent, var(--rose)); }
@@ -110,6 +126,24 @@
 .nv-tier-cta { width: 100%; min-height: 48px; margin-top: auto; border: 0; border-radius: 999px; background: var(--tier-accent); color: #fff; font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: background-color .2s ease; }
 .nv-tier-cta:hover { background: color-mix(in srgb, var(--tier-accent) 84%, #000); }
 .nv-tier-cta:focus-visible { outline: 2px solid var(--tier-ink); outline-offset: 3px; }
+.nv-tier-cta > span { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.nv-tier-cta .icon { width: 18px; height: 18px; stroke-width: 2.4; }
+.nv-tier-on { display: none !important; }
+/* o cartão do kit de agora: contorno na cor dele e "No seu kit" */
+.nv-tier.is-picked { box-shadow: inset 0 0 0 2px var(--tier-accent), 0 24px 44px -30px color-mix(in srgb, var(--tier-ink) 80%, transparent); }
+.nv-tier.is-picked .nv-tier-pick { display: none; }
+.nv-tier.is-picked .nv-tier-on { display: inline-flex !important; }
+.nv-tier.is-picked .nv-tier-cta { background: rgba(255, 255, 255, .92); color: var(--tier-accent); box-shadow: inset 0 0 0 2px var(--tier-accent); }
+/* no celular, as setas e os pontos da fileira (fenda.js as mostra só quando ela corre de lado) */
+.nv-tiers-wrap { position: relative; }
+.nv-tiers-wrap > .nv-tiers-arrow { position: absolute; z-index: 2; top: 92px; grid-row: auto; align-self: auto; width: 44px; height: 44px; margin: 0; translate: 0 -50%; transition: opacity .25s ease, background-color .3s ease; }
+.nv-tiers-wrap > .nv-tiers-arrow[data-nv-tiers-step="-1"] { left: -10px; }
+.nv-tiers-wrap > .nv-tiers-arrow[data-nv-tiers-step="1"] { right: -10px; }
+.nv-tiers-wrap > .nv-tiers-arrow:disabled { opacity: 0; pointer-events: none; }
+.nv-tiers-dots { display: none; justify-content: center; gap: 6px; margin: 2px 0 0; }
+.nv-tiers-wrap[data-scrolls] .nv-tiers-dots { display: flex; }
+.nv-tiers-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 18%, transparent); transition: width .3s var(--nv-ease), background-color .3s ease; }
+.nv-tiers-dots i.is-on { width: 22px; background: var(--theme-accent, var(--rose)); }
 .nv-kit-panel { display: grid; gap: 12px; max-width: 580px; margin: 26px auto 0; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent, var(--rose)) 16%, #ece7e9); border-radius: 26px; background: var(--panel, #fffcfb); box-shadow: 0 20px 44px -34px rgba(40, 30, 20, .5); scroll-margin-top: 90px; }
 .nv-kit-panel .pl-kit-head h3 { margin: 0; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--ink); }
 .nv-kit-panel .kit { --kit-accent: var(--theme-accent, var(--rose)); --kit-strong: var(--theme-accent-strong, #9e3e59); --kit-tint: color-mix(in srgb, var(--theme-accent, var(--rose)) 7%, #fff); }
@@ -141,16 +175,19 @@
 }
 @media (max-width: 900px) {
   .nv-main { margin-top: 6px; }
-  .nv-stage { --nv-fh: min(76vw, 300px); --stage-top: 190px; min-height: 0 !important; margin: 0 -10px; padding: 20px 0 26px; border-radius: 26px; }
+  .nv-return { min-height: 38px; margin-bottom: 10px; font-size: 13.5px; }
+  .nv-stage { --nv-fh: min(76vw, 300px); --nv-fade: 150px; --stage-top: 190px; min-height: 0 !important; margin: 0 -10px; padding: 20px 0 48px; border-radius: 26px 26px 0 0; }
   .nv-head { position: static; max-width: none; justify-items: center; gap: 2px; padding: 0 18px 12px; text-align: center; }
   .nv-badges { margin-bottom: 6px; }
   .nv-title { margin-bottom: 10px; font-size: 26px; }
   .nv-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
   .nv-list button { min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .62); font: 600 12.5px 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--nv-muted); }
   .nv-list button[aria-current=true] { background: var(--nv-ink); color: #fff; }
-  /* no celular as três ficam à vista lado a lado (tocar numa das laterais, as pílulas acima e arrastar trocam a peça): sem as setas */
+  /* no celular as três ficam à vista lado a lado (tocar numa das laterais, as pílulas acima e arrastar também trocam a peça); as setas
+     ficam na altura do nome, dos dois lados dele, longe das peças */
   .nv-item { transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * .86)) scale(calc(1 - var(--k, 0) * .38)); }
-  .nv-stage > .nv-arrow { display: none; }
+  .nv-stage > .nv-arrow { top: calc(var(--stage-top) + var(--nv-fh) + 53px); width: 40px; height: 40px; }
+  .nv-prev { left: 8px; } .nv-next { right: 8px; }
   .nv-name { font-size: clamp(36px, 10vw, 46px); }
   .nv-buy { flex-direction: column; gap: 10px; width: 100%; padding: 0 16px; }
   .nv-ctas { display: grid; width: 100%; gap: 8px; }
@@ -162,8 +199,8 @@
   .nv-stage.is-detail .nv-focus { transform: none; }
   .nv-stage.is-detail .nv-name { font-size: clamp(32px, 9vw, 42px); }
   .nv-detail { position: static; width: auto; margin: 18px 16px 0; scroll-margin: 120px 0 24px; animation-name: nv-in-up; }
-  .nv-offers { margin-top: 44px; }
-  .nv-tiers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(78%, 300px); gap: 12px; margin: 0 -22px; padding: 4px 22px 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; }
+  .nv-offers { margin-top: 4px; }
+  .nv-tiers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(80%, 300px); gap: 12px; margin: 0 -22px; padding: 4px 22px 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; }
   .nv-tiers::-webkit-scrollbar { display: none; }
   .nv-tier { scroll-snap-align: start; }
   .nv-tier:hover { transform: none; }
@@ -173,6 +210,6 @@
 }
 @keyframes nv-in-up { from { opacity: 0; transform: translateY(16px); } }
 @media (prefers-reduced-motion: reduce) {
-  .nv-layer, .nv-focus, .nv-item, .nv-name, .nv-more, .nv-list button, .nv-head, .nv-arrow, .nv-back, .nv-cta, .nv-tier, [data-nv-reveal].is-in { transition: none; }
+  .nv-layer, .nv-focus, .nv-item, .nv-name, .nv-more, .nv-list button, .nv-head, .nv-arrow, .nv-back, .nv-cta, .nv-tier, .nv-return .icon, .nv-tiers-dots i, [data-nv-reveal].is-in { transition: none; }
   .nv-detail { animation: none; }
 }
