@@ -17,8 +17,10 @@ const context = vm.createContext({
 vm.runInContext(source + '\nglobalThis.Carousel = ProductCarousel; globalThis.startAt = startAt;', context);
 function target() {
   const handlers = new Map(), captures = new Set();
+  const classes = new Set();
   return {
-    style: {setProperty() {}, removeProperty() {}},
+    style: {values: {}, setProperty(name, value) { this.values[name] = value; }, removeProperty(name) { delete this.values[name]; }},
+    classList: {add: name => classes.add(name), remove: name => classes.delete(name), contains: name => classes.has(name)},
     addEventListener(type, fn) { handlers.set(type, [...(handlers.get(type) || []), fn]); },
     setPointerCapture(id) { captures.add(id); },
     hasPointerCapture(id) { return captures.has(id); },
@@ -57,6 +59,20 @@ drag(rail, -100, 'pointercancel');
 assert.equal(rail.active, 0, 'cancelled gestures must not navigate');
 drag(rail, -20);
 assert.equal(rail.active, 0, 'small gestures must return');
+// 08/10/2026 (movimento 6): the cards follow the finger 1:1, without the transition, and a short quick flick also moves
+rail.stage.emit('pointerdown', {timeStamp: 0}); rail.stage.emit('pointermove', {clientX: 80, timeStamp: 200});
+assert.equal(rail.track.style.values['--drag'], '-120px', 'the drag is 1:1 with the pointer');
+assert.ok(rail.track.classList.contains('is-dragging'), 'no transition while dragging');
+rail.stage.emit('pointerup', {clientX: 80, timeStamp: 210});
+assert.ok(!rail.track.classList.contains('is-dragging') && !('--drag' in rail.track.style.values), 'released: back to the transitions');
+assert.equal(rail.active, 1, 'a long drag moves'); rail.active = 0;
+const flick = (moves, end) => { rail.stage.emit('pointerdown', {timeStamp: 0}); for (const [x, t] of moves) rail.stage.emit('pointermove', {clientX: x, timeStamp: t}); rail.stage.emit('pointerup', {clientX: moves.at(-1)[0], timeStamp: end}); };
+flick([[190, 8], [180, 16], [170, 24]], 30);
+assert.equal(rail.active, 1, 'a short quick flick (30 px in 30 ms) moves'); rail.active = 0;
+flick([[190, 200], [180, 400], [170, 600]], 610);
+assert.equal(rail.active, 0, 'the same 30 px dragged slowly returns');
+flick([[150, 100], [100, 200], [140, 216]], 220);
+assert.equal(rail.active, 0, 'a quick flick back cancels the drag');
 const blocked = rail.stage.emit('click');
 assert.ok(blocked.prevented && blocked.stopped, 'drag click cannot reach modal/cart handlers');
 rail.stage.emit('pointerdown'); rail.stage.emit('pointerup');

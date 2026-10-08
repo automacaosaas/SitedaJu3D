@@ -60,43 +60,53 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 /* Depois do resumo (largura toda): "Você também pode gostar" e as informações da compra com os meios de pagamento. */
 .cart-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
 .cart-recs h2, .cart-pay h2 { margin: 0 0 18px; font: 500 clamp(24px, 2.4vw, 30px)/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.6px; }
-/* "Você também pode gostar" (06/10/2026): cards pequenos (foto, nome, preço) lado a lado num carrossel que anda sozinho, um por vez.
-   A fileira desliza de lado (toque, roda do mouse, arraste) e assenta num card; as bordas esmaecem onde ainda há cards. */
-.cart-recs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+/* "Você também pode gostar" (refeito em 08/10/2026): três cards à vista num carrossel (dois no celular) e, no fim da fileira, o
+   "Ver mais +". A fileira anda por transform (cart-view.js wireRecArrows); a janela recorta os cards que estão fora, com as bordas
+   esmaecendo só na faixa do respiro (os cards parados ficam inteiros). Os botões ficam à direita do título, longe dos cards. */
+.cart-recs { position: relative; }
+.cart-recs-head { display: flex; align-items: center; min-height: 44px; margin-bottom: 18px; padding-right: 164px; }
 .cart-recs-head h2 { margin: 0; }
-.cart-recs-all { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; min-height: 40px; color: var(--rose); font-size: 13px; font-weight: 650; text-decoration: none; }
-.cart-recs-all .icon { width: 15px; height: 15px; transition: transform .3s cubic-bezier(.34, 1.56, .64, 1); }
-.cart-rec-rail { position: relative; --rec-w: 176px; --rec-gap: 14px; }
-.cart-rec-track { display: flex; flex-wrap: nowrap; gap: var(--rec-gap); margin: 0 -16px; padding: 6px 16px 14px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.cart-rec-track::-webkit-scrollbar { display: none; }
-.cart-rec-rail.can-scroll .cart-rec-track { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent); }
-.cart-rec-rail.can-scroll:not(.at-start) .cart-rec-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 56px), transparent); }
-.cart-rec-track.is-dragging { scroll-snap-type: none; cursor: grabbing; user-select: none; }
-.cart-rec-track > li { flex: 0 0 var(--rec-w); scroll-snap-align: start; }
+.cart-rec-rail { --rec-k: 3; --rec-gap: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--rec-gap); align-items: stretch; }
+.cart-rec-rail[data-count="1"] { --rec-k: 1; }
+.cart-rec-rail[data-count="2"] { --rec-k: 2; }
+.cart-rec-viewport { grid-column: span var(--rec-k); min-width: 0; margin: -10px calc(-1 * var(--rec-gap)) -30px; padding: 10px var(--rec-gap) 30px; overflow: hidden; touch-action: pan-y; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
+.cart-rec-track { display: flex; gap: var(--rec-gap); margin: 0; padding: 0; list-style: none; }
+.cart-rec-rail:not(.is-static) .cart-rec-track { will-change: transform; }
+.cart-rec-slide { flex: 0 0 calc((100% - (var(--rec-k) - 1) * var(--rec-gap)) / var(--rec-k)); min-width: 0; }
+.cart-rec-rail.is-dragging .cart-rec-viewport { cursor: grabbing; user-select: none; }
+.cart-rec-rail.is-dragging .cart-rec:active { transform: none; }
 .cart-rec { display: grid; gap: 4px; height: 100%; padding: 8px 8px 12px; border: 1px solid #b64c6814; border-radius: 18px; background: var(--panel); color: inherit; text-decoration: none; box-shadow: 0 4px 16px #65364908; -webkit-user-drag: none; transition: transform .35s cubic-bezier(.25, .8, .25, 1), box-shadow .35s ease, border-color .3s ease; }
 .cart-rec-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; border-radius: 12px; overflow: hidden; background: radial-gradient(120% 90% at 50% 30%, var(--rec-stops)); }
 .cart-rec-art img { width: 84%; height: 88%; object-fit: contain; filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--rec-ink) 16%, transparent)); transition: transform .45s cubic-bezier(.25, .8, .25, 1); pointer-events: none; }
-.cart-rec-name { padding: 0 4px; font: 500 15px/1.25 'Playfair Display', Georgia, serif; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cart-rec-price { padding: 0 4px; font-size: 13.5px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cart-rec-name { padding: 0 4px; font: 500 16px/1.25 'Playfair Display', Georgia, serif; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-rec-price { padding: 0 4px; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
 .cart-rec.is-soon .cart-rec-price { justify-self: start; margin-left: 4px; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--rec-accent) 12%, transparent); color: var(--rec-accent); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
 .cart-rec:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
-/* As setas, no meio da altura das fotos. A da direita (avançar; o carrossel dá a volta) tem um anel que se fecha no tempo até o
-   próximo card e uma setinha que chama para o lado enquanto o carrossel anda sozinho. */
-.cart-rec-arrow { position: absolute; top: calc(6px + (var(--rec-w) - 16px) / 2); z-index: 2; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffe6; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--ink); box-shadow: 0 8px 20px #6536491f; cursor: pointer; transform: translateY(-50%); transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease, background-color .3s ease, color .3s ease; }
-.cart-rec-arrow[hidden] { display: none; }
-.cart-rec-arrow > .icon { position: relative; z-index: 1; width: 18px; height: 18px; }
-.cart-rec-arrow.is-next { right: -8px; }
-.cart-rec-arrow.is-prev { left: -8px; }
+.cart-rec:active { transform: scale(.98); transition-duration: .08s; }
+/* "Ver mais +": a última casa da fileira (no celular, um botão embaixo), para a página Produtos; o + gira no hover. */
+.cart-rec-more { display: grid; align-content: center; justify-items: center; gap: 14px; min-height: 100%; padding: 18px 12px; border: 1px solid color-mix(in srgb, var(--rose) 20%, transparent); border-radius: 18px; background: linear-gradient(160deg, var(--theme-wash, #f8e4ea), color-mix(in srgb, var(--theme-wash, #f8e4ea) 30%, #fff) 85%); color: var(--rose); text-decoration: none; box-shadow: 0 4px 16px #65364908; transition: transform .35s cubic-bezier(.25, .8, .25, 1), box-shadow .35s ease, border-color .3s ease; }
+.cart-rec-more-plus { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: #fff; color: var(--rose); box-shadow: 0 8px 20px color-mix(in srgb, var(--rose) 18%, transparent); transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), background-color .25s ease, color .25s ease; }
+.cart-rec-more-plus svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.cart-rec-more-label { font: 500 20px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.2px; }
+.cart-rec-more:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+.cart-rec-more:active { transform: scale(.98); transition-duration: .08s; }
+/* Pausar, voltar e avançar: redondos, de 44 px. O anel do botão de pausa se fecha no tempo até o próximo card. */
+.cart-rec-controls { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 8px; }
+.cart-rec-arrow, .cart-rec-toggle { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffe6; color: var(--ink); box-shadow: 0 6px 16px #6536491a; cursor: pointer; transition: transform .2s ease, box-shadow .25s ease, background-color .25s ease; }
+.cart-rec-arrow > .icon { width: 18px; height: 18px; transition: translate .25s ease; }
 .cart-rec-arrow.is-prev > .icon { transform: rotate(180deg); }
-.cart-rec-arrow:active { transform: translateY(-50%) scale(.92); }
-.cart-rec-arrow:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+.cart-rec-toggle > svg:not(.cart-rec-ring) { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.cart-rec-toggle > .cart-rec-play { display: none; fill: currentColor; stroke-width: 1.2; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-play { display: block; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-pause { display: none; }
+.cart-rec-arrow:active, .cart-rec-toggle:active { transform: scale(.92); transition-duration: .08s; }
+.cart-rec-arrow:focus-visible, .cart-rec-toggle:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
 .cart-rec-ring { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); transform: rotate(-90deg); pointer-events: none; }
-.cart-rec-ring circle { fill: none; stroke: var(--rose); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 138.3; stroke-dashoffset: 138.3; opacity: 0; }
+.cart-rec-ring circle { fill: none; stroke: var(--rose); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 132; stroke-dashoffset: 132; opacity: 0; transition: opacity .2s ease; }
 .cart-rec-rail.is-playing .cart-rec-ring circle { opacity: 1; animation: rec-ring var(--rec-auto, 4200ms) linear forwards; }
-.cart-rec-rail.is-playing .cart-rec-arrow.is-next > .icon { animation: rec-nudge 1.4s cubic-bezier(.45, 0, .55, 1) infinite; }
 @keyframes rec-ring { to { stroke-dashoffset: 0; } }
-@keyframes rec-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
-@media (prefers-reduced-motion: reduce) { .cart-rec-rail .cart-rec-ring circle, .cart-rec-rail .cart-rec-arrow > .icon { animation: none !important; } }
+/* com "reduzir movimento" o carrossel não anda sozinho: o botão de pausa não tem o que fazer */
+@media (prefers-reduced-motion: reduce) { .cart-rec-toggle { display: none; } .cart-rec-rail .cart-rec-ring circle { animation: none !important; } }
 /* Informações da compra: uma linha por assunto, com o ícone e um link para a política. */
 .cart-info { display: grid; gap: 28px; }
 .cart-info-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -162,12 +172,12 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-total-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
   /* "Ver resumo" (06/10/2026): um balãozinho em cima da barra de baixo, com o rabinho apontando para o total; um toque leva a página
      até o resumo numa rolagem fluida, e ele sobe e some junto. Some enquanto o resumo está na tela (watchSummary). */
-  .cart-summary-balloon { position: absolute; left: max(16px, calc((100% - 690px) / 2)); bottom: calc(100% + 12px); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 10px 22px #14231b33; -webkit-tap-highlight-color: transparent; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1); animation: cart-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, cart-balloon-bob 2.4s 1s ease-in-out infinite; }
+  .cart-summary-balloon { position: absolute; left: max(16px, calc((100% - 690px) / 2)); bottom: calc(100% + 12px); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 10px 22px #14231b33; -webkit-tap-highlight-color: transparent; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1), visibility 0s; animation: cart-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, cart-balloon-bob 2.4s 1s ease-in-out infinite; }
   .cart-summary-balloon::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
   .cart-summary-balloon svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1); }
   .cart-checkout-bar.summary-above .cart-summary-balloon svg { transform: rotate(180deg); }
   .cart-summary-balloon:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
-  .cart-checkout-bar.is-at-summary .cart-summary-balloon { opacity: 0; transform: translateY(8px) scale(.9); pointer-events: none; animation: none; }
+  .cart-checkout-bar.is-at-summary .cart-summary-balloon { opacity: 0; visibility: hidden; transform: translateY(8px) scale(.9); pointer-events: none; animation: none; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1), visibility 0s .3s; }
   .cart-checkout-bar .cart-checkout { min-height: 52px; padding: 12px 14px; text-align: left; }
   .cart-more { max-width: 690px; margin-inline: auto; }
   .cart-info { grid-template-columns: minmax(0, 1fr); }
@@ -200,21 +210,29 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-order-summary { padding: 18px 16px; border-radius: 14px; }
   .cart-order-summary h2 { font-size: 23px; padding-bottom: 12px; }
   .cart-order-summary .grand-total { font-size: 24px; }
-  /* recomendações: uns dois cards e meio na tela (o pedaço do próximo chama para o lado) */
-  .cart-rec-rail { --rec-w: min(40vw, 168px); --rec-gap: 10px; }
-  .cart-rec-arrow { width: 42px; height: 42px; }
-  .cart-rec-arrow.is-next { right: -4px; }
-  .cart-rec-arrow.is-prev { left: -4px; }
+  /* recomendações: dois cards à vista; embaixo, os botões à esquerda e o "Ver mais +" à direita */
+  .cart-recs-head { padding-right: 0; margin-bottom: 14px; }
+  .cart-rec-rail, .cart-rec-rail[data-count] { --rec-k: 2; --rec-gap: 10px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "view view" "controls more"; row-gap: 16px; }
+  .cart-rec-viewport { grid-area: view; }
+  .cart-rec-controls { position: static; grid-area: controls; }
+  .cart-rec-more { grid-area: more; display: inline-flex; flex-direction: row-reverse; align-items: center; justify-self: end; gap: 10px; min-height: 48px; padding: 0 7px 0 20px; border: 1.5px solid color-mix(in srgb, var(--rose) 38%, transparent); border-radius: 999px; background: #fff; }
+  .cart-rec-controls[hidden] + .cart-rec-viewport + .cart-rec-more { grid-column: 1 / -1; justify-self: center; }
+  .cart-rec-more-plus { width: 34px; height: 34px; box-shadow: none; background: color-mix(in srgb, var(--rose) 12%, #fff); }
+  .cart-rec-more-plus svg { width: 18px; height: 18px; stroke-width: 2; }
+  .cart-rec-more-label { font: 650 14px/1 'DM Sans', sans-serif; letter-spacing: .01em; color: var(--rose); }
+  .cart-rec-name { font-size: 15px; }
   .cart-info-list a { font-size: 13px; }
 }
 @media (hover: hover) {
   .cart-product:hover { border-color: #b64c6838; }
   .cart-edit-link:hover { color: #963b55; }
-  .cart-rec:hover { transform: translateY(-3px); border-color: #b64c6826; box-shadow: 0 14px 30px #65364914; }
+  .cart-rec:hover, .cart-rec-more:hover { transform: translateY(-3px); border-color: #b64c6826; box-shadow: 0 14px 30px #65364914; }
   .cart-rec:hover .cart-rec-art img { transform: scale(1.06); }
-  .cart-rec-arrow:hover { transform: translateY(-50%) scale(1.06); box-shadow: 0 12px 26px #65364926; }
-  .cart-recs-all:hover .icon { transform: translateX(3px); }
-  .cart-rec-track:not(.is-dragging) { cursor: grab; }
+  .cart-rec-more:hover .cart-rec-more-plus { transform: rotate(90deg); background: var(--rose); color: #fff; }
+  .cart-rec-arrow:hover, .cart-rec-toggle:hover { background: #fff; box-shadow: 0 10px 22px #65364926; }
+  .cart-rec-arrow.is-next:hover > .icon { translate: 2px 0; }
+  .cart-rec-arrow.is-prev:hover > .icon { translate: -2px 0; }
+  .cart-rec-rail:not(.is-static) .cart-rec-viewport { cursor: grab; }
   .cart-info-list a:hover { text-decoration-color: currentColor; }
 }
 /* The cart's CEP box: price the delivery before signing in (the same CEP goes on to the delivery step). */

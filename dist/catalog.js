@@ -68,7 +68,7 @@ class ProductCarousel {
         card.dataset.productTitle === items[index].product.title &&
         card.dataset.productSubtitle === items[index].product.subtitle &&
         Number(card.dataset.priceCents) === COMMERCE.prices[items[index].id]);
-    if (!preRendered) host.innerHTML = `<div class="product-carousel-stage" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="${host.getAttribute('aria-label') || 'Produtos'}"><div class="product-carousel-track"></div><button class="product-carousel-arrow product-carousel-prev" type="button" aria-label="Ver produto anterior">${icon('arrow')}</button><button class="product-carousel-arrow product-carousel-next" type="button" aria-label="Ver próximo produto">${icon('arrow')}</button></div><div class="product-carousel-dots" role="tablist" aria-label="Escolher produto"></div><p class="sr-only" aria-live="polite" aria-atomic="true"></p>`;
+    if (!preRendered) host.innerHTML = `<div class="product-carousel-stage" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="${host.getAttribute('aria-label') || 'Produtos'}"><div class="product-carousel-track"></div><button class="product-carousel-arrow product-carousel-prev" type="button" aria-label="Ver produto anterior">${icon('arrow')}</button><button class="product-carousel-arrow product-carousel-next" type="button" aria-label="Ver próximo produto">${icon('arrow')}</button></div><div class="product-carousel-dots" role="group" aria-label="Escolher produto"></div><p class="sr-only" aria-live="polite" aria-atomic="true"></p>`;
     this.stage = host.querySelector('.product-carousel-stage'); this.track = host.querySelector('.product-carousel-track'); this.dots = host.querySelector('.product-carousel-dots'); this.live = host.querySelector('[aria-live]');
     if (!preRendered) this.track.innerHTML = items.map(productCard).join('');
     this.cards = [...this.track.children];
@@ -98,7 +98,7 @@ class ProductCarousel {
         observer.observe(card);
       } else begin();
     });
-    if (!preRendered) this.dots.innerHTML = items.map(({product}, index) => `<button type="button" role="tab" aria-label="Mostrar ${product.title}" aria-selected="${index === 0}" data-dot="${index}"><span class="sr-only">${product.title}</span></button>`).join('');
+    if (!preRendered) this.dots.innerHTML = items.map(({product}, index) => `<button type="button" aria-label="Mostrar ${product.title}" data-dot="${index}"><span class="sr-only">${product.title}</span></button>`).join('');
     this.bind(); this.render(false);
   }
   bind() {
@@ -111,32 +111,84 @@ class ProductCarousel {
     this.track.addEventListener('click', event => { const card = event.target.closest('[data-product-id]'); if (!card || event.target.closest('[data-add-product]')) return; const index = this.cards.indexOf(card); if (index !== this.active) { event.preventDefault(); this.goTo(index); } });
     this.stage.addEventListener('keydown', event => { if (event.key === 'ArrowLeft') { event.preventDefault(); this.move(-1); } if (event.key === 'ArrowRight') { event.preventDefault(); this.move(1); } });
     this.stage.addEventListener('wheel', event => { if (Math.abs(event.deltaX) < Math.abs(event.deltaY) || Math.abs(event.deltaX) < 12 || this.wheelLock) return; event.preventDefault(); this.wheelLock = true; this.move(event.deltaX > 0 ? 1 : -1); setTimeout(() => { this.wheelLock = false; }, reduceMotion() ? 0 : 360); }, {passive:false});
-    this.stage.addEventListener('pointerdown', event => { if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return; this.suppressClick = false; this.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, moved:false}; });
-    this.stage.addEventListener('pointermove', event => { if (!this.gesture || event.pointerId !== this.gesture.id) return; const dx = event.clientX - this.gesture.x, dy = event.clientY - this.gesture.y; if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return; this.gesture.moved = true; this.stage.setPointerCapture?.(event.pointerId); this.track.style.setProperty('--drag', `${Math.max(-24, Math.min(24, dx * .08))}px`); if (event.cancelable) event.preventDefault(); });
+    // Arrastar (dedo ou mouse): os cards andam junto com o dedo, 1:1, sem transição; ao soltar, troca se passou de 46 px ou se o
+    // gesto foi rápido (velocidade dos últimos movimentos), e anda dois cards num arraste longo.
+    this.stage.addEventListener('pointerdown', event => { if (event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0)) return; this.suppressClick = false; this.gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, moved:false, lx:event.clientX, lt:event.timeStamp, v:0}; });
+    this.stage.addEventListener('pointermove', event => {
+      const gesture = this.gesture;
+      if (!gesture || event.pointerId !== gesture.id) return;
+      const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+      if (!gesture.moved) {
+        if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+        gesture.moved = true; this.stage.setPointerCapture?.(event.pointerId); this.placeFar(); this.track.classList.add('is-dragging');
+      }
+      const dt = event.timeStamp - gesture.lt;
+      if (dt > 0) gesture.v = .8 * (event.clientX - gesture.lx) / dt + .2 * gesture.v;
+      gesture.lx = event.clientX; gesture.lt = event.timeStamp;
+      this.track.style.setProperty('--drag', `${dx}px`);
+      if (event.cancelable) event.preventDefault();
+    });
     const end = event => {
-      if (!this.gesture || event.pointerId !== this.gesture.id) return;
-      const dx = event.clientX - this.gesture.x, moved = this.gesture.moved;
-      this.gesture = null; this.track.style.removeProperty('--drag');
+      const gesture = this.gesture;
+      if (!gesture || event.pointerId !== gesture.id) return;
+      const dx = event.clientX - gesture.x, moved = gesture.moved, v = event.timeStamp - gesture.lt > 100 ? 0 : gesture.v;
+      this.gesture = null; this.track.classList.remove('is-dragging'); this.track.style.removeProperty('--drag');
       if (this.stage.hasPointerCapture?.(event.pointerId)) this.stage.releasePointerCapture(event.pointerId);
       if (moved) {
         this.suppressClick = true;
-        if (event.type === 'pointerup' && Math.abs(dx) > 46) this.move(dx < 0 ? 1 : -1);
+        const flick = Math.abs(v) > .35, along = !flick || Math.sign(v) === Math.sign(dx);   // um tranco de volta cancela
+        if (event.type === 'pointerup' && along && (Math.abs(dx) > 46 || (flick && Math.abs(dx) > 12))) {
+          const steps = this.slotPx && Math.abs(dx) > this.slotPx * 1.5 ? 2 : 1;
+          this.move(dx < 0 ? steps : -steps);
+        }
       }
     };
     this.stage.addEventListener('pointerup', end); this.stage.addEventListener('pointercancel', end);
     this.stage.addEventListener('lostpointercapture', event => { if (event.target === this.stage) end(event); });
     this.stage.addEventListener('pointerleave', event => { if (!this.gesture?.moved) end(event); });
   }
-  move(direction) { this.goTo((this.active + direction + this.items.length) % this.items.length); }
+  move(direction) { const length = this.items.length, index = ((this.active + direction) % length + length) % length; if (index === this.active) return; this.shift = direction; this.goTo(index); }
   // Só a coleção anda (a vitrine fica onde está).
   goTo(index) { if (index === this.active) return; this.active = index; this.render(true); }
-  // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine).
-  follow(id) { const index = this.items.findIndex(item => item.id === id); if (index < 0 || index === this.active) return; this.active = index; this.render(false); }
+  // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine). Com a seção fora da tela, de uma vez:
+  // cards e cores trocam sem transição (nada fica animando longe dos olhos).
+  follow(id) { const index = this.items.findIndex(item => item.id === id); if (index < 0 || index === this.active) return; this.active = index; this.quiet = !this.onScreen(); this.render(false); this.quiet = false; }
+  onScreen() { const box = this.stage.getBoundingClientRect?.(); return !!box && box.bottom > 0 && box.top < innerHeight; }
+  // Cada card guarda onde está desenhado (this.slots) e anda o mesmo tanto que a coleção. O que dá a volta não atravessa o palco: se
+  // vai ficar escondido, fica do lado por onde saiu; se vai aparecer, entra pela borda certa. Os de longe ficam inertes (fora do Tab).
   render(announce) {
-    this.cards.forEach((card, index) => { const position = offsetFrom(index, this.active, this.items.length); card.style.setProperty('--slot', position); card.classList.toggle('is-active', position === 0); card.classList.toggle('is-side', Math.abs(position) === 1); card.classList.toggle('is-far', Math.abs(position) > 1); card.tabIndex = position === 0 ? 0 : -1; card.querySelector('.product-rail-active-details').setAttribute('aria-hidden', String(position !== 0)); });
-    [...this.dots.children].forEach((dot, index) => dot.setAttribute('aria-selected', String(index === this.active)));
+    const length = this.items.length, shift = this.slots ? this.shift ?? offsetFrom(this.active, this.shown, length) : 0, instant = !this.slots || this.quiet || reduceMotion();
+    const slots = this.slots || [], entering = [];
+    this.cards.forEach((card, index) => {
+      const position = offsetFrom(index, this.active, length), expected = (slots[index] ?? position) - shift;
+      let slot = position;
+      if (!instant && expected !== position) { if (Math.abs(position) > 1) slot = expected; else entering.push([card, position + shift]); }
+      slots[index] = slot; card.style.setProperty('--slot', slot);
+      card.classList.toggle('is-active', position === 0); card.classList.toggle('is-side', Math.abs(position) === 1); card.classList.toggle('is-far', Math.abs(position) > 1);
+      // os de longe ficam inertes; os vizinhos se clicam (vêm para o centro), mas no Tab só entra o do centro (as setas e os pontinhos levam aos outros)
+      card.inert = Math.abs(position) > 1; card.tabIndex = -1;
+      for (const control of card.querySelectorAll('a, button')) { if (position === 0) control.removeAttribute('tabindex'); else control.tabIndex = -1; }
+      card.querySelector('.product-rail-active-details').setAttribute('aria-hidden', String(position !== 0));
+    });
+    if (entering.length) {
+      for (const [card, from] of entering) { card.classList.add('is-placing'); card.style.setProperty('--slot', from); }
+      void this.track.offsetWidth;
+      for (const [card] of entering) { card.classList.remove('is-placing'); card.style.setProperty('--slot', slots[this.cards.indexOf(card)]); }
+    }
+    if (instant && this.slots) { this.track.classList.add('is-instant'); requestAnimationFrame(() => requestAnimationFrame(() => this.track.classList.remove('is-instant'))); }
+    this.slots = slots; this.shown = this.active; this.shift = undefined;
+    [...this.dots.children].forEach((dot, index) => { if (index === this.active) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); });
     if (announce) this.live.textContent = `${this.items[this.active].product.title}, ${this.active + 1} de ${this.items.length}.`;
     this.paintTheme();
+  }
+  // No começo de um arraste, os cards escondidos vão (sem transição) para o lugar de verdade, dos dois lados, e aparecem conforme o
+  // dedo puxa; a distância entre dois cards (slotPx) decide se um arraste longo anda dois.
+  placeFar() {
+    if (!this.cards || !this.slots) return;
+    const moved = this.cards.filter((card, index) => { const position = offsetFrom(index, this.active, this.items.length); if (Math.abs(position) <= 1 || this.slots[index] === position) return false; this.slots[index] = position; card.classList.add('is-placing'); card.style.setProperty('--slot', position); return true; });
+    const active = this.cards[this.active].getBoundingClientRect(), side = this.cards.find(card => card.classList.contains('is-side'))?.getBoundingClientRect();
+    if (side) this.slotPx = Math.abs(side.left + side.width / 2 - active.left - active.width / 2);
+    for (const card of moved) card.classList.remove('is-placing');
   }
   // A seção da home (.catalog-home) veste as cores da peça do card do centro: título, apoio, pontinhos, botões e o tom dos cards dos
   // lados. As cores (--cat-*) são propriedades registradas em carousel.css: deslizam em .6s quando o card do centro muda.
@@ -146,8 +198,8 @@ class ProductCarousel {
     const colors = journeyColors(showcase(this.items[this.active].id).theme), accent = colors['--theme-accent'];
     const vars = {'--cat-text': colors['--theme-text'], '--cat-muted': colors['--theme-muted'], '--cat-accent': accent, '--cat-accent-strong': colors['--theme-accent-strong'], '--cat-soft': colors['--theme-soft'], '--cat-wash': colors['--theme-wash'], '--cat-glow': withAlpha(accent, .32)};
     for (const name in vars) section.style.setProperty(name, vars[name]);
-    // a primeira pintura entra parada; dali em diante, as cores deslizam
-    if (!section.dataset.themed) { section.dataset.themed = 'still'; requestAnimationFrame(() => requestAnimationFrame(() => { section.dataset.themed = 'live'; })); }
+    // a primeira pintura entra parada (e a que segue a vitrine com a seção fora da tela); dali em diante, as cores deslizam
+    if (!section.dataset.themed || this.quiet) { section.dataset.themed = 'still'; requestAnimationFrame(() => requestAnimationFrame(() => { section.dataset.themed = 'live'; })); }
   }
 }
 const rails = new Map();   // uma coleção por host; trocar de categoria troca a do host

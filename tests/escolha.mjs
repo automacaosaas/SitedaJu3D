@@ -77,9 +77,13 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   const catalog = read('dist/catalog.js'), css = read('dist/carousel.css');
   assert.match(catalog, /return `--rail-own-1:\$\{one\};--rail-own-2:\$\{two\};--rail-own-3:\$\{three\};--rail-own-accent:\$\{theme\.accentColor\};--rail-own-ink:\$\{theme\.textColor\}`;/);
   assert.equal((catalog.match(/tabindex="-1" style="\$\{railTone\(id\)\}">/g) || []).length, 2, 'peças e novidades');
-  for (const name of ['--rail-1', '--rail-2', '--rail-3', '--rail-a', '--rail-i']) assert.match(css, new RegExp(`@property ${name} \\{ syntax: '<color>'`), 'cores registradas: deslizam suavemente na troca');
-  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  --rail-1: color-mix\(in srgb, var\(--theme-wash, #f4e4e7\) 22%, #fff\);[^}]*--rail-a: var\(--rose, #b64c68\); --rail-i: var\(--ink, #282326\);/, 'laterais no tom da página');
-  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \{ --rail-1: var\(--rail-own-1\); --rail-2: var\(--rail-own-2\); --rail-3: var\(--rail-own-3\); --rail-a: var\(--rail-own-accent\); --rail-i: var\(--rail-own-ink\);/, 'o do centro na cor da peça');
+  // 08/10/2026 (revisão de movimento 4 e 5): sem cores próprias com transição nos cards (era uma transição alimentando outra a cada
+  // quadro); o degradê da peça do centro é uma camada que só acende (opacidade); todos os cards têm a mesma caixa e só a escala muda
+  assert.doesNotMatch(css, /@property --rail-|--rail-[123ai]\b/, 'sem --rail-* registradas nem transição de cor nos cards');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]::before \{[^}]*radial-gradient\(130% 78% at 50% 20%, var\(--rail-own-1\) 0%, var\(--rail-own-2\) 52%, var\(--rail-own-3\) 100%\); opacity: 0; transition: opacity \.45s ease;/, 'o do centro na cor da peça, numa camada');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active::before \{ opacity: 1; \}/);
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  width: var\(--card-w\); min-height: var\(--card-h\);[^}]*transform: translate\(calc\(-50% \+ var\(--slot\) \* var\(--slot-w\) \+ var\(--drag\)\), var\(--side-y\)\) scale\(var\(--side-s\)\);[^}]*transition: transform 560ms [^;]*, opacity 360ms ease, clip-path 560ms [^;]*;/, 'a mesma caixa em todos os cards; troca só por transform, opacidade e recorte');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \{ transform: translate\(calc\(-50% \+ var\(--drag\)\), 0\) scale\(1\);/);
   assert.doesNotMatch(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{ overflow: visible; \}/, 'a peça fica dentro do card (2026-10-05)');
 }
 
