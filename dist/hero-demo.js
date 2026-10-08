@@ -67,6 +67,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   // exiting: a linha do tempo carregada é a saída própria (exitTracks), não a entrada; assembled: o instante da entrada (ms) a partir do
   // qual a peça já está montada e só a ficha técnica e o convite ainda entram
   let dom = null, prepared = -1, index = -1, state = 'idle', calm = false, float = null, tilt = null, exiting = false, assembled = Infinity;
+  // quem abriu (o "Ver encaixado" ou a peça): ao fechar, o foco volta para ele, não para a peça (WCAG 2.4.3)
+  let opener = null;
 
   function build() {
     const image = className => `<img class="${className}" alt="" decoding="async" draggable="false">`;
@@ -399,6 +401,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (state === 'closing') { reopen(); return; }
     const ready = prepare(i);
     if (!ready) return;
+    const from = document.activeElement;
+    opener = from !== region && region.contains(from) ? from : null;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
     region.setAttribute('aria-busy', 'true');
     // with its stylesheet applied (the home loads hero-demo.css after the first paint, late-css.js)
@@ -489,7 +493,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (dom) show(false);
     state = 'idle'; exiting = false;
     onLock(false);
-    if (hadFocus) slots[index]?.focus({preventScroll: true});
+    const back = opener?.isConnected && !opener.closest('[inert]') ? opener : slots[index];
+    opener = null;
+    if (hadFocus) back?.focus({preventScroll: true});
   }
 
   // Desktop, depois da montagem: o conjunto inclina até 2° seguindo o cursor; camadas mais próximas deslocam mais.

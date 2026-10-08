@@ -349,6 +349,9 @@
    no outro canto de cima (a área é larga e baixa; a peça fica no meio). A dica de girar sai. */
 @media (max-width: 900px) and (max-height: 560px) {
   #product-dialog { overflow: hidden auto; overscroll-behavior: contain; }
+  /* o que recebe o foco pelo Tab rola para cima da compra presa embaixo (81 px recolhida), nunca para trás dela (WCAG 2.4.11:
+     "Corpo", as cores e o kit sumiam inteiros atrás da barra com zoom de 200%) */
+  #product-dialog { scroll-padding-bottom: 96px; }
   /* em bloco, não em grade: um item de grade só fica preso dentro da própria linha, e a compra precisa ficar presa na janela toda */
   #product-dialog[open] { display: block; }
   #product-dialog .detail-visual { height: max(180px, calc(100dvh - 200px)); }

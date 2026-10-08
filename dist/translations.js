@@ -6,6 +6,7 @@ Não foi possível carregar a demonstração. Tente novamente.|Could not load th
 Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.|To verify your account in this preview, create an account or request a new code. Real email delivery is not connected yet.|Para verificar tu cuenta en esta vista previa, crea una cuenta o solicita un nuevo código. El envío real de correo aún no está conectado.
 ← Voltar à vitrine|← Back to showcase|← Volver a la vitrina
 Voltar à vitrine|Back to showcase|Volver a la vitrina
+Pular para o conteúdo|Skip to content|Saltar al contenido
 Retinoscópio|Retinoscope|Retinoscopio
 Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
 Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.

@@ -88,6 +88,9 @@
 .pl-fab .icon { width: 22px; height: 22px; }
 .pl-fab-plus { position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; background: #1f7a4d; font-size: 14px; font-weight: 700; line-height: 1; }
 .pl.show-fab .pl-fab { opacity: 1; transform: none; pointer-events: auto; }
+/* escondido, também fora do Tab e do leitor de tela (era um botão invisível que recebia o foco); some depois do esmaecimento */
+.pl-fab { visibility: hidden; transition: opacity .3s ease, transform .35s var(--pl-spring), visibility 0s linear .35s; }
+.pl.show-fab .pl-fab { visibility: visible; transition-delay: 0s; }
 .pl-fab.is-adding .icon { animation: pl-fab-spin .6s cubic-bezier(.45, .05, .3, 1); }
 @keyframes pl-fab-spin { 55% { transform: rotate(300deg) scale(1.18); } 100% { transform: rotate(360deg); } }
 .pl-fab:focus-visible { outline: 2px solid var(--pl-accent); outline-offset: 3px; }
