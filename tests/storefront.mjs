@@ -91,9 +91,32 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.equal((page.match(/class="cart-rec-slide"/g) || []).length, 4 + Object.keys(SOON).length, 'every suggestion once, no clones');
   assert.doesNotMatch(page, /is-clone|aria-hidden="true"><a class="cart-rec/, 'no hidden copies in the row');
   assert.match(page, /<\/ul><\/div><a class="cart-rec-more" href="produtos\.html" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true">[^]*?<span class="cart-rec-more-label">Ver mais<\/span><\/a>/, '"Ver mais +" at the end of the row');
-  assert.match(page, /<div class="cart-rec-controls" hidden><button type="button" class="cart-rec-toggle" data-rec-play aria-label="Pausar a troca automática"[^>]*><svg class="cart-rec-ring"[^]*?data-rec-step="-1"[^]*?data-rec-step="1"/, 'pause (with the ring), previous and next, before the cards');
+  assert.match(page, /<div class="cart-rec-controls" hidden><button type="button" class="cart-rec-toggle" data-rec-play aria-label="Pausar a troca automática"[^>]*><span class="cart-rec-dot" aria-hidden="true">[^]*?data-rec-step="-1"[^]*?data-rec-step="1"/, 'pause (the small dot with the ring), previous and next, before the cards');
   const cartView = read('dist/cart-view.js'), cartCss = read('dist/cart-page.css');
-  assert.match(cartView, /const AUTO_MS = 4200;/);
+  // 2026-10-08, second round (the owner: "uma bolinha menor, com esse tempo maior... quando a pessoa põe o dedo por cima, escrola, essa
+  // contagem para... no computador, se passa o mouse por cima, o temporizador também para e volta quando o mouse sair"): one card every
+  // 8.5 s; the countdown holds — and resumes from where it stopped — with the mouse anywhere over the section, with a finger on it (also
+  // while scrolling the page over it: touch events keep coming during the scroll, pointer events do not) and for HOLD_MS after lifting it
+  assert.match(cartView, /const AUTO_MS = 8500;/);
+  assert.match(cartView, /const HOLD_MS = 4000;/);
+  assert.match(cartView, /if \(state\.since\) \{ state\.left = Math\.max\(0, state\.left - \(Date\.now\(\) - state\.since\)\); state\.since = 0; \}/, 'the time already counted is kept');
+  assert.match(cartView, /state\.lead \+= direction; state\.left = AUTO_MS; state\.since = 0;/, 'new cards in view: the countdown starts over');
+  assert.match(cartView, /root\.addEventListener\('pointerover', event => \{ const state = recState\(root\); if \(event\.pointerType === 'mouse' && !state\.hover && inRecs\(event\.target\)\)/, 'the mouse anywhere over the section holds');
+  assert.match(cartView, /root\.addEventListener\('touchstart', event => \{[^]*?event\.target\.addEventListener\(type, lift, \{once: true, passive: true\}\);[^]*?\}, \{passive: true\}\);/, 'a finger holds until it lifts (heard on the touch target itself)');
+  assert.match(cartView, /return countingRec\(state\) && !state\.hover && !state\.focus && !state\.touching && !state\.drag && !state\.anim && !document\.hidden && state\.onScreen && Date\.now\(\) >= state\.heldUntil;/);
+  assert.doesNotMatch(cartView.slice(cartView.indexOf('function paintRing'), cartView.indexOf('export function wireRecArrows')), /offsetWidth/, 'the ring is set through its animation (currentTime), with no forced reflow');
+  assert.match(cartView, /for \(const anim of half\.getAnimations\?\.\(\) \|\| \[\]\) anim\.currentTime = at;/);
+  // the dot: a 44 px target with no box, an 18 px ring in two halves that rotate (transform only), frozen and dimmed while held
+  assert.match(cartCss, /\.cart-rec-arrow, \.cart-rec-toggle \{ position: relative; display: grid; place-items: center; width: 44px; height: 44px;/);
+  assert.match(cartCss, /\.cart-rec-toggle \{ border-color: transparent; background: transparent; box-shadow: none;/);
+  assert.match(cartCss, /\.cart-rec-dot \{ position: relative; width: 18px; height: 18px;/);
+  assert.match(cartCss, /@keyframes rec-half-a \{ 50%, 100% \{ transform: rotate\(405deg\); \} \}\r?\n@keyframes rec-half-b \{ 0%, 50% \{ transform: rotate\(45deg\); \} 100% \{ transform: rotate\(225deg\); \} \}/, 'the ring moves by transform only');
+  assert.doesNotMatch(cartCss, /stroke-dashoffset/, 'no painted ring');
+  assert.match(cartCss, /\.cart-rec-rail\.is-held \.cart-rec-dot i \{ animation-play-state: paused; \}/, 'held: the ring freezes where it is');
+  // review: the slide of each change holds the count too, but the dot does not dim then (it would blink at every card); a second finger
+  // still on the section keeps holding, and the once-only listener is armed again on the lifted target
+  assert.match(cartCss, /\.cart-rec-rail\.is-held:not\(\.is-moving\) \.cart-rec-dot \{ opacity: \.55; \}/);
+  assert.match(cartView, /if \(\[\.\.\.event\.touches\]\.some\(touch => inRecs\(touch\.target\)\)\) \{ event\.currentTarget\.addEventListener\(event\.type, lift, \{once: true, passive: true\}\); return; \}/);
   assert.match(cartView, /slide\.inert = index < state\.lead \|\| index >= state\.lead \+ k;/, 'the cards out of view leave the Tab order');
   // the cart is redrawn on every quantity and every shipping quote: the row carries on from the card that was first in view; turning a
   // phone sideways (2 -> 3 in view) near the end of the row leaves no empty place
@@ -207,8 +230,9 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // audit L1, then the review of 2026-10-08 (visual 14): side cards recede by scale, with the text and the piece in true colors
   assert.match(read('dist/catalog.css'), /\.product-rail-card\{opacity:1;filter:none\}/, 'side cards: full contrast (audit L1)');
   assert.doesNotMatch(read('dist/catalog.css'), /\.product-rail-card:not\(\.is-active\) \.product-rail-art img\{opacity/, 'side cards: the picture keeps its true colors');
-  // on phones the side cards peek with the photo only: the clip closes under it (no empty white band where the hidden name would be)
-  assert.match(read('dist/catalog.css'), /@media \(max-width: 760px\) \{[^@]*--art-h: 212px; --keep: calc\(var\(--art-h\) \+ 10px\);/, 'phone side cards: just the photo');
+  // on phones the side pieces float whole in the margins, beside the centre card's photo, with no box and no name (it would be cut);
+  // the arrows sit below them (second round, 2026-10-08)
+  assert.match(read('dist/catalog.css'), /@media \(max-width: 760px\) \{[^@]*\.home \.product-rail-name \{ display: none; \}[^@]*--art-h: 212px; --slot-w: 41vw; --side-s: \.56; --side-y: -64px;/, 'phone side pieces: whole, beside the photo, no name');
   const tools = /<div class="viewer-tools"[^]*?<\/div>/.exec(read('dist/index.html'))[0];
   assert.doesNotMatch(tools, /[↶↷]|>[+−]</, '3D controls are drawn icons, not text characters (audit L2)');
   assert.equal((tools.match(/<svg /g) || []).length, 4);

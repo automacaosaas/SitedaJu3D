@@ -82,9 +82,35 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   assert.doesNotMatch(css, /@property --rail-|--rail-[123ai]\b/, 'sem --rail-* registradas nem transição de cor nos cards');
   assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]::before \{[^}]*radial-gradient\(130% 78% at 50% 20%, var\(--rail-own-1\) 0%, var\(--rail-own-2\) 52%, var\(--rail-own-3\) 100%\); opacity: 0; transition: opacity \.45s ease;/, 'o do centro na cor da peça, numa camada');
   assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active::before \{ opacity: 1; \}/);
-  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  width: var\(--card-w\); min-height: var\(--card-h\);[^}]*transform: translate\(calc\(-50% \+ var\(--slot\) \* var\(--slot-w\) \+ var\(--drag\)\), var\(--side-y\)\) scale\(var\(--side-s\)\);[^}]*transition: transform 560ms [^;]*, opacity 360ms ease, clip-path 560ms [^;]*;/, 'a mesma caixa em todos os cards; troca só por transform, opacidade e recorte');
+  // segunda volta (08/10/2026, a dona: "as imagens parecem estar dentro de um quadrado... quero em fundo transparente; os que não são
+  // centrais mais simples, diferentes do central"): os vizinhos não têm caixa (fundo, contorno e sombra transparentes); a caixa do card
+  // (degradê, contorno claro e sombra) é a camada ::before, que só acende no do centro; a troca anda só por transform e opacidade
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{\n  width: var\(--card-w\); min-height: var\(--card-h\);[^}]*transform: translate\(calc\(-50% \+ var\(--slot\) \* var\(--slot-w\) \+ var\(--drag\)\), var\(--side-y\)\) scale\(var\(--side-s\)\);\n  border-color: transparent; color: var\(--ink, #282326\); background: transparent; box-shadow: none;[^}]*transition: transform 560ms [^;]*, opacity 360ms ease;\n\}/, 'a mesma caixa em todos os cards, sem caixa nos vizinhos; troca só por transform e opacidade');
+  assert.doesNotMatch(css, /clip-path/, 'sem o recorte (clip-path) que recolhia os vizinhos');
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]::before \{[^}]*box-shadow: inset 0 0 0 1px rgba\(255, 255, 255, \.8\), 0 30px 50px -32px/, 'contorno e sombra do card do centro na camada que acende');
   assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \{ transform: translate\(calc\(-50% \+ var\(--drag\)\), 0\) scale\(1\);/);
-  assert.doesNotMatch(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \{ overflow: visible; \}/, 'a peça fica dentro do card (2026-10-05)');
+  // a peça fica dentro do card (2026-10-05): a foto tem a altura da caixa (--art-h); só a sombra dela não é mais cortada (era a marca reta)
+  assert.match(css, /\.home \.product-rail-card\[style\*="--rail-own-1"\] \.product-rail-art, \.home \.product-rail-card\[style\*="--rail-own-1"\]\.is-active \.product-rail-art \{ height: var\(--art-h\); background: transparent; overflow: visible;/);
+  assert.match(css, /\.is-active \.product-rail-art img \{ filter: drop-shadow\(/, 'a sombra da peça só no card do centro');
+  // os vizinhos: a peça recortada flutua (invólucro .product-rail-float) num halo nas cores da peça do centro (--theme-* = --cat-*), com
+  // o chão embaixo e o nome centralizado; halo, chão e nome fora do link da foto (num <a>, o Chrome perde as --cat-* enquanto deslizam)
+  const cat = read('dist/catalog.css');
+  assert.match(catalog, /const railArt = \(href, label, title, img\) => `<a class="product-rail-art" href="\$\{href\}" aria-label="\$\{label\}"><span class="product-rail-float">\$\{img\}<\/span><\/a><span class="product-rail-name" aria-hidden="true">\$\{title\}<\/span>`;/);
+  assert.equal((catalog.match(/\$\{railArt\(/g) || []).length, 2, 'peças e novidades');
+  // revisão: um brilho leve, não um disco branco atrás da peça (a dona pediu fundo transparente)
+  assert.match(cat, /\.home \.product-rail-card::after \{[^}]*background: radial-gradient\(closest-side, rgba\(255, 255, 255, \.8\) 0%, rgba\(255, 255, 255, \.46\) 38%, color-mix\(in srgb, var\(--theme-accent, #b64c68\) 8%, transparent\) 66%, transparent 100%\);/, 'o halo na cor da peça do centro');
+  assert.match(cat, /\.home \.product-rail-card:not\(\.is-active\)::after, \.home \.product-rail-card:not\(\.is-active\) \.product-rail-copy::before \{ opacity: 1; \}/);
+  assert.doesNotMatch(cat, /\.product-rail-art::(before|after) \{/, 'nada que leia as cores da seção dentro do link');
+  assert.match(cat, /\.home \.product-rail-card:not\(\.is-active\) :is\(\.product-rail-category, \.product-rail-copy h3, \.product-rail-subtitle,/, 'nos vizinhos, só a peça e o nome');
+  // movimento: só os dois vizinhos flutuam (e só sem "reduzir movimento"), parado com a coleção fora da tela; tudo em transform/opacidade
+  const still = cat.slice(cat.indexOf('@media (prefers-reduced-motion: no-preference) {\n  .home .product-rail-card.is-side'));
+  assert.match(still, /^@media \(prefers-reduced-motion: no-preference\) \{\n  \.home \.product-rail-card\.is-side \.product-rail-float \{ animation: rail-float 6\.4s ease-in-out infinite; \}/);
+  assert.match(still, /\.home \.product-carousel\.is-away \.product-rail-float, [^{]*\{ animation-play-state: paused; \}/);
+  for (const name of ['rail-float', 'rail-floor', 'rail-halo', 'rail-mist']) {
+    const frames = new RegExp(`@keyframes ${name} \\{ 50% \\{ ([^}]*) \\} \\}`).exec(cat);
+    assert(frames && frames[1].split(';').filter(Boolean).every(rule => /^\s*(transform|opacity):/.test(rule)), `${name}: só transform e opacidade`);
+  }
+  assert.match(catalog, /this\.away = new IntersectionObserver\(\(\[entry\]\) => host\.classList\.toggle\('is-away', !entry\.isIntersecting\)/);
 }
 
 console.log('PASS: famílias de encaixe, figura encaixada, home sem a seção das fichas, Escolha o seu, filtro da página Produtos e cards da coleção.');

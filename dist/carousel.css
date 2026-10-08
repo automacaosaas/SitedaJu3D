@@ -66,13 +66,18 @@
 @media (prefers-reduced-motion: reduce) { .home .catalog-home[data-themed] { transition: none; } }
 /* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
-  /* a caixa de todos os cards (--card-w, --card-h, --art-h); os vizinhos a --slot-w do centro, em --side-s da escala, mostrando o alto
-     do card (--keep: a foto e o nome) */
-  .home .product-carousel-stage { height: 526px; --card-w: min(372px, 38vw); --card-h: 516px; --art-h: 206px; --keep: calc(var(--art-h) + 92px); --slot-w: 304px; --side-s: .645; --side-y: 52px; }
+  /* a caixa de todos os cards (--card-w, --card-h, --art-h), o do centro uns 8% menor desde a segunda volta (a dona: "reduzir um
+     pouquinho o card central, já que os laterais estão bem pequenos"); os vizinhos a --slot-w do centro, em --side-s da escala */
+  .home .product-carousel-stage { height: 526px; --card-w: min(342px, 35vw); --card-h: 490px; --art-h: 192px; --slot-w: clamp(270px, 24vw, 340px); --side-s: .82; --side-y: 60px; }
   .home .product-rail-copy { padding: 14px 20px 16px; }
   .home .product-rail-copy h3 { font-size: 26px; }
   .home .product-rail-active-details > div { min-height: 33px; }
   .home .product-rail-actions { margin-top: 12px; }
+}
+/* De 901 a 1023 px (tablet deitado, notebook pequeno) a sobra de cada lado é estreita: os vizinhos um pouco menores e mais perto do
+   centro, para a peça não passar por baixo da seta nem o nome sumir no esmaecido da borda (revisão, 08/10/2026). */
+@media (min-width: 901px) and (max-width: 1023px) {
+  .home .product-carousel-stage { --slot-w: 25.8vw; --side-s: .72; }
 }
 /* Header da home: mesma estrutura, fundo transparente sobre a faixa de tema. */
 .home .site-header { grid-area: 1 / 1; position: relative; z-index: 2; padding-inline: var(--inset); background: transparent; border-bottom: 0; }
@@ -362,28 +367,31 @@
 }
 
 /* Nossa coleção: todos os cards têm a mesma caixa (largura, altura e foto); o do centro em tamanho cheio e os vizinhos menores só
-   pela escala, então nada pula na troca (08/10/2026). Os vizinhos mostram a foto, com as cores verdadeiras da peça, e o nome; o resto
-   some e o card se recolhe por baixo num recorte de cantos redondos (clip-path), que se abre quando ele chega ao centro. O degradê da
-   peça do centro (--rail-own-*, as cores do banner) é uma camada que só acende (opacidade). Textos, botões e pontinhos seguem as cores
-   da seção (--cat-*, o card do centro, carousel.css acima): os cards não têm transição de cor própria. */
+   pela escala, então nada pula na troca (08/10/2026). Segunda volta (08/10/2026, pedido da dona: "as imagens parecem estar dentro de
+   um quadrado... quero em fundo transparente; os que não são centrais mais simples, diferentes do central"): os vizinhos não têm mais
+   caixa nenhuma, só a peça recortada flutuando num halo nas cores da peça do centro, com o nome embaixo (catalog.css). A caixa do card
+   (o degradê da peça, --rail-own-*, o contorno claro e a sombra) é uma camada só, que acende (opacidade) quando ele chega ao centro: a
+   troca anda só por transform e opacidade. Textos, botões e pontinhos seguem as cores da seção (--cat-*, o card do centro, carousel.css
+   acima): os cards não têm transição de cor própria. */
 .home .product-rail-card[style*="--rail-own-1"] {
-  width: var(--card-w); min-height: var(--card-h); display: flex; flex-direction: column;
+  width: var(--card-w); min-height: var(--card-h); display: flex; flex-direction: column; overflow: visible;
   transform: translate(calc(-50% + var(--slot) * var(--slot-w) + var(--drag)), var(--side-y)) scale(var(--side-s));
-  border-color: color-mix(in srgb, var(--theme-accent, #b64c68) 14%, #fff); color: var(--ink, #282326); background: linear-gradient(to bottom, #fff, color-mix(in srgb, var(--theme-wash, #f4e4e7) 45%, #fff));
-  box-shadow: 0 30px 50px -32px color-mix(in srgb, var(--theme-accent, #b64c68) 62%, transparent);
-  clip-path: inset(0 0 calc(100% - var(--keep)) 0 round var(--card-r, 22px));
-  transition: transform 560ms cubic-bezier(.22, 1.12, .36, 1), opacity 360ms ease, clip-path 560ms cubic-bezier(.22, 1, .36, 1);
+  border-color: transparent; color: var(--ink, #282326); background: transparent; box-shadow: none; pointer-events: none;
+  transition: transform 560ms cubic-bezier(.22, 1.12, .36, 1), opacity 360ms ease;
 }
-.home .product-rail-card[style*="--rail-own-1"].is-active { transform: translate(calc(-50% + var(--drag)), 0) scale(1); border-color: rgba(255, 255, 255, .8); clip-path: inset(-48px -72px -96px -72px round var(--card-r, 22px)); }
-.home .product-rail-card[style*="--rail-own-1"]::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(130% 78% at 50% 20%, var(--rail-own-1) 0%, var(--rail-own-2) 52%, var(--rail-own-3) 100%); opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+.home .product-rail-card[style*="--rail-own-1"].is-active { transform: translate(calc(-50% + var(--drag)), 0) scale(1); pointer-events: auto; }
+.home .product-rail-card[style*="--rail-own-1"]::before { content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), 0 30px 50px -32px color-mix(in srgb, var(--theme-accent, #b64c68) 62%, transparent); background: radial-gradient(130% 78% at 50% 20%, var(--rail-own-1) 0%, var(--rail-own-2) 52%, var(--rail-own-3) 100%); opacity: 0; transition: opacity .45s ease; pointer-events: none; }
 .home .product-rail-card[style*="--rail-own-1"].is-active::before { opacity: 1; }
-.home .product-rail-card[style*="--rail-own-1"] .product-rail-art, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art { height: var(--art-h); background: transparent; }
-/* A peça fica dentro do card (2026-10-05: sair por cima poluía a tela) e, ao virar a da vez, cresce um pouco com um leve quique. */
-.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: scale(.9); transform-origin: 50% 100%; filter: drop-shadow(0 14px 14px color-mix(in srgb, var(--ink, #282326) 18%, transparent)); transition: transform .7s cubic-bezier(.34, 1.3, .64, 1); }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art { height: var(--art-h); background: transparent; overflow: visible; pointer-events: auto; }
+/* A peça fica dentro do card (2026-10-05: sair por cima poluía a tela) e, ao virar a da vez, cresce um pouco com um leve quique. A
+   sombra da peça do centro não é mais cortada pela caixa da foto (era a marca reta embaixo); a dos lados é o chão, em catalog.css. */
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: scale(.9); transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.34, 1.3, .64, 1); }
 .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { transform: scale(1); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--ink, #282326) 16%, transparent)); }
 .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(-4px) scale(1.02); }
 @media (hover: hover) {
   .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img { transform: translateY(-4px) scale(1.02); }
+  .home .product-rail-card[style*="--rail-own-1"]:not(.is-active) .product-rail-art:hover img { transform: scale(.95); }
 }
 @media (prefers-reduced-motion: reduce) {
   .home .product-rail-card[style*="--rail-own-1"], .home .product-rail-card[style*="--rail-own-1"]::before, .home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transition: none; }
