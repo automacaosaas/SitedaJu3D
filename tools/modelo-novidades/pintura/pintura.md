@@ -42,6 +42,28 @@ da geometria, em passos:
      narina é pintada com a elipse do próprio domo (`dome`); o sorriso ficou mais grosso (`width` 46, como a referência);
    - o `crisp.cjs` subdivide só os triângulos que a borda cruza (`refineTarget`; `refine` por detalhe), para a elipse não sair
      facetada.
+9. **Superfícies refeitas para o zoom da galeria** (girafa, 08/10/2026: "risco/reflexo claro na pele amarela na base de cada olho…
+   emenda/sombra logo abaixo do focinho, linhas claras entre as pintas, pintas com borda deformada ou manchada"). A malha do Rodin
+   tinha dobras e triângulos-agulha que a luz desenhava como riscos claros; as partes com defeito viram a forma que deviam ter, com as
+   mesmas cores e o mesmo desenho:
+   - `tubeRebuild` (`tube-rebuild.cjs`, no lugar do `tube` do passo 8): o pescoço é o próprio tubo liso (raio ajustado em função do
+     ângulo e da altura) e cada pinta, achada onde a superfície sobe acima dele, ganha o contorno alisado e o mesmo relevo (parede
+     íngreme que arredonda no topo, altura igual para todas); a malha é refinada onde a superfície dobra e vai para cima dela, com as
+     normais da própria superfície, e a pintura marrom cobre exatamente o relevo. Depois de as cores assentarem, `band` alisa a faixa
+     sob a cabeça (onde o pescoço abre para a cabeça) e `cheeks` refaz as pintas das bochechas do mesmo jeito;
+   - `eyeRebuild` (`eye-rebuild.cjs`): a pele de cima do rosto vira uma superfície lisa (B-spline ajustada à vista de frente, `skin`) e
+     os dois olhos, dois domos iguais e espelhados (mesmos eixos, mesma altura), com o pé arredondado (`fillet`); o focinho fica fora do
+     alcance (`protect`). `surface-rebuild.cjs` tem o refinamento e a simplificação que os dois usam;
+   - `normals: geometry`: as normais saem da forma final (média por área, `normalPasses` vezes com as vizinhas), as mesmas no 3D do
+     site e nas fotos (`lamp-assets.cjs` usa `smooth=0`, as do modelo);
+   - `ownNormals` (segunda rodada, os fiapos claros em volta do focinho e na base do olho): os triângulos compridos do pé do focinho
+     ligam o amarelo plano à parede do focinho, e a parte amarela deles levava a normal inclinada da parede para longe. Perto do
+     contorno do focinho (`reach`), cada cor passa a usar a normal da própria superfície (média a distância fixa das faces daquela cor
+     que não tocam outra, `crisp.metricField`); a forma não muda e a luz só quebra na borda da tinta, onde a cor já muda. No creme,
+     só onde a superfície olha para a frente (`facing`);
+   - `domes.maxFoot`: o raio do pé de cada narina fica limitado a 1,35× a elipse dela — um raio da narina esquerda escapava (0,13 em
+     vez de 0,07) até a pele sob o olho esquerdo, e o afundamento amassava a pele já refeita ali (a mancha clara na base do olho);
+     `smoothRegions` ganhou o par espelhado do lado esquerdo, embaixo da narina.
 
 ## Refazer
 
@@ -56,6 +78,8 @@ git show fb36280:dist/assets/models/unicornioscopio.glb > unicornio-fonte.glb
 GLTF_NM=… node lamp-fix.cjs unicornio-fonte.glb ../../../dist/assets/models/unicornioscopio.glb unicornio.json
 ```
 
-Depois, o `?v=` em `dist/asset-models.js` e as fotos: `tools/render-aviao-macaco/lamp-assets.cjs` (vitrine, cards e, com `--vistas`,
-as vistas da galeria da girafa), `node tools/galeria-vistas/gerar.cjs`, `node tools/og-lampadas.cjs` e `node tools/build-product-pages.cjs`.
+A girafa leva uns 2 minutos e sai igual byte a byte a cada rodada. Depois, o `?v=` em `dist/asset-models.js` e as fotos:
+`tools/render-aviao-macaco/lamp-assets.cjs` (vitrine, cards e, com `--vistas`, as vistas da galeria da girafa; numa worktree,
+`RENDER_PORT` igual no `serve.cjs` e no `lamp-assets.cjs`, para servir o `dist/` dela), `node tools/galeria-vistas/gerar.cjs girafoscopio`
+(e `VIEWS_VERSION` em `dist/gallery.js`), `node tools/og-lampadas.cjs`, `node tools/build-product-pages.cjs` e `node tools/sync-versions.cjs`.
 As coordenadas das sementes e das caixas estão em unidades do render (altura 4,1, chão em −1,9, centrado), as mesmas do visualizador.

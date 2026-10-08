@@ -13,28 +13,6 @@
   "muzzle": 400,
   "spots": 800
  },
- "tube": [
-  {
-   "name": "spots",
-   "other": "coat",
-   "axis": [
-    0.001,
-    -0.172
-   ],
-   "yMin": -1.86,
-   "yMax": 0.49,
-   "rMin": 0.66,
-   "rMax": 0.8,
-   "rBare": 0.712,
-   "t": 0.009,
-   "deg": 4,
-   "harm": 3,
-   "iters": 4,
-   "smooth": 1,
-   "scale": 0.08,
-   "thetaMax": 130
-  }
- ],
  "exact": [
   {
    "name": "muzzle",
@@ -63,8 +41,8 @@
    "refine": 0.012,
    "depth": 0.15,
    "facing": [
-    0.45,
-    0.75
+    0.2,
+    0.4
    ]
   },
   {
@@ -87,7 +65,8 @@
    "shape": "ellipse",
    "cover": 0.97,
    "maxScale": 1.06,
-   "depth": 0.03
+   "depth": 0.03,
+   "eye": 0
   },
   {
    "name": "features",
@@ -109,7 +88,8 @@
    "shape": "ellipse",
    "cover": 0.97,
    "maxScale": 1.06,
-   "depth": 0.03
+   "depth": 0.03,
+   "eye": 1
   },
   {
    "name": "features",
@@ -229,7 +209,8 @@
   ],
   "profile": 0.6,
   "relax": 1.55,
-  "relaxIterations": 80
+  "relaxIterations": 80,
+  "maxFoot": 1.35
  },
  "smoothKeepExact": [
   1,
@@ -238,19 +219,15 @@
  "smoothRegions": [
   {
    "at": [
-    -0.29,
-    1.265
+    -0.25,
+    0.95
    ],
    "radii": [
     0.09,
-    0.075
+    0.13
    ],
    "relax": 0,
-   "ring": [
-    1.15,
-    1.6
-   ],
-   "blend": 0.008
+   "blend": 0.03
   },
   {
    "at": [
@@ -269,10 +246,10 @@
  "forceRender": [
   {
    "box": [
-    -0.45,
+    -0.56,
     1.12,
-    -0.18,
-    1.36
+    -0.14,
+    1.68
    ],
    "name": "coat",
    "only": [
@@ -281,14 +258,236 @@
   },
   {
    "box": [
-    0.18,
+    0.14,
     1.12,
-    0.45,
-    1.36
+    0.56,
+    1.68
    ],
    "name": "coat",
    "only": [
     "spots"
+   ]
+  }
+ ],
+ "tubeRebuild": {
+  "name": "spots",
+  "other": "coat",
+  "axis": [
+   0.001,
+   -0.172
+  ],
+  "yMin": -1.84,
+  "rMin": 0.66,
+  "rMax": 0.8,
+  "theta": [
+   122,
+   132
+  ],
+  "thetaFit": 130,
+  "height": 0.028,
+  "alpha": 0.5,
+  "w1": 0.01,
+  "w2": 0.05,
+  "t": 0.01,
+  "foot": 0.0025,
+  "harmonics": 20,
+  "topBlend": [
+   0.015,
+   0.002
+  ],
+  "tol": 0.0004,
+  "minLen": 0.0025,
+  "maxLen": 0.035,
+  "refine": 0.01,
+  "fillet": 0.0012,
+  "paintAbove": 0.02,
+  "maxAngle": 22,
+  "footBand": 0.005,
+  "simplifyTol": 0.0003,
+  "normalWeight": 0.004,
+  "band": {
+   "theta": [
+    100,
+    110
+   ],
+   "eta": [
+    -0.07,
+    0.22
+   ],
+   "top": [
+    0.15,
+    0.19
+   ],
+   "knotTheta": 12,
+   "knotEta": 0.02,
+   "guard": [
+    "spots"
+   ],
+   "guardBand": [
+    0.012,
+    0.03
+   ],
+   "smooth": 0.1,
+   "tol": 0.0003,
+   "maxLen": 0.025,
+   "reliefBand": [
+    0.006,
+    0.015
+   ],
+   "iters": 3,
+   "protect": 0,
+   "protectBand": [
+    0,
+    0.006
+   ]
+  },
+  "cheeks": {
+   "patches": [
+    {
+     "theta": [
+      36,
+      118
+     ]
+    },
+    {
+     "theta": [
+      -118,
+      -36
+     ]
+    }
+   ],
+   "y": [
+    0.5,
+    1.12
+   ],
+   "r0": 0.78,
+   "knotTheta": 10,
+   "knotY": 0.04,
+   "smooth": 0.05,
+   "iters": 4,
+   "margin": 8,
+   "marginY": 0.05,
+   "protect": 0,
+   "protectBand": [
+    0.006,
+    0.02
+   ],
+   "reliefBand": [
+    0.006,
+    0.015
+   ],
+   "t": 0.01,
+   "tMax": 0.05,
+   "harmonics": 12,
+   "minArea": 0.005,
+   "paintReach": 0.03
+  }
+ },
+ "normals": "geometry",
+ "normalPasses": 4,
+ "eyeRebuild": {
+  "targets": [
+   {
+    "name": "features",
+    "box": [
+     -0.56,
+     1.12,
+     -0.14,
+     1.72
+    ],
+    "exclude": [
+     "features",
+     "spots",
+     "muzzle"
+    ],
+    "frac": 0.15,
+    "harmonics": 4,
+    "cover": 0.97,
+    "maxScale": 1.06,
+    "depth": 0.03
+   },
+   {
+    "name": "features",
+    "box": [
+     0.14,
+     1.06,
+     0.58,
+     1.68
+    ],
+    "exclude": [
+     "features",
+     "spots",
+     "muzzle"
+    ],
+    "frac": 0.15,
+    "harmonics": 4,
+    "cover": 0.97,
+    "maxScale": 1.06,
+    "depth": 0.03
+   }
+  ],
+  "profile": 0.35,
+  "mirror": true,
+  "flatten": [
+   1.7,
+   2.3
+  ],
+  "protect": 0,
+  "protectBand": [
+   0,
+   0.006
+  ],
+  "fillet": 0.001,
+  "tol": 0.0003,
+  "minLen": 0.0015,
+  "maxLen": 0.02,
+  "maxAngle": 20,
+  "creaseBand": 0.004,
+  "skin": {
+   "box": [
+    -0.62,
+    0.95,
+    0.62,
+    1.8
+   ],
+   "px": 0.004,
+   "knot": 0.06,
+   "smooth": 0.05,
+   "drop": 0.004,
+   "iters": 4,
+   "margin": 0.06,
+   "eyeClear": 1.5,
+   "muzzleClear": 0.01,
+   "reliefBand": [
+    0.006,
+    0.015
+   ],
+   "eyeOld": 1.6
+  },
+  "simplifyTol": 0.0003,
+  "normalWeight": 0.004
+ },
+ "ownNormals": [
+  {
+   "name": "coat",
+   "near": 0,
+   "reach": [
+    0.02,
+    0.04
+   ],
+   "radius": 0.012
+  },
+  {
+   "name": "muzzle",
+   "near": 0,
+   "reach": [
+    0.01,
+    0.025
+   ],
+   "radius": 0.008,
+   "facing": [
+    0.15,
+    0.35
    ]
   }
  ]

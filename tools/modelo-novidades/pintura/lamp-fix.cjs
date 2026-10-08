@@ -17,6 +17,15 @@ const exact = require('./exact.cjs');
 
 async function run(file, out, opt) {
   const t0 = Date.now(), m = await lib.load(file);
+  // 0t. the giraffe's neck rebuilt smooth (tube-rebuild.cjs): a smooth tube, the spots with regular outlines and the same relief, the
+  //     mesh refined where the surface bends; it changes the mesh, so it comes before anything else reads it
+  // (`protect` of the late parts: an exact entry or its index — the muzzle)
+  const exactOf = p => typeof p === 'number' ? opt.exact[p] : p, tr = opt.tubeRebuild;
+  const tubeO = tr && {...tr, band: tr.band && {...tr.band, protect: exactOf(tr.band.protect)}, cheeks: tr.cheeks && {...tr.cheeks, protect: exactOf(tr.cheeks.protect)}};
+  const tubeR = tubeO ? await require('./tube-rebuild.cjs').rebuildTube(m, tubeO, (...a) => console.log('0t', ...a)) : null;
+  // 0e. the eyes rebuilt (eye-rebuild.cjs): two equal clean domes on a clean skin, the muzzle (`protect`: an exact entry or its index)
+  //     out of reach
+  const eyeO = opt.eyeRebuild, eyesR = eyeO ? await require('./eye-rebuild.cjs').rebuildEyes(m, {...eyeO, protect: typeof eyeO.protect === 'number' ? opt.exact[eyeO.protect] : eyeO.protect}, (...a) => console.log('0e', ...a)) : null;
   // 0. reshaped reliefs before anything else reads the geometry: the nostrils rebuilt as two equal, aligned domes (exact.cjs domes)
   const early = {};
   let rebuilt = null; if (opt.domes) { rebuilt = exact.domes(m, Uint8Array.from(m.label), m.names, opt.domes); console.log('0 domes:', rebuilt.info, '· vertices moved', rebuilt.moved.size); }
@@ -30,8 +39,9 @@ async function run(file, out, opt) {
     const keep = (x, y) => Math.min(...keeps.map(f => f(x, y)));
     for (const r of opt.smoothRegions) { const out = exact.smoothRegion(m, r, keep, ring0); console.log('0b smooth', JSON.stringify(r.at), 'moved', out.moved.size, 'fitted on', out.fitted); rebuilt ||= {moved: new Set(), ellipses: []}; for (const v of out.moved) rebuilt.moved.add(v); }
   }
-  const topo = lib.topology(m), ring = lib.vertexRing(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
-  const idOf = n => names.indexOf(n), label = Uint8Array.from(m.label);
+  const topo = lib.topology(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
+  let ring = lib.vertexRing(m), label = Uint8Array.from(m.label);
+  const idOf = n => names.indexOf(n);
   const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
   const count = () => names.map((n, k) => `${n} ${label.filter(l => l === k).length}`).join(' · ');
   log('in', count());
@@ -107,6 +117,10 @@ async function run(file, out, opt) {
     for (let f = 0; f < nf; f++) { const y = ry(f); if (y >= b.yMax) continue; if (label[f] === o && y < yb) { label[f] = k; c++; } else if (label[f] === k && y >= yb) { label[f] = o; c++; } }
     bands.push({k, o, yb, yMax: b.yMax, yMin: b.yMin ?? -Infinity, zMax: b.zMax ?? Infinity, w: b.soft ?? .004, fr}); log('band', b.name, 'at', yb.toFixed(4), 'changed', c);
   }
+  // 3b. the band under the giraffe's head (tube-rebuild.cjs, step 8) smoothed now that the colours are settled: it refines the mesh
+  //     there (the new faces keep the settled colours) and moves it, so the neighbours are taken again
+  //     then the cheek spots (step 8 there), rebuilt like the neck's
+  for (const run of [tubeR?.runBand, tubeR?.runCheeks]) if (run) { m.label = label; await run(); label = Uint8Array.from(m.label); ring = lib.vertexRing(m); log('3b late part | faces', m.nf, '|', count()); }
   if (opt.saveLabels) fs.writeFileSync(opt.saveLabels, Buffer.from(label.buffer));
   // 4. smooth borders
   const fl = crisp.fields(m, label, ring, K, opt.smooth ?? 3, {iterationsBy: Object.fromEntries(Object.entries(opt.smoothBy || {}).map(([n, v]) => [idOf(n), v])), bias: Object.fromEntries(Object.entries(opt.bias || {}).map(([n, v]) => [idOf(n), v]))});
@@ -115,9 +129,23 @@ async function run(file, out, opt) {
   // 5. exact borders from the relief (exact.cjs): the neck's spots on the tube, then the front details in order (muzzle, eyes,
   //    nostrils, smile), each a signed function of the position cut exactly across the triangles
   for (const t of opt.tube || []) { const r = exact.tube(m, fl, K, names, ring, t); log('5 tube', t.name, 'vertices', r.n, 'inside', r.inside, process.env.HIST ? '\n' + r.hist : ''); }
-  const overrides = [], claimed = names.map(() => new Uint8Array(m.nv)), vn = crisp.vertexNormals(m);
-  if (rebuilt) log('0 domes: normals rebuilt for', exact.rebuildNormals(m, vn, rebuilt.moved, ring), 'vertices');
+  // normals: 'geometry' (08/10/2026) = from the final shape, area-weighted and averaged with the neighbours `normalPasses` times — what
+  // lamp-glb.html did in the browser for the pictures, now in the model itself, so the site's 3D and the pictures shade alike; else
+  // the original ones (the moved reliefs rebuilt from their new faces)
+  // the paint's 'facing' (where a front detail fades out on a steep flank) keeps reading the original normals (vnPaint): new shading
+  // normals must not move a border
+  const overrides = [], claimed = names.map(() => new Uint8Array(m.nv)), vnPaint = crisp.vertexNormals(m), vn = opt.normals === 'geometry' ? crisp.geometricNormals(m, ring, opt.normalPasses ?? 4) : vnPaint;
+  if (rebuilt) log('0 domes: normals rebuilt for', exact.rebuildNormals(m, vnPaint, rebuilt.moved, ring), 'vertices');
+  // the rebuilt neck and eyes: the surface's own normals (blended where the rebuilt part fades out), and the neck's spots painted
+  // exactly over their relief (before the front details)
+  for (const r of [tubeR, eyesR]) if (r) for (const [v, {n, w}] of r.normals) for (const arr of new Set([vn, vnPaint])) { const q = [0, 1, 2].map(j => w * n[j] + (1 - w) * arr[v * 3 + j]), l = Math.hypot(...q) || 1; arr.set(q.map(x => x / l), v * 3); }
+  if (tubeR) {
+    const t = opt.tubeRebuild, k = idOf(t.name || 'spots');
+    for (const ov of tubeR.overrides(k, idOf(t.other || 'coat'), t.refine)) { log('5 tube rebuilt', t.name || 'spots', 'vertices', exact.applyVertices(m, fl, K, ov, claimed[k], vnPaint)); overrides.push(ov); }
+    log('5 tube rebuilt: normals', tubeR.normals.size);
+  }
   const dets = (opt.exact || []).map((t, i) => early[i] || (t.mode === 'line' ? exact.line(m, label, names, t) : exact.contour(m, label, names, t)));
+  if (process.env.DEBUG_DETS) dets.forEach((d, i) => d.R && log('det', i, 'centre', ((d.centre[0] - frame(m).ctr[0]) * frame(m).s).toFixed(3), ((d.centre[1] - frame(m).lo[1]) * frame(m).s - 1.9).toFixed(3), 'R', Array.from({length: 24}, (_, j) => (d.R[j * 15] * d.res * frame(m).s).toFixed(3)).join(' ')));
   // mirrored pairs ('mirror': same group name): the same axes (the mean), the angle mirrored across the vertical — the two nostrils alike
   for (const g of new Set((opt.exact || []).map(t => t.mirror).filter(Boolean))) {
     const pair = dets.filter((d, i) => opt.exact[i].mirror === g && d.ell); if (pair.length !== 2) continue;
@@ -129,18 +157,43 @@ async function run(file, out, opt) {
     log('5 mirror', g, `axes ${(a * frame(m).s).toFixed(3)}×${(b * frame(m).s).toFixed(3)} at ${(angL * 180 / Math.PI).toFixed(0)}°`);
   }
   // the rebuilt nostrils are painted with their domes' own ellipses (grown a hair to cover the foot)
+  // the rebuilt eyes likewise, with their domes' ellipses (`eyeGrow`: a hair over the rim, the fillet's middle)
+  (opt.exact || []).forEach((t, i) => { if (eyesR && t.eye != null) { const e = eyesR.ellipses[t.eye], g = t.eyeGrow ?? 1.005; dets[i].setEllipseAt(e.cx, e.cy, e.a * g, e.b * g, e.ang); dets[i].extent = Math.max(e.a, e.b) * g + Math.hypot(e.cx - dets[i].centre[0], e.cy - dets[i].centre[1]); } });
   (opt.exact || []).forEach((t, i) => { if (rebuilt && t.dome != null) { const e = rebuilt.ellipses[t.dome], g = t.domeGrow ?? 1.02; dets[i].setEllipseAt(e.cx, e.cy, e.a * g, e.b * g, e.ang); dets[i].extent = Math.max(e.a, e.b) * g + Math.hypot(e.cx - dets[i].centre[0], e.cy - dets[i].centre[1]); } });
   for (const [i, t] of (opt.exact || []).entries()) {
     const k = idOf(t.name), det = dets[i];
-    const ov = exact.override(m, k, det, {...t, surround: t.surround ? idOf(t.surround) : -1}), n = exact.applyVertices(m, fl, K, ov, claimed[k], vn); overrides.push(ov);
+    const ov = exact.override(m, k, det, {...t, surround: t.surround ? idOf(t.surround) : -1}), n = exact.applyVertices(m, fl, K, ov, claimed[k], vnPaint); overrides.push(ov);
     log('5 exact', t.name, t.mode || 'contour', JSON.stringify(t.box), 'vertices', n, det.R ? `relief top ${det.topRender.toFixed(4)} · rough ${det.rough.toFixed(4)} · r ${(det.extent * frame(m).s).toFixed(3)} ${det.info}` : `points ${det.points.length}`);
   }
   // a colour that only the details draw (the giraffe's black): nothing of it outside them
   for (const name of opt.onlyExact || []) log('5 only exact', name, 'cleared', exact.onlyClaimed(m, fl, K, idOf(name), claimed[idOf(name)], ring, idOf(opt.fallback || names[0])));
-  const {geo, split, refined} = crisp.build(m, label, fl, vn, K, overrides.length ? {overrides, target: (opt.refineTarget ?? .004) / frame(m).s, maxDepth: opt.maxDepth ?? 4} : null);
+  // ownNormals: [{name, near (an exact entry: its outline), reach: [r0, r1] (render), radius, facing}] (08/10/2026, the gallery's zoom: light
+  // wedges on the coat all around the muzzle) — where the mesh does not resolve a crease (the long Rodin triangles at the muzzle's foot
+  // join the flat coat to the muzzle's wall, and the coat's part of them, after the paint cut, carried the wall's tilted normal far into
+  // the coat), the part of a triangle painted `name` shades with that colour's own surface: its corners within r0 of the outline (on
+  // either side) take the fixed-distance average of the faces of that colour that touch no other one (crisp.metricField), blended
+  // back to their own normal by r1. The shape does not move; the shading breaks only at the paint border, where the colour changes.
+  // facing: [f0, f1] — only where the surface looks to the front (its normal's z from f0 to f1; under the muzzle, where the front view
+  // does not draw the paint border, the steeper own normals would only light up its teeth)
+  const vnBy = names.map(() => null);
+  for (const o of opt.ownNormals || []) {
+    const fr = frame(m), k = idOf(o.name), det = dets[o.near], [r0, r1] = o.reach, other = new Uint8Array(m.nv), reach = det.extent + r1 / fr.s;
+    for (let f = 0; f < m.nf; f++) if (label[f] !== k) for (let j = 0; j < 3; j++) other[m.F[f * 3 + j]] = 1;
+    const field = crisp.metricField(m, {s: fr.s, radius: o.radius ?? .012, faceOk: f => label[f] === k && !other[m.F[f * 3]] && !other[m.F[f * 3 + 1]] && !other[m.F[f * 3 + 2]],
+      box: [det.centre[0] - reach, det.centre[1] - reach, fr.ctr[2], det.centre[0] + reach, det.centre[1] + reach, 2 * fr.ctr[2] - fr.lo[2]]});
+    const arr = vnBy[k] || Float32Array.from(vn), smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t); let n = 0;
+    for (let v = 0; v < m.nv; v++) {
+      const x = m.P[v * 3], y = m.P[v * 3 + 1], z = m.P[v * 3 + 2]; if (z < fr.ctr[2]) continue; const d = Math.abs(det.s(x, y)) * fr.s; if (!(d < r1) || !det.zOK(x, y, z)) continue;
+      const q = field(x, y, z); if (!q) continue; const t = (1 - smooth((d - r0) / (r1 - r0))) * (o.facing ? smooth((vnPaint[v * 3 + 2] - o.facing[0]) / (o.facing[1] - o.facing[0])) : 1); if (t <= 0) continue; const mix = [0, 1, 2].map(j => t * q[j] + (1 - t) * arr[v * 3 + j]), l = Math.hypot(...mix) || 1;
+      arr.set(mix.map(c => c / l), v * 3); n++;
+    }
+    vnBy[k] = arr; log('own normals', o.name, 'by', JSON.stringify(o.reach), 'corners', n);
+  }
+  const {geo, split, refined} = crisp.build(m, label, fl, vn, K, overrides.length ? {overrides, target: (opt.refineTarget ?? .004) / frame(m).s, maxDepth: opt.maxDepth ?? 4, facingNormals: vnPaint} : null, vnBy);
   log('4 crisp: split', split, 'faces (refined', refined, '); out', geo.map((G, k) => `${names[k]} ${G.idx.length / 3}`).join(' · '));
   const bytes = await crisp.writeGeo(m, geo, out, {compress: opt.compress !== false});
   log('written', out, Math.round(bytes / 1024), 'KB');
 }
+// the options: the JSON itself or the path of a .json file (girafa.json, unicornio.json)
 const [file, out, json = '{}'] = process.argv.slice(2);
-run(file, out, JSON.parse(json)).catch(e => { console.error(e); process.exit(1); });
+run(file, out, JSON.parse(/\.json$/i.test(json) ? fs.readFileSync(json, 'utf8') : json)).catch(e => { console.error(e); process.exit(1); });
