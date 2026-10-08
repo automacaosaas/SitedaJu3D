@@ -12,12 +12,18 @@ const {planTracks} = await load('motion-timeline.js');
 const {PRODUCTS, SOON, SHOWCASE, showcase} = await load('products.js');
 const {translate} = await load('i18n-core.js');
 
-// ── linha do tempo: todas as trilhas terminam juntas, então tocar ao contrário espelha a ordem ──
+// ── linha do tempo: um relógio só para todas as trilhas (tocar ao contrário espelha a ordem), sem endDelay — o Chrome não leva
+//    para a GPU uma animação com endDelay, e a demonstração inteira rodava na thread principal (movimento 2, 08/10/2026) ──
 const plan = planTracks([{el: 1, duration: 400}, {el: 2, delay: 1000, duration: 900}, {el: 3, delay: 2020, duration: 380}]);
 assert.equal(plan.total, 2400);
-for (const track of plan.tracks) assert.equal(track.delay + track.duration + track.endDelay, 2400);
-assert.deepEqual(plan.tracks.map(track => track.endDelay), [2000, 500, 0], 'a última a entrar é a primeira a sair');
+assert.deepEqual(plan.tracks.map(track => track.delay), [0, 1000, 2020]);
+assert.ok(plan.tracks.every(track => !('endDelay' in track)), 'nenhuma trilha com endDelay');
 assert.equal(planTracks([]).total, 0);
+{
+  const timeline = read('motion-timeline.js').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/endDelay:/.test(timeline) && /animation\.startTime = this\.origin/.test(timeline) && !/animation\.play\(\)/.test(timeline),
+    'play() por um startTime comum (sem o auto-rewind de play() numa trilha já terminada): ida e volta continuam alinhadas');
+}
 
 // ── dados: medidas coerentes com a peça e o equipamento ─────────────────────────
 const demos = Object.entries(SHOWCASE).filter(([, entry]) => entry.demo);
@@ -62,7 +68,9 @@ assert.equal(translate('Retinoscópio', 'en'), 'Retinoscope');
 const demo = read('hero-demo.js'), timeline = read('motion-timeline.js'), carousel = read('carousel.js'), css = read('hero-demo.css');
 const html = read('index.html'), controller = read('controller.js');
 assert.ok(!/borboletosc|dinossaurosc|aviaosc|retinosc/i.test(demo + timeline), 'a experiência vem dos dados: nada específico de produto no código');
-assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css">'));
+// a folha da demonstração chega depois da primeira pintura (late-css.js; tests/pagespeed.mjs) e a abertura espera por ela
+assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>'));
+assert.ok(demo.includes("import {lateCss} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, lateCss]);'), 'a demonstração só aparece com o estilo dela');
 assert.ok(carousel.includes("import {createHeroDemo} from './hero-demo.js';"));
 assert.ok(/if \(locked \|\| !e\.isPrimary/.test(carousel) && /if \(locked \|\| gesture/.test(carousel) && /if \(!locked && \(e\.key === 'ArrowLeft'/.test(carousel), 'arraste, setas e teclado travados durante a demonstração');
 assert.ok(/performance\.now\(\) < suppressUntil[\s\S]{0,420}demo\.open\(index\)/.test(carousel), 'um arraste nunca abre a demonstração (o filtro de clique vem antes)');
@@ -73,6 +81,13 @@ assert.ok(/finePointer\.matches/.test(demo), 'inclinação e flutuação só com
 assert.ok(/timeline\.cancel\(\)/.test(demo) && /float\.cancel\(\)/.test(demo) && /removeEventListener\('pointermove'/.test(demo), 'limpeza de animações e ouvintes');
 assert.ok(!/setInterval/.test(demo + timeline));
 assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered'") && css.includes('.hero-demo[data-back="recessed"] .demo-back {') && !/^\.demo-back \{[^}]*(filter|mask|scale)/m.test(css), 'camadas renderizadas juntas (depth 0) entram sem nenhuma compensação');
+// o fundo: a raiz da camada escurece e recua (o desenho atrás da peça vai junto, por estar dentro dela); com movimento, o desenho
+// ainda desliza com a câmera até ficar atrás da peça montada — num translate/scale próprio, sem disputar o transform da raiz
+const calmBlock = demo.slice(demo.indexOf('if (g.reduced) {'), demo.indexOf('const depth = PERSPECTIVE'));
+assert.ok(demo.includes('scenery: bgLayers[index]?.firstElementChild') && demo.includes("motif: bgLayers[index]?.querySelector('.scenery-back')"), 'a demonstração usa a raiz do fundo e o desenho dentro dela');
+assert.ok(calmBlock.includes('fade(g.scenery, 80, 260, 1, .3)') && !calmBlock.includes('g.motif'), 'movimento reduzido: o fundo só esmaece, o desenho não desliza');
+assert.ok(/\{el: g\.motif, delay: 40, duration: 560, easing: EASE\.camera, keyframes: \[\{translate: '0px 0px', scale: '1'\}, \{translate: `\$\{\(-g\.dx\)\.toFixed\(1\)\}px \$\{\(-g\.dy\)\.toFixed\(1\)\}px`, scale: Math\.min\(1\.2, 1 \/ g\.s\)/.test(demo), 'o desenho acompanha a câmera, sem crescer demais');
+assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(demo + timeline), 'nenhuma peça citada pelo nome na demonstração');
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
 assert.ok(ends.length > 8 && Math.max(...ends) <= 2700, `nenhuma trilha passa de 2,7 s (${Math.max(...ends)} ms)`);
 const timing = demo.match(/const T = asm \? \{([^}]*)\} : config\.head \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);
@@ -83,7 +98,46 @@ assert.ok(field(timing[1], 'cta') + 340 <= 2700 && field(timing[1], 'tool') > 52
 assert.ok(/el: d\.header/.test(demo) && /\{opacity: \.6\}/.test(demo), 'o header fica mais discreto durante a demonstração');
 assert.ok(/aria-label', 'Voltar à vitrine'/.test(demo) && /icon\('palette'\) \+ '<span>Personalizar o meu<\/span>'/.test(demo), 'a demonstração usa o mesmo botão do banner (paleta, sem seta)');
 assert.ok(/entries\[i\]\.soon/.test(demo) && /'Ver em 3D'/.test(demo) && demo.includes('#produto/${key}/3d'), 'novidade sem compra (cores fixas): o convite leva a ver a peça em 3D');
-for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, SOON.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
+for (const text of ['Em breve', 'Novidade · em breve', 'Lâmpada de fenda', 'Régua de esquiascopia', SHOWCASE.aviaoscopia.demo.message, SHOWCASE.macacoscopio.demo.message, SHOWCASE.macacoscopio.art.alt, PRODUCTS.macacoscopio.subtitle]) { assert.notEqual(translate(text, 'en'), text, text); assert.notEqual(translate(text, 'es'), text, text); }
+assert.ok(demo.includes("fixed ? 'Comprar' : 'Personalizar o meu'") && demo.includes('fixed ? `#produto/${key}`'), 'a lâmpada (cores fixas, à venda): o convite é Comprar, que abre a peça na foto');
+assert.notEqual(translate('Comprar', 'en'), 'Comprar');
 for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqual(translate(text, 'en'), text); assert.notEqual(translate(text, 'es'), text); }
+// O unicórnio (07/10/2026: "fazer uma animação… girar o rostinho para a direita, para ensinar… o chifre pode atrapalhar"): depois do
+// encaixe a cabeça gira (os quadros do 3D numa tira, por cima da foto, só na caixa que muda) e a dica aparece; na volta, a cabeça desvira.
+{
+  const turn = SHOWCASE.unicornioscopio.demo.turn, file = new URL(`../dist/assets/${turn.src}`, import.meta.url);
+  assert.ok(turn.frames >= 12 && turn.angle > 45 && turn.box.length === 4 && turn.box.every(v => v >= 0 && v <= 1) && turn.box[0] + turn.box[2] <= 1.0001 && turn.box[1] + turn.box[3] <= 1.0001, 'o giro: quadros, ângulo e a caixa na foto');
+  const bytes = fs.readFileSync(file);
+  assert.ok(bytes.toString('latin1', 8, 12) === 'WEBP' && bytes.length < 900000, 'a tira dos quadros, leve');
+  assert.ok(!SHOWCASE.girafoscopio.demo.turn && !SHOWCASE.macacoscopio.demo.turn, 'só o unicórnio gira a cabeça');
+  for (const part of ['function setupTurn(turn)', 'function playTurn(to, duration, fade = false)', "dom.cover.classList.add('is-turning')", 'playTurn(1, calm ? 260 : 950, calm)', 'if (dom.giro.p > 0) playTurn(0, calm ? 200 : 420, calm)', "g.globalCompositeOperation = 'lighter'", 'resetTurn();']) assert.ok(demo.includes(part), part);
+  assert.notEqual(translate(turn.hint, 'en'), turn.hint); assert.notEqual(translate(turn.hint, 'es'), turn.hint);
+  // 08/10/2026 (movimento 3): a tira é decodificada fora da thread principal antes do giro (o primeiro drawImage de um <img> a
+  // decodificava na hora: até 1 s de tela parada no celular); em meia resolução quando ela basta para a tela
+  assert.ok(/createImageBitmap\(await response\.blob\(\)\)/.test(demo) && /t\.ready = true/.test(demo) && /drawImage\(t\.bitmap/.test(demo) && !/drawImage\(t\.sprite/.test(demo), 'tira decodificada com createImageBitmap antes de ficar pronta');
+  assert.ok(/t\?\.decoded\.then\(/.test(demo), 'o giro espera a tira decodificada');
+  const small = fs.readFileSync(new URL(`../dist/assets/${turn.small.src}`, import.meta.url));
+  assert.ok(small.toString('latin1', 8, 12) === 'WEBP' && small.length < bytes.length && turn.small.width > 200 && turn.small.width < 300, 'a tira em meia resolução existe, mais leve');
+  assert.ok(/turn\.small && turnPixels\(/.test(demo), 'a tira menor só quando basta para a tela');
+}
+
+// ── a saída (movimento 7): curta e própria com a peça montada; nada de filter nas trilhas (vai para a GPU) ──
+{
+  const exit = demo.slice(demo.indexOf('function exitTracks(g)'), demo.indexOf('function show(on)'));
+  // (montada = depois de T.labels: fechada enquanto a ficha técnica e o convite ainda entram, a saída também é a curta, não a montagem
+  // inteira de trás para frente a 4×; o que estava aparecendo some da opacidade em que estava)
+  assert.ok(exit.length > 500 && /exiting = !calm && \(state === 'open' \|\| time >= assembled\);/.test(demo) && /assembled = T\.labels;/.test(demo) && /timeline\.load\(exitTracks\(g\)\)/.test(demo), 'Voltar com a peça montada usa a saída própria');
+  assert.ok(/keyframes: \[\{opacity: \+getComputedStyle\(el\)\.opacity\}, \{opacity: 0\}\]/.test(exit), 'a ficha técnica e o convite somem da opacidade de agora');
+  const ends = [...exit.matchAll(/delay: (\d+), duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
+  assert.ok(ends.length >= 8 && Math.max(...ends) <= 650, `a saída inteira em até 0,65 s (${Math.max(...ends)} ms)`);
+  assert.ok(/\{el: d\.rig, delay: 40, duration: 540/.test(exit), 'a câmera começa a voltar logo (40 ms)');
+  // o equipamento esmaece desde cedo (a curva que acelera fica só no deslocamento): com ela na trilha inteira, ele descia opaco por
+  // cima do texto e do "Comprar" que voltavam
+  assert.ok(/const down = el => \(\{el, delay: [^,]+, duration: 260, keyframes: \[\s*\{offset: 0, opacity: 1, transform: 'translate3d\(0, 0, 0\)', easing: EASE\.away\}, \{offset: \.2, opacity: 1\}/.test(exit) && !/easing: EASE\.away, keyframes/.test(exit), 'o equipamento esmaece em linha reta, sem esperar o fim da curva');
+  assert.ok(/if \(exiting\) \{ run\('closing'\); return; \}/.test(demo), 'reaberta no meio da saída e fechada de novo: a saída segue');
+  assert.ok(/-Math\.max\(CLOSE_RATE, timeline\.time \/ REWIND_MS\)/.test(demo) && /REWIND_MS = 600/.test(demo), 'uma entrada interrompida volta de trás para frente em até ~0,6 s');
+  assert.ok(!/filter: '[^']*blur/.test(demo.slice(demo.indexOf('function tracks(g)'), demo.indexOf('function show(on)'))), 'nenhuma trilha anima filter: blur');
+  assert.ok(/if \(top < 0\) scrollTo\(\{top: Math\.max\(0, scrollY \+ top\)/.test(demo) && /dom\.close\.focus\(\{preventScroll: true\}\)/.test(demo), 'aberta com a página rolada: a vitrine sobe antes de o foco ir para Voltar (usabilidade 3)');
+}
 
 console.log('hero-demo: ok');

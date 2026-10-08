@@ -4,11 +4,15 @@ export function setupScrollHeader(header) {
   const spacer = document.createElement('div');
   spacer.className = 'header-space'; spacer.setAttribute('aria-hidden', 'true');
   header.after(spacer);
-  let height = header.offsetHeight, last = Math.max(0, scrollY), distance = 0, frame = 0, forcedUntil = 0;
+  // The header's height in the page flow comes from a ResizeObserver (after layout): nothing here reads layout while the page
+  // is being built (PageSpeed, 2026-10-08: offsetHeight and scrollY read right after the shell's DOM writes forced a reflow).
+  // Until that first measure no frame draws; the measure draws the first one.
+  let height = 0, last = null, distance = 0, frame = 0, forcedUntil = 0;
   let floating = false, shown = false, positioningFrame = 0;
   const draw = () => {
     frame = 0;
-    const y = Math.max(0, scrollY), delta = y - last;
+    if (!height) return;
+    const y = Math.max(0, scrollY), delta = last === null ? 0 : y - last;
     const wasFloating = floating;
     if (y > 8) header.classList.add('has-scrolled');
     distance = Math.sign(delta) === Math.sign(distance) ? distance + delta : delta;
@@ -38,9 +42,19 @@ export function setupScrollHeader(header) {
   };
   const schedule = () => { if (!frame) frame = requestAnimationFrame(draw); };
   window.addEventListener('scroll', schedule, {passive:true});
+  // In the flow the observer has the height; floating, the header has its compact height, so it is ignored then.
+  const measured = size => {
+    if (floating || !size) return;
+    const first = !height;
+    height = size;
+    if (first) draw();
+  };
+  if ('ResizeObserver' in window) new ResizeObserver(([entry]) => measured(entry.borderBoxSize?.[0]?.blockSize ?? entry.target.offsetHeight)).observe(header);
+  else requestAnimationFrame(() => measured(header.offsetHeight));
+  // A resize while floating: the height in the flow is read without the floating style for a moment (only then).
   window.addEventListener('resize', () => {
-    header.classList.remove('is-floating'); height = header.offsetHeight;
-    header.classList.toggle('is-floating', floating); schedule();
+    if (floating) { header.classList.remove('is-floating'); height = header.offsetHeight || height; header.classList.toggle('is-floating', floating); }
+    schedule();
   }, {passive:true});
   window.addEventListener('ju:cart-feedback', () => {
     forcedUntil = performance.now() + 1500; shown = true; schedule();
@@ -49,6 +63,6 @@ export function setupScrollHeader(header) {
     setTimeout(() => header.classList.remove('cart-notified'), 850);
   });
   document.addEventListener('keydown', e => { if (e.key === 'Tab') {forcedUntil = performance.now() + 600; shown = true; schedule();} });
-  window.addEventListener('pageshow', schedule);
-  draw();
+  // a page restored by Back/Forward redraws; a fresh load is drawn by the first measure
+  window.addEventListener('pageshow', e => { if (e.persisted) schedule(); });
 }

@@ -1,10 +1,12 @@
 // Demonstração na vitrine: quando o produto tem `demo` (products.js › SHOWCASE), um clique de verdade na peça
 // transforma a própria vitrine numa apresentação — a interface sai, a peça se aproxima como numa câmera, o fundo
 // acompanha, o equipamento sobe até se encaixar nela e uma ficha técnica mínima nomeia as duas partes.
-// "Voltar" toca a mesma sequência ao contrário.
 // Com `assemble` (products.js) o produto é montado em vez de encaixado: a peça se abre em duas metades, o equipamento sobe por entre elas e as
 // metades se fecham em volta dele (peça de duas metades, como a de um avião com régua). Com `head`, uma segunda peça do equipamento desce por cima da
-// peça depois que a base sobe (equipamento em duas partes).
+// peça depois que a base sobe (equipamento em duas partes). Com `turn` (o unicórnio), depois do encaixe a cabeça da peça gira para o lado
+// (quadros renderizados do 3D, por cima da foto, só na parte que muda) e uma dica explica por quê.
+// "Voltar" com a peça montada é uma saída curta (~0,6 s) e própria: a interface some, o equipamento desce e a câmera já leva a peça
+// de volta à pilastra; só uma entrada interrompida no meio volta tocando a sequência de trás para frente.
 //
 // Camadas (de trás para frente): sombra projetada · peça, camada de trás (paredes internas da abertura) · sombra do
 // equipamento nas paredes · equipamento (com o reflexo verde da peça) · sombra da peça sobre o equipamento · peça,
@@ -13,11 +15,16 @@ import {Timeline} from './motion-timeline.js';
 import {withAlpha} from './hero-motion.js';
 import {imageReady} from './loading-ui.js';
 import {icon} from './icons.js';
+import {artSrcset, DEMO_SIZES, fixedColors} from './products.js';
+import {lateCss} from './late-css.js';
 
 const PERSPECTIVE = 1600;
-const CLOSE_RATE = 1.35;
+// uma entrada interrompida volta de trás para frente em no máximo ~0,6 s (e nunca mais devagar que 1,35×)
+const CLOSE_RATE = 1.35, REWIND_MS = 600;
 const EASE = {
   exit: 'cubic-bezier(.4, 0, .2, 1)',
+  away: 'cubic-bezier(.55, 0, .85, .35)',
+  home: 'cubic-bezier(.5, 0, .15, 1)',
   camera: 'cubic-bezier(.16, .9, .24, 1)',
   turn: 'cubic-bezier(.45, 0, .3, 1)',
   soft: 'cubic-bezier(.65, 0, .35, 1)',
@@ -37,12 +44,31 @@ function callout({label}, layout, {points, align}) {
     + `<span class="demo-callout-label" style="--x:${x};--y:${y}">${label}</span></div>`;
 }
 
+// A tira do giro, decodificada fora da thread principal (createImageBitmap) muito antes de o giro começar: desenhada direto de um
+// <img>, o primeiro drawImage decodificava a imagem inteira na hora — de 0,1 a 1 s de tela parada, justo no início do giro.
+async function decodeSprite(src) {
+  try {
+    const response = await fetch(src);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await createImageBitmap(await response.blob());
+  } catch {
+    // sem createImageBitmap (ou se ele falhar): o <img> com decode(), que pode ficar pendente numa aba escondida — daí o limite
+    const img = new Image(); img.src = src;
+    await Promise.race([img.decode().catch(() => {}), new Promise(resolve => setTimeout(resolve, 2500))]);
+    return img.complete && img.naturalWidth ? img : null;
+  }
+}
+
 export function createHeroDemo({region, shell, entries, slots, bgLayers, status, reduced, onLock}) {
   const configs = entries.map(entry => entry.demo || null);
   const compact = matchMedia('(max-width: 900px)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const timeline = new Timeline();
-  let dom = null, prepared = -1, index = -1, state = 'idle', calm = false, float = null, tilt = null;
+  // exiting: a linha do tempo carregada é a saída própria (exitTracks), não a entrada; assembled: o instante da entrada (ms) a partir do
+  // qual a peça já está montada e só a ficha técnica e o convite ainda entram
+  let dom = null, prepared = -1, index = -1, state = 'idle', calm = false, float = null, tilt = null, exiting = false, assembled = Infinity;
+  // quem abriu (o "Ver encaixado" ou a peça): ao fechar, o foco volta para ele, não para a peça (WCAG 2.4.3)
+  let opener = null;
 
   function build() {
     const image = className => `<img class="${className}" alt="" decoding="async" draggable="false">`;
@@ -52,9 +78,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       + '<div class="demo-cast">' + image('demo-cast-image') + '</div>'
       + '<div class="demo-tool"><img alt="" decoding="async" draggable="false"></div>'
       + '<div class="demo-head"><img alt="" decoding="async" draggable="false"></div>'
-      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '<div class="demo-sheen" aria-hidden="true"><i></i></div></div>'
+      + '<div class="demo-sleeve">' + image('demo-shade') + image('demo-cover') + '<canvas class="demo-frames" hidden></canvas><div class="demo-sheen" aria-hidden="true"><i></i></div></div>'
       + '</div></div></div></div>');
-    const controls = node('div', 'demo-controls', '<div class="demo-callouts" aria-hidden="true"></div>');
+    const controls = node('div', 'demo-controls', '<div class="demo-callouts" aria-hidden="true"></div><p class="demo-hint" hidden>' + icon('returns') + '<span></span></p>');
     const close = node('button', 'demo-close', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
     close.type = 'button';
     close.setAttribute('aria-label', 'Voltar à vitrine');
@@ -72,7 +98,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       callouts: controls.querySelector('.demo-callouts'), header: shell.querySelector('.site-header'),
       rig: q('.demo-rig'), tilt: q('.demo-tilt'), turn: q('.demo-turn'), float: q('.demo-float'), drop: q('.demo-drop'), back: q('.demo-back'),
       cast: q('.demo-cast'), castImage: q('.demo-cast-image'), tool: q('.demo-tool'), toolImage: q('.demo-tool img'),
-      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), head: q('.demo-head'), headImage: q('.demo-head img'), ready: null};
+      sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), head: q('.demo-head'), headImage: q('.demo-head img'),
+      frames: q('.demo-frames'), hint: controls.querySelector('.demo-hint'), ready: null, giro: null};
   }
 
   // Monta as camadas do produto e decodifica as imagens antes do clique (o equipamento nunca chega atrasado).
@@ -83,7 +110,10 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     if (prepared !== i) {
       prepared = i;
       const {key, product} = entries[i], {tool, layers = {}, callouts = []} = config;
-      const toolSrc = `assets/${tool.src}`, front = `assets/${layers.front || product.catalogImage || product.image}`;
+      const toolSrc = `assets/${tool.src}`, frontFile = layers.front || product.catalogImage || product.image, front = `assets/${frontFile}`;
+      // 768 ou 1254 px conforme a tela (products.js): a peça aqui aparece 1,4 a 1,6 vez maior que na vitrine, então o
+      // celular 2x e o computador 1x reaproveitam a de 768 da vitrine, e as telas 3x e retina pegam a de 1254, nítida.
+      const frontSet = artSrcset(frontFile);
       // turn: peça fotografada levemente de lado → o equipamento gira igual (graus em Y; negativo = de frente para a esquerda),
       // fica um pouco mais para o lado de trás (shift), escurece do lado que se afasta e mostra a lateral do lado que se aproxima.
       const turn = tool.turn || 0, far = turn < 0 ? ['--tool-dim-l', '--tool-dim-r'] : ['--tool-dim-r', '--tool-dim-l'];
@@ -101,7 +131,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // bounce: false — equipamento que já vem renderizado com a luz do estúdio (a régua): sem o reflexo colorido por cima, que lavaria o cabo preto
       dom.stage.toggleAttribute('data-plain-tool', tool.bounce === false);
       for (const host of [dom.stage, dom.backdrop, dom.controls, dom.atmosphere]) for (const name in vars) host.style.setProperty(name, vars[name]);
-      dom.cover.src = dom.drop.src = dom.shade.src = front;
+      for (const img of [dom.cover, dom.drop, dom.shade]) { img.sizes = frontSet ? DEMO_SIZES : ''; img.srcset = frontSet; img.src = front; }
       dom.back.hidden = dom.cast.hidden = !layers.back;
       if (layers.back) dom.back.src = `assets/${layers.back}`;
       dom.toolImage.src = dom.castImage.src = toolSrc;
@@ -110,14 +140,86 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // novidade sem compra: o convite vira um aviso, sem link
       const soon = !!entries[i].soon;
       // novidade sem compra (cores fixas): o convite é para ver a peça em 3D, sem personalizar
-      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : 'Personalizar o meu';
-      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : 'palette')));
-      dom.cta.href = soon ? `#produto/${key}/3d` : `#produto/${key}/personalizar`;
+      // peça de cores fixas à venda (as lâmpadas): o convite é para comprar (abre a peça na foto, com o preço)
+      const fixed = !soon && fixedColors(key);
+      dom.cta.classList.toggle('is-soon', soon); dom.cta.querySelector('span').textContent = soon ? 'Ver em 3D' : fixed ? 'Comprar' : 'Personalizar o meu';
+      dom.cta.querySelector('svg')?.replaceWith(document.createRange().createContextualFragment(icon(soon ? 'cube' : fixed ? 'cart' : 'palette')));
+      dom.cta.href = soon ? `#produto/${key}/3d` : fixed ? `#produto/${key}` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
+      setupTurn(config.turn || null);
       const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
       dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));
     }
     return dom.ready;
+  }
+
+  // ── o giro da cabeça (turn): os quadros numa grade de `cols` colunas (src), na caixa [x, y, largura, altura] da foto (frações); a
+  //    foto some só dentro da caixa, recortada um pouco para dentro dela (`inset`: foto e quadros se sobrepõem num anel onde nada muda,
+  //    sem fresta enquanto a demonstração flutua), e o canvas mistura o quadro do momento com o seguinte (sem degraus) ──
+  function setupTurn(turn) {
+    resetTurn();
+    dom.giro?.bitmap?.close?.();
+    dom.giro = null; dom.hint.hidden = true;
+    if (!turn) return;
+    const [x, y, w, h] = turn.box, cols = turn.cols || turn.frames, rows = Math.ceil(turn.frames / cols);
+    // a tira em meia resolução (turn.small) quando ela basta para esta tela: a caixa da cabeça, em pixels do aparelho, cabe num quadro dela
+    // (até 12% ampliada, o que não se vê); nas telas 3x do celular e nas retina grandes, a inteira
+    const src = turn.small && turnPixels(configs[prepared], w) <= turn.small.width * 1.12 ? turn.small.src : turn.src;
+    const t = dom.giro = {turn, bitmap: null, cols, p: 0, raf: 0, ready: false, timer: 0};
+    Object.assign(dom.frames.style, {left: `${x * 100}%`, top: `${y * 100}%`, width: `${w * 100}%`, height: `${h * 100}%`});
+    const k = turn.inset ?? .006, [hx, hy, hw, hh] = [x + k, y + k, w - 2 * k, h - 2 * k];
+    dom.cover.style.setProperty('--turn-mask-pos', `${(hx / (1 - hw) * 100).toFixed(3)}% ${(hy / (1 - hh) * 100).toFixed(3)}%`);
+    dom.cover.style.setProperty('--turn-mask-size', `${(hw * 100).toFixed(3)}% ${(hh * 100).toFixed(3)}%`);
+    dom.hint.querySelector('span').textContent = turn.hint || '';
+    t.decoded = decodeSprite(`assets/${src}`).then(bitmap => {
+      if (dom.giro !== t || !bitmap) { bitmap?.close?.(); return false; }
+      t.bitmap = bitmap; dom.frames.width = (bitmap.naturalWidth || bitmap.width) / cols; dom.frames.height = (bitmap.naturalHeight || bitmap.height) / rows;
+      drawFrames(0, 0, 0);
+      return t.ready = true;
+    });
+  }
+  // A largura da caixa do giro na tela, em pixels do aparelho: o tamanho da peça é o mesmo cálculo de hero-demo.css › --size.
+  function turnPixels(config, w) {
+    const W = region.clientWidth, H = region.clientHeight, zoom = config.zoom?.wide ?? config.zoom ?? 1;
+    const size = compact.matches ? Math.min(.84 * W, .58 * H) * (config.zoom?.compact ?? zoom) : Math.min(.37 * W, .76 * H) * zoom;
+    return size * w * (devicePixelRatio || 1);
+  }
+  // a mistura soma os dois quadros com pesos 1 − f e f ('lighter'): nada fica translúcido no meio (as orelhas não "falham" no movimento)
+  function drawFrames(a, b, f) {
+    const t = dom.giro, g = dom.frames.getContext('2d'), fw = dom.frames.width, fh = dom.frames.height;
+    const cell = i => [(i % t.cols) * fw, Math.floor(i / t.cols) * fh];
+    g.clearRect(0, 0, fw, fh); g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = f > .001 && a !== b ? 1 - f : 1; g.drawImage(t.bitmap, ...cell(a), fw, fh, 0, 0, fw, fh);
+    if (f > .001 && a !== b) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = f; g.drawImage(t.bitmap, ...cell(b), fw, fh, 0, 0, fw, fh); }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+  function drawTurn(p) {
+    const n = dom.giro.turn.frames, at = p * (n - 1), a = Math.min(n - 1, Math.floor(at));
+    dom.giro.p = p; drawFrames(a, Math.min(n - 1, a + 1), at - a);
+  }
+  // to: 1 = virada, 0 = de frente; a foto volta inteira quando o giro termina de frente. fade (movimento reduzido): sem o giro — o
+  // quadro de agora se funde direto no do fim, como um esmaecimento cruzado
+  function playTurn(to, duration, fade = false) {
+    const t = dom.giro; if (!t?.ready) return Promise.resolve();
+    cancelAnimationFrame(t.raf); clearTimeout(t.timer);
+    dom.frames.hidden = false; dom.cover.classList.add('is-turning'); drawTurn(t.p);
+    const from = t.p, n = t.turn.frames, start = performance.now(), ease = x => x < .5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+    return new Promise(done => {
+      const step = now => {
+        const k = duration ? Math.min(1, (now - start) / duration) : 1;
+        if (fade && k < 1) { drawFrames(Math.round(from * (n - 1)), Math.round(to * (n - 1)), k); t.p = from + (to - from) * k; }
+        else drawTurn(from + (to - from) * ease(k));
+        if (k < 1) { t.raf = requestAnimationFrame(step); return; }
+        if (to === 0) { dom.frames.hidden = true; dom.cover.classList.remove('is-turning'); }
+        done();
+      };
+      t.raf = requestAnimationFrame(step);
+    });
+  }
+  function resetTurn() {
+    if (!dom) return;
+    const t = dom.giro; if (t) { cancelAnimationFrame(t.raf); clearTimeout(t.timer); t.p = 0; }
+    dom.frames.hidden = true; dom.cover.classList.remove('is-turning'); dom.hint.hidden = true; dom.hint.classList.remove('is-shown');
   }
 
   function measure() {
@@ -125,7 +227,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const piece = (source.hidden ? slot.querySelector('.piece') : source).getBoundingClientRect();
     const box = dom.stage.getBoundingClientRect(), size = dom.rig.offsetWidth || 1;
     const left = box.left + dom.rig.offsetLeft, top = box.top + dom.rig.offsetTop;
-    return {slot, source, scenery: bgLayers[index]?.firstElementChild, compact: compact.matches, reduced: calm,
+    // scenery: a raiz do fundo da peça (escurece e recua); motif: o desenho atrás da peça (hero-scenery.js), que acompanha a câmera
+    return {slot, source, scenery: bgLayers[index]?.firstElementChild, motif: bgLayers[index]?.querySelector('.scenery-back'), compact: compact.matches, reduced: calm,
       s: piece.width / size || 1,
       dx: piece.left + piece.width / 2 - (left + size / 2),
       dy: piece.top + piece.height / 2 - (top + size / 2),
@@ -152,6 +255,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const config = configs[index], asm = config.assemble || null;
     // encaixe simples · equipamento em duas partes (a cabeça desce depois que a base sobe) · montagem
     const T = asm ? {tool: 900, shade: 1660, labels: 2150, cta: 2260, glow: 2000, drop: 1900} : config.head ? {tool: 520, shade: 880, labels: 1650, cta: 1760, glow: 1700, drop: 1700, head: 1000} : {tool: 520, shade: 880, labels: 1120, cta: 1220, glow: 1220, drop: 1260};
+    assembled = T.labels;
     const assemble = () => {
       // cada metade quando aberta (vista explodida): z (px de perspectiva), x/y (% do quadrado) e giros em X/Y (graus); a da frente vem para perto, a de trás recua
       const at = ({z = 0, x = 0, y = 0, rx = 0, ry = 0} = {}) => `translate3d(${x}%, ${y}%, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
@@ -171,7 +275,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     };
     const camera = (x, y, z) => `perspective(${PERSPECTIVE}px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)`;
     const [copyAway, paletteAway] = g.compact ? ['0, -12px', '0, 12px'] : ['-18px, 0', '18px, 0'];
-    const leave = away => [{opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)', filter: 'blur(0px)'}, {opacity: 0, transform: `translate3d(${away}, 0) scale(.985)`, filter: 'blur(2px)'}];
+    // só opacidade e transform em tudo o que anda (nada de filter: blur, que o Chrome não leva para a GPU)
+    const leave = away => [{opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'}, {opacity: 0, transform: `translate3d(${away}, 0) scale(.985)`}];
     const rise = [
       {offset: 0, opacity: 0, transform: `translate3d(0, ${g.toolY.toFixed(1)}px, 0)`, easing: EASE.rise},
       {offset: .03, opacity: 1},
@@ -208,6 +313,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
         {offset: 1, opacity: .16, transform: DROP_REST}]},
       // 3 · o fundo acompanha: luz macia atrás do encaixe, cenário recua, vinheta discreta
       {el: g.scenery, delay: 60, duration: 460, easing: EASE.soft, keyframes: [{opacity: 1, transform: 'translate3d(0, 0, 0)'}, {opacity: .3, transform: 'translate3d(0, 12px, 0)'}]},
+      // o desenho atrás da peça desliza com a câmera e fica atrás da peça montada (translate/scale: o transform é da raiz, acima)
+      {el: g.motif, delay: 40, duration: 560, easing: EASE.camera, keyframes: [{translate: '0px 0px', scale: '1'}, {translate: `${(-g.dx).toFixed(1)}px ${(-g.dy).toFixed(1)}px`, scale: Math.min(1.2, 1 / g.s).toFixed(3)}]},
       {el: d.vignette, delay: 80, duration: 460, easing: EASE.soft, keyframes: [{opacity: 0}, {opacity: 1}]},
       {el: d.glow, delay: 80, duration: T.glow, keyframes: [
         {offset: 0, opacity: 0, transform: 'scale(.85)', easing: EASE.soft},
@@ -234,7 +341,52 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       // 5 · 1,12–1,56 s — estabilizado: a ficha técnica nomeia as partes e, logo depois, o convite
       ...labels.map((el, i) => ({el, delay: T.labels + Math.floor(i / 2) * 60, duration: 300, easing: EASE.out,
         keyframes: [{opacity: 0, translate: el.dataset.align === 'below' ? '0 -6px' : '8px 0'}, {opacity: 1, translate: '0 0'}]})),
-      {el: d.cta, delay: T.cta, duration: 340, easing: EASE.out, keyframes: [{opacity: 0, translate: '0 10px', filter: 'blur(3px)'}, {opacity: 1, translate: '0 0', filter: 'blur(0px)'}]}
+      {el: d.cta, delay: T.cta, duration: 340, easing: EASE.out, keyframes: [{opacity: 0, translate: '0 10px'}, {opacity: 1, translate: '0 0'}]}
+    ];
+  }
+
+  // A saída com a peça montada (~0,6 s): cada trilha parte de onde a entrada terminou e volta ao começo dela. A interface some
+  // primeiro (140 ms), a cabeça do equipamento sobe e a base desce acelerando (saem, não "assentam"), e a câmera já começa a levar a
+  // peça de volta à pilastra aos 40 ms, desacelerando até pousar exatamente sobre a foto da vitrine, que reaparece por baixo no fim.
+  function exitTracks(g) {
+    const d = dom, config = configs[index], asm = config.assemble || null, back = d.back.hidden ? null : d.back, cast = d.cast.hidden ? null : d.castImage;
+    const ped = g.slot.querySelector('.ped'), contact = g.slot.querySelector('.piece-shadow');
+    const copy = region.querySelector('.hero-copy'), palette = region.querySelector('.hero-palette'), arrows = [...region.querySelectorAll('.hero-arrow')];
+    const depth = PERSPECTIVE * (1 / g.s - 1), camera = (x, y, z) => `perspective(${PERSPECTIVE}px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)`;
+    const [copyAway, paletteAway] = g.compact ? ['0, -12px', '0, 12px'] : ['-18px, 0', '18px, 0'];
+    // da opacidade de agora: fechada enquanto a ficha técnica ou o convite ainda apareciam, nada pisca antes de sumir
+    const fadeOut = el => ({el, duration: 140, easing: 'ease-out', keyframes: [{opacity: +getComputedStyle(el).opacity}, {opacity: 0}]});
+    const comeBack = (el, delay, duration, from) => ({el, delay, duration, easing: EASE.out, keyframes: [{opacity: 0, transform: from}, {opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'}]});
+    // o deslocamento acelera (EASE.away, por trecho) e a opacidade cai em linha reta desde cedo: com a curva na trilha inteira a
+    // opacidade só chegava ao trecho dela no fim, e o equipamento descia inteiro por cima do texto e do botão que voltavam
+    const down = el => ({el, delay: config.head ? 60 : 0, duration: 260, keyframes: [
+      {offset: 0, opacity: 1, transform: 'translate3d(0, 0, 0)', easing: EASE.away}, {offset: .2, opacity: 1}, {offset: 1, opacity: 0, transform: `translate3d(0, ${g.toolY.toFixed(1)}px, 0)`}]});
+    return [
+      {el: g.source, duration: 600, keyframes: [{visibility: 'hidden'}, {visibility: 'hidden'}]},
+      ...[d.close, d.cta, ...(dom.hint.hidden ? [] : [dom.hint]), ...d.callouts.children].map(fadeOut),
+      // o brilho do estalo (montagem), se ainda atravessa a peça: some onde está
+      ...(asm ? [(s => ({el: d.sheen, duration: 140, easing: 'ease-out', keyframes: [{opacity: +s.opacity, transform: s.transform}, {opacity: 0, transform: s.transform}]}))(getComputedStyle(d.sheen))] : []),
+      ...(config.head ? [{el: d.head, duration: 240, keyframes: [{offset: 0, opacity: 1, transform: 'translate3d(0, 0, 0)', easing: EASE.away}, {offset: .3, opacity: 1}, {offset: 1, opacity: 0, transform: 'translate3d(0, -34%, 0)'}]}] : []),
+      down(d.tool), down(cast),
+      {el: d.shade, duration: 160, easing: 'ease-out', keyframes: [{opacity: .56}, {opacity: 0}]},
+      {el: d.drop, duration: 320, easing: 'ease-out', keyframes: [{opacity: .16, transform: DROP_REST}, {opacity: 0, transform: 'translate3d(0, 0, 0) scale(.92)'}]},
+      {el: d.glow, duration: 420, easing: EASE.soft, keyframes: [{opacity: 1, transform: 'scale(1.02)'}, {opacity: 0, transform: 'scale(.85)'}]},
+      {el: d.vignette, delay: 60, duration: 420, easing: EASE.soft, keyframes: [{opacity: 1}, {opacity: 0}]},
+      // a câmera: de volta à pilastra, com o mesmo leve giro da chegada (ao contrário), e o desenho do fundo junto
+      {el: d.rig, delay: 40, duration: 540, easing: EASE.home, keyframes: [{transform: camera(0, 0, 0)}, {transform: camera(g.dx / g.s, g.dy / g.s, -depth)}]},
+      {el: d.turn, delay: 40, duration: 540, easing: EASE.turn, keyframes: [
+        {transform: 'perspective(1100px) rotateX(0deg) rotateY(0deg)'},
+        {offset: .5, transform: 'perspective(1100px) rotateX(-2deg) rotateY(2.5deg)'},
+        {transform: 'perspective(1100px) rotateX(0deg) rotateY(0deg)'}]},
+      {el: g.motif, delay: 40, duration: 540, easing: EASE.home, keyframes: [{translate: `${(-g.dx).toFixed(1)}px ${(-g.dy).toFixed(1)}px`, scale: Math.min(1.2, 1 / g.s).toFixed(3)}, {translate: '0px 0px', scale: '1'}]},
+      {el: g.scenery, delay: 120, duration: 460, easing: EASE.soft, keyframes: [{opacity: .3, transform: 'translate3d(0, 12px, 0)'}, {opacity: 1, transform: 'translate3d(0, 0, 0)'}]},
+      // as paredes internas somem quando a peça já está quase na pilastra (na montagem, a camada de trás é a outra metade: fica)
+      ...(back && !asm ? [{el: back, delay: 330, duration: 220, easing: 'ease-in', keyframes: [{opacity: 1}, {opacity: 0}]}] : []),
+      {el: d.header, delay: 80, duration: 420, easing: EASE.soft, keyframes: [{opacity: .6}, {opacity: 1}]},
+      comeBack(copy, 260, 320, `translate3d(${copyAway}, 0) scale(.985)`), comeBack(palette, 290, 310, `translate3d(${paletteAway}, 0) scale(.985)`),
+      ...arrows.map(el => comeBack(el, 300, 300, 'scale(.9)')),
+      comeBack(ped, 280, 320, 'translate3d(0, 5%, 0) scale(.965)'),
+      {el: contact, delay: 430, duration: 170, easing: EASE.out, keyframes: [{opacity: 0, transform: 'scale(1.25)'}, {opacity: 1, transform: 'scale(1)'}]}
     ];
   }
 
@@ -246,30 +398,61 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
 
   async function open(i) {
     if (state === 'opening' || state === 'open') return;
-    if (state === 'closing') { timeline.load(tracks(measure()), timeline.time); run('opening'); return; }   // reaberta no meio da saída: volta com a entrada normal
+    if (state === 'closing') { reopen(); return; }
     const ready = prepare(i);
     if (!ready) return;
+    const from = document.activeElement;
+    opener = from !== region && region.contains(from) ? from : null;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
     region.setAttribute('aria-busy', 'true');
-    const loaded = await ready;
+    // with its stylesheet applied (the home loads hero-demo.css after the first paint, late-css.js)
+    const [loaded] = await Promise.all([ready, lateCss]);
     region.removeAttribute('aria-busy');
     if (state !== 'opening') return;
     if (!loaded) { prepared = -1; finish(); status.textContent = 'Não foi possível carregar a demonstração. Tente novamente.'; return; }
+    // aberta pelo teclado com a página rolada (tela baixa, zoom de 200%): a vitrine sobe até aparecer, para o foco não cair fora da tela
+    const top = shell.getBoundingClientRect().top;
+    if (top < 0) scrollTo({top: Math.max(0, scrollY + top), behavior: calm ? 'auto' : 'smooth'});
     show(true);
+    exiting = false;
     timeline.load(tracks(measure()));
     run('opening');
     dom.close.focus({preventScroll: true});
   }
 
+  // reaberta no meio da saída: a saída própria volta de trás para frente até a peça montada; a volta de uma entrada interrompida
+  // retoma a entrada normal do ponto em que estava
+  function reopen() {
+    state = 'opening';
+    if (!exiting) { timeline.load(tracks(measure()), timeline.time); run('opening'); return; }
+    timeline.play(-1.4).then(done => {
+      if (!done || state !== 'opening') return;
+      exiting = false; timeline.load(tracks(measure()), Infinity); settle();
+    });
+  }
+
   function run(next) {
     state = next;
     if (next === 'opening') timeline.play(1).then(done => { if (done && state === 'opening') settle(); });
-    else timeline.play(-CLOSE_RATE).then(done => { if (done && state === 'closing') finish(); });
+    else timeline.play(exiting ? 1 : -Math.max(CLOSE_RATE, timeline.time / REWIND_MS)).then(done => { if (done && state === 'closing') finish(); });
   }
 
   function settle() {
     state = 'open';
     status.textContent = configs[index].message || '';
+    const t = dom.giro;
+    // o giro começa logo depois que o convite aparece (a tira já foi decodificada em prepare(); se ainda não, assim que ficar pronta)
+    t?.decoded.then(ok => {
+      if (!ok || state !== 'open' || dom.giro !== t) return;
+      t.timer = setTimeout(() => {
+        if (state !== 'open') return;
+        playTurn(1, calm ? 260 : 950, calm).then(() => {
+          if (state !== 'open' || !t.turn.hint) return;
+          dom.hint.hidden = false; requestAnimationFrame(() => dom.hint.classList.add('is-shown'));
+          status.textContent = `${configs[index].message || ''} ${t.turn.hint}`.trim();
+        });
+      }, calm ? 200 : 150);
+    });
     if (calm || !finePointer.matches) return;
     float = dom.float.animate([
       {transform: 'perspective(1100px) translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg)'},
@@ -290,20 +473,29 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   function closeDemo({immediate = false} = {}) {
     if (state === 'idle' || (state === 'closing' && !immediate)) return;
     if (immediate || !timeline.animations.length || timeline.time <= 0) { finish(); return; }
-    const time = timeline.time;
+    if (exiting) { run('closing'); return; }   // reaberta no meio da saída e fechada de novo: a saída segue do ponto em que está
+    const time = timeline.time, g = {...measure(), closing: true};   // medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
     stopIdle(false);
-    timeline.load(tracks({...measure(), closing: true}), time);   // saída própria onde precisa (closing); medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
+    if (dom.giro) { if (dom.giro.p > 0) playTurn(0, calm ? 200 : 420, calm); else clearTimeout(dom.giro.timer); }
+    // montada (e com movimento), mesmo que a ficha técnica e o convite ainda estejam entrando: a saída própria, curta; no meio da
+    // montagem (ou com movimento reduzido, só esmaecimentos): a entrada de trás para frente, do ponto em que está
+    exiting = !calm && (state === 'open' || time >= assembled);
+    if (exiting) timeline.load(exitTracks(g));
+    else { dom.hint.classList.remove('is-shown'); timeline.load(tracks(g), time); }
     run('closing');
   }
 
   function finish() {
     const hadFocus = dom?.controls.contains(document.activeElement);
     stopIdle(true);
+    resetTurn();
     timeline.cancel();
     if (dom) show(false);
-    state = 'idle';
+    state = 'idle'; exiting = false;
     onLock(false);
-    if (hadFocus) slots[index]?.focus({preventScroll: true});
+    const back = opener?.isConnected && !opener.closest('[inert]') ? opener : slots[index];
+    opener = null;
+    if (hadFocus) back?.focus({preventScroll: true});
   }
 
   // Desktop, depois da montagem: o conjunto inclina até 2° seguindo o cursor; camadas mais próximas deslocam mais.

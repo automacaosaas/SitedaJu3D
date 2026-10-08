@@ -19,6 +19,20 @@ export function freeShippingBar(freeShipping, subtotalCents) {
   return `<div class="free-ship${progress.reached ? ' is-reached' : ''}"><p>${text}</p><span class="free-ship-track" aria-hidden="true"><i style="--free-ship:${progress.ratio.toFixed(3)}"></i></span></div>`;
 }
 
+// The bar rises: after the cart was drawn again (a piece added from "Complete o kit", a quantity changed), the green fill
+// grows from where it was (`from`, 0–1) to its new value, with a glow on the box and a shine running along the fill.
+// Nothing when it did not grow, or with reduced motion. Browser only.
+export const barRatio = root => { const fill = root?.querySelector('.free-ship-track i'); return fill ? Number(fill.style.getPropertyValue('--free-ship')) || 0 : null; };
+export function riseBar(root, from) {
+  const fill = root?.querySelector('.free-ship-track i'), to = barRatio(root);
+  if (!fill || from === null || from === undefined || !(to > from) || matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  // only transform (movimento 16): the fill keeps its final width and grows from the left, from where it was
+  fill.style.transformOrigin = 'left center';
+  fill.animate([{transform: `scaleX(${(from / to).toFixed(3)})`}, {transform: 'scaleX(1)'}], {duration: 950, delay: 220, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'});
+  const box = fill.closest('.free-ship'); box.classList.remove('is-rising'); void box.offsetWidth; box.classList.add('is-rising');
+  return true;
+}
+
 // The short note for the product: "Frete grátis (PAC) em compras a partir de R$ 500,00".
 export function freeShippingNote(freeShipping) {
   if (!freeShipping?.fromCents) return '';

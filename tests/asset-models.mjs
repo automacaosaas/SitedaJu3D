@@ -6,17 +6,18 @@ registerHooks({resolve(specifier,context,next){return next(specifier==='three'?n
 const T=await import('../dist/vendor/three.module.min.js');
 const {GLTFLoader}=await import('../dist/vendor/loaders/GLTFLoader.js');
 const {PRODUCTS,PALETTE,SOON}=await import('../dist/products.js');
-const {createAssetModel,PRESENTATION_SCALE}=await import('../dist/asset-models.js');
+const {createAssetModel,PRESENTATION_SCALE,modelURL}=await import('../dist/asset-models.js');
 // The native renderer decodes images in browser checks; no image shim affects geometry.
 const originalParse=GLTFLoader.prototype.parseAsync;
 GLTFLoader.prototype.parseAsync=function(...args){this.register(()=>({name:'node-test-no-textures',loadTexture(){return Promise.resolve(null);}}));return originalParse.apply(this,args);};
 const originalFetch=globalThis.fetch;
 globalThis.fetch=async(url,{signal}={})=>{signal?.throwIfAborted();const b=await readFile(url);return new Response(b,{status:200});};
 try{
- for(const key of Object.keys(PRODUCTS)){
+ for(const key of Object.keys(PRODUCTS).filter(key=>PRODUCTS[key].parts.length)){
   const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
-  const expected={borboletoscopio:['body','details','face','eyes'],dinossauroscopio:['body','details','eyes','teeth'],aviaoscopia:['body','details','engines','fixed']}[key];
+  const expected={borboletoscopio:['body','details','face','eyes','cheeks','highlight'],dinossauroscopio:['body','details','eyes','teeth','highlight'],aviaoscopia:['body','details','engines','fixed']}[key];
+  // dinossauroscopio: the Meshy model (05/10/2026) adds the fixed white shine on each eye (highlight), like the monkey
   assert.deepEqual(json.materials.map(m=>m.name).sort(),expected.sort(),'Logical material contract');
   for(const material of json.materials.filter(m=>['body','details','engines'].includes(m.name))){
    assert.equal(material.pbrMetallicRoughness?.baseColorTexture,undefined,'Selected colors never multiply the old color map');
@@ -52,12 +53,17 @@ try{
   }
   model.dispose();console.log(`PASS ${key}: GLB loads, logical materials, no tint multiplication, all ${PALETTE.length} colors and consistent bounds.`);
  }
- // Novelties (SOON) with a 3D preview: fixed colours (nothing selectable), the same fit on the pedestal as the products.
- for(const key of Object.keys(SOON)){
-  const raw=await readFile(new URL(`../dist/assets/models/${key}.glb`,import.meta.url));
+ // The pieces in fixed colours with a 3D preview (the lamps: novelties in SOON until 07/10/2026, now on sale): nothing selectable,
+ // the same fit on the pedestal as the products.
+ // 2026-10-06: the giraffe and the unicorn have their own models (Rodin, tools/modelo-novidades), each in its fixed colours.
+ const NOVELTY_MATERIALS={macacoscopio:['banana','face','features','fur','highlight'],girafoscopio:['coat','features','muzzle','spots'],unicornioscopio:['blue','coat','features','horn','purple']};
+ for(const key of [...Object.keys(PRODUCTS).filter(key=>!PRODUCTS[key].parts.length),...Object.keys(SOON)]){
+  const raw=await readFile(modelURL(key));
   const json=JSON.parse(raw.toString('utf8',20,20+raw.readUInt32LE(12)));
   // The loader reads embedded images through a blob: fetch, which the site's CSP (connect-src) blocks: colours go in the materials.
   assert.equal(json.textures?.length||0,0,`${key}: fixed colours in the materials, no texture`);
+  assert.ok(String(modelURL(key)).includes(`/models/${key}.glb`),`${key}: its own model`);
+  assert.deepEqual(json.materials.map(m=>m.name).sort(),NOVELTY_MATERIALS[key],`${key}: the materials of its colours`);
   const model=await createAssetModel(key,{},new AbortController().signal);
   assert.equal(model.parts.size,0,`${key}: fixed colours, no selectable part`);
   model.group.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model.group);

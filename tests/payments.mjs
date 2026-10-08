@@ -16,8 +16,8 @@ const {createMemoryStore} = require('../api/_lib/store-memory');
 const {createAccounts} = require('../api/_lib/accounts');
 const {createOrders} = require('../api/_lib/orders');
 const {decrypt, maskCpf} = require('../api/_lib/fields');
-const {TERMS_VERSION} = require('../api/_lib/legal');
-const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), health = require('../api/health');
+const {TERMS_VERSION, COMPANY} = require('../api/_lib/legal');
+const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), cancelHandler = require('../api/payments/cancel'), health = require('../api/health');
 const site = f => import(pathToFileURL(path.join(root, 'dist', f)).href);
 const {PRODUCTS: SITE_PRODUCTS, PALETTE} = await site('products.js');
 const {COMMERCE} = await site('commerce-config.js');
@@ -103,14 +103,32 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
 // ── prices come from the server, and only real carts pass ─────────────
 {
   const priced = catalog.priceOrder([{productId: 'borboletoscopio', quantity: 2, selection: {body: 'pink'}, unitPrice: 1, unitCents: 1, price: 1, total: 1}]);
-  assert.equal(priced.lines[0].unitCents, 12900, 'a price sent by the browser is ignored');
-  assert.equal(priced.subtotal, 25800); assert.equal(priced.shipping, 1800); assert.equal(priced.total, 27600);
+  assert.equal(priced.lines[0].unitCents, 26500, 'a price sent by the browser is ignored');
+  assert.equal(priced.subtotal, 53000); assert.equal(priced.shipping, 1800); assert.equal(priced.total, 54800);
+  // the second airplane (and the next ones) in the same order costs R$ 215: the line that holds the first is split in two
+  const planes = catalog.priceOrder([{productId: 'aviaoscopia', quantity: 2, selection: {body: 'blue'}}, {productId: 'borboletoscopio', quantity: 1}, {productId: 'aviaoscopia', quantity: 1, selection: {body: 'red'}}]);
+  assert.deepEqual(planes.lines.map(l => [l.productId, l.quantity, l.unitCents, l.selection.body]), [['aviaoscopia', 1, 28500, 'blue'], ['aviaoscopia', 1, 21500, 'blue'], ['borboletoscopio', 1, 26500, 'mint'], ['aviaoscopia', 1, 21500, 'red']]);
+  assert.equal(planes.subtotal, 28500 + 2 * 21500 + 26500);
+  assert.deepEqual(catalog.applyPixDiscount(planes).lines.map(l => l.chargeUnitCents), [27075, 20425, 25175, 20425], 'Pix: 5% off each real unit price');
+  for (const id of Object.keys(catalog.PRODUCTS)) assert.equal(catalog.PRODUCTS[id].extraPrice, COMMERCE.extraPrices[id], `${id}: the site shows the same quantity price`);
+  // the lamps' kit (07/10/2026): R$ 90 each; mixed, 2 for R$ 160 and 3 for R$ 210, the largest groups first, the rest at full price.
+  // The same table and the same price per unit on the site (cart-store.js priceSegments) and on the server.
+  assert.deepEqual(JSON.parse(JSON.stringify(catalog.KITS)), JSON.parse(JSON.stringify(COMMERCE.kits)), 'the same kits on the site and on the server');
+  for (const kit of Object.values(COMMERCE.kits)) for (const [n, cents] of Object.entries(kit.groups)) assert(Number.isInteger(cents / Number(n)), `a group of ${n} splits into whole cents`);
+  const {totals} = await site('cart-store.js');
+  for (const [items, total] of [[[['girafoscopio', 1]], 9000], [[['girafoscopio', 1], ['macacoscopio', 1]], 16000], [[['girafoscopio', 2], ['unicornioscopio', 1]], 21000], [[['girafoscopio', 4]], 30000], [[['girafoscopio', 3], ['macacoscopio', 2]], 37000], [[['aviaoscopia', 2], ['unicornioscopio', 1], ['girafoscopio', 1]], 28500 + 21500 + 16000]]) {
+    const server = catalog.priceOrder(items.map(([productId, quantity]) => ({productId, quantity})));
+    const site = totals(items.map(([productId, quantity], i) => ({id: String(i), productId, quantity, unitPrice: COMMERCE.prices[productId], selection: {}})), 0);
+    assert.deepEqual([server.subtotal, site.subtotal], [total, total], `kit: ${JSON.stringify(items)}`);
+    assert(server.lines.every(l => Number.isInteger(l.unitCents) && l.unitCents > 0), 'every Mercado Pago item keeps an exact unit price');
+  }
+  assert.equal(catalog.encodeSelection('girafoscopio', {}), 'cores fixas', 'a lamp never sends Mercado Pago an empty description');
   assert.deepEqual(priced.lines[0].selection, {body: 'pink', details: 'yellow'}, 'missing part falls back to the default color');
   assert.deepEqual(catalog.priceOrder([{productId: 'aviaoscopia', quantity: 1, selection: {body: 'neon', details: '__proto__', engines: 'red'}}]).lines[0].selection, {body: 'blue', details: 'red', engines: 'red'}, 'unknown colors fall back to the default');
   for (const bad of [null, [], 'x', {}, [null], [{productId: 'toString', quantity: 1}], [{productId: 'nao-existe', quantity: 1}], [{productId: 'aviaoscopia', quantity: 0}], [{productId: 'aviaoscopia', quantity: 100}], [{productId: 'aviaoscopia', quantity: 1.5}], [{productId: 'aviaoscopia', quantity: '2'}], Array(61).fill({productId: 'aviaoscopia', quantity: 1})]) {
     assert.throws(() => catalog.priceOrder(bad), /invalid_items/, JSON.stringify(bad)?.slice(0, 60));
   }
-  assert.equal(catalog.priceOrder([{productId: 'aviaoscopia', quantity: Number('3')}]).subtotal, 47700);
+  assert.equal(catalog.priceOrder([{productId: 'aviaoscopia', quantity: Number('3')}]).subtotal, 28500 + 2 * 21500, 'three airplanes: the 2nd and 3rd at R$ 215');
   assert.equal(catalog.amount(12900), '129.00'); assert.equal(catalog.amount(5), '0.05'); assert.equal(catalog.fromAmount('129.00'), 12900); assert.equal(catalog.fromAmount('0.1'), 10);
   assert.equal(catalog.encodeSelection('aviaoscopia', {body: 'blue', details: 'red', engines: 'yellow'}), 'body=blue;details=red;engines=yellow');
   assert(catalog.encodeSelection('aviaoscopia', {body: 'blue', details: 'red', engines: 'yellow'}).length <= 100, 'fits the 100-character item description');
@@ -138,13 +156,92 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
   assert.equal(mp.settings({...hostinger, APP_ENV: 'production', MP_MODE: 'test'}).mode, 'test');
   assert.equal(mp.settings(ENV).ownerEmail, 'ju@site.test');
   const res = makeRes(); configHandler.create({env: ENV})({method: 'GET'}, res);
-  assert.deepEqual(res.json(), {mode: 'test', publicKey: 'TEST-public-key-111'}); assert(!res.body.includes('secret-token') && !res.body.includes('whsec'));
+  assert.deepEqual(res.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: null}, 'without a "sem juros" check (the default export has one) the number is unknown'); assert(!res.body.includes('secret-token') && !res.body.includes('whsec'));
   const off = makeRes(); configHandler.create({env: {}})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
   const blocked = makeRes(); configHandler.create({env: {...ENV, VERCEL_ENV: 'production'}})({method: 'GET'}, blocked); assert.deepEqual(blocked.json(), {mode: 'off'}, 'the public key is not even exposed while blocked');
   const post = makeRes(); configHandler.create({env: ENV})({method: 'POST'}, post); assert.equal(post.statusCode, 405);
   const h = makeRes(); await health.create({env: ENV})({}, h);
   assert.deepEqual(h.json().mp, {token: true, publicKey: true, webhookSecret: true}); assert.equal(h.json().payments, 'test'); assert.equal(h.json().orderMail, true);
   for (const secret of SECRETS) assert(!h.body.includes(secret), 'health never prints a secret');
+}
+
+// ── "sem juros": what the Mercado Pago account really gives (2026-10-08) ─
+{
+  const {createInterestFree, REFERENCE_CENTS, KEEP_MS, RETRY_MS} = require('../api/_lib/interest-free');
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  assert.equal(REFERENCE_CENTS, Math.min(...Object.values(COMMERCE.prices)), 'asked for the cheapest piece, a lamp');
+  // A plan is interest-free with rate 0, collected by Mercado Pago, and a total that does not pass the amount.
+  const plan = (installments, extra = {}) => ({installments, installment_rate: 0, installment_rate_collector: ['MERCADOPAGO'], installment_amount: 90 / installments, total_amount: 90, ...extra});
+  const interest = (installments, total) => plan(installments, {installment_rate: Number(((total / 90 - 1) * 100).toFixed(2)), total_amount: total});
+  const card = (costs, extra = {}) => ({payment_method_id: 'master', payment_type_id: 'credit_card', payer_costs: costs, ...extra});
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2), plan(3), interest(4, 95.5), interest(12, 110)])], 9000), 3);
+  assert.equal(mp.interestFreeCount([card([interest(3, 95), plan(2), plan(1)])], 9000), 2, 'in order of installments, whatever order they come in');
+  assert.equal(mp.interestFreeCount([card([plan(1), interest(2, 92.9)])], 9000), 0, 'interest from 2x on: nothing to announce');
+  assert.equal(mp.interestFreeCount([card([plan(1)])], 9000), 0, '1x alone is not "sem juros"');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {installment_rate_collector: ['THIRD_PARTY']})])], 9000), 0, 'rate 0 but the bank\'s own interest');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {total_amount: 110.97})])], 9000), 0, 'a total above the price is interest, whatever the rate says');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2, {installment_rate: undefined})])], 9000), 0, 'no rate: not promised');
+  assert.equal(mp.interestFreeCount([card([plan(1), plan(2), plan(3)]), card([plan(1), plan(2), interest(3, 95)], {payment_method_id: 'visa'})], 9000), 2, 'every card must give it');
+  assert.equal(mp.interestFreeCount([card(Array.from({length: 18}, (_, i) => plan(i + 1)))], 9000), 12, 'never past the 12 the checkout offers');
+  for (const answer of [null, {}, [], [card([])], [card('x')], [card([{installments: 'x'}])], [{payment_type_id: 'debit_card', payer_costs: [plan(1)]}]]) assert.equal(mp.interestFreeCount(answer, 9000), null, `nothing to count: ${JSON.stringify(answer)?.slice(0, 40)}`);
+
+  // Through the simulated account: the reference amount, the two brands, the Access Token, and the answer kept for hours.
+  let clock = 0;
+  const watch = (fake, {fail = false, slow = 0} = {}) => {
+    const calls = [];
+    return {calls, fetchImpl: async (url, init) => { calls.push({url: String(url), auth: init.headers.Authorization}); if (slow) await new Promise(resolve => setTimeout(resolve, slow)); if (fail) throw new Error('offline'); return fake.fetchImpl(url, init); }};
+  };
+  const three = watch(createFakeMercadoPago({interestFree: 3}));
+  const check = createInterestFree({fetchImpl: three.fetchImpl, now: () => clock});
+  assert.equal(await check({}), null, 'payments off: unknown, and nothing is asked');
+  assert.equal(three.calls.length, 0);
+  assert.equal(await check(ENV), 3);
+  assert.deepEqual(three.calls.map(c => c.url).sort(), ['https://api.mercadopago.com/v1/payment_methods/installments?amount=90.00&payment_method_id=master', 'https://api.mercadopago.com/v1/payment_methods/installments?amount=90.00&payment_method_id=visa']);
+  assert(three.calls.every(c => c.auth === `Bearer ${ENV.MP_ACCESS_TOKEN}`), 'asked with the Access Token, on the server');
+  clock += 5 * 60 * 60 * 1000; assert.equal(await check(ENV), 3); assert.equal(three.calls.length, 2, 'kept for hours');
+  clock += 2 * 60 * 60 * 1000; assert.equal(await check(ENV), 3); assert.equal(three.calls.length, 4, 'asked again after 6 hours');
+  assert.equal(await check({...ENV, MP_ACCESS_TOKEN: 'TEST-other-token'}), 3); assert.equal(three.calls.length, 6, 'other credentials, asked again');
+  assert.equal(await createInterestFree({fetchImpl: watch(createFakeMercadoPago()).fetchImpl})(ENV), 0, 'an account that did not turn it on: 0');
+  assert.equal(await createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 6})).fetchImpl})(ENV), 6);
+  // Mercado Pago down: unknown (never an error), asked again after a few minutes.
+  const down = watch(createFakeMercadoPago({interestFree: 3}), {fail: true});
+  const failing = createInterestFree({fetchImpl: down.fetchImpl, now: () => clock});
+  assert.equal(await failing(ENV), null); assert.equal(await failing(ENV), null); assert.equal(down.calls.length, 2, 'not asked again at once');
+  clock += 6 * 60 * 1000; await failing(ENV); assert.equal(down.calls.length, 4, 'asked again after 5 minutes');
+  const refused = createInterestFree({fetchImpl: async () => ({ok: false, status: 401, headers: {get: () => null}, json: async () => ({message: 'invalid credentials'})})});
+  assert.equal(await refused(ENV), null, 'refused credentials: unknown');
+  // A slow answer never holds the request: unknown for now, the number on the next one.
+  const slow = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3}), {slow: 80}).fetchImpl, wait: 10});
+  assert.equal(await slow(ENV), null);
+  await new Promise(resolve => setTimeout(resolve, 150));
+  assert.equal(await slow(ENV), 3);
+  // After the first answer nothing waits on Mercado Pago again (review): an old answer is handed over at once while it is asked
+  // again, and the new one (or null, when Mercado Pago does not answer) serves the next request.
+  let open, asked = 0, held = Promise.resolve(), offline = false, account = createFakeMercadoPago({interestFree: 3});
+  const hold = () => { held = new Promise(resolve => { open = resolve; }); };
+  const settle = () => new Promise(resolve => setTimeout(resolve, 20));
+  const atOnce = promise => Promise.race([promise, new Promise(resolve => setTimeout(resolve, 300, 'waited'))]);
+  const later = createInterestFree({fetchImpl: async (url, init) => { asked++; await held; if (offline) throw new Error('offline'); return account.fetchImpl(url, init); }, now: () => clock, wait: 5000});
+  assert.equal(await later(ENV), 3);
+  account = createFakeMercadoPago(); hold(); clock += KEEP_MS;   // the account turned it off, and Mercado Pago is slow
+  assert.equal(await atOnce(later(ENV)), 3, 'the old answer at once, not a wait on Mercado Pago'); assert.equal(asked, 4);
+  open(); await settle();
+  assert.equal(await later(ENV), 0, 'the new answer on the next request'); assert.equal(asked, 4);
+  offline = true; clock += KEEP_MS; assert.equal(await later(ENV), 0); await settle();
+  assert.equal(await later(ENV), null, 'Mercado Pago did not answer: unknown, never the old number');
+  hold(); clock += RETRY_MS;
+  assert.equal(await atOnce(later(ENV)), null, 'asking again after a failure does not wait either'); assert.equal(asked, 8);
+  open(); await settle();
+
+  // /api/payments/config and /api/health hand over the number, never anything else.
+  const known = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3})).fetchImpl});
+  const cfg = makeRes(); await configHandler.create({env: ENV, interestFree: known})({method: 'GET'}, cfg);
+  assert.deepEqual(cfg.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: 3});
+  const off = makeRes(); await configHandler.create({env: {}, interestFree: known})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
+  const h = makeRes(); await health.create({env: ENV, interestFree: known})({}, h); assert.equal(h.json().interestFree, 3);
+  for (const secret of SECRETS) assert(!h.body.includes(secret) && !cfg.body.includes(secret));
+  const plain = makeRes(); await health.create({env: ENV})({}, plain); assert.equal(plain.json().interestFree, null, 'no check given: unknown, and no network');
+  const quiet = makeRes(); await health.create({env: {}, interestFree: known})({}, quiet); assert(!('interestFree' in quiet.json()), 'payments off: not shown');
 }
 
 // ── Brick data → Orders API ───────────────────────────────────────────
@@ -178,25 +275,25 @@ const priced = catalog.priceOrder(ITEMS);
 {
   // Pix discount: per unit, on the pieces only; card keeps the list price.
   const pix = catalog.applyPixDiscount(priced);
-  assert.deepEqual(pix.lines.map(l => [l.unitCents, l.chargeUnitCents]), [[12900, 12255], [15900, 15105]]);
-  assert.equal(pix.subtotal, priced.subtotal, 'the subtotal keeps the list price'); assert.equal(pix.discount, 2085); assert.equal(pix.shipping, 1800);
-  assert.equal(pix.total, 41415); assert.equal(priced.total, 43500, 'the priced order itself is not changed');
-  for (const [id, cents] of [['borboletoscopio', 645], ['dinossauroscopio', 695], ['aviaoscopia', 795]]) assert.equal(catalog.pixUnitDiscount(catalog.PRODUCTS[id].price), cents, id);
+  assert.deepEqual(pix.lines.map(l => [l.unitCents, l.chargeUnitCents]), [[26500, 25175], [28500, 27075]]);
+  assert.equal(pix.subtotal, priced.subtotal, 'the subtotal keeps the list price'); assert.equal(pix.discount, 4075); assert.equal(pix.shipping, 1800);
+  assert.equal(pix.total, 79225); assert.equal(priced.total, 83300, 'the priced order itself is not changed');
+  for (const [id, cents] of [['borboletoscopio', 1325], ['dinossauroscopio', 1325], ['aviaoscopia', 1425]]) assert.equal(catalog.pixUnitDiscount(catalog.PRODUCTS[id].price), cents, id);
   const free = catalog.applyPixDiscount({...priced, shipping: 0, total: priced.subtotal});
-  assert.equal(free.total, 41700 - 2085, 'with free delivery the total is only the discounted pieces');
+  assert.equal(free.total, 81500 - 4075, 'with free delivery the total is only the discounted pieces');
   const payload = mp.buildOrderPayload({priced: pix, reference: 'JU-PIX', customer: {name: 'Ana Souza', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140071', street: 's', number: '1', district: 'd', city: 'c', state: 'MG'}, notes: '', lang: 'pt-BR', payment: {methodId: 'pix', type: 'bank_transfer'}});
-  assert.equal(payload.total_amount, '414.15');
-  assert.equal(payload.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'items add up to the discounted total');
+  assert.equal(payload.total_amount, '792.25');
+  assert.equal(payload.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 79225, 'items add up to the discounted total');
 }
 const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-0123456789', customer: {name: 'Ana Souza Lima', email: 'ana@example.com', phone: '31999991234'}, address: {cep: '30140-071', street: 'Rua da Bahia', number: '1200', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''}, notes: 'Escrever Ana', lang: 'en', payment});
 {
   const pix = payloadFor(mp.paymentFromBrick(BRICK_PIX));
   assert.equal(pix.type, 'online'); assert.equal(pix.processing_mode, 'automatic'); assert.equal(pix.external_reference, 'JU-0123456789');
-  assert.equal(pix.total_amount, '435.00', '2 x 129 + 159 + 18 delivery'); assert.equal(pix.transactions.payments[0].amount, pix.total_amount);
+  assert.equal(pix.total_amount, '833.00', '2 x 265 + 285 + 18 delivery'); assert.equal(pix.transactions.payments[0].amount, pix.total_amount);
   assert.deepEqual(pix.transactions.payments[0].payment_method, {id: 'pix', type: 'bank_transfer'}); assert.equal(pix.transactions.payments[0].expiration_time, 'PT1H');
   const itemsTotal = pix.items.reduce((sum, item) => sum + Math.round(Number(item.unit_price) * 100) * item.quantity, 0);
-  assert.equal(itemsTotal, 43500, 'the items (delivery included) add up to the total charged');
-  assert.deepEqual(pix.items[0], {title: 'Borboletoscópio', unit_price: '129.00', quantity: 2, description: 'body=pink;details=lilac', external_code: 'borboletoscopio'});
+  assert.equal(itemsTotal, 83300, 'the items (delivery included) add up to the total charged');
+  assert.deepEqual(pix.items[0], {title: 'Borboletoscópio', unit_price: '265.00', quantity: 2, description: 'body=pink;details=lilac', external_code: 'borboletoscopio'});
   assert.deepEqual(pix.items.at(-1), {title: 'Frete', unit_price: '18.00', quantity: 1, description: 'Entrega', external_code: 'shipping'});
   assert.deepEqual(pix.payer, {email: 'ana@example.com', first_name: 'Ana', last_name: 'Souza Lima', entity_type: 'individual', phone: {area_code: '31', number: '999991234'}});
   assert.deepEqual(pix.shipment.address, {zip_code: '30140071', street_name: 'Rua da Bahia', street_number: '1200', neighborhood: 'Centro', city: 'Belo Horizonte', state: 'MG'}, 'empty complement is left out');
@@ -216,7 +313,7 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   const net = fakeNetwork();
   const make = async payment => (await net.fetchImpl('https://api.mercadopago.com/v1/orders', {method: 'POST', headers: {'X-Idempotency-Key': crypto.randomUUID()}, body: JSON.stringify(payloadFor(mp.paymentFromBrick(payment)))})).json();
   const pix = mp.normalizeOrder(await make(BRICK_PIX));
-  assert.equal(pix.state, 'pending_pix'); assert.equal(pix.pix.qrCode, '000201PIXCODE'); assert.equal(pix.pix.qrCodeBase64, 'iVBORw0KGgo='); assert.equal(pix.pix.ticketUrl, 'https://mp.test/ticket'); assert.equal(pix.total, 43500);
+  assert.equal(pix.state, 'pending_pix'); assert.equal(pix.pix.qrCode, '000201PIXCODE'); assert.equal(pix.pix.qrCodeBase64, 'iVBORw0KGgo='); assert.equal(pix.pix.ticketUrl, 'https://mp.test/ticket'); assert.equal(pix.total, 83300);
   assert.equal(mp.normalizeOrder(await make(brickCard())).state, 'approved'); assert.equal(mp.normalizeOrder(await make(brickCard('CONT' + 'c'.repeat(28)))).state, 'in_review'); assert.equal(mp.normalizeOrder(await make(brickCard('REJE' + 'r'.repeat(28)))).state, 'refused');
   assert.equal(mp.normalizeOrder({status: 'expired'}).state, 'expired'); assert.equal(mp.normalizeOrder({status: 'processed', status_detail: 'accredited', transactions: {payments: [{status: 'expired'}]}}).state, 'approved', 'the order status wins');
   assert.equal(mp.normalizeOrder({status: 'action_required', status_detail: 'waiting_capture'}).state, 'in_review', 'anything unknown is never treated as paid');
@@ -224,12 +321,44 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   assert.equal(mp.normalizeOrder({}).state, 'in_review'); assert.equal(mp.normalizeOrder(null).state, 'in_review');
   assert(!JSON.stringify(mp.normalizeOrder(await make(brickCard()))).includes('aaaaaaaa'), 'the card token is not echoed to the browser');
   const paid = mp.summarizeOrder(await make(brickCard()));
-  assert.equal(paid.paid, true); assert.equal(paid.lang, 'en'); assert.equal(paid.notes, 'Escrever Ana'); assert.equal(paid.shipping, 1800); assert.equal(paid.total, 43500);
-  assert.deepEqual(paid.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), [['borboletoscopio', 2, 12900, {body: 'pink', details: 'lilac'}], ['aviaoscopia', 1, 15900, {body: 'black', details: 'red', engines: 'yellow'}]], 'the whole order is rebuilt from Mercado Pago alone');
+  assert.equal(paid.paid, true); assert.equal(paid.lang, 'en'); assert.equal(paid.notes, 'Escrever Ana'); assert.equal(paid.shipping, 1800); assert.equal(paid.total, 83300);
+  assert.deepEqual(paid.items.map(i => [i.productId, i.quantity, i.unitCents, i.selection]), [['borboletoscopio', 2, 26500, {body: 'pink', details: 'lilac'}], ['aviaoscopia', 1, 28500, {body: 'black', details: 'red', engines: 'yellow'}]], 'the whole order is rebuilt from Mercado Pago alone');
   assert.equal(paid.customer.name, 'Ana Souza Lima'); assert.equal(paid.customer.phone, '31999991234'); assert.equal(paid.address.cep, '30140071'); assert.equal(paid.method.installments, 3);
   assert.equal(mp.summarizeOrder(await make(BRICK_PIX)).paid, false);
   const swapped = await make(brickCard()); swapped.payer.email = 'test@testuser.com'; assert.equal(mp.summarizeOrder(swapped).customer.email, 'ana@example.com', 'the address stored in the order wins over the payer address Mercado Pago holds');
   assert.deepEqual(mp.summarizeOrder({items: [{external_code: 'toString', unit_price: '1.00', quantity: 1}, {external_code: 'shipping', unit_price: '9.00', quantity: 1}]}).items, [], 'foreign or forged items are ignored');
+}
+
+// ── before going live (2026-10-07): refusal reasons, cancelled Pix, device id, company payer, signature time ──
+{
+  // Why a card was refused: only known reasons, from the payment's status_detail (or the older cc_rejected_ spelling).
+  const refused = (paymentDetail, detail = 'failed') => mp.normalizeOrder({status: 'failed', status_detail: detail, transactions: {payments: [{status: 'failed', status_detail: paymentDetail, payment_method: {id: 'master', type: 'credit_card'}}]}});
+  assert.equal(refused('insufficient_amount').reason, 'insufficient_amount'); assert.equal(refused('cc_rejected_call_for_authorize').reason, 'call_for_authorize');
+  assert.equal(refused('rejected_high_risk').reason, 'rejected_high_risk', 'the longer name wins over high_risk inside it');
+  assert(!('reason' in refused('<script>')), 'anything else is no reason at all'); assert(!('reason' in mp.normalizeOrder({status: 'processed', status_detail: 'accredited'})), 'only refusals have one');
+  assert.equal(mp.refusalReason('pay_01ABC: bad_filled_card_data'), 'bad_filled_card_data'); assert.equal(mp.refusalReason('not_a_reason_insufficient_amountx'), '');
+  // A cancelled order (a Pix the buyer left) is its own state, not a refused card.
+  assert.equal(mp.normalizeOrder({status: 'canceled', status_detail: 'canceled_transaction', transactions: {payments: [{status: 'canceled', payment_method: {id: 'pix', type: 'bank_transfer'}}]}}).state, 'canceled');
+  // A 402 from POST /v1/orders names the reason in the error details (or carries the order): kept on the error.
+  const error402 = await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', fetchImpl: async () => ({ok: false, status: 402, headers: {get: n => n === 'x-request-id' ? 'req-abc-123' : null}, json: async () => ({errors: [{code: 'failed', message: 'The following transactions failed', details: ['pay_01JX: insufficient_amount']}]})})}).catch(e => e);
+  assert.equal(error402.status, 402); assert.equal(error402.code, 'failed'); assert.equal(error402.reason, 'insufficient_amount'); assert.equal(error402.requestId, 'req-abc-123', "Mercado Pago's x-request-id rides on the error");
+  const withData = await mp.getOrder({settings: mp.settings(ENV), id: 'ORD1', fetchImpl: async () => ({ok: false, status: 402, json: async () => ({errors: [{code: 'failed'}], data: {transactions: {payments: [{status_detail: 'card_disabled'}]}}})})}).catch(e => e);
+  assert.equal(withData.reason, 'card_disabled'); assert.equal(withData.requestId, '', 'no header, no id');
+  // The device id goes as X-meli-session-id when it looks like one.
+  let headers = null; const capture = async (url, init) => { headers = init.headers; return {ok: true, status: 201, json: async () => ({})}; };
+  await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', sessionId: 'armor.7f3e2a.1a2b3c', fetchImpl: capture});
+  assert.equal(headers['X-meli-session-id'], 'armor.7f3e2a.1a2b3c');
+  await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', fetchImpl: capture}); assert(!('X-meli-session-id' in headers), 'none without one');
+  assert.equal(mp.deviceId('armor.7f3e2a.1a2b3c'), 'armor.7f3e2a.1a2b3c'); for (const bad of ['', 'short', 'a b c d e f g h', '<script>alert(1)</script>', 'x'.repeat(300), null, 42]) assert.equal(mp.deviceId(bad), '', `not a device id: ${String(bad).slice(0, 20)}`);
+  // A CNPJ pays as a company.
+  const company = payloadFor({...mp.paymentFromBrick(brickCard()), identification: {type: 'CNPJ', number: '67771044000196'}});
+  assert.equal(company.payer.entity_type, 'association'); assert.deepEqual(company.payer.identification, {type: 'CNPJ', number: '67771044000196'});
+  assert.equal(payloadFor(mp.paymentFromBrick(brickCard())).payer.entity_type, 'individual');
+  // The Orders API's own name for "use a test buyer address".
+  assert.equal(mp.isTestEmailRejection({code: 'invalid_email_for_sandbox', message: 'x'}), true);
+  // When a notice was signed: milliseconds, or seconds in older examples.
+  assert.equal(mp.signatureTime('ts=1742505638683,v1=ab'), 1742505638683); assert.equal(mp.signatureTime('v1=ab, ts=1742505638'), 1742505638000);
+  for (const bad of ['', null, 'ts=abc,v1=1', 'v1=ab', 'ts=1']) assert.equal(mp.signatureTime(bad), null);
 }
 
 // ── webhook signature ─────────────────────────────────────────────────
@@ -304,9 +433,9 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const sent = net.mpCalls.at(-1);
     assert.equal(sent.method, 'POST'); assert.equal(sent.url, 'https://api.mercadopago.com/v1/orders');
     assert.equal(sent.headers.Authorization, `Bearer ${ENV.MP_ACCESS_TOKEN}`); assert.equal(sent.headers['X-Idempotency-Key'], body.attempt);
-    assert.equal(sent.body.total_amount, '414.15', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the pieces, 417.00 − 20.85 + 18.00 delivery)');
-    assert.deepEqual(sent.body.items.map(i => [i.external_code, i.unit_price, i.quantity]), [['borboletoscopio', '122.55', 2], ['aviaoscopia', '151.05', 1], ['shipping', '18.00', 1]], 'Pix items carry the discounted unit price; delivery is not discounted');
-    assert.equal(sent.body.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 41415, 'the items add up to the Pix total');
+    assert.equal(sent.body.total_amount, '792.25', 'the total was recomputed on the server, not taken from the browser (Pix: 5% off the pieces, 815.00 − 40.75 + 18.00 delivery)');
+    assert.deepEqual(sent.body.items.map(i => [i.external_code, i.unit_price, i.quantity]), [['borboletoscopio', '251.75', 2], ['aviaoscopia', '270.75', 1], ['shipping', '18.00', 1]], 'Pix items carry the discounted unit price; delivery is not discounted');
+    assert.equal(sent.body.items.reduce((sum, i) => sum + Math.round(Number(i.unit_price) * 100) * i.quantity, 0), 79225, 'the items add up to the Pix total');
     assert.equal(sent.body.payer.email, 'ana@example.com', 'the payer is the account'); assert.equal(sent.body.payer.first_name, 'Ana'); assert.equal(sent.body.payer.last_name, 'Souza Lima');
     assert.deepEqual(sent.body.payer.identification, {type: 'CPF', number: ana.cpf}, 'Pix carries the CPF from the identification (better approval and fraud checks)');
     assert.equal(sent.body.shipment.address.state, 'MG'); assert.equal(sent.body.shipment.address.zip_code, '30140071');
@@ -316,7 +445,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     // The order is in our database before and after Mercado Pago answers.
     const saved = await store.orders.findByReference(answer.reference);
     assert.equal(saved.customerId, ana.id); assert.equal(saved.status, 'aguardando_pagamento'); assert.equal(saved.paymentState, 'pending_pix'); assert.equal(saved.mpOrderId, answer.id); assert.equal(saved.method, 'pix');
-    assert.equal(saved.subtotalCents, 41700, 'the subtotal stays at list price'); assert.equal(saved.totalCents, 41415, 'the total is what Pix charges'); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 12900], ['aviaoscopia', 1, 15900]]);
+    assert.equal(saved.subtotalCents, 81500, 'the subtotal stays at list price'); assert.equal(saved.totalCents, 79225, 'the total is what Pix charges'); assert.deepEqual(saved.items.map(i => [i.productId, i.quantity, i.unitCents]), [['borboletoscopio', 2, 26500], ['aviaoscopia', 1, 28500]]);
     assert.deepEqual(saved.items[0].selection, {body: 'pink', details: 'lilac'}, 'the colors of each part are recorded');
     assert.equal(saved.shipTo.recipient, 'Ana Souza Lima'); assert.equal(saved.buyer.name, 'Ana Souza Lima'); assert.equal(saved.buyer.email, 'ana@example.com');
     assert.equal(saved.termsVersion, TERMS_VERSION, 'the order records which Termos the buyer accepted'); assert.ok(saved.termsAcceptedAt);
@@ -336,6 +465,10 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     await settled(); assert.equal(paidOrder.status, 'pendente', 'an approved card is a paid order for Ju right away'); assert.ok(paidOrder.paidAt); assert.equal(paidOrder.installments, 3);
     assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ana@example.com', 'ju@site.test'], 'and Ju and the buyer are told at once');
     assert.equal(net.mails.find(m => m.to[0] === 'ju@site.test').headers['Idempotency-Key'], `order-owner-${paidOrder.id}`);
+    // "Responder" (2026-10-08): on Ju's notice it writes to the buyer; on the buyer's receipt, to the shop's public e-mail.
+    assert.equal(net.mails.find(m => m.to[0] === 'ju@site.test').reply_to, 'ana@example.com', 'Ju answers the buyer straight from the notice');
+    assert.equal(net.mails.find(m => m.to[0] === 'ana@example.com').reply_to, COMPANY.email, 'the buyer\'s answer reaches the shop (MAIL_REPLY_TO empty)');
+    assert(net.mails.every(m => m.from === 'Ju <pedidos@site.test>'), 'the sender stays MAIL_FROM');
     const notified = await store.orders.findById(paidOrder.id); assert.ok(notified.ownerNotifiedAt && notified.customerNotifiedAt);
     const cardCall = net.mpCalls.at(-1).body.transactions.payments[0];
     assert.equal(cardCall.payment_method.installments, 3); assert.equal(cardCall.payment_method.token.length, 32); assert(!card.body.includes('aaaaaaaa'), 'the card token stays on the server');
@@ -358,6 +491,14 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const liveStore = createMemoryStore(), liveAna = await signedInBuyer(liveStore, {env: LIVE});
     const live = await call(createHandler.create({waitUntil, env: LIVE, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store: liveStore}), {body: request(), ...as(liveAna)});
     assert.equal(live.statusCode, 422); assert(!('detail' in live.json()), 'live mode never leaks the provider message (it can quote the customer\'s data)');
+    assert(errors.lines.at(-1).startsWith('payments/create: Mercado Pago answered 422 invalid_payer · JU-') && !errors.lines.at(-1).includes('ana@example.com'), 'nor writes it to the log (reference and request id only)');
+    assert(errors.lines.some(l => l.includes('simulated failure with payer')), 'test mode logs it, to find problems');
+    // The same attempt sent again with a new card token after a timeout: Mercado Pago says the key was used. The first
+    // charge may exist, so this is not a refusal: the order stays open (webhook or status settle it) and the browser
+    // keeps the attempt (5xx), never a second charge.
+    const reusedBody = request(), reused = await call(createHandler.create({waitUntil, env: ENV, fetchImpl: async (url, init) => String(url).startsWith('https://api.mercadopago.com') ? {ok: false, status: 409, json: async () => ({errors: [{code: 'idempotency_key_already_used', message: 'key used'}]})} : net.fetchImpl(url, init), store}), {body: reusedBody, ...as(caio)});
+    assert.equal(reused.statusCode, 502); assert.equal(reused.json().error, 'provider_unavailable');
+    assert.equal((await store.orders.findByReference(mp.referenceFor(reusedBody.attempt))).status, 'aguardando_pagamento');
     for (const status of [401, 403, 404, 424, 429, 500, 503]) { const res = await call(createHandler.create({waitUntil, env: ENV, fetchImpl: fakeNetwork({mpStatus: status}).fetchImpl, store}), {body: request(), ...as(bia)}); assert.equal(res.statusCode, 502, `MP ${status} → 502`); assert.equal(res.json().error, 'provider_unavailable'); }
     assert.equal((await call(createHandler.create({waitUntil, env: ENV, fetchImpl: async () => { throw new Error('socket hang up'); }, store}), {body: request(), ...as(bia)})).statusCode, 502, 'a network failure is reported as 502');
 
@@ -456,6 +597,62 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   } finally { quiet.restore(); }
 }
 
+// ── against the simulator (tools/fake-mercadopago.cjs): refusal reasons, device id, POST /api/payments/cancel ──
+{
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  const fake = createFakeMercadoPago(), net = fakeNetwork(), store = createMemoryStore();
+  const fetchImpl = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? fake.fetchImpl(url, init) : net.fetchImpl(url, init);
+  const ana = await signedInBuyer(store), bia = await signedInBuyer(store, {email: 'bia@example.com'});
+  const create = createHandler.create({waitUntil, env: ENV, fetchImpl, store}), cancel = cancelHandler.create({waitUntil, env: ENV, fetchImpl, store});
+  const leave = (id, buyer = ana, opts = {}) => call(cancel, {body: {id}, ...(buyer ? as(buyer) : {}), ...opts});
+  const errors = spyErrors();
+  try {
+    // A refused card (402 "failed"): the buyer hears why, the order ends, the log has our reference and Mercado Pago's request id.
+    const fund = await call(create, {body: request({payment: brickCard('FUND' + 'f'.repeat(28))}), ...as(ana)});
+    assert.equal(fund.statusCode, 422); assert.equal(fund.json().error, 'payment_rejected'); assert.equal(fund.json().reason, 'insufficient_amount');
+    assert(errors.lines.some(l => /payments\/create: Mercado Pago answered 402 failed · JU-[0-9A-F]{10} · x-request-id fake-req-\d+ · insufficient_amount/.test(l)), 'reference, request id and reason in the log');
+    assert.equal((await call(create, {body: request({payment: brickCard('CALL' + 'c'.repeat(28))}), ...as(ana)})).json().reason, 'required_call_for_authorize');
+    assert.equal((await call(create, {body: request({payment: brickCard('OTHE' + 'o'.repeat(28))}), ...as(ana)})).json().reason, 'rejected_by_issuer');
+    // The device id from security.js reaches Mercado Pago; a malformed one is dropped, and the payment still goes.
+    const withDevice = await call(create, {body: request({payment: brickCard(), deviceId: 'armor.0a1b2c3d4e5f.66'}), ...as(ana)});
+    assert.equal(withDevice.json().state, 'approved'); assert.equal(fake.deviceIds.get(withDevice.json().id), 'armor.0a1b2c3d4e5f.66');
+    const badDevice = await call(create, {body: request({payment: brickCard(), deviceId: '<img src=x>'}), ...as(ana)});
+    assert.equal(badDevice.statusCode, 201); assert.equal(fake.deviceIds.get(badDevice.json().id), null);
+
+    // "Gerar novo código" / leaving a waiting Pix cancels the old code at Mercado Pago: it can no longer be paid.
+    const first = (await call(create, {body: request(), ...as(ana)})).json();
+    assert.equal(first.state, 'pending_pix');
+    assert.equal((await leave(first.id, null)).statusCode, 401, 'needs the session');
+    assert.equal((await leave(first.id, bia)).statusCode, 404, "nobody cancels someone else's Pix");
+    assert.equal((await leave(first.id, ana, {origin: 'https://evil.example'})).statusCode, 403, 'only from the site');
+    assert.equal((await leave('../x')).statusCode, 400); assert.equal((await call(cancel, {method: 'GET', ...as(ana)})).statusCode, 405);
+    const left = await leave(first.id);
+    assert.equal(left.statusCode, 200); assert.deepEqual(left.json(), {reference: first.reference, state: 'canceled'});
+    assert.equal(fake.orders.get(first.id).status, 'canceled', 'cancelled at Mercado Pago'); assert.equal(await fake.pay(first.id), false, 'so the old QR code cannot be paid');
+    assert.equal((await store.orders.findByMpId(first.id)).status, 'cancelado', 'and our order ends (hidden from "Meus pedidos")');
+    assert.equal((await leave(first.id)).json().state, 'canceled', 'leaving twice is harmless');
+    // Paid a moment before leaving: never cancelled, recorded as paid, and the checkout shows the confirmation.
+    const second = (await call(create, {body: request(), ...as(ana)})).json();
+    await fake.pay(second.id);
+    const late = await leave(second.id);
+    assert.equal(late.json().state, 'approved'); assert.equal(fake.orders.get(second.id).status, 'processed');
+    await settled(); assert.equal((await store.orders.findByMpId(second.id)).status, 'pendente');
+    assert(net.mails.some(m => m.to[0] === 'ju@site.test' && m.subject.includes(second.reference)), 'Ju hears about it');
+    // Mercado Pago down: the buyer is told to try again (the old code is still alive, so nothing new is made).
+    const third = (await call(create, {body: request(), ...as(ana)})).json();
+    const down = cancelHandler.create({env: ENV, fetchImpl: (url, init) => String(url).includes('/cancel') ? Promise.resolve({ok: false, status: 500, json: async () => ({})}) : fetchImpl(url, init), store});
+    assert.equal((await call(down, {body: {id: third.id}, ...as(ana)})).statusCode, 502);
+    assert.equal((await store.orders.findByMpId(third.id)).status, 'aguardando_pagamento');
+    assert.equal((await call(cancelHandler.create({env: {SITE_URL: SITE}, fetchImpl, store}), {body: {id: third.id}, ...as(ana)})).statusCode, 503, 'payments off');
+  } finally { errors.restore(); }
+  // The status check carries the reason of a card refused after review.
+  const caio = await signedInBuyer(store, {email: 'caio@example.com'});   // Ana used her 8 attempts of ten minutes above
+  const review = (await call(create, {body: request({payment: brickCard('CONT' + 'r'.repeat(28))}), ...as(caio)})).json();
+  Object.assign(fake.orders.get(review.id), {status: 'failed', status_detail: 'failed'}); Object.assign(fake.orders.get(review.id).transactions.payments[0], {status: 'failed', status_detail: 'high_risk'});
+  const checked = await call(statusHandler.create({waitUntil, env: ENV, fetchImpl, store}), {method: 'GET', origin: '', url: '/api/payments/status?id=' + review.id, ...as(caio)});
+  assert.equal(checked.json().state, 'refused'); assert.equal(checked.json().reason, 'high_risk');
+}
+
 // ── POST /api/payments/webhook ────────────────────────────────────────
 {
   const build = async (extra = {}, envOver = {}) => {
@@ -467,8 +664,8 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const {net, store, buyer, handler, create} = await build();
     const card = (await call(create, {body: request({payment: brickCard()}), ...as(buyer)})).json(), pix = (await call(create, {body: request(), ...as(buyer)})).json(); await settled();
     assert.equal(net.mails.length, 2, 'the approved card already told Ju and the buyer');
-    assert.equal((await store.orders.findByMpId(card.id)).totalCents, 43500, 'card pays the list price (no Pix discount)');
-    assert.equal((await store.orders.findByMpId(pix.id)).totalCents, 41415, 'Pix pays 5% less on the pieces');
+    assert.equal((await store.orders.findByMpId(card.id)).totalCents, 83300, 'card pays the list price (no Pix discount)');
+    assert.equal((await store.orders.findByMpId(pix.id)).totalCents, 79225, 'Pix pays 5% less on the pieces');
     assert(!net.mails.at(-1).html.includes('Pix (5%)'), 'no discount line on a card receipt');
     assert.equal((await call(handler, {method: 'GET', origin: ''})).statusCode, 405);
     assert.equal((await notify(handler, pix.id, {signature: 'ts=1,v1=' + '0'.repeat(64)})).statusCode, 401, 'wrong signature');
@@ -480,7 +677,7 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(first.statusCode, 200); assert.deepEqual(first.json(), {ok: true, paid: true, sent: {owner: true, customer: true}});
     assert.equal(net.mails.length, 2, 'a notice about an order already recorded as paid sends nothing new');
     const [owner, customer] = [net.mails.find(m => m.to[0] === 'ju@site.test'), net.mails.find(m => m.to[0] === 'ana@example.com')];
-    assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('435,00'));
+    assert(owner.subject.startsWith('[TESTE] Novo pedido pago · JU-')); assert(owner.subject.includes('R$') && owner.subject.includes('833,00'));
     assert(owner.html.includes('Borboletoscópio') && owner.html.includes('Rosa Ju') && owner.html.includes('Lilás') && owner.html.includes('Preto') && owner.html.includes('Aviãoscopia'), 'Ju sees the pieces and the chosen colors');
     assert(owner.html.includes('Rua da Bahia, 1200') && owner.html.includes('30140-071') && owner.html.includes('wa.me/5531999991234') && owner.html.includes('ana@example.com'), 'and where to send it and how to reach the customer');
     assert(owner.html.includes('NOTA FISCAL') && owner.html.includes(`CPF ${maskCpf(buyer.cpf)}`) && !owner.html.includes(buyer.cpf) && !owner.text.includes(buyer.cpf), 'invoice data for Ju, CPF masked (the full number stays in the panel)');
@@ -505,8 +702,38 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(tampered.status, 'aguardando_pagamento', 'a different amount is not a payment of this order');
     assert((await store.orders.events(tampered.id)).some(e => e.kind === 'payment_mismatch'));
 
-    assert.equal((await notify(handler, 'ORD01DOESNOTEXIST999')).statusCode, 500, 'Mercado Pago cannot find it → 5xx so it retries later');
+    // A card in 6x with interest (2026-10-08): whether Mercado Pago keeps total_amount as asked and puts the interest in
+    // paid_amount (the documented way) or raises total_amount by it, the order is paid, at our price.
+    for (const raised of [false, true]) {
+      const six = (await call(create, {body: request({payment: brickCard('CONT' + 'j'.repeat(28), {installments: 6})}), ...as(buyer)})).json();
+      assert.equal(six.state, 'in_review');
+      const remote = net.orders.get(six.id), withInterest = (Number(remote.total_amount) * 1.1612).toFixed(2);
+      Object.assign(remote, raised ? {total_amount: withInterest, total_paid_amount: withInterest} : {total_paid_amount: withInterest});
+      remote.transactions.payments[0].paid_amount = withInterest;
+      net.pay(six.id); await notify(handler, six.id);
+      const ours = await store.orders.findByMpId(six.id);
+      assert.equal(ours.status, 'pendente', raised ? 'total raised by the interest: paid' : 'interest only in paid_amount: paid');
+      assert.equal(ours.totalCents, 83300, 'the order keeps the price'); assert.equal(ours.installments, 6);
+      const kinds = (await store.orders.events(ours.id)).map(e => e.kind);
+      assert(!kinds.includes('payment_mismatch')); assert.equal(kinds.includes('card_interest'), raised, 'the interest is noted when the total carried it');
+    }
+
+    // What can never be one of our orders answers 200, so Mercado Pago stops retrying (2026-10-07).
+    const unknown = await notify(handler, 'ORD01DOESNOTEXIST999');
+    assert.equal(unknown.statusCode, 200, 'an order Mercado Pago does not know (the panel\'s "Simular notificação") is not retried forever'); assert.equal(unknown.json().ignored, 'not_found');
     assert.equal((await notify(handler, 'x/../y', {signature: sign({id: 'x/../y'})})).json().ignored, 'not_an_order');
+    const calls = net.mpCalls.length;
+    assert.equal((await notify(handler, '123456789012', {signature: sign({id: '123456789012'})})).json().ignored, 'not_an_order', 'a payment id (Payments API) is not an order');
+    const payment = await call(handler, {origin: '', url: '/api/payments/webhook?data.id=123456789012&type=payment', body: {type: 'payment', data: {id: '123456789012'}}, headers: {'x-signature': 'ts=1,v1=' + '0'.repeat(64)}});
+    assert.equal(payment.statusCode, 200); assert.equal(payment.json().ignored, 'topic', 'another topic ticked in the panel is acknowledged and ignored');
+    assert.equal((await call(handler, {origin: '', url: '/api/payments/webhook?id=9&topic=merchant_order', body: {}})).json().ignored, 'topic', 'the old IPN form too');
+    assert.equal(net.mpCalls.length, calls, 'none of them asked Mercado Pago anything');
+    // A notice signed long ago (a replay) is refused like a forged one; one signed a moment ago, or in seconds, passes.
+    const old = await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Date.now() - 16 * 60 * 1000)})});
+    assert.equal(old.statusCode, 401); assert.equal(old.json().error, 'stale_signature');
+    assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Date.now() + 10 * 60 * 1000)})})).statusCode, 401, 'nor one from the future');
+    assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Math.floor(Date.now() / 1000) - 60)})})).statusCode, 200, 'ts in seconds, a minute ago');
+    assert(errors.lines.some(l => l.includes('older than 15 minutes')), 'the refusal says why');
     net.orders.get(card.id).external_reference = 'OUTRA-LOJA'; const before = net.mails.length;
     assert.equal((await notify(handler, card.id)).json().ignored, 'not_ours'); assert.equal(net.mails.length, before, 'orders from elsewhere are ignored');
     net.orders.get(card.id).external_reference = 'JU-NAOEXISTE'; assert.equal((await notify(handler, card.id)).json().ignored, 'unknown_order', 'ours by prefix but not in the database');
@@ -518,6 +745,13 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   try {
     const noSecret = await build({}, {MP_WEBHOOK_SECRET: ''}); assert.equal((await notify(noSecret.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 503, 'no webhook secret → refuses');
     assert.equal((await call(webhookHandler.create({env: {}, fetchImpl: noSecret.net.fetchImpl}), {origin: '', url: '/x?data.id=ORD01ABCDEFGHIJKLM', body: {}})).statusCode, 503, 'payments off');
+    // No database (production without one): 503, so Mercado Pago sends it again instead of the notice being lost.
+    const noDb = await notify(webhookHandler.create({env: LIVE, fetchImpl: noSecret.net.fetchImpl}), 'ORD01ABCDEFGHIJKLM');
+    assert.equal(noDb.statusCode, 503); assert.equal(noDb.json().error, 'accounts_unavailable'); assert.equal(noSecret.net.mpCalls.length, 0, 'before asking Mercado Pago');
+    // Mercado Pago itself not answering: 5xx, so it retries later; the log names its x-request-id, never a body.
+    const down = await build({mpStatus: 500});
+    assert.equal((await notify(down.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 500);
+    assert(quiet.lines.some(l => l.includes('could not read ORD01ABCDEFGHIJKLM') && l.includes('x-request-id')));
     const ownerDown = await build({resendFailFor: 'ju@site.test'}); const paid = (await call(ownerDown.create, {body: request({payment: brickCard()}), ...as(ownerDown.buyer)})).json();
     assert.equal((await ownerDown.store.orders.findByMpId(paid.id)).status, 'pendente', 'the paid order is saved even when the e-mail fails');
     assert.equal((await notify(ownerDown.handler, paid.id)).statusCode, 500, 'Ju\'s e-mail still failing → 500 so Mercado Pago calls again');
@@ -560,12 +794,42 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert(owner.html.includes('wa.me/5531999991234'));
 }
 
+// ── what Mercado Pago charged against what we asked (2026-10-08) ──────
+{
+  const store = createMemoryStore(), orders = createOrders({store, env: ENV});
+  let serial = 0;
+  const settle = async (total, method, totalCents = 9000) => {
+    const {order} = await store.orders.create({id: crypto.randomUUID(), reference: `JU-JUROS${++serial}`, customerId: 'c1', source: 'test', status: 'aguardando_pagamento', subtotalCents: totalCents, shippingCents: 0, totalCents, buyer: {name: 'Ana Souza', email: 'ana@example.com'}, items: []});
+    const {order: after, newlyPaid} = await orders.applyPayment(order, {id: `ORD01JUROS${serial}`, reference: order.reference, state: 'approved', total, method});
+    return {after, newlyPaid, events: (await store.orders.events(order.id)).map(e => [e.kind, e.detail])};
+  };
+  const credit = installments => ({id: 'master', type: 'credit_card', installments});
+  // The documented way: total_amount stays what we asked (the interest goes to paid_amount). Paid, nothing else to say.
+  let r = await settle(9000, credit(6));
+  assert.equal(r.after.status, 'pendente'); assert(r.newlyPaid); assert(!r.events.some(([kind]) => kind === 'payment_mismatch' || kind === 'card_interest'));
+  // A total raised by the interest the buyer chose: paid too; the order keeps the price, the interest is noted.
+  r = await settle(10612, credit(6));
+  assert.equal(r.after.status, 'pendente'); assert.equal(r.after.totalCents, 9000, 'the interest is Mercado Pago\'s financing, not the shop\'s sale');
+  assert.deepEqual(r.events.find(([kind]) => kind === 'card_interest'), ['card_interest', '6x · 1612']);
+  assert.equal((await settle(14400, credit(12))).after.status, 'pendente', '12x at the highest rates (+60%)');
+  // Never: less, a larger total without installments (1x, Pix, debit), or far beyond any interest.
+  for (const [total, method, why] of [[8999, credit(6), 'one cent less'], [100, credit(3), 'much less'], [9500, credit(1), 'a card in 1x has no interest'], [9500, {id: 'master', type: 'credit_card'}, 'no installments said: 1x'],
+    [9500, {id: 'pix', type: 'bank_transfer'}, 'Pix has no interest'], [9500, {id: 'debelo', type: 'debit_card', installments: 3}, 'nor debit'], [14401, credit(12), 'beyond +60%'], [NaN, credit(6), 'no total at all']]) {
+    r = await settle(total, method);
+    assert.equal(r.after.status, 'aguardando_pagamento', why); assert(!r.newlyPaid, why); assert(r.events.some(([kind]) => kind === 'payment_mismatch'), `${why}: recorded`);
+  }
+}
+
 // ── browser module: configuration, messages, safe values ──────────────
 {
   const client = await site('live-payment.js');
   const cfg = (response, options) => client.loadPaymentConfig({fetchImpl: async () => response, ...options});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc'})}), {mode: 'test', publicKey: 'TEST-abc'});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'live', publicKey: 'APP_USR-x', token: 'must-not-leak'})}), {mode: 'live', publicKey: 'APP_USR-x'}, 'only mode and the public key are kept');
+  // the installments the account gives without interest, only when the server knows it
+  assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 3})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 3});
+  assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 0})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 0});
+  for (const odd of [null, '3', 2.5, -1, 99]) assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: odd})}), {mode: 'test', publicKey: 'TEST-abc'}, `unknown: ${odd}`);
   for (const bad of [{ok: false}, {ok: true, json: async () => ({mode: 'off'})}, {ok: true, json: async () => ({mode: 'test'})}, {ok: true, json: async () => ({mode: 'weird', publicKey: 'k'})}, {ok: true, json: async () => ({mode: 'test', publicKey: 42})}, {ok: true, json: async () => { throw new Error('not json'); }}]) assert.deepEqual(await cfg(bad), {mode: 'off'}, 'anything unexpected keeps the demo');
   assert.deepEqual(await client.loadPaymentConfig({fetchImpl: async () => { throw new Error('offline'); }}), {mode: 'off'}, 'offline / no API (static hosting) keeps the demo');
   assert.deepEqual(await client.loadPaymentConfig({timeout: 30, fetchImpl: (url, {signal}) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))}), {mode: 'off'}, 'a hanging API cannot freeze the checkout');
@@ -574,8 +838,57 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   const said = (status, data) => client.paymentMessage(status, data);
   assert(/entrega/.test(said(400, {error: 'invalid_request', field: 'cep'}))); assert(/cartão/.test(said(400, {error: 'invalid_card'}))); assert(/Muitas tentativas/.test(said(429, {error: 'too_many_requests'}))); assert(/não foi aceito/.test(said(422, {error: 'payment_rejected'})));
   assert(/Se tiver certeza de que não houve cobrança/.test(said(502, {error: 'provider_unavailable'})) && /Se tiver certeza/.test(said(0, null)), 'an unclear outcome never promises that nothing was charged');
+  // Every refusal reason the server passes on has its own sentence, translated; anything else gets the general one.
+  const {translate} = await site('i18n-core.js');
+  for (const reason of mp.REFUSAL_REASONS) {
+    const text = client.refusalMessage(reason);
+    assert.notEqual(text, client.refusedMessage(), `a sentence for ${reason}`); assert(!text.includes(reason), 'never the code itself');
+    for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${lang}: ${text}`);
+  }
+  for (const odd of ['', undefined, 'toString', '__proto__', 'whatever']) assert.equal(client.refusalMessage(odd), client.refusedMessage());
+  assert.equal(said(422, {error: 'payment_rejected', reason: 'insufficient_amount'}), client.refusalMessage('insufficient_amount'), 'a 402 refusal is explained too');
+  assert.equal(client.refusalMessage('cc_rejected_insufficient_amount'), client.refusedMessage(), 'the browser only knows what the server normalized');
+  // The attempt id survives only an unknown outcome (no answer, 5xx): then the retry cannot charge twice.
+  for (const status of [0, undefined, 500, 502, 503, 504]) assert.equal(client.keepAttempt(status), true, `keep after ${status}`);
+  for (const status of [201, 400, 401, 403, 409, 422, 429]) assert.equal(client.keepAttempt(status), false, `new attempt after ${status}`);
+  // security.js: an external script with view="checkout", never waited for; the id only when it looks like one.
+  {
+    const added = [], doc = {createElement: () => ({attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }}), head: {append: s => added.push(s)}};
+    const blocked = {}; const failing = client.loadDeviceId({doc, win: blocked, timeout: 50});
+    added[0].onerror(); assert.equal(await failing, '', 'blocked: the payment goes without it');
+    const win = {}; const loading = client.loadDeviceId({doc, win, timeout: 2000});
+    const script = added[1];
+    assert.equal(script.src, 'https://www.mercadopago.com/v2/security.js'); assert.equal(script.attrs.view, 'checkout'); assert.equal(script.async, true);
+    win.MP_DEVICE_SESSION_ID = 'armor.12ab34cd56ef.7890'; script.onload();
+    assert.equal(await loading, 'armor.12ab34cd56ef.7890');
+    assert.equal(await client.loadDeviceId({doc, win}), 'armor.12ab34cd56ef.7890'); assert.equal(added.length, 2, 'loaded once');
+    assert.equal(client.currentDeviceId({MP_DEVICE_SESSION_ID: '<img src=x onerror=1>'}), ''); assert.equal(client.currentDeviceId({}), '');
+  }
   assert.equal(client.safeBase64('iVBORw0KGgo='), 'iVBORw0KGgo='); for (const hostile of ['"><script>', 'a b', 'data:x', '', null, undefined, 'x'.repeat(30000)]) assert.equal(client.safeBase64(hostile), '', 'only clean base64 reaches the page');
   assert.equal(client.parseExpiry('2030-01-01T10:00:00.000-03:00', 0), Date.parse('2030-01-01T13:00:00.000Z')); assert.equal(client.parseExpiry('yesterday', 1000), 1000 + 3600000); assert.equal(client.parseExpiry('2000-01-01T00:00:00Z', 5e12), 5e12 + 3600000, 'a date in the past falls back to one hour'); assert.equal(client.parseExpiry(null, 0), 3600000);
 }
 
-console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped.');
+// ── GET /api/payments/methods: the account's own payment methods, for the cart's marks (2026-10-05) ──
+{
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  const methodsHandler = require('../api/payments/methods');
+  const fake = createFakeMercadoPago();
+  let calls = 0, clock = 0;
+  const counted = (url, init) => { calls++; return fake.fetchImpl(url, init); };
+  const handler = methodsHandler.create({env: ENV, fetchImpl: counted, now: () => clock});
+  const res = makeRes(); await handler({method: 'GET'}, res);
+  const {methods} = res.json();
+  assert.deepEqual(methods.map(m => m.id), ['pix', 'visa', 'master', 'elo', 'amex', 'hipercard', 'debelo'], 'Pix and the cards only (no boleto, no lottery)');
+  assert.deepEqual([...new Set(methods.map(m => m.type))], ['bank_transfer', 'credit_card', 'debit_card']);
+  assert.doesNotMatch(res.body, /TEST-secret-token/, 'the Access Token never leaves the server');
+  await handler({method: 'GET'}, makeRes()); assert.equal(calls, 1, 'kept for 6 hours');
+  clock += 7 * 60 * 60 * 1000; await handler({method: 'GET'}, makeRes()); assert.equal(calls, 2, 'asked again after 6 hours');
+  const off = makeRes(); await methodsHandler.create({env: {}, fetchImpl: counted})({method: 'GET'}, off); assert.deepEqual(off.json(), {methods: null}, 'payments off: nothing to ask');
+  const down = makeRes(); await methodsHandler.create({env: ENV, fetchImpl: async () => ({ok: false, status: 500, json: async () => ({})})})({method: 'GET'}, down);
+  assert.deepEqual(down.json(), {methods: null}, 'Mercado Pago down: the cart keeps its usual marks');
+  const post = makeRes(); await handler({method: 'POST'}, post); assert.equal(post.statusCode, 405);
+  const pictures = await mp.paymentMethods({settings: mp.settings(ENV), fetchImpl: async () => ({ok: true, json: async () => [{id: 'x', name: 'X', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: 'https://evil.example/x.png'}, {id: 'y', name: 'Y', payment_type_id: 'credit_card', status: 'inactive'}]})});
+  assert.deepEqual(pictures, [{id: 'x', name: 'X', type: 'credit_card', thumbnail: ''}], 'only active methods; pictures only from Mercado Pago hosts');
+}
+
+console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped; before going live: refusal reasons in Portuguese, device id as X-meli-session-id, the webhook ignoring other topics and unknown orders, 503 without a database, stale signatures refused, a waiting Pix cancelled (POST /api/payments/cancel), one attempt until a definite answer, logs with the reference and x-request-id only.');

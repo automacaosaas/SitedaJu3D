@@ -11,7 +11,7 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 - **O caminho de um pedido**, uma aba para cada etapa:
   1. **Pendentes:** pago, esperando a Ju. **Confirmar pedido** (pede confirmação) ou **Recusar pedido**.
   2. **Pronto para envio:** ao confirmar, a nota fiscal sai na hora pelo Bling e o cliente recebe o e-mail de pedido confirmado
-     e o da nota (PDF e XML). Quando a Ju postar nos Correios, digita o **código de rastreio** (AA123456789BR) no pedido.
+     e o da nota (PDF e XML). Quando a Ju postar nos Correios, digita o **código de rastreio** (AA123456785BR) no pedido.
   3. **Enviados:** o pedido com o rastreio. Dá para corrigir o código. **Concluir pedido** (pede confirmação) manda ao cliente o
      e-mail "Pedido enviado" com o código e um botão que abre **Meus pedidos** no site, onde o código também aparece.
   4. **Concluídos** e **Recusados** (motivo opcional, visto só pela equipe; o motivo nunca vai no e-mail).
@@ -31,7 +31,8 @@ Hostinger), os mesmos que o checkout grava. Nada fica guardado no navegador.
 
 ## Fluxo de caixa
 
-No topo do painel há duas partes: **Pedidos** e **Fluxo de caixa** (o endereço `admin.html#caixa` abre direto nela). É o
+No topo do painel ficam as partes: **Pedidos**, **Fluxo de caixa** (o endereço `admin.html#caixa` abre direto nela),
+**Envio internacional** e **Mensagens** (abaixo). O Fluxo de caixa é o
 dinheiro que de fato entrou e saiu da loja, no dia em que aconteceu, sem termos de contabilidade.
 
 - **Visão geral:** quatro números (**Saldo atual**, **Entrou este mês**, **Saiu este mês**, **Resultado do mês**), o gráfico de
@@ -58,6 +59,37 @@ O que o painel ainda não desconta sozinho: a tarifa do Mercado Pago e o custo d
 por exemplo a fatura mensal dos Correios em **Frete**). Os dados ficam no banco (tabelas `cash_entries` e `bills`, migração
 `009_caixa.sql`, criadas sozinhas ao iniciar o site) e cada mudança vai para o registro de auditoria do painel.
 
+## Mensagens
+
+As mensagens do formulário **Fale com a Ju** (`contato.html`) chegam no painel, na parte **Mensagens** (o endereço
+`admin.html#mensagens` abre direto nela). O **ícone de conversa** no alto da tela, ao lado do "Olá", e o botão Mensagens
+mostram quantas mensagens novas existem; o número é conferido a cada minuto com o painel aberto e também aparece na aba
+do navegador, como "(3) Painel da Ju". Só os números mudam: nada do que estiver sendo digitado em outra parte se perde.
+
+- **Novas** (ainda não abertas), **Todas** e **Arquivadas**. Tocar numa mensagem abre o texto completo e ela conta como lida.
+- **Responder por e-mail** abre o e-mail da Ju com o endereço da pessoa, o assunto e um começo de resposta (em inglês ou
+  espanhol quando a pessoa escreveu nessa língua). **Responder no WhatsApp** aparece quando a pessoa deixou o número e abre o
+  WhatsApp com um "Olá" pronto. Nada é enviado pelo painel: a resposta sai do e-mail ou do WhatsApp da Ju, e a mensagem
+  ganha a etiqueta **Respondida**.
+- **Ver pedido JU-…** aparece quando a mensagem cita o número de um pedido e abre esse pedido em Pedidos.
+- **Marcar como não lida** (volta para Novas), **Arquivar** (o assunto foi resolvido), **É spam** / **Não é spam** e
+  **Excluir** (pede confirmação; use quando a pessoa pedir que os dados dela sejam apagados).
+- O texto aparece exatamente como foi escrito: nenhum link dentro da mensagem vira link clicável.
+
+**Como a mensagem chega:** o site guarda a mensagem **primeiro** no banco (tabela `contact_messages`, migração
+`015_mensagens.sql`, criada sozinha ao iniciar o site) e só depois manda o aviso por e-mail para `CONTACT_EMAIL` (ou, sem
+ela, para `ORDER_NOTIFY_EMAIL`), com um botão **Abrir no Painel da Ju**. Se o e-mail não sair (Resend sem domínio
+verificado, chave errada, fora do ar), a mensagem continua no painel. O WhatsApp que a pessoa informa é opcional e fica
+cifrado no banco (`DATA_KEY`), como o telefone dos pedidos.
+
+**Proteções do formulário:** um campo escondido pega robôs (nada é guardado); no máximo 5 mensagens por hora e 20 por dia
+do mesmo endereço de internet, 3 por hora do mesmo e-mail e 200 por dia no site inteiro. Mensagem com cara de propaganda
+automática (muitos links, por exemplo) fica guardada como **spam**: não gera e-mail, não conta no ícone e aparece só em Todas,
+com a etiqueta **Parece spam**.
+
+**Quanto tempo fica:** 12 meses (spam, 30 dias), como diz a Política de Privacidade; depois sai sozinha. Cada ação da equipe
+(abrir, responder, arquivar, spam, excluir) vai para o registro de auditoria (`admin_audit`), só com o código da mensagem.
+
 ## Como entrar: senha e código do celular
 
 1. E-mail e senha.
@@ -77,6 +109,8 @@ hPanel → o site → **Variáveis de ambiente**:
 |---|---|---|
 | `ADMIN_EMAIL` | `powershop.bras@gmail.com` (o e-mail da equipe) | não |
 | `ADMIN_PASSWORD` | uma senha forte, com **12 caracteres ou mais** | **sim** |
+
+**Servidor próprio:** os dois valores entram por `sudo bash /srv/juimprime/current/deploy/config-loja.sh` (opção 1), não pelo hPanel (`SERVIDOR-SETUP.md`).
 
 Essas duas variáveis só criam a **primeira** pessoa do painel, no primeiro login, e só enquanto não existe ninguém no
 banco. Depois disso quem vale é o banco: a senha fica guardada com scrypt (não dá para ler de volta) e trocar

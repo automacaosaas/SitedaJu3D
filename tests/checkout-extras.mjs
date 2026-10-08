@@ -10,7 +10,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const {freeShippingProgress, freeShippingBar, freeShippingNote} = await site('free-shipping.js');
-const {installmentRows, installmentsTable} = await site('installments.js');
+const {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} = await site('installments.js');
 const {cartSummary} = await site('cart-view.js');
 
 // ── free shipping ─────────────────────────────────────────────────────
@@ -46,13 +46,27 @@ const {cartSummary} = await site('cart-view.js');
   assert.equal(installmentsTable(rows.slice(0, 1)), '', 'one option: nothing to compare');
   assert.deepEqual(installmentRows(null, 100), []); assert.deepEqual(installmentRows([{payment_type_id: 'debit_card', payer_costs: [{installments: 1, installment_amount: 1, total_amount: 1}]}], 100), [], 'debit cards have no installments');
   assert.doesNotMatch(installmentsTable([{installments: 1, eachCents: 1, totalCents: 1, interestCents: 0}, {installments: 2, eachCents: 1, totalCents: 3, interestCents: 2, cet: '<b>9%'}]), /<b>/, 'a label from outside cannot inject markup');
+  // the card option promises "sem juros" only as far as this card's table goes (2026-10-08)
+  assert.equal(interestFreeCount(rows), 2, 'this card: 2x without interest, 3x with');
+  assert.equal(interestFreeCount(rows.slice(0, 1)), 1);
+  assert.equal(interestFreeCount([{installments: 1, interestCents: 0}, {installments: 2, interestCents: 5}, {installments: 3, interestCents: 0}]), 1, 'stops at the first interest');
+  assert.equal(interestFreeCount([]), null); assert.equal(interestFreeCount(null), null, 'no table yet: the account\'s number decides');
+  // what the card option promises (checkout.js cardOffer), with the site announcing 3 — the rule, not its source text
+  for (const [card, account, promised, why] of [[null, 3, 3, 'before the card: the account'], [null, 6, 3, 'never past what the site announces'], [null, 2, 2, 'the account gives fewer'],
+    [null, 0, 0, 'the account charges interest from 2x on'], [null, undefined, 0, 'the account unknown: no promise'], [null, null, 0, 'unknown'],
+    [1, 3, 0, 'the typed card has interest from 2x on, whatever the account says'], [2, 3, 2, 'the typed card gives 2'], [0, 3, 0, 'interest even in 1x'],
+    [12, 0, 3, 'the typed card\'s own table beats the account, still up to the site\'s number'], [3, undefined, 3, 'the typed card, the account unknown'],
+    [null, 2.5, 0, 'not a count'], [null, '3', 0, 'not a count']]) assert.equal(promisedInstallments(card, account, 3), promised, why);
+  assert.equal(promisedInstallments(null, 6, 6), 6); assert.equal(promisedInstallments(null, 3, 1), 0, 'the site announcing less than 2: nothing to promise');
+  // together: a card whose table charges from 3x on promises 2, never the account's 3
+  assert.equal(promisedInstallments(interestFreeCount(rows), 3, 3), 2);
 }
 
 // ── cart summary: estimate by CEP and the free-shipping bar ───────────
 {
   const items = [{id: 'a', productId: 'borboletoscopio', title: 'Borboletoscópio', selection: {body: 'pink', details: 'lilac'}, quantity: 1, unitPrice: 12900}];
   const before = cartSummary(items, {realShipping: true, freeShipping: {fromCents: 50000, label: 'PAC'}, estimate: {status: 'idle'}});
-  assert.match(before, /calculada pelo CEP/); assert.match(before, /Sem frete · ver resumo/); assert.match(before, /id="cart-ship-form"/); assert.match(before, /Faltam <strong>R\$\s?371,00/);
+  assert.match(before, /calculada pelo CEP/); assert.match(before, /<small class="cart-total-note">sem frete<\/small>/); assert.match(before, /class="cart-summary-balloon"/); assert.match(before, /id="cart-ship-form"/); assert.match(before, /Faltam <strong>R\$\s?371,00/);
   const quoted = cartSummary(items, {realShipping: true, estimate: {status: 'ready', cep: '01001000', options: [{service: 'pac', label: 'PAC', priceCents: 2201, free: false, days: {min: 9, max: 11}}], chosen: {service: 'pac', label: 'PAC', priceCents: 2201, free: false}}});
   assert.match(quoted, /Entrega <small>\(PAC\)<\/small><\/dt><dd>R\$\s?22,01/); assert.match(quoted, /R\$\s?151,01/, 'total with the delivery'); assert.match(quoted, /value="01001-000"/, 'the CEP stays in the box, formatted');
   assert.doesNotMatch(quoted, /Sem frete/);
@@ -74,6 +88,20 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(account, /input\('password', 'Crie uma senha \(opcional\)', 'password', 'new-password', 'Pelo menos 8 caracteres', true\)/, 'sign-up password is optional');
   assert.match(account, /\$\{optional \? '' : 'required'\}/);
   assert.match(fake, /getInstallments/); assert.match(fake, /onBinChange/);
+  assert.match(fake, /fetch\('\/__fake-mp\/installments\?amount='/, 'the simulated Brick\'s table comes from the same simulated account as the server\'s check');
+  // Before going live (2026-10-07): one attempt until a definite answer, the device id, no raw Mercado Pago code on the
+  // real site, and a waiting Pix cancelled before a new one is made.
+  assert.match(checkout, /if \(!order\.attempt\) order = \{\.\.\.order, attempt: newAttempt\(\)\};/, 'the attempt is kept across retries');
+  assert.match(checkout, /if \(order\?\.attempt === attempt && !keepAttempt\(status\)\) order = \{\.\.\.order, attempt: null\};/, 'and dropped after a definite answer');
+  assert.match(checkout, /payMethod=button\.dataset\.method;order=\{\.\.\.order,attempt:null\};/, 'switching Pix/card starts a new attempt (another total)');
+  assert.match(checkout, /attempt, deviceId: currentDeviceId\(\) \|\| undefined,/, 'the device id goes with the payment');
+  assert.match(checkout, /loadDeviceId\(\);/);
+  assert.match(checkout, /showPaymentError\(refusalMessage\(result\.reason\), test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code in parentheses only in test mode');
+  assert.doesNotMatch(checkout, /refusedMessage\(\), result\.statusDetail/);
+  assert.match(checkout, /if\(action==='new-pix'\)\{if\(await dropPix\(button\)==='gone'/, '"Gerar novo código Pix" cancels the old one first');
+  assert.match(checkout, /if\(action==='delivery'\)\{if\(order\?\.live&&\['pix','expired'\]\.includes\(order\.phase\)&&await dropPix\(button\)!=='gone'\)return;/, 'and so does going back from a waiting Pix');
+  assert.match(checkout, /try \{ result = await cancelPayment\(order\.mpId\); \} catch \{\}/);
+  assert.match(fake, /window\.MP_DEVICE_SESSION_ID = /, 'the simulator stands in for security.js');
 }
 
-console.log('PASS: checkout extras — free-shipping bar and note, installments with interest per option, cart estimate by CEP, mobile total with the real delivery, optional sign-up password.');
+console.log('PASS: checkout extras — free-shipping bar and note, installments with interest per option, cart estimate by CEP, mobile total with the real delivery, optional sign-up password, one payment attempt until a definite answer, device id, a waiting Pix cancelled before a new one.');

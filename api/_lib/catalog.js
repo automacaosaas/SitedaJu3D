@@ -21,11 +21,39 @@ const PARTS = Object.freeze({
   engines: ['Motores', 'Engines', 'Motores']
 });
 // The part ids below are the site's own ("body", "details", "engines"); `names` says which wording each product uses.
+// Prices confirmed on 05/10/2026. `extraPrice`: what each unit after the first of the same product in the same order costs (the
+// second airplane is R$ 215); dist/commerce-config.js has the same table (extraPrices).
 const PRODUCTS = Object.freeze({
-  borboletoscopio: {title: 'Borboletoscópio', price: 12900, parts: [{id: 'body', names: PARTS.body, default: 'mint'}, {id: 'details', names: PARTS.wings, default: 'yellow'}]},
-  dinossauroscopio: {title: 'Dinossauroscópio', price: 13900, parts: [{id: 'body', names: PARTS.body, default: 'moss'}, {id: 'details', names: PARTS.spikes, default: 'cream'}]},
-  aviaoscopia: {title: 'Aviãoscopia', price: 15900, parts: [{id: 'body', names: PARTS.body, default: 'blue'}, {id: 'details', names: PARTS.stars, default: 'red'}, {id: 'engines', names: PARTS.engines, default: 'yellow'}]}
+  borboletoscopio: {title: 'Borboletoscópio', price: 26500, parts: [{id: 'body', names: PARTS.body, default: 'mint'}, {id: 'details', names: PARTS.wings, default: 'yellow'}]},
+  dinossauroscopio: {title: 'Dinossauroscópio', price: 26500, parts: [{id: 'body', names: PARTS.body, default: 'moss'}, {id: 'details', names: PARTS.spikes, default: 'cream'}]},
+  aviaoscopia: {title: 'Aviãoscopia', price: 28500, extraPrice: 21500, parts: [{id: 'body', names: PARTS.body, default: 'blue'}, {id: 'details', names: PARTS.stars, default: 'red'}, {id: 'engines', names: PARTS.engines, default: 'yellow'}]},
+  // The lamps (07/10/2026): fixed colours, nothing to choose (no parts); R$ 90 each, and the kit below when mixed.
+  macacoscopio: {title: 'MonkeyLamp', price: 9000, parts: []},
+  girafoscopio: {title: 'GiraffeLamp', price: 9000, parts: []},
+  unicornioscopio: {title: 'UnicornLamp', price: 9000, parts: []}
 });
+// Kits: the units of a kit's products, summed over the whole order, form groups with a closed price, the largest first (3 lamps: R$ 210,
+// R$ 70 each; 2: R$ 160, R$ 80 each); what is left without a group pays the full price. dist/commerce-config.js has the same table (kits).
+const KITS = Object.freeze({lampadas: Object.freeze({items: Object.freeze(['macacoscopio', 'girafoscopio', 'unicornioscopio']), groups: Object.freeze({2: 16000, 3: 21000})})});
+const kitOf = productId => Object.keys(KITS).find(id => KITS[id].items.includes(productId)) || null;
+function kitUnitPrices(count, groups) {
+  const sizes = Object.keys(groups).map(Number).filter(n => n > 1).sort((a, b) => b - a), out = [];
+  let left = count;
+  for (const size of sizes) while (left >= size) { for (let k = 0; k < size; k++) out.push(groups[size] / size); left -= size; }
+  while (left-- > 0) out.push(null);
+  return out;
+}
+// Each kit line becomes the runs of equal unit price it falls in (in cart order), like the site's priceSegments.
+function splitByKit(lines) {
+  const queue = Object.fromEntries(Object.entries(KITS).map(([id, kit]) => [id, kitUnitPrices(lines.filter(l => kit.items.includes(l.productId)).reduce((sum, l) => sum + l.quantity, 0), kit.groups)]));
+  return lines.flatMap(line => {
+    const kit = kitOf(line.productId);
+    if (!kit) return [line];
+    const prices = queue[kit].splice(0, line.quantity).map(p => p ?? line.unitCents), out = [];
+    for (let k = 0; k < prices.length;) { let j = k; while (j < prices.length && prices[j] === prices[k]) j++; out.push({...line, quantity: j - k, unitCents: prices[k]}); k = j; }
+    return out;
+  });
+}
 const LANG_INDEX = {'pt-BR': 0, en: 1, es: 2};
 
 const fail = code => Object.assign(new Error(code), {code});
@@ -39,16 +67,31 @@ function cleanSelection(productId, value) {
   return selection;
 }
 
+// Quantity pricing: the first unit of a product (in cart order) keeps the full price and the rest cost `extraPrice`, so a line
+// holding both becomes two lines (each with an exact unit price for Mercado Pago, the invoice and the e-mails). The site does the
+// same (dist/cart-store.js priceSegments).
+function splitByQuantity() {
+  const seen = {};
+  return line => {
+    const extra = PRODUCTS[line.productId].extraPrice, before = seen[line.productId] || 0;seen[line.productId] = before + line.quantity;
+    if (extra == null) return [line];
+    const full = Math.max(0, Math.min(line.quantity, 1 - before)), out = [];
+    if (full) out.push({...line, quantity: full});
+    if (line.quantity > full) out.push({...line, quantity: line.quantity - full, unitCents: extra});
+    return out;
+  };
+}
+
 // Turns what the browser sent into priced lines. Anything that does not look like a real cart is refused, never "fixed".
 function priceOrder(rawItems) {
   if (!Array.isArray(rawItems) || !rawItems.length || rawItems.length > MAX_LINES) throw fail('invalid_items');
-  const lines = rawItems.map(raw => {
+  const lines = splitByKit(rawItems.map(raw => {
     if (!raw || typeof raw.productId !== 'string' || !Object.hasOwn(PRODUCTS, raw.productId)) throw fail('invalid_items');
     const quantity = raw.quantity;
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) throw fail('invalid_items');
     const product = PRODUCTS[raw.productId];
     return {productId: raw.productId, title: product.title, quantity, unitCents: product.price, selection: cleanSelection(raw.productId, raw.selection)};
-  });
+  }).flatMap(splitByQuantity()));
   const subtotal = lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
   return {lines, subtotal, shipping: SHIPPING_CENTS, total: subtotal + SHIPPING_CENTS};
 }
@@ -69,7 +112,8 @@ const money = cents => new Intl.NumberFormat('pt-BR', {style: 'currency', curren
 
 // The chosen colors travel inside the MP item as `body=mint;details=yellow` (item description accepts 100 characters),
 // so the paid order can be rebuilt from Mercado Pago alone, without a database.
-const encodeSelection = (productId, selection) => PRODUCTS[productId].parts.map(part => `${part.id}=${selection[part.id]}`).join(';');
+// (the lamps have no parts: "cores fixas", so Mercado Pago never gets an empty description)
+const encodeSelection = (productId, selection) => PRODUCTS[productId].parts.length ? PRODUCTS[productId].parts.map(part => `${part.id}=${selection[part.id]}`).join(';') : 'cores fixas';
 function decodeSelection(productId, text) {
   const chosen = {};
   for (const pair of String(text || '').split(';')) { const [key, value] = pair.split('='); if (key) chosen[key.trim()] = (value || '').trim(); }
@@ -80,4 +124,4 @@ function describeSelection(productId, selection, lang = 'pt-BR') {
   return PRODUCTS[productId].parts.map(part => ({part: part.names[at], color: COLORS[selection[part.id]][at]}));
 }
 
-module.exports = {PRODUCTS, COLORS, SHIPPING_CENTS, PIX_DISCOUNT_BPS, pixUnitDiscount, applyPixDiscount, MAX_LINES, MAX_QUANTITY, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};
+module.exports = {PRODUCTS, KITS, COLORS, SHIPPING_CENTS, PIX_DISCOUNT_BPS, pixUnitDiscount, applyPixDiscount, MAX_LINES, MAX_QUANTITY, priceOrder, cleanSelection, amount, fromAmount, money, encodeSelection, decodeSelection, describeSelection};

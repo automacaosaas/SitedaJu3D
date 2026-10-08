@@ -21,7 +21,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-customize .icon { position: relative; width: 17px; height: 17px; }
 .cart-customize:hover::before { background: #963b55; }
 .cart-product-info { grid-column: 2 / 4; min-width: 0; }
-.cart-product h2 { font: 500 23px/1.25 'Playfair Display', Georgia, serif; margin: 0; letter-spacing: -.55px; overflow-wrap: anywhere; }
+.cart-product h2 { font: 500 23px/1.25 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; margin: 0; letter-spacing: -.55px; overflow-wrap: anywhere; }
 .cart-product .item-type { font-size: 12px; margin: 4px 0 7px; line-height: 1.45; }
 .cart-colors { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .cart-colors ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
@@ -34,26 +34,131 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-product-price { grid-column: 3; align-self: center; justify-self: end; white-space: nowrap; font-size: 15px; font-weight: 550; font-variant-numeric: tabular-nums; }
 .cart-continue { margin-top: 9px; font-size: 12px; }
 .cart-order-summary { position: sticky; top: 24px; padding: 24px; border: 1px solid #b64c681b; border-radius: 16px; background: linear-gradient(140deg, #fffcfb, #fcf1f3); box-shadow: 0 8px 32px #65364904; }
-.cart-order-summary h2 { font: 500 25px/1.25 'Playfair Display', Georgia, serif; letter-spacing: -.7px; margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.cart-order-summary h2 { font: 500 25px/1.25 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.7px; margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .cart-selection-note { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
 .cart-order-summary .amounts { margin: 12px 0 14px; }
 .cart-order-summary .amounts > div { margin: 10px 0; }
-.cart-order-summary .grand-total { font: 600 24px/1.3 'Playfair Display', Georgia, serif; padding-top: 14px; margin-top: 16px; }
+.cart-order-summary .grand-total { font: 600 24px/1.3 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-variant-numeric: lining-nums; padding-top: 14px; margin-top: 16px; }
 .cart-checkout { min-height: 48px; font-size: 14px; font-weight: 500; border-radius: 10px; }
 .cart-checkout .icon { width: 20px; height: 20px; }
 .cart-checkout:disabled:hover { background: var(--rose); }
-.cart-checkout-total { display: none; }
+.cart-checkout-total, .cart-summary-balloon { display: none; }
 .cart-checkout:focus-visible, .cart-checkout-total:focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
 .cart-order-summary h2 { scroll-margin-top: 24px; }
+.cart-order-summary h2:focus { outline: none; }
+/* o resumo acende quando o "Ver resumo" da barra de baixo chega nele */
+.cart-order-summary.is-spotlight { animation: summary-spot 1.7s cubic-bezier(.25, .8, .25, 1); }
+@keyframes summary-spot {
+  0% { box-shadow: 0 0 0 0 transparent, 0 8px 32px #65364904; }
+  22% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--rose) 20%, transparent), 0 16px 40px #6536491c; border-color: color-mix(in srgb, var(--rose) 55%, transparent); }
+  100% { box-shadow: 0 0 0 16px transparent, 0 8px 32px #65364904; }
+}
+@keyframes cart-balloon-in { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+@keyframes cart-balloon-bob { 50% { transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .cart-order-summary.is-spotlight, .cart-summary-balloon { animation: none; } }
 .cart-selection-help { font-size: 12px; color: var(--rose); margin: 10px 0 0; }
-.cart-reassurance { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 6px; }
-.cart-reassurance > div { display: flex; gap: 13px; align-items: center; padding: 12px 0; }
-.cart-reassurance > div + div { border-top: 1px solid #b64c6810; }
-.cart-reassurance .icon { width: 25px; height: 25px; color: var(--rose); }
-.cart-reassurance p { margin: 0; font-size: 12px; line-height: 1.5; }
-.cart-reassurance strong { display: block; font-weight: 500; }
-.cart-reassurance span { display: block; color: var(--muted); font-size: 12px; }
-.cart-order-summary .accepted-methods { margin-top: 4px; padding-top: 16px; gap: 24px; }
+/* Depois do resumo (largura toda): "Você também pode gostar" e as informações da compra com os meios de pagamento. */
+.cart-more { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(36px, 5vw, 56px); margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
+.cart-recs h2, .cart-pay h2 { margin: 0 0 18px; font: 500 clamp(24px, 2.4vw, 30px)/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.6px; }
+/* "Você também pode gostar" (refeito em 08/10/2026): três cards à vista num carrossel (dois no celular) e, no fim da fileira, o
+   "Ver mais +". A fileira anda por transform (cart-view.js wireRecArrows); a janela recorta os cards que estão fora, com as bordas
+   esmaecendo só na faixa do respiro (os cards parados ficam inteiros). Os botões ficam à direita do título, longe dos cards. */
+.cart-recs { position: relative; }
+.cart-recs-head { display: flex; align-items: center; min-height: 44px; margin-bottom: 18px; padding-right: 164px; }
+.cart-recs-head h2 { margin: 0; }
+.cart-rec-rail { --rec-k: 3; --rec-gap: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--rec-gap); align-items: stretch; }
+.cart-rec-rail[data-count="1"] { --rec-k: 1; }
+.cart-rec-rail[data-count="2"] { --rec-k: 2; }
+.cart-rec-viewport { grid-column: span var(--rec-k); min-width: 0; margin: -10px calc(-1 * var(--rec-gap)) -30px; padding: 10px var(--rec-gap) 30px; overflow: hidden; touch-action: pan-y pinch-zoom; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent); }
+.cart-rec-track { display: flex; gap: var(--rec-gap); margin: 0; padding: 0; list-style: none; }
+.cart-rec-rail:not(.is-static) .cart-rec-track { will-change: transform; }
+.cart-rec-slide { flex: 0 0 calc((100% - (var(--rec-k) - 1) * var(--rec-gap)) / var(--rec-k)); min-width: 0; }
+.cart-rec-rail.is-dragging .cart-rec-viewport { cursor: grabbing; user-select: none; }
+.cart-rec-rail.is-dragging .cart-rec:active { transform: none; }
+.cart-rec { display: grid; gap: 4px; height: 100%; padding: 8px 8px 12px; border: 1px solid #b64c6814; border-radius: 18px; background: var(--panel); color: inherit; text-decoration: none; box-shadow: 0 4px 16px #65364908; -webkit-user-drag: none; transition: transform .35s cubic-bezier(.25, .8, .25, 1), box-shadow .35s ease, border-color .3s ease; }
+.cart-rec-art { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: 6px; border-radius: 12px; overflow: hidden; background: radial-gradient(120% 90% at 50% 30%, var(--rec-stops)); }
+.cart-rec-art img { width: 84%; height: 88%; object-fit: contain; filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--rec-ink) 16%, transparent)); transition: transform .45s cubic-bezier(.25, .8, .25, 1); pointer-events: none; }
+.cart-rec-name { padding: 0 4px; font: 500 16px/1.25 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cart-rec-price { padding: 0 4px; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cart-rec.is-soon .cart-rec-price { justify-self: start; margin-left: 4px; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--rec-accent) 12%, transparent); color: var(--rec-accent); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+.cart-rec:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+.cart-rec:active { transform: scale(.98); transition-duration: .08s; }
+/* "Ver mais +": a última casa da fileira (no celular, um botão embaixo), para a página Produtos; o + gira no hover. */
+.cart-rec-more { display: grid; align-content: center; justify-items: center; gap: 14px; min-height: 100%; padding: 18px 12px; border: 1px solid color-mix(in srgb, var(--rose) 20%, transparent); border-radius: 18px; background: linear-gradient(160deg, var(--theme-wash, #f8e4ea), color-mix(in srgb, var(--theme-wash, #f8e4ea) 30%, #fff) 85%); color: var(--rose); text-decoration: none; box-shadow: 0 4px 16px #65364908; transition: transform .35s cubic-bezier(.25, .8, .25, 1), box-shadow .35s ease, border-color .3s ease; }
+.cart-rec-more-plus { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: #fff; color: var(--rose); box-shadow: 0 8px 20px color-mix(in srgb, var(--rose) 18%, transparent); transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), background-color .25s ease, color .25s ease; }
+.cart-rec-more-plus svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.cart-rec-more-label { font: 500 20px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.2px; }
+.cart-rec-more:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+.cart-rec-more:active { transform: scale(.98); transition-duration: .08s; }
+/* Pausar, voltar e avançar: redondos, de 44 px. O anel do botão de pausa se fecha no tempo até o próximo card. */
+.cart-rec-controls { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 8px; }
+.cart-rec-arrow, .cart-rec-toggle { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid #2a1c2214; border-radius: 50%; background: #ffffffe6; color: var(--ink); box-shadow: 0 6px 16px #6536491a; cursor: pointer; transition: transform .2s ease, box-shadow .25s ease, background-color .25s ease; }
+.cart-rec-arrow > .icon { width: 18px; height: 18px; transition: translate .25s ease; }
+.cart-rec-arrow.is-prev > .icon { transform: rotate(180deg); }
+.cart-rec-arrow:active, .cart-rec-toggle:active { transform: scale(.92); transition-duration: .08s; }
+.cart-rec-arrow:focus-visible, .cart-rec-toggle:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+/* A bolinha de pausa (08/10/2026, segunda volta, o dono: "uma bolinha menor... não precisa ser tão grande, nem tão chamativa"): o alvo
+   continua de 44 px, mas sem caixa; à vista, um anel fino de 18 px que se fecha no tempo até o próximo card e, dentro, o sinal pequeno
+   de pausa (ou de play, pausado). O anel são duas metades que giram dentro de duas janelas (só transform, no compositor): a da direita
+   na primeira metade do tempo, a da esquerda na segunda. Quando algo segura a contagem (is-held), ele congela onde está e se apaga um
+   pouco (não no deslize de cada troca, que também segura: a bolinha piscaria a cada card); pausado, fica só o trilho. */
+.cart-rec-toggle { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); }
+.cart-rec-toggle > * { grid-area: 1 / 1; }
+.cart-rec-dot { position: relative; width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rose) 22%, transparent); transition: opacity .3s ease; }
+.cart-rec-dot > span { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; overflow: hidden; }
+.cart-rec-dot > span + span { left: 0; }
+.cart-rec-dot i { position: absolute; top: 0; left: -100%; width: 200%; height: 100%; box-sizing: border-box; border: 1.5px solid transparent; border-top-color: var(--rose); border-right-color: var(--rose); border-radius: 50%; opacity: 0; transform: rotate(225deg); }
+.cart-rec-dot > span + span i { left: 0; transform: rotate(45deg); }
+.cart-rec-rail.is-counting .cart-rec-dot i { opacity: 1; animation: rec-half-a var(--rec-auto, 8500ms) linear forwards; }
+.cart-rec-rail.is-counting .cart-rec-dot > span + span i { animation-name: rec-half-b; }
+.cart-rec-rail.is-held .cart-rec-dot i { animation-play-state: paused; }
+.cart-rec-rail.is-held:not(.is-moving) .cart-rec-dot { opacity: .55; }
+@keyframes rec-half-a { 50%, 100% { transform: rotate(405deg); } }
+@keyframes rec-half-b { 0%, 50% { transform: rotate(45deg); } 100% { transform: rotate(225deg); } }
+.cart-rec-toggle > svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.cart-rec-toggle > .cart-rec-play { display: none; fill: currentColor; stroke-width: .6; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-play { display: block; }
+.cart-rec-rail.is-paused .cart-rec-toggle > .cart-rec-pause { display: none; }
+/* com "reduzir movimento" o carrossel não anda sozinho: o botão de pausa não tem o que fazer */
+@media (prefers-reduced-motion: reduce) { .cart-rec-toggle { display: none; } .cart-rec-rail .cart-rec-dot i { animation: none !important; } }
+/* Informações da compra: uma linha por assunto, com o ícone e um link para a política. */
+.cart-info { display: grid; gap: 28px; }
+.cart-info-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.cart-info-list li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 14px; align-items: start; padding: 12px 0; }
+.cart-info-list li + li { border-top: 1px solid #b64c6812; }
+.cart-info-list .icon { width: 24px; height: 24px; margin-top: 1px; color: var(--rose); }
+.cart-info-list a { color: inherit; font-size: 14px; line-height: 1.55; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 25%, transparent); text-underline-offset: 4px; transition: text-decoration-color .25s ease; }
+.cart-info-list a span { color: var(--muted); }
+.cart-info-list strong { font-weight: 650; }
+.cart-pay h2 { font-size: 12px; font-family: 'DM Sans', 'DM Sans Fallback', sans-serif; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.pay-groups { display: grid; gap: 14px; }
+.pay-group { display: grid; gap: 8px; }
+.pay-group-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.pay-marks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pay-mark { display: grid; place-items: center; align-content: center; width: 58px; height: 38px; border: 1px solid #b64c6815; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px #65364908; }
+.pay-mark svg { width: 32px; height: 20px; }
+.pay-mark img { max-width: 40px; max-height: 24px; object-fit: contain; }
+.pay-sub { margin-top: 2px; font-size: 12px; line-height: 1; font-weight: 600; color: #1d5fa8; }
+.pay-word { font: 800 15px/1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: -.02em; }
+.pay-elo { color: #231f20; font-size: 18px; }
+.pay-hiper { color: #b3131b; font-size: 12px; font-style: italic; }
+.cart-pay-by { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; font-size: 12px; color: var(--muted); }
+/* No computador, enxuto: as quatro informações lado a lado e, embaixo, uma faixa só com os meios de pagamento. */
+@media (min-width: 901px) {
+  .cart-info { gap: 22px; }
+  .cart-info-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+  .cart-info-list li { grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 0; }
+  .cart-info-list li + li { border-top: 0; }
+  .cart-info-list .icon { width: 22px; height: 22px; }
+  .cart-info-list a { font-size: 13px; line-height: 1.5; }
+  .cart-info-list strong { display: block; margin-bottom: 2px; }
+  .cart-pay { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 4px 32px; padding: 16px 22px; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+  .cart-pay h2 { grid-column: 1; grid-row: 1; align-self: end; margin: 0; }
+  .pay-groups { grid-column: 2; grid-row: 1 / 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px 26px; }
+  .pay-group { display: flex; align-items: center; gap: 10px; }
+  .cart-pay-by { grid-column: 1; grid-row: 2; align-self: start; margin: 0; }
+}
+.cart-pay-by svg { width: 26px; height: 26px; flex: none; }
 .cart-empty-layout { margin: 36px auto 0; }
 .cart-empty-layout .empty-cart { margin-top: 20px; }
 .empty-cart > p { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
@@ -75,15 +180,24 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   body[data-stage="cart"] .cart-layout { scroll-margin-bottom: 124px; }
   body[data-stage="cart"] .cart-layout :is(a, button, input) { scroll-margin-bottom: 124px; }
   .cart-checkout-bar { position: fixed; z-index: 100; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: minmax(116px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 16px; padding: 12px max(16px, calc((100% - 690px) / 2)); padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--panel); box-shadow: 0 -6px 24px #6536490d; }
-  .cart-checkout-total { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 52px; color: var(--ink); text-decoration: none; border-radius: 6px; }
-  .cart-checkout-total > span { font-size: 12px; line-height: 1.3; color: var(--muted); }
-  .cart-checkout-total > span span { margin-left: 4px; color: var(--rose); }
+  .cart-checkout-total { display: grid; justify-items: start; align-content: center; min-width: 0; min-height: 52px; color: var(--ink); text-decoration: none; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+  .cart-total-label { font-size: 12px; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .cart-checkout-total strong { font-size: clamp(18px, 5vw, 22px); line-height: 1.4; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .cart-checkout-total small { color: var(--rose); font-size: 12px; line-height: 1.4; }
+  .cart-total-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  /* "Ver resumo" (06/10/2026): um balãozinho em cima da barra de baixo, com o rabinho apontando para o total; um toque leva a página
+     até o resumo numa rolagem fluida, e ele sobe e some junto. Some enquanto o resumo está na tela (watchSummary). */
+  .cart-summary-balloon { position: absolute; left: max(16px, calc((100% - 690px) / 2)); bottom: calc(100% + 12px); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 650; text-decoration: none; box-shadow: 0 10px 22px #14231b33; -webkit-tap-highlight-color: transparent; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1), visibility 0s; animation: cart-balloon-in .45s cubic-bezier(.16, 1, .3, 1) both, cart-balloon-bob 2.4s 1s ease-in-out infinite; }
+  .cart-summary-balloon::after { content: ''; position: absolute; left: 22px; top: 100%; border: 7px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+  /* a área de toque passa dos 44 px sem o balão crescer: 4 px invisíveis acima e abaixo dos 36 px dele */
+  .cart-summary-balloon::before { content: ''; position: absolute; inset: -4px -2px; border-radius: inherit; }
+  .cart-summary-balloon svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+  .cart-checkout-bar.summary-above .cart-summary-balloon svg { transform: rotate(180deg); }
+  .cart-summary-balloon:focus-visible { outline: 2px solid var(--rose); outline-offset: 3px; }
+  .cart-checkout-bar.is-at-summary .cart-summary-balloon { opacity: 0; visibility: hidden; transform: translateY(8px) scale(.9); pointer-events: none; animation: none; transition: opacity .3s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1), visibility 0s .3s; }
   .cart-checkout-bar .cart-checkout { min-height: 52px; padding: 12px 14px; text-align: left; }
+  .cart-more { max-width: 690px; margin-inline: auto; }
+  .cart-info { grid-template-columns: minmax(0, 1fr); }
   body[data-stage="cart"]:has(.cart-checkout-bar) .shop-live { bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
-  .cart-reassurance { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .cart-reassurance > div + div { border: 0; }
 }
 @media (max-width: 600px) {
   .checkout-page { padding: 0 16px 32px; }
@@ -112,15 +226,44 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .cart-order-summary { padding: 18px 16px; border-radius: 14px; }
   .cart-order-summary h2 { font-size: 23px; padding-bottom: 12px; }
   .cart-order-summary .grand-total { font-size: 24px; }
-  .cart-reassurance { gap: 12px; }
-  .cart-reassurance > div { gap: 8px; }
-  .cart-reassurance .icon { width: 21px; height: 21px; }
-  .cart-reassurance p { font-size: 12px; }
-  .cart-reassurance span { font-size: 12px; }
+  /* recomendações: dois cards à vista; embaixo, os botões à esquerda e o "Ver mais +" à direita */
+  .cart-recs-head { padding-right: 0; margin-bottom: 14px; }
+  .cart-rec-rail, .cart-rec-rail[data-count] { --rec-k: 2; --rec-gap: 10px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "view view" "controls more"; row-gap: 16px; }
+  .cart-rec-viewport { grid-area: view; }
+  .cart-rec-controls { position: static; grid-area: controls; }
+  /* o anel da bolinha alinha com a borda dos cards (o alvo de 44 px avança sobre a margem) */
+  .cart-rec-toggle { margin: 0 -6px 0 -13px; }
+  .cart-rec-more { grid-area: more; display: inline-flex; flex-direction: row-reverse; align-items: center; justify-self: end; gap: 10px; min-height: 48px; padding: 0 7px 0 20px; border: 1.5px solid color-mix(in srgb, var(--rose) 38%, transparent); border-radius: 999px; background: #fff; }
+  .cart-rec-controls[hidden] + .cart-rec-viewport + .cart-rec-more { grid-column: 1 / -1; justify-self: center; }
+  .cart-rec-more-plus { width: 34px; height: 34px; box-shadow: none; background: color-mix(in srgb, var(--rose) 12%, #fff); }
+  .cart-rec-more-plus svg { width: 18px; height: 18px; stroke-width: 2; }
+  .cart-rec-more-label { font: 650 14px/1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .01em; color: var(--rose); }
+  .cart-rec-name { font-size: 15px; }
+  /* uma peça só: o card e o "Ver mais +" lado a lado, duas casas iguais (sem meia fileira vazia e o botão sozinho embaixo) */
+  .cart-rec-rail[data-count="1"] { --rec-k: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "view more"; }
+  .cart-rec-rail[data-count="1"] .cart-rec-viewport + .cart-rec-more { grid-area: more; display: grid; align-content: center; justify-items: center; justify-self: stretch; gap: 12px; padding: 18px 10px; border: 1px solid color-mix(in srgb, var(--rose) 20%, transparent); border-radius: 18px; background: linear-gradient(160deg, var(--theme-wash, #f8e4ea), color-mix(in srgb, var(--theme-wash, #f8e4ea) 30%, #fff) 85%); }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-plus { width: 52px; height: 52px; background: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--rose) 18%, transparent); }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-plus svg { width: 24px; height: 24px; stroke-width: 1.8; }
+  .cart-rec-rail[data-count="1"] .cart-rec-more-label { font: 500 18px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.2px; }
+  .cart-info-list a { font-size: 13px; }
+}
+/* No toque, também no tablet (601–900 px), o − / + e o "Editar cores" têm os 44 px que o celular já tem. */
+@media (pointer: coarse) {
+  .cart-product .quantity-control button { width: 44px; }
+  .cart-edit-link { min-height: 44px; }
 }
 @media (hover: hover) {
   .cart-product:hover { border-color: #b64c6838; }
   .cart-edit-link:hover { color: #963b55; }
+  .cart-rec:hover, .cart-rec-more:hover { transform: translateY(-3px); border-color: #b64c6826; box-shadow: 0 14px 30px #65364914; }
+  .cart-rec:hover .cart-rec-art img { transform: scale(1.06); }
+  .cart-rec-more:hover .cart-rec-more-plus { transform: rotate(90deg); background: var(--rose); color: #fff; }
+  .cart-rec-arrow:hover { background: #fff; box-shadow: 0 10px 22px #65364926; }
+  .cart-rec-toggle:hover { background: color-mix(in srgb, var(--rose) 8%, transparent); color: var(--ink); }
+  .cart-rec-arrow.is-next:hover > .icon { translate: 2px 0; }
+  .cart-rec-arrow.is-prev:hover > .icon { translate: -2px 0; }
+  .cart-rec-rail:not(.is-static) .cart-rec-viewport { cursor: grab; }
+  .cart-info-list a:hover { text-decoration-color: currentColor; }
 }
 /* The cart's CEP box: price the delivery before signing in (the same CEP goes on to the delivery step). */
 .cart-ship { margin: 4px 0 16px; }
@@ -157,6 +300,11 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-off strong { font-size: 13px; letter-spacing: .06em; }
 .card-off { background: #edf3ef; color: var(--theme-accent, #25664c); }
 .card-off strong { font-size: 12px; letter-spacing: .05em; }
+/* As duas promessas do cartão no mesmo lugar ("3X SEM JUROS" e "EM ATÉ 12X", checkout.js cardOffer): a maior dá o tamanho e só uma
+   aparece, então a troca (quando o Mercado Pago dá menos parcelas sem juros para o cartão digitado) não empurra o Brick. */
+.card-off { display: grid; grid-template-columns: minmax(0, 1fr); }
+.card-offer { grid-area: 1 / 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.card-offer[aria-hidden="true"] { visibility: hidden; }
 .amounts .pix-discount dd { color: #13864a; font-weight: 650; }
 .amounts .pix-hint { color: #13864a; font-size: 13px; }
 .amounts .pix-hint dd { font-weight: 650; }

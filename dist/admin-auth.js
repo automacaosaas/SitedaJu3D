@@ -27,10 +27,19 @@ export async function currentSession(options) {
 }
 export async function logout(options) { try { await request('/api/admin/logout', {method: 'POST', ...options}); } catch {} }
 
+// The totals, the chart and the calendar need every paid order: the server answers a page at a time (each answer small
+// and quick) and the pages are joined here. MAX_PAGES stops a server that would keep answering a next page.
+const ORDERS_PAGE = 200, MAX_PAGES = 100;
 export async function loadOrders(options) {
-  const {status, data} = await request('/api/admin/orders', options);
-  if (status === 200 && Array.isArray(data?.orders)) return {orders: data.orders, invoicing: data.invoicing || 'off', provider: data.invoicingProvider || null};
-  throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
+  const orders = [];
+  let first = null, cursor = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const {status, data} = await request(`/api/admin/orders?limit=${ORDERS_PAGE}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, options);
+    if (status !== 200 || !Array.isArray(data?.orders)) throw Object.assign(new Error(status === 401 ? 'unauthorized' : 'unavailable'), {status, code: status === 401 ? 'unauthorized' : data?.error || 'unavailable'});
+    first ||= data; orders.push(...data.orders); cursor = data.nextCursor || null;
+    if (!cursor) break;
+  }
+  return {orders, invoicing: first.invoicing || 'off', provider: first.invoicingProvider || null, integration: first.integration || null};
 }
 // "Conferir estorno" / "Tentar estorno de novo" on a declined order.
 export async function retryRefund(id, options) {
@@ -62,6 +71,31 @@ export async function cashAction(action, payload = {}, options) {
   const answer = await request('/api/admin/cash', {method: 'POST', body: {...payload, action}, ...options});
   if (answer.status === 200 && answer.data?.cash) return answer.data.cash;
   throw cashError(answer);
+}
+
+// Envio internacional: the Exporta Fácil options of the contract for a country and the pieces (api/admin/international-quote.js).
+export async function internationalQuote(country, items, options) {
+  const answer = await request('/api/admin/international-quote', {method: 'POST', body: {country, items}, timeout: 30000, ...options});
+  if (answer.status === 200 && Array.isArray(answer.data?.options)) return answer.data;
+  throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+}
+
+// Mensagens (api/admin/messages.js): the count of new ones (the chat icon), a page of a view, and one change.
+const inboxError = answer => Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+export async function messagesSummary(options) {
+  const answer = await request('/api/admin/messages?summary=1', options);
+  if (answer.status === 200 && Number.isInteger(answer.data?.unread)) return answer.data.unread;
+  throw inboxError(answer);
+}
+export async function loadMessages({view = 'novas', cursor = null} = {}, options) {
+  const answer = await request(`/api/admin/messages?view=${encodeURIComponent(view)}&limit=30${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, options);
+  if (answer.status === 200 && Array.isArray(answer.data?.messages)) return answer.data;
+  throw inboxError(answer);
+}
+export async function messageAction(action, id, options) {
+  const answer = await request('/api/admin/messages', {method: 'POST', body: {action, id}, ...options});
+  if (answer.status === 200 && answer.data?.ok) return answer.data;
+  throw inboxError(answer);
 }
 
 // The buyer's full CPF for issuing the invoice by hand (audited on the server).

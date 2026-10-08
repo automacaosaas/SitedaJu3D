@@ -1,0 +1,130 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// Renders of the lamps (girafa, unicórnio) from the site's 3D preview, with the studio of the airplane (studio.js): the corrected paint of
+// 07/10/2026 (tools/modelo-novidades/pintura.md) in the showcase, the cards and the giraffe's gallery. Each view is a transparent PNG
+// cropped to the piece (cropToContent); tools/render-aviao-macaco/lamp-assets.cjs places it in the frame of each picture of the site.
+// node runpage.cjs "glb=/assets/models/girafoscopio.glb&views=frente:0:6,lado:90:6,costas:180:6,rosto:0:4:face" saida.png lamp-glb.html
+//   views: name:azimuth:elevation[:face] (degrees; "face" frames only the head, for the close-up)
+import * as THREE from 'three';
+import {GLTFLoader} from '/vendor/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from '/vendor/libs/meshopt_decoder.module.js';
+import {makeRenderer, studioEnvironment, renderStudio, finish, cropToContent} from './studio.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const SIZE = Number(P.size || 1600), PASSES = Number(P.passes || 48);
+const renderer = makeRenderer(SIZE, SIZE, {exposure: Number(P.exposure || 1.0), toneMapping: P.tone || 'neutral'});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: 5.5, left: 3, right: 2.4, scrim: 1.4, glint: 12});
+// the colours of the GLB (fixed colours of each lamp) as printed plastic: satin, a light clear coat; the black of the eyes glossier
+const buf = await (await fetch(P.glb)).arrayBuffer();
+const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buf, '');
+const subject = gltf.scene;
+subject.traverse(o => {
+  if (!o.isMesh) return;
+  // tint=coat:#e8b616,…: the colour of a material only in the picture (the showcase photo's yellow, more lemon than the satin plastic of
+  // the 3D under this light), the model unchanged
+  const tint = Object.fromEntries((P.tint || '').split(',').filter(Boolean).map(t => t.split(':')));
+  const src = o.material, dark = src.name === 'features' || src.name === 'eyes'; o.userData.matName = src.name;
+  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: dark ? .28 : .46, clearcoat: dark ? .8 : .28, clearcoatRoughness: dark ? .12 : .4, envMapIntensity: .9, side: THREE.DoubleSide});
+  // flat=1 (checking the paint): the bare colours, no light — a border that leaks shows as it is, not as a shadow
+  if (P.flat) o.material = new THREE.MeshBasicMaterial({color: src.color.clone(), side: THREE.DoubleSide});
+  // the thin, dense Rodin shells get shadow acne from their own inner wall (as on the site, asset-models.js): they cast, not receive
+  o.castShadow = true; o.receiveShadow = false;
+  // (the GLB normals are 8-bit: kept as they are)
+});
+// smooth=0 keeps the GLB normals (the unicorn: the averaging spread the dark underside of the head down the white tube, "manchas de sombra no
+// pescoço"). Otherwise: normals rebuilt from the geometry, the same across the colour borders (a vertex has one normal whatever primitive it is in): the 8-bit
+// normals of the GLB and the needle triangles of the Rodin mesh drew thin light streaks on the coat in the close-up
+if (P.smooth !== '0') {
+  subject.updateMatrixWorld(true);
+  const meshes = []; subject.traverse(o => { if (o.isMesh) meshes.push(o); });
+  const key = v => `${Math.round(v.x * 2e4)},${Math.round(v.y * 2e4)},${Math.round(v.z * 2e4)}`, acc = new Map(), a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  const local = meshes.map(o => { const p = o.geometry.attributes.position, V = []; for (let i = 0; i < p.count; i++) V.push(new THREE.Vector3().fromBufferAttribute(p, i)); return V; });
+  const nb = new Map(), link = (p, q) => { if (!nb.has(p)) nb.set(p, new Set()); nb.get(p).add(q); };
+  meshes.forEach((o, mi) => { const V = local[mi], idx = o.geometry.index.array; for (let t = 0; t < idx.length; t += 3) { a.copy(V[idx[t]]); b.copy(V[idx[t + 1]]); c.copy(V[idx[t + 2]]); n.subVectors(c, b).cross(a.clone().sub(b)); const ks = [a, b, c].map(key); for (const k of ks) { const s0 = acc.get(k) || new THREE.Vector3(); s0.add(n); acc.set(k, s0); } link(ks[0], ks[1]); link(ks[1], ks[2]); link(ks[2], ks[0]); link(ks[1], ks[0]); link(ks[2], ks[1]); link(ks[0], ks[2]); } });
+  // a few passes of averaging the normals with the neighbours' (the noise of the dense mesh goes, the shape stays)
+  for (const k of acc.keys()) acc.get(k).normalize();
+  for (let it = 0; it < Number(P.ns ?? 4); it++) { const next = new Map(); for (const [k, v] of acc) { const s0 = v.clone(); for (const q of nb.get(k) || []) s0.add(acc.get(q)); next.set(k, s0.normalize()); } for (const [k, v] of next) acc.set(k, v); }
+  meshes.forEach((o, mi) => { const V = local[mi], N = new Float32Array(V.length * 3), pos = new Float32Array(V.length * 3); V.forEach((v, i) => { const s0 = acc.get(key(v)).clone().normalize(); N.set([s0.x, s0.y, s0.z], i * 3); pos.set([v.x, v.y, v.z], i * 3); });
+    o.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3)); o.geometry.setAttribute('normal', new THREE.BufferAttribute(N, 3)); });
+}
+// fitted like the site (height 4.1, standing on y = −1.9, centred)
+const box0 = new THREE.Box3().setFromObject(subject), size0 = box0.getSize(new THREE.Vector3()), c0 = box0.getCenter(new THREE.Vector3()), k = 4.1 / size0.y;
+const holder = new THREE.Group(); holder.add(subject); subject.position.set(-c0.x, -box0.min.y, -c0.z); holder.scale.setScalar(k); holder.position.y = -1.9;
+scene.add(holder); holder.updateMatrixWorld(true);
+const meshesAll = []; subject.traverse(o => { if (o.isMesh) meshesAll.push(o); });
+// cut=y&axis=cx,cz: the faces above y = cut (render units) are the head (the unicorn's head is a cap that turns on the tube); they turn
+// around the vertical axis through (cx, cz) by the 5th field of each view (degrees, positive to the viewer's right: the face goes toward +x)
+let pivot = null;
+// ledge=y0,r[,y1,r1]: also the faces that look down (the underside of the head, its ledge over the tube) above y0 and farther than r from
+// the axis, and everything above y1 farther than r1 (the snout hangs below the ledge) — the head then ends exactly where it sits on the tube, a seam hidden under its own ledge (a cut across the tube showed a dark
+// line on the neck while turning: 07/10/2026)
+if (P.cut) {
+  const cut = Number(P.cut), [ax, az] = (P.axis || '0,0').split(',').map(Number), v = new THREE.Vector3(); pivot = new THREE.Group();
+  const [ly, lr, oy = Infinity, or = Infinity] = P.ledge ? P.ledge.split(',').map(Number) : [Infinity, 0];
+  pivot.position.set(ax, 0, az); scene.add(pivot);
+  for (const o of meshesAll) {
+    const g = o.geometry, p = g.attributes.position, idx = g.index.array, keep = [], head = [], W = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); W[i * 3] = v.x; W[i * 3 + 1] = v.y; W[i * 3 + 2] = v.z; }
+    const isHead = (a, b, c) => {
+      const cy = (W[a * 3 + 1] + W[b * 3 + 1] + W[c * 3 + 1]) / 3; if (cy > cut) return true; if (cy < ly) return false;
+      const cx = (W[a * 3] + W[b * 3] + W[c * 3]) / 3 - ax, cz = (W[a * 3 + 2] + W[b * 3 + 2] + W[c * 3 + 2]) / 3 - az; const rr = Math.hypot(cx, cz); if (cy > oy && rr > or) return true; if (rr < lr) return false;
+      const ux = W[b * 3] - W[a * 3], uy = W[b * 3 + 1] - W[a * 3 + 1], uz = W[b * 3 + 2] - W[a * 3 + 2], vx = W[c * 3] - W[a * 3], vy = W[c * 3 + 1] - W[a * 3 + 1], vz = W[c * 3 + 2] - W[a * 3 + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; return ny / (Math.hypot(nx, ny, nz) || 1) < -.7;
+    };
+    for (let t = 0; t < idx.length; t += 3) (isHead(idx[t], idx[t + 1], idx[t + 2]) ? head : keep).push(idx[t], idx[t + 1], idx[t + 2]);
+    if (!head.length) continue;
+    g.setIndex(keep);
+    const hg = g.clone(); hg.setIndex(head);
+    // where the two parts met (the snout rested on the tube), the vertex normals still lean toward the other part: once the head turns
+    // they drew a faint arc on the tube. Within a few rings of the seam, each part gets normals from its own faces only
+    for (const [geo, faces] of [[g, keep], [hg, head]]) {
+      const other = new Set(faces === keep ? head : keep), seam = new Set(faces.filter(i => other.has(i))), adj = new Map();
+      for (let t = 0; t < faces.length; t += 3) for (let c = 0; c < 3; c++) { const i = faces[t + c]; if (!adj.has(i)) adj.set(i, []); adj.get(i).push(t); }
+      let ring = seam; const near = new Set(seam);
+      for (let r = 0; r < Number(P.heal ?? 3); r++) { const next = new Set(); for (const i of ring) for (const t of adj.get(i) || []) for (let c = 0; c < 3; c++) { const j = faces[t + c]; if (!near.has(j)) { near.add(j); next.add(j); } } ring = next; }
+      const nrm = geo.attributes.normal.clone(), pa = geo.attributes.position, A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3(), n = new THREE.Vector3();
+      for (const i of near) { const s0 = new THREE.Vector3(); for (const t of adj.get(i) || []) { A.fromBufferAttribute(pa, faces[t]); B.fromBufferAttribute(pa, faces[t + 1]); C.fromBufferAttribute(pa, faces[t + 2]); n.subVectors(C, B).cross(A.clone().sub(B)); s0.add(n); } if (s0.lengthSq()) { s0.normalize(); nrm.setXYZ(i, s0.x, s0.y, s0.z); } }
+      geo.setAttribute('normal', nrm);
+    }
+    const hm = new THREE.Mesh(hg, o.material); hm.castShadow = true; hm.receiveShadow = false;
+    // the head mesh in pivot space: the original world matrix, moved to the axis
+    hm.matrixAutoUpdate = false; hm.matrix.copy(new THREE.Matrix4().makeTranslation(-ax, 0, -az).multiply(o.matrixWorld));
+    pivot.add(hm);
+  }
+  // collar=r,y0,y1: a plain tube just inside the neck, in the coat's material — wherever the turned head uncovers a gap in the seam, the
+  // eye finds the neck's white there, not the dark inside
+  if (P.collar) {
+    const [cr, cy0, cy1] = P.collar.split(',').map(Number), coat = meshesAll.find(o => o.userData.matName === 'coat') || meshesAll[0];
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(cr, cr, cy1 - cy0, 160, 1, true), coat.material); collar.position.set(ax, (cy0 + cy1) / 2, az); scene.add(collar);
+  }
+}
+const camera = new THREE.PerspectiveCamera(Number(P.fov || 20), 1, .1, 200);
+const out = {}, info = {};
+for (const spec of (P.views || 'frente:0:6').split(',')) {
+  const [name, az, el, mode, turn = '0'] = spec.split(':'), a = Number(az) * Math.PI / 180, e = Number(el) * Math.PI / 180;
+  if (pivot) { pivot.rotation.y = Number(turn) * Math.PI / 180; pivot.updateMatrixWorld(true); }
+  // mode: 'face' (the head, for the close-up) or 'y<height>' (a close-up at that height)
+  // 'p<x>_<y>_<dist>': a close-up of the point (x, y) of the front from that distance (checking a detail of the paint)
+  const near = /^p/.test(mode || '') ? mode.slice(1).split('_').map(Number) : null;
+  const face = mode === 'face' || /^y/.test(mode || '') || !!near, target = near ? new THREE.Vector3(near[0], near[1], 0) : face ? new THREE.Vector3(0, mode === 'face' ? 1.35 : Number(mode.slice(1)), 0) : new THREE.Vector3(0, .15, 0), dist = near ? near[2] : face ? 6.2 : 15.5;
+  camera.position.set(target.x + dist * Math.sin(a) * Math.cos(e), target.y + dist * Math.sin(e), target.z + dist * Math.cos(a) * Math.cos(e));
+  camera.lookAt(target); camera.updateProjectionMatrix();
+  // the key light stays at the camera's upper left, whatever the azimuth
+  const kd = new THREE.Vector3(-.55, .75, .6).applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+  const canvas = renderStudio(renderer, scene, camera, {width: SIZE, height: SIZE, passes: PASSES, subject: holder, key: {dir: kd.toArray(), spread: .22, intensity: Number(P.key || 2.1)}, dome: {intensity: Number(P.dome || 1.05), minElevation: -.1}});
+  // full=1: the whole square, uncropped (frames rendered one per page keep the same framing)
+  out[name] = face || P.union || P.full ? canvas : cropToContent(canvas, {pad: 2, symmetric: false}).canvas;
+  info[name] = [out[name].width, out[name].height];
+}
+// union=1 (the frames of the head turn): every view cropped to the union of their pieces, so the frames stay aligned
+if (P.union) {
+  let x0 = SIZE, y0 = SIZE, x1 = -1, y1 = -1;
+  for (const c of Object.values(out)) { const {box} = cropToContent(c, {pad: 2, symmetric: false}); x0 = Math.min(x0, box.x); y0 = Math.min(y0, box.y); x1 = Math.max(x1, box.x + box.w - 1); y1 = Math.max(y1, box.y + box.h - 1); }
+  for (const name of Object.keys(out)) { const c = document.createElement('canvas'); c.width = x1 - x0 + 1; c.height = y1 - y0 + 1; c.getContext('2d').drawImage(out[name], -x0, -y0); out[name] = c; info[name] = [c.width, c.height]; }
+}
+finish(out, info);
+</script>
+</body>

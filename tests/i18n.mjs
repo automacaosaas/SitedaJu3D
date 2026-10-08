@@ -42,6 +42,13 @@ assert.equal(t('Coleção de 1 produto', 'es'), 'Colección de 1 producto');
 const chooseLabel = 'Escolha sua cor: ver Borboletoscópio na coleção e personalizar. Cores originais: Verde-menta, Amarelo';
 assert.equal(t(chooseLabel, 'en'), 'Choose your color: view Borboletoscópio in the collection and customize. Original colors: Mint green, Yellow');
 assert.equal(t(chooseLabel, 'es'), 'Elige tu color: ver Borboletoscópio en la colección y personalizar. Colores originales: Verde menta, Amarillo');
+// 2026-10-08: accessible names of the showcase pieces and of the card's cart button come out whole in EN/ES
+assert.equal(t('Conhecer MonkeyLamp, capa para lâmpada de fenda portátil', 'en'), 'Discover MonkeyLamp, cover for a handheld slit lamp');
+assert.equal(t('Conhecer MonkeyLamp, capa para lâmpada de fenda portátil', 'es'), 'Conocer MonkeyLamp, funda para lámpara de hendidura portátil');
+assert.equal(t('Conhecer Aviãoscopia, avião magnético para régua de esquiascopia', 'en'), 'Discover Aviãoscopia, magnetic airplane for a skiascopy rack');
+assert.equal(t('Adicionar Borboletoscópio ao carrinho nas cores originais', 'en'), 'Add Borboletoscópio to cart in the original colors');
+assert.equal(t('Adicionar Borboletoscópio ao carrinho nas cores originais', 'es'), 'Añadir Borboletoscópio al carrito en los colores originales');
+assert.equal(t('Adicionar Borboletoscópio nas cores originais', 'en'), 'Add Borboletoscópio in the original colors');
 assert.equal(t('Aviãoscopia sobre pilastra branca', 'en'), 'Aviãoscopia on a white pedestal');
 assert.equal(t('Prévia 3D ilustrativa de Aviãoscopia', 'es'), 'Vista previa 3D ilustrativa de Aviãoscopia');
 assert.equal(t('Olá, Maria.', 'en'), 'Hello, Maria.');
@@ -58,13 +65,16 @@ for (const text of ['Enviamos um código de seis números para', 'Código enviad
   'Só mais um instante.', 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.', 'Carregando as formas de pagamento…', 'Confira os dados do cartão e tente novamente.',
   'O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.', 'Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.',
   'O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.', 'Pix gerado. Pague com o código ou o QR Code.', 'Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.',
-  'Pagamento confirmado. A Ju já recebeu o seu pedido.', 'O Pix expirou. Gere um novo código para continuar.', 'Tentar novamente']) {
+  'Pagamento confirmado. A Ju já recebeu o seu pedido.', 'O Pix expirou. Gere um novo código para continuar.', 'Tentar novamente',
+  // why a card was refused, and leaving a Pix that waits (2026-10-07)
+  'O cartão não tem limite disponível para esta compra. Tente outro cartão ou pague com Pix.', 'O banco do cartão não aprovou o pagamento. Tente outro cartão ou pague com Pix.',
+  'Cancelando o código anterior…', 'Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.']) {
   assert.notEqual(t(text, 'en'), text, `missing EN: ${text}`);
   assert.notEqual(t(text, 'es'), text, `missing ES: ${text}`);
 }
 
 // ── static pages: every visible string has an English translation ─────
-const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal', 'Total', 'Pix', 'Borboletoscópio', 'Dinossauroscópio', 'Aviãoscopia', 'Instagram', 'WhatsApp', '3D', 'Macacoscópio']);
+const keepAsIs = new Set(['Ju, imprime pra mim', 'Ju imprime pra mim', 'Subtotal', 'Total', 'Pix', 'Borboletoscópio', 'Dinossauroscópio', 'Aviãoscopia', 'Instagram', 'WhatsApp', '3D', 'MonkeyLamp', 'GiraffeLamp', 'UnicornLamp']);
 const entities = {'&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&copy;': '©', '&larr;': '←', '&rarr;': '→', '&middot;': '·', '&hearts;': '♥'};
 const decode = text => text.replace(/&#?\w+;/g, entity => entities[entity] ?? entity);
 const missing = [];
@@ -97,6 +107,15 @@ assert(/translate', 'no'/.test(i18n), 'the picker itself is never translated');
 assert(/\.language-button \.language-globe\{display:none\}/.test(theme), 'desktop shows initials only');
 assert(/@media\(max-width:800px\)\{\.language-button\{[^}]*\}\.language-button \.language-globe\{display:block\}/.test(theme), 'phones show the globe with the initials');
 assert.equal((theme.match(/\.language-picker\{position:relative/g) || []).length, 1, 'picker base rule defined once');
+
+// ── the dictionary only for English and Spanish (Portuguese, the source, never downloads it) ──
+assert(!/^import [^\n]*i18n-core/m.test(i18n) && /loading \?\?= import\('\.\/i18n-core\.js'\)/.test(i18n), 'i18n.js loads the dictionary on demand, not at import');
+assert(/if \(language !== 'pt-BR'\) \{ await loadCore\(\)\.catch\(\(\) => \{\}\); apply\(\); \} else syncPickers\(\);/.test(i18n), 'a Portuguese page is not walked nor watched');
+assert(/if \(language !== 'pt-BR'\) await loadCore\(\)\.catch\(\(\) => \{\}\);\n  apply\(\);/.test(i18n), 'choosing English or Spanish loads it first, then translates');
+assert(/return locale === 'pt-BR' \|\| !core \? value : core\.translate\(value, locale\);/.test(i18n), 'translate() before the dictionary arrives leaves the text as it is');
+assert(/languageReady\.then\(\(\) => window\.dispatchEvent\(new Event\('ju:header-ready'\)\)\);/.test(shell), 'the header waits for the language (English and Spanish never flash Portuguese)');
+const journey = read('dist/journey.js');
+assert(/\/\^\(en\|es\)\$\/\.test\(localStorage\.getItem\('ju\.language'\)/.test(journey) && /\['i18n-core\.js', 'translations\.js'\]/.test(journey) && /link\.rel = 'modulepreload'/.test(journey), 'English or Spanish chosen before: the dictionary starts downloading with the page');
 
 // ── the merge-conflict regression that shipped in theme.css ──────────
 for (const file of ['dist/theme.css', 'dist/i18n.js', 'dist/account.js', 'dist/site-shell.js', 'dist/translations.js', 'dist/account.css', 'dist/conta.html']) {

@@ -18,8 +18,6 @@
    --hero-h (altura do banner, medida no JS) mantém a geometria do degradê idêntica à do banner.
    As nuvens ficam presas ao banner e o catálogo desenha por cima. */
 .hero-bg .hero-layer { background: radial-gradient(90% calc(var(--hero-h) * .75) at 52% calc(var(--hero-h) * .42), var(--stops)); }
-/* As nuvens esmaecem antes do limite do banner, para o corte não virar uma linha. */
-.clouds { --cloud-lift:clamp(140px,13vw,180px); position: absolute; top: 0; left: 0; right: 0; height: var(--hero-h); overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cloud-lift) - 110px), transparent calc(100% - var(--cloud-lift))); mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cloud-lift) - 110px), transparent calc(100% - var(--cloud-lift))); }
 /* Véu na cor do site (#fff7f5 = --bg): 0% no fim do banner, 56% no miolo da seção, 20% no rodapé (mais tema).
    A rampa do rodapé começa em max(fim da primeira rampa, fim da página − --foot-ramp): nunca se sobrepõem. */
 .hero-bg::after { content: ''; position: absolute; left: 0; right: 0; top: calc(var(--hero-h) - var(--fade-in)); bottom: 0; z-index: 5; pointer-events: none; background: linear-gradient(to bottom, rgba(255, 247, 245, 0) calc(var(--ramp-1) * 0), rgba(255, 247, 245, 0.016) calc(var(--ramp-1) * 0.1), rgba(255, 247, 245, 0.058) calc(var(--ramp-1) * 0.2), rgba(255, 247, 245, 0.121) calc(var(--ramp-1) * 0.3), rgba(255, 247, 245, 0.197) calc(var(--ramp-1) * 0.4), rgba(255, 247, 245, 0.28) calc(var(--ramp-1) * 0.5), rgba(255, 247, 245, 0.363) calc(var(--ramp-1) * 0.6), rgba(255, 247, 245, 0.439) calc(var(--ramp-1) * 0.7), rgba(255, 247, 245, 0.502) calc(var(--ramp-1) * 0.8), rgba(255, 247, 245, 0.544) calc(var(--ramp-1) * 0.9), rgba(255, 247, 245, 0.56) calc(var(--ramp-1) * 1), rgba(255, 247, 245, 0.56) max(var(--ramp-1), calc(100% - var(--foot-ramp))), rgba(255, 247, 245, 0.55) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.1), rgba(255, 247, 245, 0.523) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.2), rgba(255, 247, 245, 0.482) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.3), rgba(255, 247, 245, 0.433) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.4), rgba(255, 247, 245, 0.38) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.5), rgba(255, 247, 245, 0.327) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.6), rgba(255, 247, 245, 0.278) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.7), rgba(255, 247, 245, 0.237) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.8), rgba(255, 247, 245, 0.21) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 0.9), rgba(255, 247, 245, 0.2) calc(max(var(--ramp-1), calc(100% - var(--foot-ramp))) + (100% - max(var(--ramp-1), calc(100% - var(--foot-ramp)))) * 1)); }
@@ -33,7 +31,7 @@
 /* Categoria dos cards, valor "Categoria" e pontinhos do carrossel também seguem o tema. */
 .home .product-rail-category, .home .product-rail-active-details strong { color: var(--theme-accent, var(--rose)); }
 .home .product-carousel-dots button::after { background: var(--theme-soft, #e8d6da); }
-.home .product-carousel-dots button[aria-selected=true]::after { background: var(--theme-accent, var(--rose)); }
+.home .product-carousel-dots button[aria-current]::after { background: var(--theme-accent, var(--rose)); }
 /* Card central limpo: a sombra do palco era cortada pela borda dele e desenhava retângulos. Agora o palco só
    recorta na horizontal e a sombra é curta, suave e no tom do tema. Borda e faixa superior no tom do tema. */
 @supports (overflow: clip) { .home .product-carousel-stage { overflow-x: clip; overflow-y: visible; } }
@@ -41,32 +39,46 @@
 .home .product-rail-card.is-active { border-color: var(--theme-soft, #eadde1); box-shadow: 0 30px 46px -32px var(--theme-glow, #65364925); }
 .home .product-rail-card.is-active .product-rail-art { background: linear-gradient(to bottom, var(--theme-wash, #fff) 0%, #fff 82%); }
 .home .catalog-home .product-customize, .home .catalog-home .product-cart { background: var(--theme-accent, var(--rose)); box-shadow: 0 6px 15px var(--theme-glow, #b64c6824); }
-.home .catalog-home .product-customize:hover, .home .catalog-home .product-cart:hover { background: var(--theme-accent-strong, #9e3e59); box-shadow: 0 10px 18px var(--theme-glow, #b64c6833); }
+@media (hover: hover) {
+  .home .catalog-home .product-customize:hover, .home .catalog-home .product-cart:hover { background: var(--theme-accent-strong, #9e3e59); box-shadow: 0 10px 18px var(--theme-glow, #b64c6833); }
+}
+/* A seção dos produtos veste a peça do card do centro (07/10/2026, pedido da dona: mexer nos cards muda só os cards; catalog.js
+   paintTheme). As cores dela chegam em --cat-*, propriedades registradas que deslizam em .6s quando o card do centro muda, e tudo o que
+   lê --theme-* aqui dentro vai junto: título, apoio, pontinhos, botões dos cards e o tom dos cards dos lados. A vitrine não pinta mais
+   esta seção (só o rodapé). Na primeira pintura, sem deslizar (data-themed="still"); sem JavaScript, as cores da página. */
+@property --cat-text { syntax: '<color>'; inherits: true; initial-value: #282326; }
+@property --cat-muted { syntax: '<color>'; inherits: true; initial-value: #7b7076; }
+@property --cat-accent { syntax: '<color>'; inherits: true; initial-value: #b64c68; }
+@property --cat-accent-strong { syntax: '<color>'; inherits: true; initial-value: #9e3e59; }
+@property --cat-soft { syntax: '<color>'; inherits: true; initial-value: #eadde1; }
+@property --cat-wash { syntax: '<color>'; inherits: true; initial-value: #f4e4e7; }
+@property --cat-glow { syntax: '<color>'; inherits: true; initial-value: #b64c6824; }
+.home .catalog-home[data-themed] { --theme-text: var(--cat-text); --theme-muted: var(--cat-muted); --theme-accent: var(--cat-accent); --theme-accent-strong: var(--cat-accent-strong); --theme-soft: var(--cat-soft); --theme-wash: var(--cat-wash); --theme-glow: var(--cat-glow);
+  /* as cores do site que o journey.css amarra ao tema da página (a vitrine) também passam a ser as da seção: os cards dos lados e as setas */
+  --ink: var(--cat-text); --muted: var(--cat-muted); --rose: var(--cat-accent); --pink: var(--cat-soft); --line: color-mix(in srgb, var(--cat-accent) 18%, transparent); }
+/* A seção tem a sua faixa de fundo, de ponta a ponta da tela, no tom do card do centro: título, botões e fundo sempre na mesma cor (antes
+   o fundo seguia a vitrine e brigava com o texto). É uma border-image que transborda para os lados (sem rolagem lateral) e se dissolve em
+   cima e embaixo, emendando com a vitrine e com o rodapé; --band também pinta o esmaecido das bordas do palco (catalog.css). */
+.home .catalog-home[data-themed] { --band: color-mix(in srgb, var(--cat-wash) 70%, #fff7f5); border-image: linear-gradient(to bottom, transparent, var(--band) 160px, var(--band) calc(100% - 140px), transparent) 0 fill / 0 / 80px 100vw 24px; }
+/* atrás do card do centro, um halo claro: o card se destaca da faixa sem mudar de cor */
+.home .catalog-home[data-themed] .product-carousel-stage::before { content: ''; position: absolute; left: 50%; top: 46%; z-index: 0; width: min(920px, 120%); height: 118%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, .2) 55%, transparent 100%); transform: translate(-50%, -50%); pointer-events: none; }
+.home .catalog-home[data-themed="live"] { transition: --cat-text .6s ease, --cat-muted .6s ease, --cat-accent .6s ease, --cat-accent-strong .6s ease, --cat-soft .6s ease, --cat-wash .6s ease, --cat-glow .6s ease; }
+@media (prefers-reduced-motion: reduce) { .home .catalog-home[data-themed] { transition: none; } }
 /* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
-  .home .product-carousel-stage { height: 526px; }
-  .home .product-rail-card { width: min(300px, 30vw); min-height: 400px; transform: translate(calc(-50% + var(--slot) * 336px + var(--drag)), 22px) scale(.91); }
-  .home .product-rail-card.is-active { width: min(352px, 37vw); min-height: 440px; transform: translate(calc(-50% + var(--drag)), 0) scale(1); }
-  .home .product-rail-art { height: 196px; }
-  .home .product-rail-card.is-active .product-rail-art { height: 212px; }
+  /* a caixa de todos os cards (--card-w, --card-h, --art-h), o do centro uns 8% menor desde a segunda volta (a dona: "reduzir um
+     pouquinho o card central, já que os laterais estão bem pequenos"); os vizinhos a --slot-w do centro, em --side-s da escala */
+  .home .product-carousel-stage { height: 526px; --card-w: min(342px, 35vw); --card-h: 490px; --art-h: 192px; --slot-w: clamp(270px, 24vw, 340px); --side-s: .82; --side-y: 60px; }
   .home .product-rail-copy { padding: 14px 20px 16px; }
   .home .product-rail-copy h3 { font-size: 26px; }
   .home .product-rail-active-details > div { min-height: 33px; }
-  .home .product-rail-bottom, .home .product-rail-actions { margin-top: 12px; }
+  .home .product-rail-actions { margin-top: 12px; }
 }
-.cloud { position: absolute; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 38% 30%, rgba(255, 255, 255, .94) 0%, rgba(255, 255, 255, .64) 46%, rgba(255, 255, 255, .32) 78%, rgba(255, 255, 255, .14) 100%); }
-.c1 { left: -7vw; bottom: -10vw; width: 25vw; }
-.c2 { left: 9vw; bottom: -14vw; width: 21vw; }
-.c3 { right: -8vw; bottom: -12vw; width: 26vw; }
-.c4 { right: 15vw; bottom: -16vw; width: 20vw; }
-.c5 { left: -12vw; top: 7vw; width: 17vw; }
-.c6 { right: -10vw; top: 4vw; width: 15vw; }
-/* Keep the airplane's lower clouds beside the pedestal, like petals and ferns. */
-.clouds .c1, .clouds .c2, .clouds .c3, .clouds .c4 { translate:0 calc(-1 * var(--cloud-lift)); }
-@media (max-width:900px) {
-  .clouds { --cloud-lift:clamp(140px,42vw,240px); }
+/* De 901 a 1023 px (tablet deitado, notebook pequeno) a sobra de cada lado é estreita: os vizinhos um pouco menores e mais perto do
+   centro, para a peça não passar por baixo da seta nem o nome sumir no esmaecido da borda (revisão, 08/10/2026). */
+@media (min-width: 901px) and (max-width: 1023px) {
+  .home .product-carousel-stage { --slot-w: 25.8vw; --side-s: .72; }
 }
-
 /* Header da home: mesma estrutura, fundo transparente sobre a faixa de tema. */
 .home .site-header { grid-area: 1 / 1; position: relative; z-index: 2; padding-inline: var(--inset); background: transparent; border-bottom: 0; }
 .home .site-header .brand img { mix-blend-mode: normal; }
@@ -88,25 +100,45 @@
 
 /* Textos e paleta do produto ativo (um bloco por produto, empilhados na mesma célula) */
 .copy, .palette { grid-area: 1 / 1; will-change: transform, opacity; }
-.copy-category { margin: 0; font: 650 clamp(12px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
-.copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
-.copy-sub { margin: 0; max-width: 15em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', sans-serif; color: var(--muted); }
+.copy-category { margin: 0; font: 650 clamp(12px, calc(var(--u) * 0.01), 17px) / 1.2 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.copy-name { margin: clamp(10px, calc(var(--u) * 0.011), 20px) 0 clamp(8px, calc(var(--u) * 0.01), 18px); font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-weight: 500; font-size: clamp(34px, calc(var(--u) * 0.041), 76px); line-height: 1.02; letter-spacing: -.025em; color: var(--text); }
+/* O subtítulo em linhas equilibradas (sem palavra sozinha embaixo) e cada bloco alinhado pelo pé: o preço fica no mesmo lugar de
+   peça para peça, colado aos botões (no celular, ao palco). */
+.copy { align-self: end; }
+.copy-sub { margin: 0; max-width: 18em; font: 400 clamp(15px, calc(var(--u) * 0.016), 27px) / 1.3 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--muted); text-wrap: balance; }
 .copy-price { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: clamp(12px, calc(var(--u) * 0.012), 20px) 0 0; color: var(--text); }
-.copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', sans-serif; font-variant-numeric: tabular-nums; }
-.copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', sans-serif; letter-spacing: .02em; }
-.palette { display: flex; flex-wrap: wrap; align-items: center; gap: clamp(10px, calc(var(--u) * 0.011), 18px); width: max-content; max-width: 100%; }
+.copy-price strong { font: 650 clamp(18px, calc(var(--u) * 0.016), 26px) / 1.1 'DM Sans', 'DM Sans Fallback', sans-serif; font-variant-numeric: tabular-nums; }
+.copy-pix { padding: .35em .75em; border-radius: 999px; background: #13864a; color: #fff; font: 700 clamp(12px, calc(var(--u) * 0.0092), 14px) / 1.1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .02em; }
+/* As duas ações lado a lado (07/10/2026: "deixar mais dinâmico o botão… integrar no nosso universo visual"): a principal, cheia, na cor
+   da peça, e "Ver encaixado", de vidro, com a borda na mesma cor; as duas na mesma altura e em pílula, como as setas e os selos. */
+.palette { display: flex; flex-direction: row; align-items: center; gap: 12px; width: max-content; max-width: 100%; }
 .copy[inert], .palette[inert] { pointer-events: none; }
-/* Ação principal no padrão dos marketplaces: cor sólida, verbo claro, ícone à esquerda e área de toque generosa. */
-.palette-button { display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 0 1.6em 0 1.3em; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; text-decoration: none; cursor: pointer; box-shadow: 0 10px 24px -8px var(--glow); transition: background .2s, transform .2s, box-shadow .2s; }
-.palette-button svg { width: 1.3em; height: 1.3em; flex: none; }
+/* o brilho que atravessa o botão só corre no da peça à vista (os das outras estão escondidos) */
+.palette[inert] .palette-button::after { animation: none; }
+/* Ação principal, o elemento mais chamativo da vitrine: a cor da peça com um degradê vertical quase imperceptível (mais
+   clara no topo, volume), uma sombra viva no próprio tom (flutua sobre o fundo), em pílula, letra bem espaçada, a paleta de
+   cores à esquerda e, na ponta, um círculo branco com a seta (para onde o clique leva). De tempos em tempos um brilho atravessa
+   o botão (chama o clique sem piscar). No hover sobe em direção a quem olha (3% maior, sombra mais espalhada), a paleta balança
+   de leve e a seta anda; no clique, afunda. */
+.palette-button { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: .6em; min-height: 52px; padding: 6px 6px 6px 1.35em; border: 0; border-radius: 999px; background: var(--accent) linear-gradient(180deg, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, .04) 50%, rgba(0, 0, 0, .04) 100%); color: #fff; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .025em; text-decoration: none; cursor: pointer;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .24) inset, 0 10px 25px var(--glow), 0 2px 6px -2px rgba(20, 30, 40, .2); transition: transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s cubic-bezier(.25, .8, .25, 1), filter .3s ease; }
+.palette-button:not(:has(.palette-go)) { padding: 0 1.6em 0 1.35em; }
+.palette-button svg { width: 1.25em; height: 1.25em; flex: none; stroke-width: 1.8; }
+.palette-go { display: grid; place-items: center; width: 40px; height: 40px; flex: none; margin-left: .3em; border-radius: 50%; background: #fff; color: var(--accent); box-shadow: 0 2px 8px rgba(20, 30, 40, .18); transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+.palette-go svg { width: 18px; height: 18px; stroke-width: 2.2; }
+.palette-button::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .3) 50%, transparent 65%); transform: translateX(-120%); animation: palette-sheen 5.6s cubic-bezier(.4, 0, .2, 1) 1.8s infinite; pointer-events: none; }
+@keyframes palette-sheen { 0%, 64% { transform: translateX(-120%); } 84%, 100% { transform: translateX(120%); } }
 .palette-button, .hero-demo-button { white-space: nowrap; }
-.palette-button:active { transform: scale(.98); }
+.palette-button:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
+@keyframes palette-tilt { 0% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 50% { transform: rotate(8deg); } 72% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
 .palette-button:focus-visible, .hero-demo-button:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-/* Secundária: discreta, só nas peças com demonstração. */
-.hero-demo-button { display: inline-flex; align-items: center; gap: .55em; min-height: 48px; padding: 0 1.2em 0 .9em; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .72); color: var(--accent); font: 600 clamp(14px, calc(var(--u) * 0.0105), 16px) / 1 'DM Sans', sans-serif; cursor: pointer; transition: background .2s, border-color .2s; }
-.hero-demo-button svg { width: 1.35em; height: 1.35em; flex: none; }
+/* Secundária, só nas peças com demonstração: "Ver encaixado" com o olho (ver a peça montada), em vidro translúcido sobre o banner,
+   com a borda e o texto na cor da peça; no hover fica branca, a borda acende e o olho cresce. */
+.hero-demo-button { display: inline-flex; align-items: center; justify-content: center; gap: .5em; min-height: 52px; padding: 0 1.3em; border: 1.5px solid color-mix(in srgb, var(--accent) 32%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--accent); font: 650 clamp(14px, calc(var(--u) * 0.0106), 16px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .02em; cursor: pointer;
+  box-shadow: 0 8px 20px -12px rgba(20, 30, 40, .3); transition: background .3s ease, border-color .3s ease, color .3s ease, transform .3s cubic-bezier(.25, .8, .25, 1), box-shadow .3s ease; }
+.hero-demo-button svg { width: 1.3em; height: 1.3em; flex: none; stroke-width: 1.7; transition: transform .3s ease; }
 /* Novidade sem compra: no lugar da ação principal, um selo no mesmo tamanho do botão. */
-.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', sans-serif; letter-spacing: .01em; white-space: nowrap; }
+.palette-soon { display: inline-flex; align-items: center; min-height: 52px; padding: 0 1.4em; border-radius: 999px; background: rgba(255, 255, 255, .82); color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent) inset; font: 650 clamp(15px, calc(var(--u) * 0.0118), 18px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .01em; white-space: nowrap; }
 /* Na novidade o selo fica onde vai o preço, menor; a ação principal é "Ver em 3D". */
 .copy-price .palette-soon { min-height: 34px; padding: 0 1em; font-size: clamp(12px, calc(var(--u) * .009), 14px); letter-spacing: .04em; }
 .slot[data-front=true] { cursor: pointer; }
@@ -131,21 +163,35 @@
 .slot[data-front=true] .piece { perspective: 1100px; }
 .piece img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .4s ease, transform .5s cubic-bezier(.22, 1, .36, 1); }
 .piece img.is-loaded { opacity: 1; }
+/* a primeira foto aparece inteira, sem esmaecer (é ela que a página espera para aparecer, carousel.js .is-drawn) */
+.showcase:not(.is-drawn) .piece img { transition: none; }
 .slot:focus-visible { outline: 2px solid var(--rose); outline-offset: 6px; }
 
+/* Setas: vidro translúcido nas bordas do banner e chevron fino. No hover o vidro clareia e o chevron anda 3 px para onde aponta. */
 .hero-arrow {
-  position: absolute; top: 50%; z-index: 6; translate: 0 -50%; display: grid; place-items: center; width: clamp(44px, 4.1vw, 68px); height: clamp(44px, 4.1vw, 68px); padding: 0;
-  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); transition: background .2s, scale .2s;
+  position: absolute; top: 50%; z-index: 6; translate: 0 -50%; display: grid; place-items: center; width: clamp(46px, 3.8vw, 60px); height: clamp(46px, 3.8vw, 60px); padding: 0; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .6); border-radius: 50%; background: rgba(255, 255, 255, .5); -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2); color: var(--theme-text, #1f2a33);
+  box-shadow: 0 8px 24px -12px rgba(30, 50, 60, .28); transition: background-color .3s ease, box-shadow .3s ease, scale .3s ease;
 }
-.hero-arrow svg { width: 34%; height: 34%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.hero-prev { left: clamp(14px, 2.4vw, 44px); }
-.hero-next { right: clamp(14px, 2.4vw, 44px); }
-.hero-arrow:active { scale: .95; }
+.hero-arrow svg { width: 32%; height: 32%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8; transition: translate .3s ease, opacity .3s ease; }
+/* Em telas mais largas que o contêiner (1560 px), as setas acompanham a margem dele em vez de ir para a beira da janela. */
+.hero-prev { left: calc(max(0px, (100% - 1560px) / 2) + clamp(10px, 2vw, 36px)); }
+.hero-next { right: calc(max(0px, (100% - 1560px) / 2) + clamp(10px, 2vw, 36px)); }
+.hero-arrow:active { scale: .94; }
+.hero-arrow:focus-visible { outline: 2px solid var(--theme-accent, #1f2a33); outline-offset: 3px; }
 @media (hover: hover) {
-  .hero-arrow:hover { background: #fff; scale: 1.05; }
+  .hero-arrow:hover { background: rgba(255, 255, 255, .85); box-shadow: 0 12px 28px -12px rgba(30, 50, 60, .34); }
+  .hero-arrow:hover svg { opacity: 1; }
+  .hero-prev:hover svg { translate: -3px 0; }
+  .hero-next:hover svg { translate: 3px 0; }
   .home .footer-social:hover { background: var(--theme-glow, #fbe9ee); }
-  .palette-button:hover { background: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 28px -8px var(--glow); }
-  .hero-demo-button:hover { background: #fff; border-color: var(--accent); }
+  .palette-button:hover { transform: scale(1.03); filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255, 255, 255, .28) inset, 0 18px 40px var(--glow), 0 6px 14px -6px rgba(20, 30, 40, .22); }
+  /* a paleta ganha vida: um balanço rápido, com um quique no fim */
+  .palette-button:hover > svg { animation: palette-tilt .6s cubic-bezier(.34, 1.56, .64, 1); }
+  .palette-button:hover .palette-go { transform: translateX(3px); }
+  .palette-button:hover:active { transform: scale(.98); box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset, 0 5px 14px var(--glow), 0 1px 4px -1px rgba(20, 30, 40, .2); }
+  .hero-demo-button:hover { background: #fff; border-color: var(--accent); color: var(--strong); transform: translateY(-2px); box-shadow: 0 14px 26px -14px var(--glow); }
+  .hero-demo-button:hover svg { transform: scale(1.12); }
   .slot[data-front=true]:hover .piece img { transform: translateY(-8px) scale(1.012) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); }
   .slot[data-front=true]:hover .piece-shadow { transform: scale(.94); opacity: .8; }
 }
@@ -165,37 +211,54 @@
   .hero-copy { align-self: start; }
   .hero-stage { grid-column: 1 / -1; grid-row: 2; margin-top: clamp(14px, 3vw, 26px); }
   .copy-price { justify-content: center; }
-  .hero-palette { grid-column: 2; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
-  .palette { width: min(100%, 340px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 8px; }
-  .palette-button { width: 100%; padding: 0 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
-  .hero-demo-button { align-self: center; min-height: 44px; border-color: transparent; background: transparent; }
-  .hero-arrow { position: static; translate: none; grid-row: 3; align-self: start; width: 48px; height: 48px; margin-top: calc(clamp(20px, 6vw, 34px) + 2px); }
-  .hero-prev { grid-column: 1; margin-left: clamp(12px, 3vw, 24px); }
-  .hero-next { grid-column: 3; margin-right: clamp(12px, 3vw, 24px); }
+  /* o botão ocupa a linha inteira, com o link logo abaixo; as setas saem do lado dele e flutuam nas bordas da pilastra */
+  .hero-palette { grid-column: 1 / -1; grid-row: 3; align-self: start; justify-items: center; padding: 0; margin-top: clamp(20px, 6vw, 34px); }
+  /* no celular, uma embaixo da outra, as duas na largura inteira (a principal por cima; o rótulo no meio, a seta na ponta) */
+  .palette { width: min(100%, 360px); flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; }
+  .palette-button { width: 100%; padding: 6px 6px 6px 1.1em; font-size: clamp(15px, 4.1vw, 17px); }
+  .palette-button > svg:first-child { margin-left: auto; }
+  .palette-button .palette-go { margin-left: auto; }
+  .hero-demo-button { width: 100%; min-height: 50px; }
+  .hero-arrow { position: static; translate: none; grid-row: 2; align-self: center; z-index: 6; width: 44px; height: 44px; margin: 0; }
+  .hero-prev { grid-column: 1; justify-self: start; }
+  .hero-next { grid-column: 3; justify-self: end; }
 }
 @media (max-width: 600px) { .hero-shell { --inset: 22px; --hero-inset: 22px; } }
 /* Celulares estreitos (até ~380 px): o rótulo cabe numa linha, sem perder a área de toque. */
 @media (max-width: 380px) {
-  .palette-button { gap: .45em; padding: 0 .85em; font-size: 14.5px; }
-  .hero-prev { margin-left: 4px; }
-  .hero-next { margin-right: 4px; }
+  .palette-button { gap: .45em; padding: 6px 6px 6px .85em; font-size: 14.5px; }
 }
 @media (max-width: 340px) {
-  .palette-button { font-size: 13.5px; padding: 0 .7em; }
-  .hero-arrow { width: 44px; height: 44px; }
-  .hero-prev { margin-left: 0; }
-  .hero-next { margin-right: 0; }
+  .palette-button { font-size: 13.5px; padding: 5px 5px 5px .7em; }
+  .palette-go { width: 36px; height: 36px; }
+  .hero-arrow { width: 40px; height: 40px; }
 }
 @media (min-width: 901px) and (max-width: 1100px) { .showcase { --ped-w: clamp(250px, 30vw, 330px); } }
 @media (prefers-reduced-motion: reduce) {
-  .piece img, .piece-shadow, .hero-arrow, .palette-button, .hero-demo-button { transition: none; }
+  .piece img, .piece-shadow, .hero-arrow, .hero-arrow svg, .palette-button, .hero-demo-button, .hero-demo-button svg { transition: none; }
+  .palette-button:hover > svg { animation: none; }
+  .palette-button::after { animation: none; display: none; }
   .palette-button:active { transform: none; }
   .slot[data-front=true]:hover .piece img, .slot[data-front=true]:hover .piece-shadow { transform: none; opacity: 1; }
 }
 
-/* Peripheral petal and fern clouds dissolve into the active theme. */
-.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
-.hero-scenery svg { position:absolute; width:clamp(240px,32vw,510px); }
+/* Fundo da vitrine em silhuetas brancas de nuvem, nas bordas (hero-scenery.js; 08/10/2026, pedidos do dono: "deixar as coisas mais
+   na borda, para se conectar com a página… algo mais fluido, que conecte com o rolar da página… que não ocupe além [da vitrine]"): as
+   silhuetas dos cantos, as de cada peça nas bordas esquerda e direita (longe da peça, das setas, do texto e do preço) e as nuvenzinhas.
+   Tudo fica dentro da vitrine (.hero-scenery recorta na altura dela). Só transform e opacity se mexem: as nuvenzinhas deslizam alguns
+   px em voltas longas, os cantos balançam de leve, duas estrelinhas cintilam e, no arco-íris, um brilho corre pelas faixas, só na
+   camada à vista (a apagada sai da pintura com .is-off, carousel.js), com a vitrine na tela e a aba aberta (.is-still), parada
+   (.is-moving: no arraste e no assentar, o parallax já move o fundo) e sem a página rolando (.is-scrolling); e tudo acompanha a
+   rolagem da página (scn-scroll, abaixo).
+   Com movimento reduzido, tudo parado. */
+.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; }
+.hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }
+/* O parallax do arraste (carousel.js) escreve `translate` direto nos cantos e nas silhuetas das bordas, cada um na sua camada do compositor. */
+.scenery-mist { position:absolute; inset:0; will-change:translate; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
+.scenery-mist > span { position:absolute; width:clamp(240px,32vw,510px); animation:scn-sway 13s ease-in-out infinite alternate; }
+/* o que se mexe é o <span>: uma animação no próprio <svg> não vai para o compositor do Chrome (recalculava o estilo a cada quadro) */
+.scenery-mist > span > svg { display:block; width:100%; height:auto; aspect-ratio:360 / 440; }
+.scenery-mist > .scenery-right { animation-delay:-6.5s; }
 .hero-scenery .scenery-left { left:-10%; bottom:-90px; transform:rotate(-18deg); }
 .hero-scenery .scenery-right { right:-10%; bottom:-125px; transform:scaleX(-1) rotate(-24deg); opacity:.82; }
 .scenery-ferns .scenery-left { left:-9%; bottom:-105px; transform:rotate(18deg); }
@@ -205,4 +268,131 @@
   .hero-scenery .scenery-right { width:57vw; right:-25%; bottom:-50px; }
   .scenery-ferns .scenery-left { left:-25%; bottom:-36px; }
   .scenery-ferns .scenery-right { right:-26%; bottom:-28px; }
+}
+.scenery-grass .scenery-left { left:-6%; bottom:-70px; transform:rotate(-4deg); }
+.scenery-grass .scenery-right { right:-6%; bottom:-80px; transform:scaleX(-1) rotate(-6deg); }
+.scenery-puffs .scenery-left, .scenery-towers .scenery-left { left:-9%; bottom:-80px; transform:none; }
+.scenery-puffs .scenery-right, .scenery-towers .scenery-right { right:-9%; bottom:-96px; transform:scaleX(-1); }
+.scenery-palms .scenery-left { left:-8%; bottom:-70px; transform:none; }
+.scenery-palms .scenery-right { right:-8%; bottom:-84px; transform:scaleX(-1); }
+/* no computador, as folhas de palmeira mais embaixo ("só as folhas que estão embaixo"): mais altas, passavam por trás da seta da
+   esquerda (1920 px), do "Comprar" e do preço (1280 a 1440 px) */
+@media (min-width: 901px) {
+  .scenery-palms .scenery-left, .scenery-palms .scenery-right { bottom:-175px; }
+}
+@media (min-width: 1561px) {
+  .scenery-palms .scenery-left { left:-13%; }
+  .scenery-palms .scenery-right { right:-13%; }
+}
+.scenery-daisies .scenery-left { left:-7%; bottom:-60px; transform:rotate(-6deg); }
+.scenery-daisies .scenery-right { right:-7%; bottom:-74px; transform:scaleX(-1) rotate(-8deg); }
+@media(max-width:900px) {
+  .scenery-grass .scenery-left, .scenery-puffs .scenery-left, .scenery-towers .scenery-left, .scenery-palms .scenery-left, .scenery-daisies .scenery-left { left:-24%; bottom:-30px; }
+  .scenery-grass .scenery-right, .scenery-puffs .scenery-right, .scenery-towers .scenery-right, .scenery-palms .scenery-right, .scenery-daisies .scenery-right { right:-24%; bottom:-34px; }
+}
+/* As silhuetas das bordas (hero-scenery.js › edge, drift, spark). .scenery-back cobre a vitrine e cada <span> fica preso à borda do
+   seu lado (.scn-l, .scn-r: a da janela, ou a do contêiner de 1560 px nas telas mais largas), --x unidades para dentro e --y abaixo do
+   alto do palco (medido no JS: --stage-top); 1 unidade = 1/200 da pilastra (--scn-ped), então tudo acompanha o tamanho da peça. O
+   tamanho é o do desenho (--w × --h) vezes a escala (--s); até 900 px, a arrumação do celular (--cx, --cy, --cs). O `translate` e o
+   `scale` de .scenery-back são da demonstração (a câmera vai até a peça, daí a origem no meio dela). A base se dissolve pela máscara,
+   antes do fim da vitrine. */
+.scenery-back { --u:calc(var(--scn-ped, 360px) / 200 * var(--m-scale, 1)); --at:calc(var(--scn-ped, 360px) / 200); position:absolute; inset:0; will-change:translate; transform-origin:var(--stage-x, 66%) calc(var(--stage-top, 200px) + 90 * var(--at)); -webkit-mask-image:linear-gradient(#000 76%, transparent); mask-image:linear-gradient(#000 76%, transparent); }
+.scenery-defs { position:absolute; width:0; height:0; }
+.scenery-back > span { position:absolute; top:calc(var(--stage-top, 200px) + var(--y) * var(--at)); width:calc(var(--w) * var(--s, 1) * var(--u)); height:calc(var(--h) * var(--s, 1) * var(--u)); }
+.scenery-back > .scn-l { left:calc(max(0px, (100% - 1560px) / 2) + var(--x) * var(--at)); }
+.scenery-back > .scn-r { right:calc(max(0px, (100% - 1560px) / 2) + var(--x) * var(--at)); }
+@media (min-width: 901px) and (max-width: 1100px) {
+  .scenery-back { --m-scale:.9; }
+}
+@media (max-width: 900px) {
+  .scenery-back > span { top:calc(var(--stage-top, 200px) + var(--cy) * var(--at)); width:calc(var(--w) * var(--cs, 1) * var(--u)); height:calc(var(--h) * var(--cs, 1) * var(--u)); }
+  .scenery-back > .scn-l { left:calc(var(--cx) * var(--at)); }
+  .scenery-back > .scn-r { right:calc(var(--cx) * var(--at)); }
+}
+@media (max-width: 600px) {
+  .scenery-back { --m-scale:.92; }
+}
+.scenery-back > span > svg, .scenery-glint > svg { display:block; width:100%; height:100%; overflow:visible; }
+/* As nuvenzinhas deslizam devagar, cada uma no seu tempo (--d, --dl); duas estrelinhas por peça cintilam (só opacity e scale); no
+   arco-íris, o brilho gira em volta do centro do arco (--turn: o sentido), do pé até a borda, e some. */
+.scenery-back > .scenery-drift { animation:scn-drift var(--d, 20s) ease-in-out var(--dl, 0s) infinite alternate; }
+.scenery-back > .scenery-spark { animation:scn-twinkle var(--d, 6s) ease-in-out var(--dl, 0s) infinite; }
+.scenery-glint { position:absolute; opacity:0; animation:scn-glint 10s ease-in-out infinite; }
+.scn-l .scenery-glint { animation-delay:-5s; }
+/* o arco-íris sai pela borda e se dissolve antes dela, com o brilho (.scn-fade): acima de 1560 px a borda é a do contêiner e, sem
+   isso, o arco acabava num corte reto no meio do fundo */
+.scenery-back > .scn-fade.scn-l { -webkit-mask-image:linear-gradient(90deg, transparent, #000 14%); mask-image:linear-gradient(90deg, transparent, #000 14%); }
+.scenery-back > .scn-fade.scn-r { -webkit-mask-image:linear-gradient(270deg, transparent, #000 12%); mask-image:linear-gradient(270deg, transparent, #000 12%); }
+@keyframes scn-drift { from { translate:-9px 0; } to { translate:9px 0; } }
+@keyframes scn-sway { from { translate:-4px 1px; } to { translate:4px -1px; } }
+@keyframes scn-twinkle { 0%, 100% { opacity:.35; scale:.72; } 50% { opacity:1; scale:1; } }
+@keyframes scn-glint { 0% { transform:rotate(0deg); opacity:0; } 12% { opacity:.9; } 46%, 100% { transform:rotate(calc(var(--turn, 1) * 104deg)); opacity:0; } }
+/* A rolagem da página ("algo mais fluido, que conecte com o rolar da página"): enquanto a vitrine sobe e sai da tela, os cantos ficam
+   um pouco para trás, afundando, e esmaecem, as silhuetas das bordas se abrem para fora e esmaecem (.scn-mid) e o que está mais longe
+   se abre mais devagar (.scn-far: as nuvenzinhas, as estrelinhas, o sol). As das bordas só andam para fora: as setas, a peça, o preço
+   e os botões ficam logo acima e abaixo delas (descendo, no meio da rolagem as nuvenzinhas passavam por trás das setas); os cantos,
+   embaixo, nunca sobem até as setas (subindo, as margaridas e as pegadas passavam por trás delas no computador). Do topo da
+   página até a vitrine inteira ter saído (--hero-h de rolagem), uma animação ligada à rolagem (animation-timeline), só transform e
+   opacity, no compositor; onde o navegador não liga animação à rolagem, carousel.js faz o mesmo num laço barato (hero-motion.js ›
+   SCENERY_SCROLL, os mesmos números). --sy: o quanto desce até o fim (fração da altura da vitrine; negativo sobe), --sx: o quanto se
+   abre para fora (--sd, o lado), --sf: a opacidade no fim. Tudo continua recortado na vitrine. Com movimento reduzido, nada disso. */
+.scenery-mist { --sy:.06; --sf:.3; }
+.scenery-back > .scn-mid { --sy:0; --sx:.06; --sf:.45; }
+.scenery-back > .scn-far { --sy:0; --sx:.035; --sf:.4; }
+.scenery-back > .scn-l { --sd:-1; }
+.scenery-back > .scn-r { --sd:1; }
+@keyframes scn-scroll { to { transform:translate3d(calc(var(--sd, 0) * var(--sx, 0) * var(--hero-h, 720px)), calc(var(--sy, 0) * var(--hero-h, 720px)), 0); opacity:var(--sf, 1); } }
+@keyframes scn-lift { to { transform:translate3d(calc(var(--sd, 0) * var(--sx, 0) * var(--hero-h, 720px)), calc(var(--sy, 0) * var(--hero-h, 720px)), 0); } }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scenery-mist, .scenery-back > .scenery-edge { animation:scn-scroll linear both; animation-timeline:scroll(root block); animation-range:0px var(--hero-h, 720px); }
+    .scenery-back > .scenery-drift { animation:scn-drift var(--d, 20s) ease-in-out var(--dl, 0s) infinite alternate, scn-scroll linear both; animation-timeline:auto, scroll(root block); animation-range:normal, 0px var(--hero-h, 720px); }
+    .scenery-back > .scenery-spark { animation:scn-twinkle var(--d, 6s) ease-in-out var(--dl, 0s) infinite, scn-lift linear both; animation-timeline:auto, scroll(root block); animation-range:normal, 0px var(--hero-h, 720px); }
+  }
+}
+/* fora da tela, aba escondida, vitrine andando, página rolando (carousel.js) ou camada apagada: o que é do ambiente para (a primeira
+   animação da lista); a da rolagem segue */
+.hero-bg:is(.is-still, .is-moving, .is-scrolling) :is(.scenery-drift, .scenery-spark, .scenery-glint, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-glint, .scenery-mist > span) { animation-play-state:paused, running; }
+/* As cores: branco e, só nas sombras e no fio das faixas do arco-íris, o tom claro da peça (carousel.js › sceneryVars: --scn-tN,
+   nunca mais escuro que o meio do degradê); o cabinho e a pontinha das bananas no lado da sombra da cor quente da peça (--scn-s1,
+   7% do texto). */
+.scenery-back .m-t1 { stop-color:var(--scn-t1); }
+.scenery-back .m-t2 { stop-color:var(--scn-t2); }
+.scenery-back .m-t3 { stop-color:var(--scn-t3); }
+.scenery-back .m-t4 { stop-color:var(--scn-t4); }
+.scenery-back .m-nub { fill:var(--scn-s1); }
+.scenery-back .m-trail { fill:none; stroke-width:3.4; stroke-linecap:round; stroke-dasharray:0 8.5; }
+@media (prefers-reduced-motion: reduce) {
+  .scenery-drift, .scenery-spark, .scenery-glint, .scenery-mist > span { animation:none; }
+}
+
+/* Nossa coleção: todos os cards têm a mesma caixa (largura, altura e foto); o do centro em tamanho cheio e os vizinhos menores só
+   pela escala, então nada pula na troca (08/10/2026). Segunda volta (08/10/2026, pedido da dona: "as imagens parecem estar dentro de
+   um quadrado... quero em fundo transparente; os que não são centrais mais simples, diferentes do central"): os vizinhos não têm mais
+   caixa nenhuma, só a peça recortada flutuando num halo nas cores da peça do centro, com o nome embaixo (catalog.css). A caixa do card
+   (o degradê da peça, --rail-own-*, o contorno claro e a sombra) é uma camada só, que acende (opacidade) quando ele chega ao centro: a
+   troca anda só por transform e opacidade. Textos, botões e pontinhos seguem as cores da seção (--cat-*, o card do centro, carousel.css
+   acima): os cards não têm transição de cor própria. */
+.home .product-rail-card[style*="--rail-own-1"] {
+  width: var(--card-w); min-height: var(--card-h); display: flex; flex-direction: column; overflow: visible;
+  transform: translate(calc(-50% + var(--slot) * var(--slot-w) + var(--drag)), var(--side-y)) scale(var(--side-s));
+  border-color: transparent; color: var(--ink, #282326); background: transparent; box-shadow: none; pointer-events: none;
+  transition: transform 560ms cubic-bezier(.22, 1.12, .36, 1), opacity 360ms ease;
+}
+.home .product-rail-card[style*="--rail-own-1"].is-active { transform: translate(calc(-50% + var(--drag)), 0) scale(1); pointer-events: auto; }
+.home .product-rail-card[style*="--rail-own-1"]::before { content: ''; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), 0 30px 50px -32px color-mix(in srgb, var(--theme-accent, #b64c68) 62%, transparent); background: radial-gradient(130% 78% at 50% 20%, var(--rail-own-1) 0%, var(--rail-own-2) 52%, var(--rail-own-3) 100%); opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+.home .product-rail-card[style*="--rail-own-1"].is-active::before { opacity: 1; }
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art, .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art { height: var(--art-h); background: transparent; overflow: visible; pointer-events: auto; }
+/* A peça fica dentro do card (2026-10-05: sair por cima poluía a tela) e, ao virar a da vez, cresce um pouco com um leve quique. A
+   sombra da peça do centro não é mais cortada pela caixa da foto (era a marca reta embaixo); a dos lados é o chão, em catalog.css. */
+.home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transform: scale(.9); transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.34, 1.3, .64, 1); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { transform: scale(1); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art img { filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--ink, #282326) 16%, transparent)); }
+.home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:focus-visible img { transform: translateY(-4px) scale(1.02); }
+@media (hover: hover) {
+  .home .product-rail-card[style*="--rail-own-1"].is-active .product-rail-art:hover img { transform: translateY(-4px) scale(1.02); }
+  .home .product-rail-card[style*="--rail-own-1"]:not(.is-active) .product-rail-art:hover img { transform: scale(.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home .product-rail-card[style*="--rail-own-1"], .home .product-rail-card[style*="--rail-own-1"]::before, .home .product-rail-card[style*="--rail-own-1"] .product-rail-art img { transition: none; }
 }

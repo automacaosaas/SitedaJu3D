@@ -1,11 +1,13 @@
+import './late-css.js';   // first: switches on the stylesheets the home loads late (index.html data-late-css)
 import {icon} from './icons.js';
-import {mountLanguagePicker} from './i18n.js';
+import {mountLanguagePicker, languageReady} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, refreshSession, signOut} from './auth-service.js';
 import {setupScrollHeader} from './header-scroll.js';
 import {mountAnnouncementBar} from './announcement-bar.js';
 import {PRODUCTS} from './products.js';
-import {COMMERCE} from './commerce-config.js';
+import {CONTACT} from './company.js';
+import {cookieNoticeNeeded} from './analytics-config.js';
 import './shopping-navigation.js';
 import './account-drawer.js';
 
@@ -21,7 +23,7 @@ const primaryNav = () => MAIN_NAVIGATION.map(item => `<a href="${item.href}"${it
 const INSTAGRAM = 'https://www.instagram.com/juimprimepramim/';
 function drawerExtras() {
   const pieces = Object.entries(PRODUCTS).map(([id, product]) => `<li><a href="${id}.html"><img src="assets/card-preview-${id}.webp" alt="" width="56" height="56" loading="lazy" decoding="async"><span><strong>${product.title}</strong><small>${product.subtitle}</small></span></a></li>`).join('');
-  const whatsapp = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? `<a href="https://wa.me/${COMMERCE.whatsapp}" target="_blank" rel="noopener">${icon('mail')}<span>Fale com a Ju</span></a>` : '';
+  const whatsapp = /^\d{12,13}$/.test(CONTACT.whatsapp) ? `<a href="https://wa.me/${CONTACT.whatsapp}" target="_blank" rel="noopener">${icon('chat')}<span>Fale com a Ju</span></a>` : '';
   return `<section class="drawer-products" aria-labelledby="drawer-products-title"><h2 id="drawer-products-title">Nossas peças</h2><ul>${pieces}</ul></section>`
     + `<nav class="drawer-more" aria-label="Mais"><a href="conta.html#pedidos">${icon('bag')}<span>Meus pedidos</span></a>${whatsapp}<a href="${INSTAGRAM}" target="_blank" rel="noopener noreferrer" aria-label="Instagram da Ju, imprime pra mim? (abre em uma nova aba)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r=".9" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a></nav>`
     + '<p class="drawer-signature">feito com carinho, pela Ju.</p>';
@@ -88,6 +90,19 @@ function setupMobileDrawer() {
   });
 }
 
+// "Pular para o conteúdo": o primeiro Tab da página, antes da barra de avisos e dos itens do cabeçalho (eram 10 paradas até a vitrine).
+// Na home o conteúdo é a vitrine; nas outras páginas, o <main>. O alvo recebe o foco sem mudar o endereço (a home lê o # para abrir peças).
+function mountSkipLink() {
+  const target = document.querySelector('.home .showcase') || document.querySelector('main');
+  if (!target || document.querySelector('.skip-link')) return;
+  if (!target.id) target.id = 'conteudo';
+  target.dataset.skipTarget = '';
+  const link = document.createElement('a');
+  link.className = 'skip-link'; link.href = `#${target.id}`; link.textContent = 'Pular para o conteúdo';
+  link.addEventListener('click', event => { event.preventDefault(); if (!target.hasAttribute('tabindex')) target.tabIndex = -1; target.focus(); });
+  document.body.prepend(link);
+}
+
 export function refreshHeader() {
   const quantity = readCart().reduce((sum, item) => sum + item.quantity, 0);
   document.querySelectorAll('[data-cart-count]').forEach(el => { el.textContent = quantity; el.hidden = !quantity; });
@@ -95,7 +110,7 @@ export function refreshHeader() {
 }
 for (const host of document.querySelectorAll('[data-shop-nav]')) {
   setupSiteHeader(host);
-  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>Entrar ou cadastrar</a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
+  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>${icon('profile')} <span>Entrar ou cadastrar</span></a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
   const picker = mountLanguagePicker(host, host.querySelector('[data-cart-link]'));
   const menuToggle = host.closest('.site-header')?.querySelector('.menu-toggle');
   if (picker && menuToggle) {
@@ -110,7 +125,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
   trigger.addEventListener('click', () => {
     const session = getSession();
     host.querySelector('.profile-greeting').textContent = session ? `Olá, ${session.name.split(' ')[0]}.` : 'Um cantinho só seu.';
-    host.querySelector('[data-account-link]').textContent = session ? 'Minha conta' : 'Entrar ou cadastrar';
+    host.querySelector('[data-account-link] span').textContent = session ? 'Minha conta' : 'Entrar ou cadastrar';
     host.querySelector('[data-signout]').hidden = !session;
     menu.hidden = !menu.hidden; trigger.setAttribute('aria-expanded', String(!menu.hidden));
   });
@@ -120,6 +135,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
 }
 // The session is an HttpOnly cookie; ask the server who is signed in so a new tab shows the right name in the menu.
 refreshSession();
+mountSkipLink();
 setupMobileDrawer();
 // The rotating bar is for the shop pages; cart, checkout and account keep the buyer focused on finishing.
 if (!document.body.matches('.commerce-page, .account-page')) mountAnnouncementBar();
@@ -135,4 +151,19 @@ window.addEventListener('storage', e => { if (e.key === CART_KEY) refreshHeader(
 window.addEventListener('pageshow', refreshHeader);
 window.addEventListener('ju:cart', refreshHeader);
 refreshHeader();
-window.dispatchEvent(new Event('ju:header-ready'));
+// The header shows once the page is in its language (at once in Portuguese; English and Spanish wait for the dictionary).
+languageReady.then(() => window.dispatchEvent(new Event('ju:header-ready')));
+// The cookie notice (LGPD): only when an analytics or ad tool is set in analytics-config.js (or with ?cookies=preview).
+if (cookieNoticeNeeded()) import('./consent.js').then(module => module.mountConsent()).catch(() => {});
+
+// "Voltar à vitrine" leans a few pixels toward the cursor (journey.css reads --mx/--my); mouse only, never with reduced motion.
+if (matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  for (const link of document.querySelectorAll('.showcase-return')) {
+    link.addEventListener('pointermove', event => {
+      const box = link.getBoundingClientRect();
+      link.style.setProperty('--mx', `${(((event.clientX - box.left) / box.width - .5) * 8).toFixed(1)}px`);
+      link.style.setProperty('--my', `${(((event.clientY - box.top) / box.height - .5) * 5).toFixed(1)}px`);
+    });
+    link.addEventListener('pointerleave', () => { link.style.removeProperty('--mx'); link.style.removeProperty('--my'); });
+  }
+}

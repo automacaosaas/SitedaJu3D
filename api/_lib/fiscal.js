@@ -29,7 +29,11 @@ const FISCAL = {
   products: {
     borboletoscopio: {ncm: '39269090'},   // 3926.90.90, outras obras de plásticos
     dinossauroscopio: {ncm: '39269090'},
-    aviaoscopia: {ncm: '39269090'}
+    aviaoscopia: {ncm: '39269090'},
+    // the lamps (07/10/2026): the same kind of piece — plastic, printed in 3D — so the same NCM; confirm with the accountant
+    macacoscopio: {ncm: '39269090'},
+    girafoscopio: {ncm: '39269090'},
+    unicornioscopio: {ncm: '39269090'}
   },
   unit: 'UN',
   freightMode: '0',   // 0 = frete por conta do emitente (CIF): the store pays the carrier and charges it in the order
@@ -51,7 +55,7 @@ const EXAMPLE = Object.freeze({
   fiscal: {
     ...FISCAL, issuerState: 'MG', crt: '1', stateRegistration: '0010000000001', series: '1',
     cfop: {sameState: '5101', otherState: '6101', otherStateConsumer: '6107'}, icms: {origin: '0', csosn: '102'}, pis: {cst: '49'}, cofins: {cst: '49'},
-    products: {borboletoscopio: {ncm: '39269090'}, dinossauroscopio: {ncm: '39269090'}, aviaoscopia: {ncm: '39269090'}},
+    products: {borboletoscopio: {ncm: '39269090'}, dinossauroscopio: {ncm: '39269090'}, aviaoscopia: {ncm: '39269090'}, macacoscopio: {ncm: '39269090'}, girafoscopio: {ncm: '39269090'}, unicornioscopio: {ncm: '39269090'}},
     additionalInfo: 'Dados fiscais de exemplo, sem valor fiscal.',
     bling: {natureId: {nonTaxpayer: '1', taxpayer: '3'}}
   }

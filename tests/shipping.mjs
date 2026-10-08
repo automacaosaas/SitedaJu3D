@@ -50,8 +50,8 @@ for (const drop of ['CORREIOS_USER', 'CORREIOS_CODE', 'CORREIOS_CARD', 'CORREIOS
 assert.deepEqual(missing(baseConfig), [], 'the shipped config is complete: with the Correios credentials the real quote is on');
 assert.deepEqual([baseConfig.services.filter(s => s.code).map(s => [s.id, s.code]), baseConfig.production], [[['pac', '03298'], ['sedex', '03220']], {minDays: 3, maxDays: 5}], 'PAC CONTRATO AG and SEDEX CONTRATO AG; 3 to 5 days of production');
 assert.deepEqual([baseConfig.freeShipping, baseConfig.labelFeeCents], [{fromCents: 50000, service: 'pac'}, 0], 'free PAC from R$ 500, no extra label fee');
-const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250}};
-assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; butterfly + dinosaur weigh 257 g together, the airplane about 250 g');
+const SHARED = {length: 22, width: 20, height: 7, maxPieces: 3, pieceG: {borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250, macacoscopio: 110, girafoscopio: 110, unicornioscopio: 110}};
+assert.deepEqual(baseConfig.sharedBox, SHARED, 'the packaging registered at the Correios Empresa; butterfly + dinosaur weigh 257 g together, the airplane about 250 g, a lamp about 110 g (estimated)');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, maxPieces: null}}), ['sharedBox'], 'how many pieces fit is missing');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {borboletoscopio: 129, dinossauroscopio: 128}}}), ['sharedBox'], 'a weight for every product');
 assert.deepEqual(missing({...baseConfig, sharedBox: {...SHARED, pieceG: {...SHARED.pieceG, aviaoscopia: 0}}}), ['sharedBox'], 'weights are positive');
@@ -265,7 +265,7 @@ const order = (shipping, over = {}) => ({attempt: crypto.randomUUID(), items: IT
   const handler = createHandler.create({env, fetchImpl: net.fetchImpl, store, shippingConfig: EXAMPLE_CONFIG, waitUntil: work => emails.push(work)});
   const quoter = quoteHandler.create({env, fetchImpl: net.fetchImpl, shippingConfig: EXAMPLE_CONFIG});
   const ana = await signedInBuyer(store, env);
-  const subtotal = 3 * 12900 + 15900;
+  const subtotal = 3 * 26500 + 28500;
   const quoted = (await call(quoter, {body: {items: ITEMS, cep: ADDRESS.cep}})).json().options;   // what the buyer is shown
   const pacOption = quoted.find(o => o.service === 'pac');
   const orders = () => store.orders.list();

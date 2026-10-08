@@ -2,8 +2,17 @@
 .mini-cart { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(420px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-radius: 22px 0 0 22px; background: #fffcfb; color: var(--ink, #282326); box-shadow: -20px 0 60px #65364930; overflow: hidden; }
 .mini-cart[open] { display: flex; flex-direction: column; animation: mini-cart-in .32s cubic-bezier(.22, 1, .36, 1); }
 .mini-cart::backdrop { background: #2a1c2240; }
+/* o fundo esmaece ao abrir, como já esmaecia ao fechar (movimento 12) */
+.mini-cart[open]::backdrop { animation: mini-cart-backdrop-in .25s ease both; }
+@keyframes mini-cart-backdrop-in { from { opacity: 0; } }
 @keyframes mini-cart-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes mini-cart-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* fechando: desliza para fora (para a direita no computador, para baixo no celular) e o fundo clareia junto */
+.mini-cart.is-closing { animation: mini-cart-out .3s cubic-bezier(.55, 0, .75, .3) forwards; }
+.mini-cart.is-closing::backdrop { animation: mini-cart-fade .3s ease forwards; }
+@keyframes mini-cart-out { to { transform: translateX(60px); opacity: 0; } }
+@keyframes mini-cart-down { to { transform: translateY(100%); } }
+@keyframes mini-cart-fade { to { opacity: 0; } }
 .mini-cart-body { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .mini-cart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 14px; border-bottom: 1px solid var(--line, #eadde1); }
 .mini-cart-check { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; font-weight: 650; color: #1f6b47; }
@@ -11,12 +20,16 @@
 .mini-cart-close { flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line, #eadde1); border-radius: 50%; background: #fff; color: inherit; font-size: 22px; line-height: 1; cursor: pointer; }
 .mini-cart-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; }
 .mini-cart-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line, #eadde1); }
-.mini-cart-item img { width: 96px; height: 96px; object-fit: contain; border-radius: 14px; background: #fbf0f1; }
-.mini-cart-item h3 { margin: 0 0 6px; font: 500 20px/1.2 'Playfair Display', Georgia, serif; }
+/* a miniatura no tom da própria peça (mini-cart.js --thumb-wash), não num rosa fixo */
+.mini-cart-item img { width: 96px; height: 96px; object-fit: contain; border-radius: 14px; background: var(--thumb-wash, #fbf0f1); }
+.mini-cart-item h3 { margin: 0 0 6px; font: 500 20px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
 .mini-cart-colors { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 3px; font-size: 12px; color: var(--muted, #71656c); }
 .mini-cart-colors li { display: flex; align-items: center; gap: 6px; }
 .mini-cart-colors i { width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; background: var(--chip); border: 1px solid #38232630; }
 .mini-cart-colors strong { color: var(--ink, #282326); font-weight: 500; }
+/* a peça nas cores dela (as lâmpadas): uma fileira de bolinhas, em vez de uma linha por cor (visual 16) */
+.mini-cart-colors.is-dots { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.mini-cart-colors.is-dots i { width: 14px; height: 14px; }
 .mini-cart-item p { margin: 0; font-size: 13px; }
 .mini-cart-item p span { color: var(--muted, #71656c); }
 .mini-cart-total { margin: 14px 0 4px; }
@@ -31,11 +44,29 @@
 .mini-cart-kit h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted, #71656c); }
 .mini-cart-kit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mini-cart-kit li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; border: 1px solid var(--line, #eadde1); border-radius: 14px; background: #fff; }
-.mini-cart-kit img { width: 56px; height: 56px; object-fit: contain; }
+.mini-cart-kit img { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: var(--thumb-wash, transparent); }
 .mini-cart-kit strong { display: block; font-size: 14px; font-weight: 600; }
 .mini-cart-kit small { font-size: 13px; color: var(--muted, #71656c); }
 .mini-cart-add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--rose, #b64c68); border-radius: 999px; background: #fff; color: var(--rose, #b64c68); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .mini-cart-add .icon { width: 16px; height: 16px; }
+/* adicionar pelo kit: o carrinho corre por dentro do botão (a trilha recorta só ele) e, quando volta, o selo com quantas
+   peças daquela estão no carrinho aparece ou troca de número — nunca cortado pela borda */
+.mini-cart-add { position: relative; padding: 0; overflow: visible; }
+.mini-cart-add-track { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: inherit; overflow: hidden; }
+.mini-cart-add-cart { display: inline-grid; place-items: center; }
+.mini-cart-add-count { position: absolute; top: -9px; right: -7px; z-index: 1; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; overflow: hidden; border: 2px solid #fff; border-radius: 999px; background: var(--rose, #b64c68); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 3px 8px #b64c6840; }
+.mini-cart-add-count span { display: block; }
+.mini-cart-add.is-adding { background: #fdf1f4; }
+.mini-cart-add.is-adding .mini-cart-add-cart { animation: kit-cart-run .9s cubic-bezier(.65, 0, .35, 1); }
+.mini-cart-add.is-adding .mini-cart-add-label { animation: kit-label-fade .9s ease; }
+.mini-cart-add-count.is-new { animation: kit-count-in .5s cubic-bezier(.34, 1.56, .64, 1); }
+.mini-cart-add-count.is-bump { animation: kit-count-bump .5s cubic-bezier(.34, 1.56, .64, 1); }
+.mini-cart-add-count:is(.is-new, .is-bump) span { animation: kit-count-roll .4s cubic-bezier(.22, 1, .36, 1); }
+@keyframes kit-cart-run { 0% { transform: none; } 45% { transform: translateX(110px); opacity: 1; } 46% { transform: translateX(110px); opacity: 0; } 54% { transform: translateX(-40px); opacity: 0; } 55% { transform: translateX(-40px); opacity: 1; } 100% { transform: none; } }
+@keyframes kit-label-fade { 15%, 70% { opacity: 0; } }
+@keyframes kit-count-in { from { transform: scale(0); opacity: 0; } }
+@keyframes kit-count-bump { 40% { transform: scale(1.3); } }
+@keyframes kit-count-roll { from { transform: translateY(80%); opacity: 0; } }
 .mini-cart-add:hover { background: #fdf1f4; }
 .mini-cart-actions { display: grid; gap: 8px; padding: 14px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line, #eadde1); background: #fffcfb; }
 .mini-cart-actions .primary { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 50px; text-decoration: none; }
@@ -45,7 +76,107 @@
 @media (max-width: 600px) {
   .mini-cart { inset: auto 0 0 0; width: 100vw; height: auto; max-height: 88dvh; border-radius: 22px 22px 0 0; }
   .mini-cart[open] { animation-name: mini-cart-up; }
+  .mini-cart.is-closing { animation: mini-cart-down .32s cubic-bezier(.55, 0, .75, .3) forwards; }
   .mini-cart-scroll { padding: 14px 16px; }
   .mini-cart-head, .mini-cart-actions { padding-left: 16px; padding-right: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .mini-cart[open] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mini-cart[open], .mini-cart.is-closing, .mini-cart[open]::backdrop, .mini-cart.is-closing::backdrop, .mini-cart-add.is-adding *, .mini-cart-add-count, .mini-cart-add-count span { animation: none; } }
+/* A barra do frete grátis sobe quando entra mais uma peça (free-shipping.js, riseBar): a caixa acende e um brilho corre pela barra. */
+.free-ship-track i { position: relative; overflow: hidden; }
+.free-ship.is-rising { animation: free-ship-glow 1.3s ease .15s; }
+.free-ship.is-rising .free-ship-track i::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #ffffffa6, transparent); transform: translateX(-100%); animation: free-ship-shine 1.1s ease .45s; }
+.free-ship.is-rising.is-reached strong { display: inline-block; animation: free-ship-pop .6s cubic-bezier(.34, 1.56, .64, 1) 1s; }
+@keyframes free-ship-glow { 35% { border-color: #2f7d5c66; box-shadow: 0 0 0 4px #2f7d5c1f; } }
+@keyframes free-ship-shine { to { transform: translateX(100%); } }
+@keyframes free-ship-pop { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .free-ship.is-rising, .free-ship.is-rising .free-ship-track i::after, .free-ship.is-rising.is-reached strong { animation: none; } }
+
+/* ── "Monte seu kit" (kit-builder.js, 07/10/2026): os atalhos 1/2/3, uma linha por peça com − quantidade +, o total ao vivo e a compra.
+   Mora aqui porque este arquivo já vem nas duas páginas que o mostram (a home, na janela da peça, e a página de cada lâmpada), sem
+   mais um pedido. As cores vêm de quem o hospeda (--kit-accent, --kit-strong, --kit-ink, --kit-muted, --kit-line, --kit-tint:
+   product-page.css e product-landing.css); sem elas, as do site. ── */
+.kit { --kit-accent: var(--rose, #b64c68); --kit-strong: #9e3e59; --kit-ink: var(--ink, #282326); --kit-muted: var(--muted, #71656c); --kit-line: #ead9de; --kit-tint: #fdf3f5; --kit-ease: cubic-bezier(.22, 1, .36, 1); container-type: inline-size; display: grid; gap: 14px; min-width: 0; color: var(--kit-ink); }
+.kit-tiers { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.kit-tier { position: relative; display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 66px; padding: 8px 6px; border: 1px solid var(--kit-line); border-radius: 16px; background: #fff; color: var(--kit-ink); font: inherit; line-height: 1.2; text-align: center; cursor: pointer; transition: border-color .2s ease, background-color .2s ease, box-shadow .25s var(--kit-ease), transform .2s var(--kit-ease); }
+.kit-tier-n { font-size: 12px; font-weight: 600; color: var(--kit-muted); }
+.kit-tier-price { font-size: 15.5px; font-weight: 700; letter-spacing: -.2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kit-tier-each { font-size: 12px; color: var(--kit-muted); white-space: nowrap; }
+.kit-tier[aria-pressed=true] { border-color: var(--kit-accent); background: var(--kit-tint); box-shadow: inset 0 0 0 1px var(--kit-accent), 0 6px 16px -10px var(--kit-accent); }
+.kit-tier[aria-pressed=true] .kit-tier-price { color: var(--kit-accent); }
+.kit-rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.kit-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 0; }
+.kit-row + .kit-row { border-top: 1px solid var(--kit-line); }
+.kit-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: radial-gradient(circle at 50% 38%, #fff 0 45%, var(--kit-tint) 100%); box-shadow: inset 0 0 0 1px var(--kit-line); overflow: hidden; transition: opacity .25s ease; }
+.kit-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.kit-name { display: grid; gap: 5px; min-width: 0; }
+.kit-name strong { font-size: 14.5px; font-weight: 650; line-height: 1.2; overflow-wrap: break-word; }
+.kit-dots { display: flex; gap: 4px; }
+.kit-dots i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; }
+/* peça fora do kit (0): a miniatura e os pontinhos esmaecem; o nome fica no tom mais calmo, ainda legível (contraste AA) */
+.kit-row:not(.is-on) :is(.kit-art, .kit-dots) { opacity: .5; }
+.kit-row:not(.is-on) .kit-name strong { color: var(--kit-muted); font-weight: 600; }
+.kit-dots, .kit-name strong { transition: opacity .25s ease, color .25s ease; }
+.kit-stepper { display: inline-flex; align-items: center; gap: 2px; }
+.kit-step { position: relative; display: block; width: 44px; height: 44px; padding: 0; border: 1px solid var(--kit-line); border-radius: 50%; background: #fff; color: var(--kit-ink); cursor: pointer; transition: border-color .2s ease, background-color .2s ease, transform .15s ease-out; }
+.kit-step-mark, .kit-step-mark::after { position: absolute; left: 50%; top: 50%; width: 13px; height: 2px; margin: -1px 0 0 -6.5px; border-radius: 2px; background: currentColor; }
+.kit-step-mark::after { content: ''; left: 0; top: 0; margin: 0; transform: rotate(90deg); }
+.kit-step.is-minus .kit-step-mark::after { display: none; }
+.kit-step:active:not([aria-disabled=true]) { transform: scale(.92); }
+.kit-step[aria-disabled=true] { color: color-mix(in srgb, var(--kit-ink) 30%, #fff); border-color: color-mix(in srgb, var(--kit-line) 60%, #fff); cursor: default; }
+.kit-qty { min-width: 28px; font-size: 16px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.kit-sum { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--kit-line); }
+.kit-total, .kit-deal, .kit-cart-note { margin: 0; }
+.kit-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.kit-total-label { font-size: 13px; font-weight: 650; color: var(--kit-muted); }
+.kit-total-prices { display: inline-flex; align-items: baseline; gap: 8px; margin-left: auto; }
+.kit-total s { font-size: 13px; color: var(--kit-muted); font-variant-numeric: tabular-nums; }
+.kit-total strong { font-size: 22px; font-weight: 700; letter-spacing: -.4px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kit-deal { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.kit-saving { font-size: 13px; font-weight: 700; color: var(--kit-accent); }
+/* na janela da peça o kit só escolhe (a barra de compra mostra o total): embaixo das linhas, quantas peças e quanto se economiza */
+.kit-count { font-size: 13px; font-weight: 650; color: var(--kit-muted); }
+.kit.is-picker .kit-deal { justify-content: space-between; }
+.kit.is-picker .kit-saving { padding: 3px 11px; border-radius: 999px; background: var(--kit-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kit-accent) 22%, transparent); }
+.kit-pix { margin-left: auto; padding: 3px 10px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.kit-cart-note { font-size: 12.5px; color: var(--kit-muted); }
+.kit-cart-note strong { color: var(--kit-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kit-add { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 50px; padding: 0 18px; border: 1.5px solid var(--kit-accent); border-radius: 14px; background: var(--kit-accent); color: #fff; font: inherit; font-size: 14.5px; font-weight: 650; box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--kit-accent) 45%, transparent); cursor: pointer; transition: background-color .2s ease, border-color .2s ease, transform .2s var(--kit-ease), box-shadow .2s ease, opacity .2s ease; }
+.kit-add .icon { width: 19px; height: 19px; }
+.kit-add:active:not(:disabled):not([aria-disabled=true]) { transform: scale(.985); }
+/* sem nenhuma peça o botão continua no Tab (aria-disabled) e, tocado, diz por quê (usabilidade 14) */
+.kit-add:disabled, .kit-add[aria-disabled=true] { opacity: .45; box-shadow: none; cursor: not-allowed; }
+.kit-status { margin: -4px 0 0; font-size: 13px; color: #a12f3c; }
+.kit-status:empty { display: none; }
+.kit :is(button):focus-visible { outline: 2px solid var(--kit-ink); outline-offset: 2px; }
+@media (hover: hover) {
+  .kit-tier:hover { border-color: color-mix(in srgb, var(--kit-accent) 55%, #fff); transform: translateY(-1px); }
+  .kit-step:hover:not([aria-disabled=true]) { border-color: var(--kit-accent); background: var(--kit-tint); }
+  .kit-add:hover:not(:disabled):not([aria-disabled=true]) { border-color: var(--kit-strong); background: var(--kit-strong); transform: translateY(-1px); }
+}
+/* celulares (o kit com até ~320 px de largura): miniatura, nome e passos mais juntos (os botões continuam com 44 px); nos mais
+   estreitos (até ~290 px, telas de 320 a 350 px) o "R$ 70,00 cada" sai das faixas, que ficam sem texto apertado (o total diz quanto se
+   economiza) */
+@container (max-width: 320px) {
+  .kit-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
+  .kit-art { width: 40px; height: 40px; border-radius: 12px; }
+  .kit-name strong { font-size: 13.5px; }
+  .kit-stepper { gap: 0; }
+  .kit-qty { min-width: 24px; }
+  .kit-tiers { gap: 6px; }
+  .kit-tier { min-height: 60px; padding: 7px 3px; border-radius: 14px; }
+  .kit-tier-price { font-size: 14.5px; }
+}
+@container (max-width: 290px) {
+  .kit-tier-each { display: none; }
+  .kit-tier { min-height: 52px; }
+}
+/* a página da lâmpada num celular de 320 px (o kit com ~214 px): sem a miniatura, o nome cabe inteiro ao lado dos passos de 44 px, e o
+   preço das faixas fica um pouco menor para caber sem encostar na borda */
+@container (max-width: 240px) {
+  .kit-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .kit-art { display: none; }
+  .kit-tiers { gap: 4px; }
+  .kit-tier { padding: 6px 2px; }
+  .kit-tier-price { font-size: 13px; letter-spacing: -.3px; }
+}
+@media (prefers-reduced-motion: reduce) { .kit :is(.kit-tier, .kit-art, .kit-dots, .kit-name strong, .kit-step, .kit-add) { transition: none; } .kit-step:active:not([aria-disabled=true]), .kit-add:active:not(:disabled) { transform: none; } }

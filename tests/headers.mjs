@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile, readdir} from 'node:fs/promises';
+import {createRequire} from 'node:module';
 
 const root = new URL('../', import.meta.url);
 const config = JSON.parse(await readFile(new URL('vercel.json', root), 'utf8'));
@@ -70,10 +71,14 @@ for (const file of (await readdir(new URL('dist/', root))).filter(f => f.endsWit
 const assetModels = await readFile(new URL('dist/asset-models.js', root), 'utf8');
 if (assetModels.includes('meshopt_decoder')) assert(directives['script-src'].includes("'wasm-unsafe-eval'"), "script-src has 'wasm-unsafe-eval' for the Meshopt decoder");
 
-// E-mail logos load from the public site (api/_lib/mail.js DEFAULT_SITE); the dev e-mail preview shows them in a frame.
-const mail = await readFile(new URL('api/_lib/mail.js', root), 'utf8');
-const site = mail.match(/DEFAULT_SITE = '([^']+)'/)[1];
-assert(allows('img-src', new URL(site).origin), `img-src allows the public site ${site}`);
+// E-mail logos load from the public site (api/_lib/mail.js assetUrl); the dev e-mail preview shows them in a frame. With
+// SITE_URL that is the site itself ('self'); without it (a preview, a server not configured yet) it is DEFAULT_SITE, the
+// shop's own domain since 2026-10-08 (COMPANY.website), which must be listed.
+const {config: mailConfig} = createRequire(import.meta.url)('../api/_lib/mail.js');
+for (const env of [{}, {APP_ENV: 'preview'}, {VERCEL_ENV: 'preview', VERCEL_URL: 'ju-abc.vercel.app'}]) {
+  const site = new URL(mailConfig(env).assetUrl).origin;
+  assert(allows('img-src', site), `img-src allows the e-mail logo's site ${site} (${JSON.stringify(env)})`);
+}
 assert(allows('img-src', 'data:') && allows('img-src', 'blob:'), 'cart thumbnails (data:) and 3D textures (blob:)');
 
 // Heavy files: images and models are cached, then refreshed in the background.
@@ -96,6 +101,13 @@ if (livePayment.includes('https://sdk.mercadopago.com')) {
   assert(allows('frame-src', 'https://*.mercadopago.com'), 'frame-src allows the card secure fields (Payment Brick)');
   assert(allows('frame-src', "'self'"), 'frame-src keeps our own frames (e-mail preview)');
   assert(/advancedFraudPrevention: false/.test(livePayment), 'the SDK runs without the inline-script fraud module (the policy has no unsafe-inline)');
+}
+// The device id the documented way instead (2026-10-07): security.js from www.mercadopago.com, an external script, and
+// whatever it asks of the same host.
+if (livePayment.includes('https://www.mercadopago.com/v2/security.js')) {
+  assert(allows('script-src', 'https://www.mercadopago.com'), 'script-src allows security.js (device id)');
+  assert(allows('connect-src', 'https://www.mercadopago.com'), 'connect-src allows www.mercadopago.com (device id)');
+  assert(/script\.setAttribute\('view', 'checkout'\)/.test(livePayment), 'security.js is told it runs on the checkout');
 }
 
 // HTTPS only, for a year: a store with sign-in and payments never falls back to plain HTTP.

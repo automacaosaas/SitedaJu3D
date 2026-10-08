@@ -5,9 +5,12 @@
 //   node tools/dev-server.cjs --ask-key    → asks for the Resend key (hidden) and sends real e-mails
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
+//   … --fake-mp --sem-juros=3              → the simulated account gives 3 installments without interest (default: none, like an
+//                                            account that has not turned "parcelas sem juros" on); the checkout's card option follows
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
 //   node tools/dev-server.cjs --fake-bling → NF-e through a simulated Bling (connect it in the panel, then conclude an order)
 //   node tools/dev-server.cjs --fake-cep   → the address-by-CEP lookup answers from a simulator (a few CEPs) instead of ViaCEP / BrasilAPI
+//   node tools/dev-server.cjs --fake-social → "Continuar com o Google / com a Apple" against a local simulator (tools/fake-oauth.cjs)
 // Optional: MAIL_FROM, MAIL_REPLY_TO, ORDER_NOTIFY_EMAIL, PORT (default 8844), SITE_URL.
 const http = require('node:http');
 const fs = require('node:fs');
@@ -16,6 +19,7 @@ const os = require('node:os');
 const crypto = require('node:crypto');
 const {createFakeMercadoPago} = require('./fake-mercadopago.cjs');
 const {createFakeBling} = require('./fake-bling.cjs');
+const {createInterestFree} = require('../api/_lib/interest-free');
 
 const PORT = Number(process.env.PORT) || 8844;
 const ROOT = path.join(__dirname, '..', 'dist');
@@ -71,6 +75,13 @@ async function main() {
   if (process.argv.includes('--fake-nfe')) { env.NFE_PROVIDER = 'fake'; env.NFE_EXAMPLE_DATA = '1'; }
   // --fake-bling: the NF-e goes through a simulated Bling, with example tax data; its authorization page is local.
   const fakeBling = process.argv.includes('--fake-bling') ? createFakeBling() : null;
+  // Google / Apple sign-in: with --fake-social, test credentials and a simulator of both providers on this server.
+  let fakeSocial = null;
+  if (process.argv.includes('--fake-social')) {
+    const {createFakeOAuth, fakeCredentials} = require('./fake-oauth.cjs');
+    Object.assign(env, fakeCredentials(`${env.SITE_URL}/__fake-oauth`));
+    fakeSocial = createFakeOAuth({base: env.SOCIAL_FAKE_URL, env});
+  }
   if (fakeBling) Object.assign(env, {NFE_PROVIDER: 'bling', NFE_EXAMPLE_DATA: '1', BLING_CLIENT_ID: fakeBling.clientId, BLING_CLIENT_SECRET: fakeBling.clientSecret, BLING_AUTHORIZE_URL: `http://localhost:${PORT}/__fake-bling/authorize`});
   if (process.argv.includes('--ask-mp')) {
     console.log('Teste de pagamentos com o Mercado Pago. Use as credenciais de TESTE. Nada é gravado; ficam só na memória deste programa.');
@@ -114,31 +125,55 @@ async function main() {
   const {createFakeCorreios, EXAMPLE_CONFIG} = require('./fake-correios.cjs');
   const fakeCorreiosApi = fakeCorreios ? createFakeCorreios() : null;
   if (fakeCorreiosApi) Object.assign(env, fakeCorreiosApi.creds);
-  const shippingConfig = fakeCorreiosApi ? EXAMPLE_CONFIG : undefined;
-  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
+  // the example boxes, with the shop's own production time and free shipping, so the preview shows the same rule as the site
+  const shopShipping = require('../api/_lib/shipping-config');
+  const shippingConfig = fakeCorreiosApi ? {...EXAMPLE_CONFIG, production: shopShipping.production, freeShipping: shopShipping.freeShipping} : undefined;
+  // The simulator's writes are logged too (create, cancel, refund), with whether the device id (X-meli-session-id) came along.
+  const fakeMpFetch = async (url, init = {}) => {
+    const response = await fake.fetchImpl(url, init), path = String(url).replace('https://api.mercadopago.com', '');
+    if (init.method === 'POST') console.log(`[mp simulado] POST ${path} → ${response.status}${path === '/v1/orders' ? ` · device id ${init.headers?.['X-meli-session-id'] ? 'enviado' : 'ausente'}` : ''}`);
+    return response;
+  };
+  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fakeMpFetch(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
   const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
+  // "Sem juros": how many installments the (simulated or test) account gives without interest, for the checkout and the health
+  const interestFree = createInterestFree({fetchImpl: routed});
   const routes = {
     '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
-    '/api/health': require('../api/health').create({env}),
+    '/api/health': require('../api/health').create({env, interestFree}),
     '/api/email-preview': require('../api/email-preview').create({env}),
-    '/api/payments/config': require('../api/payments/config').create({env}),
+    '/api/payments/config': require('../api/payments/config').create({env, interestFree}),
+    '/api/payments/methods': require('../api/payments/methods').create({env, fetchImpl: routed}),
     '/api/payments/create': require('../api/payments/create').create({env, fetchImpl: routed, outbox, shippingConfig}),
     '/api/shipping/quote': require('../api/shipping/quote').create({env, fetchImpl: routed, shippingConfig}),
     '/api/contact/send': require('../api/contact/send').create({env, outbox, fetchImpl: loggedFetch}),
+    '/api/fila/rodar': require('../api/fila/rodar').create({env, outbox, fetchImpl: routed}),
     '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
+    '/api/payments/cancel': require('../api/payments/cancel').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
-  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling', 'cash']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'messages', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
+  routes['/api/auth/providers'] = require('../api/auth/providers').create({env});
+  for (const provider of ['google', 'apple']) {
+    routes[`/api/auth/${provider}/start`] = require(`../api/auth/${provider}/start`).create({env});
+    routes[`/api/auth/${provider}/callback`] = require(`../api/auth/${provider}/callback`).create({env, fetchImpl: fakeSocial ? fakeSocial.fetchImpl : loggedFetch});
+  }
   for (const name of ['profile', 'orders', 'delete-start', 'delete']) routes[`/api/account/${name}`] = require(`../api/account/${name}`).create({env, outbox, fetchImpl: loggedFetch});
+  // the delivery timeline asks the Correios (the simulator with --fake-correios)
+  routes['/api/account/tracking'] = require('../api/account/tracking').create({env, outbox, fetchImpl: routed});
+  // The NF-e queue, as on the Node server, on the same in-memory store; a round every 15 seconds to see it move.
+  require('../api/_lib/invoice-queue').startWorker({env, outbox, fetchImpl: routed, intervalMs: 15000});
+  require('../api/_lib/tracking').startTrackingWorker({env, outbox, fetchImpl: routed, intervalMs: 60000});
 
   // Same security headers as production (vercel.json), so a Content-Security-Policy problem shows up locally too.
   // Cache-Control is left out on purpose: local files stay `no-store` while editing.
   const headerRules = readHeaderRules();
   if (fakeMp) {
     // When the simulated customer "pays" a Pix, deliver a properly signed notification to our own webhook, like Mercado Pago would.
-    fake = createFakeMercadoPago({onPaid: async id => {
+    const semJuros = Number((process.argv.find(arg => arg.startsWith('--sem-juros=')) || '').split('=')[1]) || 0;
+    fake = createFakeMercadoPago({interestFree: semJuros, onPaid: async id => {
       const ts = String(Date.now()), requestId = crypto.randomUUID(), sign = crypto.createHmac('sha256', env.MP_WEBHOOK_SECRET).update(`id:${id.toLowerCase()};request-id:${requestId};ts:${ts};`).digest('hex');
       const res = {statusCode: 200, setHeader() {}, end() {}};
       await routes['/api/payments/webhook']({method: 'POST', url: `/api/payments/webhook?data.id=${id}&type=order`, headers: {'x-signature': `ts=${ts},v1=${sign}`, 'x-request-id': requestId}, body: {type: 'order', data: {id}}, socket: {}}, res);
@@ -152,6 +187,8 @@ async function main() {
     try {
       if (routes[url.pathname]) return await routes[url.pathname](req, res);
       if (fake && url.pathname === '/__fake-mp/sdk.js') { res.setHeader('Content-Type', TYPES['.js']); return res.end(fs.readFileSync(path.join(__dirname, 'fake-brick.js'))); }
+      // The simulated Brick's installment table (mp.getInstallments) comes from the same simulated account as the server's check.
+      if (fake && url.pathname === '/__fake-mp/installments') { const answer = await fake.fetchImpl(`https://api.mercadopago.com/v1/payment_methods/installments${url.search}`, {method: 'GET', headers: {Authorization: 'Bearer fake-brick'}}); res.statusCode = answer.status; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(await answer.json())); }
       if (fake && url.pathname === '/__fake-mp/pay') { const ok = await fake.pay(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({paid: ok})); }
       // The simulated Bling "allows" at once and sends the browser back to the panel with a code, like the real page.
       if (fakeBling && url.pathname === '/__fake-bling/authorize') {
@@ -162,13 +199,30 @@ async function main() {
       }
       // "Fixes" a rejected note in the simulated Bling, as the person would on Bling's screen, to try the panel's retry.
       if (fakeBling && url.pathname === '/__fake-bling/corrigir') { const ok = fakeBling.correct(url.searchParams.get('id') || ''); res.statusCode = ok ? 200 : 404; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({corrigida: ok})); }
+      // Puts the simulated Bling down (or back): ?modo=rede|lento|erro|limite|queda|gateway|corpo, or nothing for normal;
+      // &vezes=N for the next N calls only; &so=POST%20/nfe for those calls only. Shows the queue and the panel's notice.
+      if (fakeSocial && url.pathname.startsWith('/__fake-oauth/') && await fakeSocial.handle(req, res, url)) return;
+      if (fakeBling && url.pathname === '/__fake-bling/falha') {
+        const mode = url.searchParams.get('modo') || null, times = Number(url.searchParams.get('vezes')) || null;
+        if (mode && !['rede', 'lento', 'erro', 'limite', 'queda', 'gateway', 'corpo'].includes(mode)) { res.statusCode = 400; return res.end('modo: rede, lento, erro, limite, queda, gateway ou corpo'); }
+        fakeBling.fail(mode, {count: times, match: url.searchParams.get('so') || null});
+        console.log(`[bling] simulado: ${mode ? `falha "${mode}"${times ? ` nas próximas ${times} chamadas` : ''}` : 'normal'}`);
+        res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({modo: mode || 'normal', vezes: times}));
+      }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
-      if (!fs.existsSync(file)) { res.statusCode = 404; return res.end('Not found'); }
+      if (!fs.existsSync(file) && !path.extname(file) && fs.existsSync(file + '.html')) file += '.html';   // short links (/fenda), as server/create-server.cjs
+      if (!fs.existsSync(file)) {
+        // Like the real server: a missing page gets the site's 404 page, a missing file a short answer.
+        res.statusCode = 404; res.setHeader('Cache-Control', 'no-store');
+        if (/(^|\/)[^./]*$|\.html?$/i.test(url.pathname)) { res.setHeader('Content-Type', TYPES['.html']); return res.end(fs.readFileSync(path.join(ROOT, '404.html'))); }
+        return res.end('Not found');
+      }
       res.setHeader('Content-Type', TYPES[path.extname(file)] || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'no-store');
+      // The fonts never change under the same ?v= (dist/theme.css): cached like in production; everything else no-store.
+      res.setHeader('Cache-Control', file.endsWith('.woff2') ? 'public, max-age=31536000, immutable' : 'no-store');
       // With --fake-mp the checkout pages load the simulated Payment Brick instead of the real SDK.
       if (fake && /^(checkout|comprar-agora)/.test(path.basename(file)) && file.endsWith('.html')) return res.end(fs.readFileSync(file, 'utf8').replace('</head>', "<script src='/__fake-mp/sdk.js'></script></head>"));
       fs.createReadStream(file).pipe(res);
@@ -180,6 +234,8 @@ async function main() {
     const real = env.MAIL_TRANSPORT !== 'console';
     console.log(`Pagamentos: ${fakeMp ? `SIMULADOS (Mercado Pago e Brick de mentira). Para "pagar" um Pix aberto: http://localhost:${PORT}/__fake-mp/pay?id=<código do pedido>` : env.MP_ACCESS_TOKEN ? 'Mercado Pago de TESTE (credenciais informadas)' : 'desligados (o checkout usa a demonstração)'}`);
     console.log(`Painel da Ju: http://localhost:${PORT}/admin.html  (e-mail ${env.ADMIN_EMAIL} · senha ${env.ADMIN_PASSWORD})`);
+    const socialOn = require('../api/_lib/social').enabled(env);
+    console.log(`Entrar com Google / Apple: ${fakeSocial ? 'SIMULADOS (tela de teste em /__fake-oauth)' : [socialOn.google && 'Google', socialOn.apple && 'Apple'].filter(Boolean).join(' e ') || 'desligados (sem credenciais)'}`);
     console.log(`\nSite + API em http://localhost:${PORT}  (e-mails: ${real ? 'enviados de verdade pelo Resend' : 'gravados em ' + outboxDir})`);
     if (real) console.log(`Abra http://localhost:${PORT}/conta.html, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
   });

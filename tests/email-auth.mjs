@@ -13,7 +13,9 @@ const require = createRequire(import.meta.url);
 const {issue, verify, makeCode, CODE_TTL_MS, RESEND_AFTER_MS} = require('../api/_lib/challenge');
 const {renderVerificationEmail, verificationUrl, COPY} = require('../api/_lib/email-template');
 const {createLimiter, sameOrigin} = require('../api/_lib/http');
-const {config} = require('../api/_lib/mail');
+const {config, sendMail} = require('../api/_lib/mail');
+const {COMPANY} = require('../api/_lib/legal');
+// (o servidor roda os testes dentro da versão nova, que já tem o arquivo REVISION: o health aqui é chamado sem ele)
 const start = require('../api/auth/start'), verifyEndpoint = require('../api/auth/verify'), health = require('../api/health'), preview = require('../api/email-preview');
 const {createMemoryStore} = require('../api/_lib/store-memory');
 
@@ -105,6 +107,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert.equal(mail.url, 'https://api.resend.com/emails');
   assert.deepEqual(mail.body.to, ['ana@site.test']);
   assert.equal(mail.body.from, 'Ju <acesso@site.test>');
+  assert.equal(mail.body.reply_to, COMPANY.email, '"Responder" reaches the shop\'s public e-mail (the domain has no inbox) while MAIL_REPLY_TO is empty');
   assert.equal(mail.init.headers.Authorization, 'Bearer re_test_key_123');
   assert.match(mail.init.headers['Idempotency-Key'], /^code-[0-9a-f-]{36}$/, 'a retried request never sends a second e-mail');
   const code = codeFrom(mail.body.html);
@@ -152,14 +155,39 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert.equal(config({...onlyKey, AUTH_SECRET: 'short'}).secretFrom, 'RESEND_API_KEY', 'a too-short explicit secret is ignored');
   assert.equal(config({...onlyKey, RESEND_API_KEY: ' re_test_key_123\r\n'}).apiKey, 're_test_key_123', 'pasted whitespace is trimmed');
   assert.equal(config({SITE_URL: SITE}).secret, '', 'no key and no secret: nothing to sign with');
+  // Replies (2026-10-08): MAIL_REPLY_TO when set, else the shop's public e-mail; the sender never changes.
+  assert.equal(COMPANY.email, 'juimprimepramim@gmail.com');
+  assert.equal(config(onlyKey).replyTo, COMPANY.email);
+  assert.equal(config({...onlyKey, MAIL_REPLY_TO: ' \r\n'}).replyTo, COMPANY.email, 'a blank MAIL_REPLY_TO counts as empty');
+  assert.equal(config({...onlyKey, MAIL_REPLY_TO: 'atendimento@site.test'}).replyTo, 'atendimento@site.test', 'MAIL_REPLY_TO wins');
+  assert.equal(config(onlyKey).from, 'Ju imprime pra mim <onboarding@resend.dev>', 'the sender is still MAIL_FROM or the Resend test sender');
+  {
+    const replies = fakeResend(), settings = config(onlyKey);
+    await sendMail({settings, to: 'ana@site.test', subject: 's', html: 'h', text: 't', fetchImpl: replies.fetchImpl});
+    await sendMail({settings, to: 'ju@site.test', subject: 's', html: 'h', text: 't', replyTo: 'bia@site.test', fetchImpl: replies.fetchImpl});
+    assert.deepEqual(replies.calls.map(c => [c.body.to, c.body.from, c.body.reply_to]), [[['ana@site.test'], settings.from, COMPANY.email], [['ju@site.test'], settings.from, 'bia@site.test']], 'the recipient stays; a message\'s own replyTo still wins');
+    const shown = [];
+    await sendMail({settings: config({SITE_URL: SITE, MAIL_TRANSPORT: 'console'}), to: 'c@site.test', subject: 's', html: 'h', text: 't', outbox: m => shown.push(m)});
+    assert.equal(shown[0].replyTo, COMPANY.email, 'the console transport shows the same reply address');
+  }
+  // Without SITE_URL (2026-10-08): links and logo on the shop's domain (COMPANY.website), never the temporary Hostinger one.
+  for (const env of [{VERCEL_ENV: 'production'}, {APP_ENV: 'production'}, {APP_ENV: 'preview'}, {}, {SITE_URL: ''}]) {
+    assert.equal(config(env).siteUrl, 'https://juimprimepramim.com.br', `siteUrl: ${JSON.stringify(env)}`);
+    assert.equal(config(env).assetUrl, COMPANY.website, `assetUrl: ${JSON.stringify(env)}`);
+  }
+  assert.equal(COMPANY.website, 'https://juimprimepramim.com.br');
+  assert.equal(config({VERCEL_URL: 'ju-abc.vercel.app'}).siteUrl, 'https://ju-abc.vercel.app', 'a Vercel preview still links to itself');
+  assert.equal(config({SITE_URL: 'https://wheat-llama-936569.hostingersite.com/'}).siteUrl, 'https://wheat-llama-936569.hostingersite.com', 'SITE_URL set: used as it is');
   const resend = fakeResend(), store = createMemoryStore();
   const sent = await call(start.create({env: onlyKey, store, fetchImpl: resend.fetchImpl}), {body: {email: 'a@b.co'}});
   assert.equal(sent.statusCode, 200, 'works with the key alone');
   const proof = {challenge: sent.json().challenge, code: codeFrom(resend.calls[0].body.html)};
   assert.equal((await call(verifyEndpoint.create({env: {...onlyKey, RESEND_API_KEY: 're_other_key_456'}, store}), {body: proof})).json().error, 'invalid_code', 'another key cannot verify it');
   assert.equal((await call(verifyEndpoint.create({env: onlyKey, store}), {body: proof})).statusCode, 200);
-  const healthRes = makeRes(); await health.create({env: onlyKey})({}, healthRes);
-  assert.deepEqual(healthRes.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
+  const healthRes = makeRes(); await health.create({env: onlyKey, release: null})({}, healthRes);
+  const {uptime, ...healthBody} = healthRes.json();
+  assert(Number.isInteger(uptime) && uptime >= 0, 'seconds the process has been up');
+  assert.deepEqual(healthBody, {ok: true, mail: 'resend', secret: true, secretFrom: 'RESEND_API_KEY', key: true, sender: 'test', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'ok', social: {google: false, apple: false}, shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
 }
 
 // limiter
@@ -172,11 +200,13 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
 
 // health and preview never expose values
 {
-  const res = makeRes(); await health.create({env: ENV})({}, res);
+  const res = makeRes(); await health.create({env: ENV, release: null})({}, res);
   // Production without a database or data keys: accounts are off and the keys are reported missing (never shown).
-  assert.deepEqual(res.json(), {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'pending', shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
+  const {uptime: up, ...prodHealth} = res.json();
+  assert(Number.isInteger(up));
+  assert.deepEqual(prodHealth, {ok: true, mail: 'resend', secret: true, secretFrom: 'AUTH_SECRET', key: true, sender: 'custom', accounts: 'off', db: 'off', dataKeys: 'missing', payments: 'off', paymentsBlocked: false, mp: {token: false, publicKey: false, webhookSecret: false}, orderMail: false, admin: 'off', legal: 'ok', social: {google: false, apple: false}, shipping: 'off', nfe: 'off', fiscal: 'ok', bling: 'off'});
   assert(!res.body.includes('re_test_key_123') && !res.body.includes(SECRET));
-  const off = makeRes(); await health.create({env: {}})({}, off);
+  const off = makeRes(); await health.create({env: {}, release: null})({}, off);
   assert.equal(off.json().mail, 'off');
   const prod = makeRes(); preview.create({env: ENV})({url: '/api/email-preview'}, prod);
   assert.equal(prod.statusCode, 404, 'the preview is not available in production');
@@ -192,7 +222,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert(/auth\.adopt\(token\)/.test(account) && /history\.replaceState\(null, '', location\.pathname \+ location\.search \+ '#verificar'\)/.test(account), 'the e-mail link is adopted and its secrets leave the address bar');
   assert(/mountLanguagePicker\(document\.querySelector\('\.account-tools'\)\)/.test(account), 'language picker in the account header');
   assert(/createBusyDialog/.test(account) && !/openProgress/.test(account), 'one loading UI: the shared busy dialog');
-  assert(/await refreshSession\(\);\nroute\(\);/.test(account), 'the page asks the server who is signed in before choosing a screen');
+  assert(/\[providers\] = await Promise\.all\(\[loadProviders\(\), refreshSession\(\)\]\);\n(?:.*\n)*?route\(\);\n?$/.test(account), 'the page asks the server who is signed in (and which sign-in buttons exist) before choosing a screen');
   assert(/identificationForm\(/.test(account) && /saveProfile\(data\)/.test(account), '"Meus dados" uses the shared identification form');
   assert(/checkout: 'checkout\.html#identificacao'/.test(account), 'signing in from the checkout returns to identification');
   assert(!/de teste(…|!)/.test(account), 'no "test account" wording in the real flow');

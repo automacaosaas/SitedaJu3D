@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/vendor/three.module.min.js"}}</script>
+<body style="margin:0;background:#777"><script type="module">
+// The airplane renders of plane.html made from the site's 3D preview (dist/assets/models/aviaoscopia.glb) instead of the STL parts, for when
+// the STL folder is not at hand: the same materials, camera, studio and light subject, the GLB taken back to plane.html's millimetres
+// (world = GLB * 122 + centre; the centre from the hole rows of export-glb.cjs). The GLB is simplified and its normals are 8-bit, so a
+// smooth groove can show faint facets: on 06/10/2026 the star fix (estrelas.cjs) was laid into the site pictures only where the stars
+// changed (this page with the old GLB against the new one, the same pass for pass).
+// node runpage.cjs "variants=full,front,card,ped" saida.png plane-glb.html   (?glb=/assets/models/outro.glb for another file)
+import * as THREE from 'three';
+import {GLTFLoader} from '/vendor/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from '/vendor/libs/meshopt_decoder.module.js';
+import {makeRenderer, studioEnvironment, renderStudio, finish, cropToContent, artBox} from './studio.js';
+import {buildRuler, RULER} from './ruler.js';
+
+const P = Object.fromEntries(new URLSearchParams(location.search));
+const SIZE = Number(P.size || 1254), PASSES = Number(P.passes || 40), RULER_H = Number(P.rulerh || 1850);
+const C = {body: P.body || '#123aa6', details: P.details || '#d0142f', engines: P.engines || '#f5ae0a', glass: P.glass || '#eef3f6'};
+const renderer = makeRenderer(SIZE, SIZE, {exposure: Number(P.exposure || 1.02)});
+const scene = new THREE.Scene();
+scene.environment = studioEnvironment(renderer, {top: 5.5, left: 3, right: 2.4, scrim: 1.5, glint: 16});
+const plastic = (hex, rough = .42, coat = .32) => new THREE.MeshPhysicalMaterial({color: new THREE.Color(hex), roughness: rough, clearcoat: coat, clearcoatRoughness: .38, envMapIntensity: .9});
+const glassMat = new THREE.MeshPhysicalMaterial({color: new THREE.Color(C.glass), roughness: .22, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.4});
+const MAT = {front: plastic(C.body), back: plastic(C.body), glass: glassMat, pylons: plastic(C.engines, .4, .4), stars: plastic(C.details, .4, .4), nosef: plastic(C.details, .4, .4), noseb: plastic(C.details, .4, .4)};
+
+const GLB_MM = 122, CENTRE = new THREE.Vector3(0, Number(P.cy || 106.067), 0);
+const buf = await (await fetch(P.glb || '/assets/models/aviaoscopia.glb')).arrayBuffer();
+const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buf, '');
+gltf.scene.updateMatrixWorld(true);
+const prim = {}; gltf.scene.traverse(o => { if (o.isMesh) prim[o.material.name] = o; });
+// triangles of a primitive in world mm, sorted into parts by a function of the triangle
+function split(o, which) {
+  const g = o.geometry, p = g.attributes.position, n = g.attributes.normal, idx = g.index.array, m = o.matrixWorld, nm = new THREE.Matrix3().getNormalMatrix(m);
+  const out = {}, v = new THREE.Vector3(), w = new THREE.Vector3();
+  const V = new Float32Array(p.count * 3), N = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(m).multiplyScalar(GLB_MM).add(CENTRE); V.set([v.x, v.y, v.z], i * 3); w.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); N.set([w.x, w.y, w.z], i * 3); }
+  const label = which(V, idx);
+  for (let t = 0; t < idx.length; t += 3) { const k = label(t); if (!k) continue; (out[k] ||= {pos: [], nor: []}); for (let j = 0; j < 3; j++) { const i = idx[t + j]; out[k].pos.push(V[i * 3], V[i * 3 + 1], V[i * 3 + 2]); out[k].nor.push(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]); } }
+  return out;
+}
+const cz = (V, idx, t) => (V[idx[t] * 3 + 2] + V[idx[t + 1] * 3 + 2] + V[idx[t + 2] * 3 + 2]) / 3;
+const cx = (V, idx, t) => (V[idx[t] * 3] + V[idx[t + 1] * 3] + V[idx[t + 2] * 3]) / 3;
+const parts = {
+  ...split(prim.body, (V, idx) => t => cz(V, idx, t) >= 0 ? 'front' : 'back'),
+  ...split(prim.details, (V, idx) => t => Math.abs(cx(V, idx, t)) > 30 ? 'stars' : cz(V, idx, t) >= 0 ? 'nosef' : 'noseb'),
+  ...split(prim.engines, () => () => 'pylons'),
+  ...split(prim.fixed, () => () => 'glass')
+};
+const mesh = {}, zUp = new THREE.Group(); scene.add(zUp);
+for (const [k, {pos, nor}] of Object.entries(parts)) {
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  const m = new THREE.Mesh(g, MAT[k]); m.castShadow = m.receiveShadow = true; mesh[k] = m;
+  // plane.html: only the engines stay under zUp (the other parts move to their own pivots), so zUp — the light subject — is the engines
+  (k === 'pylons' ? zUp : scene).add(m);
+}
+scene.updateMatrixWorld(true);
+const CY = 105.243, COL = [-9.68, 9.62], ROW0 = 47.55;
+// the decal (invisible) and the ruler still count in the 'ped' subject (the whole scene)
+const decal = new THREE.Mesh(new THREE.PlaneGeometry(90, 170), new THREE.MeshBasicMaterial({transparent: true, opacity: 0})); decal.position.set(0, CY - 20, 10); decal.visible = false; scene.add(decal);
+const ruler = buildRuler(); ruler.position.set(-(COL[0] + COL[1]) / 2, CY + ROW0 - RULER.ROW0, 0); scene.add(ruler);
+
+const box = new THREE.Box3(); for (const k of ['front', 'back', 'glass', 'pylons', 'stars', 'nosef']) box.expandByObject(mesh[k]);
+const fov = Number(P.fov || 12), camera = new THREE.PerspectiveCamera(fov, 1, 10, 20000);
+const verts = []; for (const k of ['front', 'back', 'pylons', 'nosef']) { const o = mesh[k], p = o.geometry.attributes.position, step = Math.max(1, Math.floor(p.count / Number(P.vsample || 1e9))); for (let i = 0; i < p.count; i += step) verts.push(new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld)); }
+function place(az, el, fitH, fitB) {
+  const target = box.getCenter(new THREE.Vector3()); let dist = (box.max.y - box.min.y) / fitH / 2 / Math.tan(fov * Math.PI / 360);
+  const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  for (let it = 0; it < 8; it++) {
+    camera.position.copy(target).addScaledVector(dir, dist); camera.lookAt(target); camera.updateMatrixWorld();
+    let lo = Infinity, hi = -Infinity; for (const v of verts) { const y = v.clone().project(camera).y; lo = Math.min(lo, y); hi = Math.max(hi, y); }
+    const wantLo = -1 + 2 * fitB, wantHi = -1 + 2 * (fitB + fitH);
+    dist *= (hi - lo) / (wantHi - wantLo); target.y += ((hi + lo) / 2 - (wantHi + wantLo) / 2) * dist * Math.tan(fov * Math.PI / 360) / Math.cos(el);
+  }
+  camera.position.copy(target).addScaledVector(dir, dist); camera.lookAt(target); camera.updateMatrixWorld();
+}
+const [az, el] = (P.orbit || `0,${P.elev || 5}`).split(',').map(v => Number(v) * Math.PI / 180);
+const vitrine = () => place(az, el, Number(P.h || .8933), Number(P.bottom || .076));
+const PED = {r: 96, h: 110, elev: 8.5, fill: .9};
+const pillar = new THREE.Mesh(new THREE.CylinderGeometry(PED.r, PED.r, PED.h, 192), new THREE.MeshPhysicalMaterial({color: 0xf6f6f4, roughness: .55, clearcoat: .1, envMapIntensity: .9}));
+pillar.position.set(0, box.min.y - PED.h / 2, 4); pillar.castShadow = pillar.receiveShadow = true; pillar.visible = false; scene.add(pillar);
+function pedCamera() {
+  const e = PED.elev * Math.PI / 180, top = box.max.y, low = box.min.y - PED.h, frameH = (top - low) / PED.fill, dist = frameH / 2 / Math.tan(fov * Math.PI / 360);
+  const target = new THREE.Vector3(0, (top + low) / 2, 0); camera.position.copy(target).add(new THREE.Vector3(0, Math.sin(e), Math.cos(e)).multiplyScalar(dist)); camera.lookAt(target); camera.updateMatrixWorld();
+}
+const SHOW = {full: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef'], front: ['front', 'glass', 'pylons', 'stars', 'nosef'], back: ['back', 'noseb'],
+  card: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef'], ped: ['front', 'back', 'glass', 'pylons', 'stars', 'nosef', 'pillar']};
+const out = {}, info = {box: box.min.toArray().concat(box.max.toArray()).map(v => +v.toFixed(2))};
+for (const name of (P.variants || 'full').split(',')) {
+  const shown = new Set(SHOW[name]);
+  for (const [k, m] of Object.entries(mesh)) m.visible = shown.has(k);
+  ruler.visible = false; pillar.visible = shown.has('pillar');
+  if (name === 'card') place(az, el, Number(P.ch || .93), Number(P.cb || .035)); else if (name === 'ped') pedCamera(); else vitrine();
+  const W = name === 'card' ? Number(P.csize || 768) : SIZE, H = W;
+  renderer.setSize(W, H);
+  let c = renderStudio(renderer, scene, camera, {width: W, height: H, passes: PASSES, subject: name === 'ped' ? scene : zUp, view: {fullWidth: W, fullHeight: W, x: 0, y: 0},
+    key: {dir: [-.5, .72, .7], spread: .3, intensity: 1.6, distance: 4}, dome: {intensity: 1.1, minElevation: -.1}, shadowMap: 4096});
+  if (name === 'ped') {
+    const bg = document.createElement('canvas'); bg.width = W; bg.height = H; const g = bg.getContext('2d'), grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#f2f3f5'); grad.addColorStop(1, '#e5e7eb'); g.fillStyle = grad; g.fillRect(0, 0, W, H); g.drawImage(c, 0, 0); c = bg;
+  }
+  if (name === 'full' || name === 'card') info[name] = artBox(c);
+  out[name] = c;
+}
+finish(out, info);
+</script>

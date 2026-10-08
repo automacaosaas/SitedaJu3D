@@ -1,0 +1,12 @@
+# Uma cópia do banco na nuvem por dia, de madrugada (deploy/backup-nuvem.sh). Persistent: se o servidor estava
+# desligado na hora, a cópia sai quando ele voltar.
+[Unit]
+Description=Ju imprime pra mim: cópia diária do banco na nuvem
+
+[Timer]
+OnCalendar=*-*-* 03:30
+RandomizedDelaySec=20min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

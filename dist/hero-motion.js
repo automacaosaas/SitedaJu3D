@@ -49,21 +49,89 @@ export function withAlpha(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// As cores que a peça empresta às outras páginas (journey.js): as do tema e as derivadas. A vitrine guarda as da peça da
+// frente; a página de cada peça (tools/build-product-pages.cjs) já nasce com as dela.
+// wash: tom claro (miolo do degradê + branco) que suaviza o topo do card ativo do catálogo e o fundo das páginas.
+export function journeyColors(theme) {
+  return {
+    '--theme-text': theme.textColor, '--theme-muted': theme.mutedColor, '--theme-accent': theme.accentColor,
+    '--theme-wash': mixColor(theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1], '#ffffff', .3),
+    '--theme-soft': mixColor(theme.accentColor, '#ffffff', .78), '--theme-accent-strong': mixColor(theme.accentColor, '#000000', .2)
+  };
+}
+
+// ── Fundo desenhado atrás da peça (hero-scenery.js) ──
+// Luminância relativa (WCAG), a mesma fórmula dos testes de contraste.
+const linear = value => { const c = value / 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+export function luminance(hex) {
+  const [r, g, b] = channels(hex).map(linear);
+  return .2126 * r + .7152 * g + .0722 * b;
+}
+// A cor da peça clareada com branco só até ficar tão clara quanto `floor` (o tom do meio do degradê): um desenho nessa cor
+// nunca escurece o fundo atrás de um texto, e ainda guarda o máximo da cor da peça.
+export function lightTint(hex, floor) {
+  const target = luminance(floor);
+  for (let k = 0; k <= 100; k++) { const tint = mixColor(hex, '#ffffff', k / 100); if (luminance(tint) >= target) return tint; }
+  return '#ffffff';
+}
+// O sombreado (os detalhes miúdos, como o cabinho das bananas) é a cor do texto do tema a 7% (no máximo 8%): marca sem tirar contraste
+// (com o céu do avião, 8% já deixava o apoio e o destaque abaixo de 4,5:1).
+export const SCENERY_SHADE = .07;
+// Profundidade no arraste: o desenho do fundo acompanha a peça a 12% do caminho dela (pose(d).x) e as silhuetas dos cantos, mais
+// longe, a 5% (depth); tudo parado no movimento reduzido.
+export const SCENERY_PARALLAX = .12, SCENERY_EDGE = .05;
+export function sceneryShift(distance, travel, {reduced = false, depth = SCENERY_PARALLAX} = {}) {
+  return reduced ? 0 : pose(distance).x * travel * depth + 0;   // + 0: nunca -0
+}
+// A rolagem da página (08/10/2026: "algo mais fluido, que conecte com o rolar da página"; carousel.css › scn-scroll, com os mesmos
+// números, e carousel.js onde o navegador não liga animação à rolagem): da página no topo (progress 0) até a vitrine inteira ter saído
+// da tela (1), cada parte do fundo anda, em linha reta, até y (fração da altura da vitrine; negativo sobe) e até x para fora, pelo
+// seu lado (side: −1 a esquerda, 1 a direita), e esmaece até fade. near = os cantos (ficam um pouco para trás, afundando, e esmaecem);
+// mid = as silhuetas das bordas (se abrem para fora e esmaecem); far = o que está longe (se abre mais devagar). As das bordas só andam
+// para fora, nunca para cima ou para baixo: as setas, a peça, o preço e os botões ficam logo acima e abaixo delas (com 6% e 14% da
+// vitrine para trás, no meio da rolagem as nuvenzinhas passavam por trás das setas); e os cantos, embaixo, nunca sobem até as setas
+// (subindo 10%, no computador as margaridas e as pegadas passavam por trás delas). Parado no movimento reduzido.
+export const SCENERY_SCROLL = Object.freeze({near: Object.freeze({y: .06, x: 0, fade: .3}), mid: Object.freeze({y: 0, x: .06, fade: .45}), far: Object.freeze({y: 0, x: .035, fade: .4})});
+export function sceneryScroll(progress, {depth = 'mid', side = 0} = {}, height = 0, {reduced = false} = {}) {
+  const p = reduced ? 0 : clamp(progress, 0, 1), d = SCENERY_SCROLL[depth] || SCENERY_SCROLL.mid;
+  return {x: side * d.x * height * p + 0, y: d.y * height * p + 0, opacity: 1 + (d.fade - 1) * p};   // + 0: nunca -0
+}
+// As cores do desenho de uma peça, como variáveis CSS da camada, todas opacas: --scn-tN (a cor N clareada), --scn-hN (o lado da
+// luz, mais branco) e --scn-sN (o lado da sombra e os detalhes). Com menos de quatro cores, a última se repete; sem cores, o tom do meio.
+export function sceneryVars(theme, {tints = []} = {}) {
+  const [, mid] = theme.bannerStops.match(/#[0-9a-f]{6}/gi), list = tints.length ? tints : [mid], vars = {};
+  for (let i = 0; i < 4; i++) {
+    const tint = lightTint(list[Math.min(i, list.length - 1)], mid);
+    vars[`--scn-t${i + 1}`] = tint;
+    vars[`--scn-h${i + 1}`] = mixColor(tint, '#ffffff', .62);
+    vars[`--scn-s${i + 1}`] = mixColor(tint, theme.textColor, SCENERY_SHADE);
+  }
+  return vars;
+}
+
 // Fundo e header: cross-fade entre as duas camadas vizinhas da posição atual.
 export function layerMix(position, total) {
   const lo = Math.floor(position);
   return {from: mod(lo, total), to: mod(lo + 1, total), t: position - lo};
 }
 
-// Mesma regra de gesto da vitrine anterior: soltar além do limiar avança um produto.
-export function swipeTarget({anchor, dx, stride, cancelled = false}) {
+// Soltar o arraste. Um peteleco (velocity, em px/ms do dedo, acima de FLICK) segue para o lado dele a partir de onde a vitrine está
+// (position): um movimento rápido e curto troca de peça, e um peteleco de volta desfaz o arraste. Sem impulso, vale a distância
+// (o limiar). Nunca mais de uma peça a partir da âncora.
+export const FLICK = .35;
+export function swipeTarget({anchor, dx, stride, velocity = 0, position = anchor - dx / stride, cancelled = false}) {
   if (cancelled) return anchor;
+  const base = Math.round(anchor);
+  if (Math.abs(velocity) > FLICK) return clamp(velocity < 0 ? Math.floor(position + 1e-6) + 1 : Math.ceil(position - 1e-6) - 1, base - 1, base + 1);
   const threshold = Math.min(40, stride * .18);
-  return Math.abs(dx) >= threshold ? Math.round(anchor) + (dx < 0 ? 1 : -1) : anchor;
+  return Math.abs(dx) >= threshold ? base + (dx < 0 ? 1 : -1) : anchor;
 }
 
-export function settleDuration(distance, {reduced = false} = {}) {
+// Duração do assentar, pela distância. Ao soltar um arraste (velocity + stride, o curso de uma peça em px), a curva sai na velocidade
+// do dedo, sem tranco: a ease-out EASE começa a EASE[1]/EASE[0] (~4,5×) a velocidade média; entre 320 ms e FULL_DURATION.
+export function settleDuration(distance, {reduced = false, velocity = null, stride = 0} = {}) {
   if (reduced) return 320;
+  if (velocity != null && stride > 0) return Math.round(clamp(EASE[1] / EASE[0] * Math.abs(distance) * stride / Math.max(.4, Math.abs(velocity)), 320, FULL_DURATION));
   return Math.round(clamp(FULL_DURATION * (.55 + .45 * Math.abs(distance)), 320, 1100));
 }
 

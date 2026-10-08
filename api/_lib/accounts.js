@@ -83,7 +83,8 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
   function publicUser(c) {
     return {
       name: c.displayName || c.firstName || c.email.split('@')[0], email: c.email, hasPassword: Boolean(c.passwordHash),
-      profileComplete: Boolean(c.firstName && c.lastName && c.cpfEnc && c.phoneEnc), marketingOptIn: Boolean(c.marketingOptIn)
+      profileComplete: Boolean(c.firstName && c.lastName && c.cpfEnc && c.phoneEnc), marketingOptIn: Boolean(c.marketingOptIn),
+      avatar: c.avatarUrl || null
     };
   }
 
@@ -143,6 +144,53 @@ function createAccounts({store, env = process.env, sendCode = async () => {}, no
         termsVersion: TERMS_VERSION, termsAcceptedAt: date()
       });
       return {user: publicUser(customer), session: await openSession(customer, {ip, userAgent})};
+    },
+
+    // "Continuar com o Google / com a Apple", after social.js checked the provider's signed answer. The provider's own id
+    // (subject) is the key: a returning person is found by it even if the e-mail changed since. On a first visit, a
+    // verified e-mail that already has an account is linked to it (one account per e-mail, never a duplicate); otherwise
+    // a new account is created, already verified, with the name (and Google's photo) the provider sent. An e-mail the
+    // provider did not verify is never linked nor used to create an account. The sign-in screen says that continuing is
+    // agreeing to the Termos, as the sign-up screen does.
+    async socialSignIn({provider, subject, email, emailVerified, firstName = '', lastName = '', name = '', picture = '', privateEmail = false, ip = '', userAgent = ''}) {
+      await limit(`social-ip:${ip}`, 30, 15 * 60 * 1000);
+      if (!['google', 'apple'].includes(provider) || typeof subject !== 'string' || !subject || subject.length > 255) throw fail('social_failed');
+      email = normalizeEmail(email);
+      const given = clean(firstName, 60), family = clean(lastName, 100), shown = clean(name, 100) || [given, family].filter(Boolean).join(' ');
+      const avatarUrl = typeof picture === 'string' && picture.length <= 500 && picture.startsWith('https://') ? picture : null;
+      const known = await store.identities.find(provider, subject);
+      let customer = known ? await store.customers.findById(known.customerId) : null, created = false, linked = false;
+      if (known && customer) await store.identities.touch(provider, subject, {at: date(), email: email || known.email});
+      if (!customer) {
+        if (!email || !EMAIL.test(email) || email.length > 180 || !emailVerified) throw fail('social_email_unverified');
+        customer = await store.customers.findByEmail(email);
+        if (customer) {
+          // Linking: the provider proved this address belongs to the person, as the e-mailed code would.
+          linked = true;
+          const patch = {};
+          if (!customer.emailVerifiedAt) patch.emailVerifiedAt = date();
+          if (!customer.displayName && shown) patch.displayName = shown;
+          if (!customer.avatarUrl && avatarUrl) patch.avatarUrl = avatarUrl;
+          if (Object.keys(patch).length) customer = await store.customers.update(customer.id, patch);
+        } else {
+          created = true;
+          try {
+            customer = await store.customers.create({
+              id: crypto.randomUUID(), email, emailVerifiedAt: date(), displayName: shown || email.split('@')[0],
+              firstName: given.length >= 2 ? given : null, lastName: family.length >= 2 ? family : null, avatarUrl,
+              passwordHash: null, marketingOptIn: false, marketingConsentAt: null,
+              termsVersion: TERMS_VERSION, termsAcceptedAt: date()
+            });
+          } catch (error) {
+            // Two tabs finishing at once: the other one created it a moment ago.
+            if (error.code !== 'account_exists') throw error;
+            customer = await store.customers.findByEmail(email); created = false; linked = true;
+          }
+        }
+        if (known) await store.identities.remove(provider, subject);   // its account was deleted: the id starts over
+        await store.identities.create({provider, subject, customerId: customer.id, email, privateEmail: privateEmail === true, createdAt: date(), lastLoginAt: date()});
+      }
+      return {user: publicUser(customer), session: await openSession(customer, {ip, userAgent}), created, linked};
     },
 
     async login({email, password, ip = '', userAgent = ''}) {

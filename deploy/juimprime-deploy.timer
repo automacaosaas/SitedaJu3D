@@ -1,0 +1,11 @@
+# Confere o GitHub a cada minuto: subiu na branch configurada, o servidor publica sozinho (deploy/deploy.sh).
+[Unit]
+Description=Ju imprime pra mim: confere o Git a cada minuto
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

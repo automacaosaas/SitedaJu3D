@@ -1,7 +1,10 @@
 // Runs before styles: carry only validated theme colours across documents.
 (() => {
   const root = document.documentElement, key = 'ju:theme';
-  const defaults = {'--theme-text':'#10281e','--theme-muted':'#356650','--theme-accent':'#25664c','--theme-wash':'#e5f5ec','--theme-soft':'#cfe1d8','--theme-accent-strong':'#1e523d'};
+  // The colours of the piece the showcase opens on, exactly as it computes them: nothing changes colour (and transitions) at load.
+  // <entry-data> written by tools/sync-entry.cjs from products.js — do not edit by hand
+  const defaults = {'--theme-text':'#10281e', '--theme-muted':'#356650', '--theme-accent':'#25664c', '--theme-wash':'#e4f5ec', '--theme-soft':'#cfddd8', '--theme-accent-strong':'#1e523d'};
+  // </entry-data>
   const apply = values => {
     for (const name of Object.keys(defaults)) {
       const value = values?.[name];
@@ -16,6 +19,12 @@
     },
     product() { try { return JSON.parse(sessionStorage.getItem(key))?.product || ''; } catch { return ''; } }
   };
+  // A product page (tools/build-product-pages.cjs) wears its piece's colors from the first frame and carries them on, so the
+  // home's showcase opens on this piece. A page restored by Back/Forward claims its piece again.
+  const claim = () => { if (root.dataset.themeProduct) try { window.juTheme.save(root.dataset.themeProduct, JSON.parse(root.dataset.themeColors)); } catch {} };
+  claim();
+  // English or Spanish chosen before: the dictionary (i18n.js loads it only for them) starts downloading now, with the page.
+  try { if (/^(en|es)$/.test(localStorage.getItem('ju.language') || '')) for (const href of ['i18n-core.js', 'translations.js']) { const link = document.createElement('link'); link.rel = 'modulepreload'; link.href = href; document.head.append(link); } } catch {}
   const embedded = window.parent !== window && new URLSearchParams(location.search).get('panel') === '1';
   if (embedded) root.classList.add('account-embedded');
   if (embedded) window.addEventListener('message', event => {
@@ -47,7 +56,7 @@
   const deadline = setTimeout(reveal, 2000);
   window.addEventListener('ju:header-ready', revealWhenReady, {once:true});
   document.addEventListener('DOMContentLoaded', revealWhenReady, {once:true});
-  window.addEventListener('pageshow', () => { root.classList.remove('journey-leaving'); });
+  window.addEventListener('pageshow', event => { root.classList.remove('journey-leaving'); if (event.persisted) claim(); });
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href]');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.download || (link.target && link.target !== '_self')) return;

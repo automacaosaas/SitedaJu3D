@@ -22,6 +22,23 @@ export function installmentRows(answer, amountCents) {
   return rows.sort((a, b) => a.installments - b.installments).filter((row, i, all) => i === 0 || row.installments !== all[i - 1].installments);
 }
 
+// How many installments of this card come without interest, exactly as the table shows them: the rows from 1x on, until the
+// first one with interest. The card option of the checkout promises "sem juros" only that far. null without rows.
+export function interestFreeCount(rows) {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  let n = 0;
+  for (const row of rows) { if (row.interestCents) break; n = row.installments; }
+  return n;
+}
+
+// How many installments the card option may promise "sem juros": the typed card's own count (interestFreeCount) first, before
+// that the account's (/api/payments/config interestFree; unknown: none), never past what the site announces. 0 = no promise
+// (the checkout then says "EM ATÉ 12X").
+export function promisedInstallments(card, account, announced) {
+  const given = card ?? account, n = Number.isInteger(given) ? Math.min(announced, given) : 0;
+  return n >= 2 ? n : 0;
+}
+
 // The table under the payment form. Nothing when there is only one way to pay (no installments to compare).
 export function installmentsTable(rows) {
   if (!Array.isArray(rows) || rows.length < 2) return '';

@@ -31,27 +31,78 @@ function settings(env = process.env) {
   };
 }
 
+// Why a card was refused: the payment's status_detail in the Orders API (and the older "cc_rejected_…" spellings).
+// Only these ever reach the browser, which turns each into a sentence the buyer can act on (dist/live-payment.js
+// refusalMessage); anything else is no reason at all.
+const REFUSAL_REASONS = ['bad_filled_card_data', 'bad_filled_security_code', 'bad_filled_date', 'bad_filled_other', 'invalid_card_token', 'invalid_security_code', 'invalid_expiration_date',
+  'insufficient_amount', 'card_insufficient_amount', 'amount_limit_exceeded', 'required_call_for_authorize', 'call_for_authorize', 'card_disabled', 'max_attempts_exceeded',
+  'invalid_installments', 'duplicated_payment', 'high_risk', 'rejected_high_risk', 'blacklist', 'rejected_by_regulations', 'rejected_by_issuer', 'rejected_other_reason', 'processing_error', '3ds_challenge_expired'];
+const REFUSAL_PATTERN = new RegExp(`(?:^|[^a-z0-9_])(?:cc_rejected_)?(${REFUSAL_REASONS.join('|')})(?![a-z0-9_])`, 'i');
+const refusalReason = (...texts) => { for (const text of texts) { const found = REFUSAL_PATTERN.exec(' ' + String(text ?? '')); if (found) return found[1].toLowerCase(); } return ''; };
+
+// A 402 from POST /v1/orders ("failed": a transaction was refused) names the payment's reason in the error details, or
+// carries the order itself; either way only a known reason is kept.
 function apiError(status, data) {
   const first = Array.isArray(data?.errors) ? data.errors[0] : null;
-  return Object.assign(new Error(`Mercado Pago ${status}: ${first?.message || data?.message || data?.error || 'request failed'}`), {status, code: first?.code || data?.error || data?.code || null});
+  const order = data?.data && typeof data.data === 'object' ? data.data : null;
+  const reason = refusalReason(order?.transactions?.payments?.[0]?.status_detail, ...(Array.isArray(first?.details) ? first.details.map(d => typeof d === 'string' ? d : JSON.stringify(d)) : []), first?.message);
+  return Object.assign(new Error(`Mercado Pago ${status}: ${first?.message || data?.message || data?.error || 'request failed'}`), {status, code: first?.code || data?.error || data?.code || null, reason});
 }
 
-async function call({settings: s, fetchImpl = globalThis.fetch, method, path, body, idempotencyKey}) {
+// `sessionId`: the buyer's device id (security.js on the checkout pages), sent as X-meli-session-id for Mercado Pago's
+// fraud checks. Every error carries Mercado Pago's own x-request-id (`requestId`), for the logs and for their support.
+async function call({settings: s, fetchImpl = globalThis.fetch, method, path, body, idempotencyKey, sessionId, timeout = TIMEOUT_MS}) {
   const response = await fetchImpl(API + path, {
     method,
-    headers: {Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json', Accept: 'application/json', ...(idempotencyKey ? {'X-Idempotency-Key': idempotencyKey} : {})},
+    headers: {Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json', Accept: 'application/json', ...(idempotencyKey ? {'X-Idempotency-Key': idempotencyKey} : {}), ...(sessionId ? {'X-meli-session-id': sessionId} : {})},
     ...(body ? {body: JSON.stringify(body)} : {}),
-    ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(TIMEOUT_MS)} : {})
+    ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? {signal: AbortSignal.timeout(timeout)} : {})
   });
+  const requestId = String(response.headers?.get?.('x-request-id') || '').replace(/[^\w.:-]/g, '').slice(0, 80);
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw apiError(response.status, data);
+  if (!response.ok) throw Object.assign(apiError(response.status, data), {requestId});
   return data;
 }
+// The device id the browser hands over (window.MP_DEVICE_SESSION_ID): forwarded only when it looks like one.
+const deviceId = value => /^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(value ?? '')) ? String(value) : '';
 
-// Mercado Pago answers error 2198 ("Invalid test user email") when the buyer's address is not the test one while using test credentials.
-const isTestEmailRejection = error => Number(error?.code) === 2198 || /test user email|testuser/i.test(String(error?.message || ''));
-const createOrder = ({settings: s, fetchImpl, payload, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: '/v1/orders', body: payload, idempotencyKey});
+// Mercado Pago refuses a buyer address that is not a test one while using test credentials: error 2198 ("Invalid test
+// user email") in the older answers, invalid_email_for_sandbox in the Orders API.
+const isTestEmailRejection = error => Number(error?.code) === 2198 || error?.code === 'invalid_email_for_sandbox' || /test user email|testuser/i.test(String(error?.message || ''));
+// The account's payment methods (GET /v1/payment_methods): only what the checkout offers — Pix and credit and debit cards — and
+// only the active ones. {id, name, type, thumbnail}; the thumbnail is Mercado Pago's own picture, kept only from its hosts.
+const PAYMENT_TYPES = new Set(['credit_card', 'debit_card', 'bank_transfer']);
+const MP_PICTURE = /^https:\/\/([a-z0-9-]+\.)*(mlstatic\.com|mercadopago\.com)\//i;
+async function paymentMethods({settings: s, fetchImpl}) {
+  const data = await call({settings: s, fetchImpl, method: 'GET', path: '/v1/payment_methods'});
+  return (Array.isArray(data) ? data : []).filter(m => m && m.status === 'active' && PAYMENT_TYPES.has(m.payment_type_id) && (m.payment_type_id !== 'bank_transfer' || m.id === 'pix'))
+    .map(m => ({id: String(m.id).slice(0, 40), name: String(m.name || m.id).slice(0, 60), type: m.payment_type_id, thumbnail: MP_PICTURE.test(String(m.secure_thumbnail || '')) ? String(m.secure_thumbnail) : ''}));
+}
+// The account's installment plans for a card brand and an amount (GET /v1/payment_methods/installments): per card, payer_costs
+// with installments, installment_rate, installment_rate_collector, installment_amount and total_amount, as the account is set up
+// (with "parcelas sem juros" turned on, the first ones come at rate 0). Read for the "sem juros" check (interest-free.js).
+const installmentOptions = ({settings: s, fetchImpl, amountCents, paymentMethodId}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/payment_methods/installments?${new URLSearchParams({amount: amount(amountCents), payment_method_id: paymentMethodId})}`, timeout: 8000});
+// How many installments such an answer gives without interest: its plans from 1x on, in order, until the first one with interest.
+// A plan is interest-free when Mercado Pago adds nothing to the price: installment_rate 0, collected by Mercado Pago itself (a
+// "THIRD_PARTY" collector alone means the card's bank adds its own interest; the rule of Mercado Pago's own WooCommerce plugin)
+// and a total that does not pass the amount asked. Every card of the answer must give it (the smallest count wins); 1x alone is
+// 0 (nothing to announce). null when the answer holds no credit plan at all.
+const freePlan = (cost, amountCents) => Number(cost.installment_rate) === 0 && (!Array.isArray(cost.installment_rate_collector) || cost.installment_rate_collector.includes('MERCADOPAGO')) && Math.round(Number(cost.total_amount) * 100) <= amountCents;
+function interestFreeCount(answer, amountCents) {
+  const counts = (Array.isArray(answer) ? answer : []).filter(option => option?.payment_type_id !== 'debit_card' && Array.isArray(option?.payer_costs))
+    .map(option => option.payer_costs.filter(cost => Number.isInteger(cost?.installments) && cost.installments >= 1).sort((a, b) => a.installments - b.installments))
+    .filter(plans => plans.length)
+    .map(plans => { let n = 0; for (const cost of plans) { if (!freePlan(cost, amountCents)) break; n = cost.installments; } return n; });
+  if (!counts.length) return null;
+  const n = Math.min(...counts, MAX_INSTALLMENTS);
+  return n >= 2 ? n : 0;
+}
+const createOrder = ({settings: s, fetchImpl, payload, idempotencyKey, sessionId}) => call({settings: s, fetchImpl, method: 'POST', path: '/v1/orders', body: payload, idempotencyKey, sessionId});
 const getOrder = ({settings: s, fetchImpl, id}) => call({settings: s, fetchImpl, method: 'GET', path: `/v1/orders/${encodeURIComponent(id)}`});
+// Cancels an order nobody paid yet (a Pix still waiting: status action_required or created), so its QR code can no
+// longer be paid. 409 cannot_cancel_order / order_already_canceled when it moved on (paid, expired, cancelled): the
+// caller reads it back to know which.
+const cancelOrder = ({settings: s, fetchImpl, id, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: `/v1/orders/${encodeURIComponent(id)}/cancel`, idempotencyKey});
 // Total refund of an order: POST /v1/orders/{id}/refund with no amount (the documented way to return everything; card
 // and Pix alike). X-Idempotency-Key is mandatory; the caller derives it from the order, so a retry cannot refund twice.
 const refundOrder = ({settings: s, fetchImpl, id, idempotencyKey}) => call({settings: s, fetchImpl, method: 'POST', path: `/v1/orders/${encodeURIComponent(id)}/refund`, idempotencyKey});
@@ -123,13 +174,15 @@ function buildOrderPayload({priced, reference, customer, address, notes, lang, p
   return {
     type: 'online', processing_mode: 'automatic', external_reference: reference, total_amount: amount(priced.total),
     description: encodeMeta({lang, email: customer.email, notes}),
-    payer: {email: customer.email, first_name: first, last_name: rest.join(' ') || first, entity_type: 'individual', phone: splitPhone(customer.phone), ...(payment.identification ? {identification: payment.identification} : {})},
+    // A CNPJ pays as a company ("association" in the Orders API), a CPF as a person.
+    payer: {email: customer.email, first_name: first, last_name: rest.join(' ') || first, entity_type: payment.identification?.type === 'CNPJ' ? 'association' : 'individual', phone: splitPhone(customer.phone), ...(payment.identification ? {identification: payment.identification} : {})},
     shipment: {address: {zip_code: digits(address.cep), street_name: address.street, street_number: address.number, neighborhood: address.district, city: address.city, state: address.state, ...(address.complement ? {complement: address.complement} : {})}},
     items, transactions: {payments: [transaction]}
   };
 }
 
-// One vocabulary for the browser: approved · pending_pix · in_review · refused · expired.
+// One vocabulary for the browser: approved · pending_pix · in_review · refused · expired · canceled (we cancelled a
+// Pix nobody paid). A refused one may carry `reason`, one of REFUSAL_REASONS.
 function normalizeOrder(order) {
   const payment = order?.transactions?.payments?.[0] || {};
   const method = payment.payment_method || {};
@@ -140,11 +193,13 @@ function normalizeOrder(order) {
   if (status === 'refunded' || detail === 'refunded') state = 'refunded';   // returned to the buyer (by us or in Mercado Pago's panel)
   else if (status === 'processed' && detail === 'accredited') state = 'approved';
   else if (status === 'expired' || paymentStatus === 'expired' || paymentDetail === 'expired') state = 'expired';
-  else if (['failed', 'canceled', 'cancelled', 'rejected'].includes(status) || ['failed', 'rejected', 'canceled', 'cancelled'].includes(paymentStatus)) state = 'refused';
+  else if (['canceled', 'cancelled'].includes(status)) state = 'canceled';
+  else if (['failed', 'rejected'].includes(status) || ['failed', 'rejected', 'canceled', 'cancelled'].includes(paymentStatus)) state = 'refused';
   else if (isPix && ['created', 'action_required', 'processing'].includes(status)) state = 'pending_pix';
   const pix = isPix && (method.qr_code || method.ticket_url) ? {qrCode: method.qr_code || '', qrCodeBase64: method.qr_code_base64 || '', ticketUrl: method.ticket_url || '', expiresAt: payment.date_of_expiration || null} : null;
+  const reason = state === 'refused' ? refusalReason(paymentDetail, detail) : '';
   return {
-    id: order?.id || '', reference: order?.external_reference || '', state, status, statusDetail: detail, paymentStatus, paymentStatusDetail: paymentDetail,
+    id: order?.id || '', reference: order?.external_reference || '', state, status, statusDetail: detail, paymentStatus, paymentStatusDetail: paymentDetail, ...(reason ? {reason} : {}),
     method: {id: method.id || '', type: method.type || '', installments: method.installments || 1}, pix, total: fromAmount(order?.total_amount)
   };
 }
@@ -183,5 +238,11 @@ function verifySignature({secret, signature, requestId, dataId}) {
     return expected.length === given.length && crypto.timingSafeEqual(expected, given);
   });
 }
+// When a notification was signed (x-signature ts), in milliseconds; null without one. Mercado Pago documents
+// milliseconds, older examples show seconds: both are read. The webhook refuses one signed too long ago (a replay).
+function signatureTime(signature) {
+  const found = /(?:^|,)\s*ts=(\d{9,14})\s*(?:,|$)/.exec(String(signature ?? ''));
+  return found ? Number(found[1]) * (found[1].length >= 12 ? 1 : 1000) : null;
+}
 
-module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, createOrder, getOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};
+module.exports = {settings, isTestEmailRejection, TEST_PAYER_EMAIL, paymentMethods, installmentOptions, interestFreeCount, createOrder, getOrder, cancelOrder, refundOrder, refundOutcome, REFUND_CONFLICTS, referenceFor, encodeMeta, decodeMeta, splitPhone, paymentFromBrick, buildOrderPayload, normalizeOrder, summarizeOrder, verifySignature, signatureTime, deviceId, refusalReason, REFUSAL_REASONS, fail, PIX_EXPIRATION, MAX_INSTALLMENTS, REFERENCE_PREFIX};

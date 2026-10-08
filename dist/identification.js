@@ -43,7 +43,30 @@ export function maskCnpj(value) {
 const field = (name, label, value, attrs) => `<label class="id-field"><span>${label}</span><input name="${name}" value="${esc(value)}" ${attrs}></label>`;
 const cpfInput = () => field('cpf', 'CPF', '', 'inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required');
 
-export function identificationForm({email = '', profile = null, submitLabel, formId = 'identification-form'}) {
+// Only what is missing (`only`: some of firstName, lastName, cpf, phone): the welcome after "Continuar com o Google / com
+// a Apple" asks just that. The rest goes along hidden, as the server expects the whole identification.
+export function missingIdentification(profile) {
+  const p = profile || {};
+  return ['firstName', 'lastName', 'cpf', 'phone'].filter(name => name === 'cpf' ? !p.cpf : !String(p[name] || '').trim());
+}
+function compactForm({profile, submitLabel, formId, only}) {
+  const p = profile || {}, ask = name => only.includes(name);
+  const keep = name => `<input type="hidden" name="${name}" value="${esc(p[name] || '')}">`;
+  return `<form id="${formId}" class="id-form id-compact" novalidate data-identification>
+  <div class="id-grid">
+    ${ask('firstName') ? field('firstName', 'Nome', p.firstName, 'autocomplete="given-name" maxlength="60" required') : keep('firstName')}
+    ${ask('lastName') ? field('lastName', 'Sobrenome', p.lastName, 'autocomplete="family-name" maxlength="100" required') : keep('lastName')}
+    ${ask('cpf') ? cpfInput() : ''}
+    ${ask('phone') ? field('phone', 'Telefone (WhatsApp)', p.phone, 'type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(11) 99999-9999" maxlength="16" required') : keep('phone')}
+  </div>
+  <p class="id-note">CPF e telefone são usados na nota fiscal e nos avisos do pedido.</p>
+  <p class="id-error" role="alert"></p>
+  <button class="primary id-submit" type="submit">${submitLabel}<span aria-hidden="true">›</span></button>
+</form>`;
+}
+
+export function identificationForm({email = '', profile = null, submitLabel, formId = 'identification-form', only = null}) {
+  if (Array.isArray(only)) return compactForm({profile, submitLabel, formId, only});
   const p = profile || {}, company = p.company || {}, exempt = company.stateRegistration === 'ISENTO';
   return `<form id="${formId}" class="id-form" novalidate data-identification>
   <div class="id-grid">
@@ -63,14 +86,38 @@ export function identificationForm({email = '', profile = null, submitLabel, for
       <label class="id-check id-exempt"><input type="checkbox" name="stateRegistrationExempt"${exempt ? ' checked' : ''}><span>Isenta de inscrição estadual</span></label>
     </div>
     <p class="id-note">A nota fiscal sai no CNPJ. O CPF continua sendo o de quem compra.</p>
+    <button type="button" class="id-remove-company" data-id-action="remove-company"${p.company ? '' : ' hidden'}>Remover dados de pessoa jurídica</button>
   </details>
+  <p class="id-note id-company-removed" role="status" hidden>Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.</p>
   <label class="id-check"><input type="checkbox" name="marketingOptIn"${p.marketingOptIn ? ' checked' : ''}><span>Quero receber comunicações promocionais.</span></label>
   <p class="id-error" role="alert"></p>
   <button class="primary id-submit" type="submit">${submitLabel}<span aria-hidden="true">›</span></button>
 </form>`;
 }
 
-// Masks while typing, the "isenta" switch and the "Alterar" button of a saved CPF.
+// Pessoa jurídica: closing the section keeps what was typed, so "Remover dados de pessoa jurídica" empties it. With the
+// three fields empty the form sends `company: null` and the server erases the saved company (api/_lib/accounts.js): the
+// invoice goes back to the buyer's CPF. The button shows while the section holds anything.
+const COMPANY_FIELDS = ['cnpj', 'companyName', 'stateRegistration'];
+const companyTyped = form => COMPANY_FIELDS.some(name => form.querySelector(`[name="${name}"]`)?.value.trim()) || form.querySelector('[name="stateRegistrationExempt"]')?.checked === true;
+function syncCompany(form) {
+  const typed = companyTyped(form), remove = form.querySelector('[data-id-action="remove-company"]');
+  if (remove) remove.hidden = !typed;
+  if (typed) { const removed = form.querySelector('.id-company-removed'); if (removed) removed.hidden = true; }
+}
+function removeCompany(form) {
+  for (const name of COMPANY_FIELDS) { const input = form.querySelector(`[name="${name}"]`); input.value = ''; input.removeAttribute('aria-invalid'); }
+  form.querySelector('[name="stateRegistrationExempt"]').checked = false;
+  form.querySelector('[name="stateRegistration"]').disabled = false;
+  form.querySelector('.id-error').textContent = '';
+  const section = form.querySelector('.id-company');
+  section.open = false;
+  form.querySelector('[data-id-action="remove-company"]').hidden = true;
+  form.querySelector('.id-company-removed').hidden = false;
+  section.querySelector('summary').focus();
+}
+
+// Masks while typing, the "isenta" switch, the "Alterar" button of a saved CPF and the removal of the company data.
 export function wireIdentification(form) {
   form.addEventListener('input', event => {
     const input = event.target;
@@ -79,14 +126,17 @@ export function wireIdentification(form) {
     if (input.name === 'cpf') input.value = maskCpf(input.value);
     if (input.name === 'phone') input.value = maskPhone(input.value);
     if (input.name === 'cnpj') input.value = maskCnpj(input.value);
+    if (COMPANY_FIELDS.includes(input.name)) syncCompany(form);
   });
   form.addEventListener('change', event => {
     if (event.target.name !== 'stateRegistrationExempt') return;
     const ie = form.querySelector('[name="stateRegistration"]');
     ie.disabled = event.target.checked;
     if (event.target.checked) ie.value = '';
+    syncCompany(form);
   });
   form.addEventListener('click', event => {
+    if (event.target.closest('[data-id-action="remove-company"]')) { removeCompany(form); return; }
     if (!event.target.closest('[data-id-action="change-cpf"]')) return;
     const slot = form.querySelector('[data-cpf-slot]');
     slot.outerHTML = cpfInput();
@@ -103,11 +153,14 @@ const MESSAGES = {
 export function readIdentification(form) {
   const value = name => form.querySelector(`[name="${name}"]`)?.value.trim() ?? '';
   const exempt = form.querySelector('[name="stateRegistrationExempt"]')?.checked === true;
-  const data = {firstName: value('firstName'), lastName: value('lastName'), phone: value('phone'), marketingOptIn: form.querySelector('[name="marketingOptIn"]').checked};
+  const data = {firstName: value('firstName'), lastName: value('lastName'), phone: value('phone')};
+  // The short form (only the missing fields) has no consent box nor company section: those stay as they are.
+  const marketing = form.querySelector('[name="marketingOptIn"]');
+  if (marketing) data.marketingOptIn = marketing.checked;
   const cpfField = form.querySelector('[name="cpf"]');
   if (cpfField) data.cpf = cpfField.value;
   const hasCompany = [value('cnpj'), value('companyName'), value('stateRegistration')].some(Boolean) || exempt;
-  data.company = hasCompany ? {cnpj: value('cnpj'), name: value('companyName'), stateRegistration: value('stateRegistration'), stateRegistrationExempt: exempt} : null;
+  if (form.querySelector('[name="cnpj"]')) data.company = hasCompany ? {cnpj: value('cnpj'), name: value('companyName'), stateRegistration: value('stateRegistration'), stateRegistrationExempt: exempt} : null;
   const problem =
     data.firstName.length < 2 ? 'firstName' : data.lastName.length < 2 ? 'lastName' : cpfField && !validCpf(data.cpf) ? 'cpf' : !validPhone(data.phone) ? 'phone' :
     hasCompany && !validCnpj(data.company.cnpj) ? 'cnpj' : hasCompany && data.company.name.length < 2 ? 'companyName' : hasCompany && !exempt && !data.company.stateRegistration ? 'stateRegistration' : null;

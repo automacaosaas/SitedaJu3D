@@ -50,7 +50,7 @@ hPanel → o site → **Variáveis de ambiente**. Salvar republica o app.
 
 | Nome | Valor no site de teste | Para quê |
 |---|---|---|
-| `APP_ENV` | `preview` | Modo de teste. Em `production`, os caminhos de teste fecham e o site volta a aparecer no Google. |
+| `APP_ENV` | `preview` | Modo de teste. Em `production`, os caminhos de teste fecham. O Google não depende dele: só o domínio da loja (`juimprimepramim.com.br` e `www`) pode ser indexado; o endereço temporário fica sempre fora (`X-Robots-Tag`). |
 | `SITE_URL` | `https://<endereço temporário>` (sem barra no fim) | Links dos e-mails e a proteção de origem dos formulários. Sem ela, criar conta falha. |
 | `DB_HOST` | o host do passo 3 | Endereço do banco. |
 | `DB_NAME` | o nome do banco | |
@@ -89,6 +89,8 @@ Com `APP_ENV=preview`, o Mercado Pago roda sempre em **modo de teste**: só as c
 | `MP_ACCESS_TOKEN` | Access Token **de teste** | **sim** |
 | `MP_WEBHOOK_SECRET` | assinatura secreta do webhook | **sim** |
 | `ORDER_NOTIFY_EMAIL` | e-mail da Ju que recebe os pedidos pagos (precisa do Resend para sair) | não |
+| `CONTACT_EMAIL` | e-mail que recebe o aviso de cada mensagem do formulário de Contato (sem ela, vai para o `ORDER_NOTIFY_EMAIL`). A mensagem fica no painel, em Mensagens, mesmo se o e-mail não sair | não |
+| `CRON_SECRET` | 24+ caracteres aleatórios; liga `/api/fila/rodar`, chamado por uma tarefa agendada (veja `BLING-RESILIENCIA.md`, seção 5) | **sim** |
 | `ADMIN_EMAIL` | e-mail da equipe que entra no painel `/admin.html` | não |
 | `ADMIN_PASSWORD` | senha do painel, com **12 caracteres ou mais** | **sim** |
 
@@ -123,6 +125,22 @@ regras e como conferir estão em `FRETE-SETUP.md` e `FRETE-CORREIOS-passo-a-pass
 
 `/api/health` mostra `"shipping":"off"` (faltam variáveis), `"pending"` (variáveis ok, dados da loja incompletos) ou
 `"correios"` (cotando). O código de acesso não vai por chat, e-mail nem GitHub.
+
+### 4.3 Entrar com o Google e com a Apple (opcional)
+
+Sem estas variáveis os botões simplesmente não aparecem. Onde pegar cada valor e o que cadastrar nos consoles:
+`SOCIAL-LOGIN.md`. Os endereços de retorno são `SITE_URL` + `/api/auth/google/callback` e `/api/auth/apple/callback`.
+
+| Nome | Valor | Secreta |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | ID do cliente OAuth (Aplicativo da Web) | não |
+| `GOOGLE_CLIENT_SECRET` | chave secreta do cliente | **sim** |
+| `APPLE_CLIENT_ID` | identificador do Services ID | não |
+| `APPLE_TEAM_ID` | Team ID | não |
+| `APPLE_KEY_ID` | Key ID da chave com Sign in with Apple | não |
+| `APPLE_PRIVATE_KEY` | conteúdo do arquivo .p8 | **sim** |
+
+`/api/health` mostra `"social":{"google":true,"apple":true}` quando cada um está configurado.
 
 ## 5. Conferir
 

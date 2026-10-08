@@ -175,10 +175,18 @@ const DECISION = {
     confirmado: {subject: ref => `Pedido confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'A Ju confirmou o seu pedido e as peças já vão para a produção.',
       eyebrow: 'PEDIDO CONFIRMADO', title: ['Seu pedido foi', 'confirmado!'], intro: 'A Ju conferiu o seu pedido e as suas peças entram em produção, uma a uma. A nota fiscal chega em outro e-mail.',
       next: 'Quando o pedido for postado nos Correios, você recebe o código de rastreio por aqui.'},
-    concluido: {subject: ref => `Pedido enviado · ${ref} · Ju, imprime pra mim?`, preheader: 'O seu pedido foi postado nos Correios. Acompanhe pelo código de rastreio.',
+    enviado: {subject: ref => `Pedido enviado · ${ref} · Ju, imprime pra mim?`, preheader: 'O seu pedido foi postado nos Correios. Acompanhe pelo código de rastreio.',
       eyebrow: 'PEDIDO ENVIADO', title: ['Seu pedido está', 'a caminho!'], intro: 'As suas peças foram postadas nos Correios.',
-      tracking: 'CÓDIGO DE RASTREIO', button: 'Acompanhar meu pedido',
-      next: 'O botão abre Meus pedidos no site, com o código para acompanhar a entrega nos Correios.'},
+      tracking: 'CÓDIGO DE RASTREIO', button: 'Acompanhar a entrega',
+      next: 'O botão abre Meus pedidos no site, onde você acompanha cada passo da entrega.'},
+    saiu: {subject: ref => `Seu pedido saiu para entrega · ${ref} · Ju, imprime pra mim?`, preheader: 'Os Correios saíram para entregar o seu pedido.',
+      eyebrow: 'SAIU PARA ENTREGA', title: ['Seu pedido chega', 'hoje!'], intro: 'Os Correios informaram que o seu pedido saiu para entrega.',
+      tracking: 'CÓDIGO DE RASTREIO', button: 'Acompanhar a entrega',
+      next: 'Se ninguém puder receber, os Correios deixam um aviso e tentam de novo.'},
+    concluido: {subject: ref => `Pedido entregue · ${ref} · Ju, imprime pra mim?`, preheader: 'Os Correios registraram a entrega do seu pedido.',
+      eyebrow: 'PEDIDO ENTREGUE', title: ['Seu pedido foi', 'entregue!'], intro: 'As suas peças chegaram. Esperamos que elas levem muitos sorrisos às consultas!',
+      tracking: 'CÓDIGO DE RASTREIO', button: 'Ver meu pedido',
+      next: 'Algum problema com a entrega ou com as peças? Fale com a gente pela página de Contato do site.'},
     recusado: {subject: ref => `Sobre o seu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Infelizmente a Ju não vai conseguir produzir este pedido.',
       eyebrow: 'PEDIDO NÃO CONFIRMADO', title: ['Não vamos conseguir', 'produzir este pedido.'], intro: 'Sentimos muito: desta vez a Ju não vai conseguir produzir o seu pedido.',
       next: 'O valor pago será devolvido pelo Mercado Pago, na mesma forma de pagamento.',
@@ -189,10 +197,18 @@ const DECISION = {
     confirmado: {subject: ref => `Order confirmed · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmed your order and your pieces are going into production.',
       eyebrow: 'ORDER CONFIRMED', title: ['Your order is', 'confirmed!'], intro: 'Ju checked your order and your pieces are going into production, one by one. The invoice comes in a separate e-mail.',
       next: 'When your order is posted with the Correios, you will get the tracking code here.'},
-    concluido: {subject: ref => `Order shipped · ${ref} · Ju, imprime pra mim?`, preheader: 'Your order was posted with the Correios. Follow it with the tracking code.',
+    enviado: {subject: ref => `Order shipped · ${ref} · Ju, imprime pra mim?`, preheader: 'Your order was posted with the Correios. Follow it with the tracking code.',
       eyebrow: 'ORDER SHIPPED', title: ['Your order is', 'on its way!'], intro: 'Your pieces were posted with the Correios.',
-      tracking: 'TRACKING CODE', button: 'Track my order',
-      next: 'The button opens My orders on the website, with the code to follow the delivery with the Correios.'},
+      tracking: 'TRACKING CODE', button: 'Track the delivery',
+      next: 'The button opens My orders on the website, where you can follow every step of the delivery.'},
+    saiu: {subject: ref => `Your order is out for delivery · ${ref} · Ju, imprime pra mim?`, preheader: 'The Correios are out delivering your order.',
+      eyebrow: 'OUT FOR DELIVERY', title: ['Your order arrives', 'today!'], intro: 'The Correios say your order is out for delivery.',
+      tracking: 'TRACKING CODE', button: 'Track the delivery',
+      next: 'If nobody can receive it, the Correios leave a notice and try again.'},
+    concluido: {subject: ref => `Order delivered · ${ref} · Ju, imprime pra mim?`, preheader: 'The Correios registered the delivery of your order.',
+      eyebrow: 'ORDER DELIVERED', title: ['Your order has been', 'delivered!'], intro: 'Your pieces have arrived. We hope they bring many smiles to your appointments!',
+      tracking: 'TRACKING CODE', button: 'See my order',
+      next: 'Any problem with the delivery or the pieces? Talk to us through the Contact page on the website.'},
     recusado: {subject: ref => `About your order ${ref} · Ju, imprime pra mim?`, preheader: 'Unfortunately Ju will not be able to make this order.',
       eyebrow: 'ORDER NOT CONFIRMED', title: ['We will not be able', 'to make this order.'], intro: 'We are very sorry: this time Ju will not be able to make your order.',
       next: 'The amount you paid will be refunded through Mercado Pago, with the same payment method.',
@@ -203,10 +219,18 @@ const DECISION = {
     confirmado: {subject: ref => `Pedido confirmado · ${ref} · Ju, imprime pra mim?`, preheader: 'Ju confirmó tu pedido y tus piezas ya pasan a producción.',
       eyebrow: 'PEDIDO CONFIRMADO', title: ['¡Tu pedido fue', 'confirmado!'], intro: 'Ju revisó tu pedido y tus piezas pasan a producción, una por una. La factura llega en otro correo.',
       next: 'Cuando el pedido se envíe por Correios, recibirás el código de seguimiento por aquí.'},
-    concluido: {subject: ref => `Pedido enviado · ${ref} · Ju, imprime pra mim?`, preheader: 'Tu pedido fue enviado por Correios. Síguelo con el código de seguimiento.',
+    enviado: {subject: ref => `Pedido enviado · ${ref} · Ju, imprime pra mim?`, preheader: 'Tu pedido fue enviado por Correios. Síguelo con el código de seguimiento.',
       eyebrow: 'PEDIDO ENVIADO', title: ['¡Tu pedido está', 'en camino!'], intro: 'Tus piezas fueron enviadas por Correios.',
-      tracking: 'CÓDIGO DE SEGUIMIENTO', button: 'Seguir mi pedido',
-      next: 'El botón abre Mis pedidos en el sitio, con el código para seguir la entrega en Correios.'},
+      tracking: 'CÓDIGO DE SEGUIMIENTO', button: 'Seguir la entrega',
+      next: 'El botón abre Mis pedidos en el sitio, donde sigues cada paso de la entrega.'},
+    saiu: {subject: ref => `Tu pedido salió para entrega · ${ref} · Ju, imprime pra mim?`, preheader: 'Correios salió a entregar tu pedido.',
+      eyebrow: 'SALIÓ PARA ENTREGA', title: ['¡Tu pedido llega', 'hoy!'], intro: 'Correios informó que tu pedido salió para entrega.',
+      tracking: 'CÓDIGO DE SEGUIMIENTO', button: 'Seguir la entrega',
+      next: 'Si nadie puede recibirlo, Correios deja un aviso y lo intenta de nuevo.'},
+    concluido: {subject: ref => `Pedido entregado · ${ref} · Ju, imprime pra mim?`, preheader: 'Correios registró la entrega de tu pedido.',
+      eyebrow: 'PEDIDO ENTREGADO', title: ['¡Tu pedido fue', 'entregado!'], intro: 'Tus piezas llegaron. ¡Esperamos que lleven muchas sonrisas a las consultas!',
+      tracking: 'CÓDIGO DE SEGUIMIENTO', button: 'Ver mi pedido',
+      next: '¿Algún problema con la entrega o las piezas? Escríbenos desde la página de Contacto del sitio.'},
     recusado: {subject: ref => `Sobre tu pedido ${ref} · Ju, imprime pra mim?`, preheader: 'Lamentablemente Ju no podrá producir este pedido.',
       eyebrow: 'PEDIDO NO CONFIRMADO', title: ['No podremos', 'producir este pedido.'], intro: 'Lo sentimos mucho: esta vez Ju no podrá producir tu pedido.',
       next: 'El valor pagado será devuelto por Mercado Pago, con el mismo medio de pago.',
@@ -216,14 +240,15 @@ const DECISION = {
 };
 
 // refund (decline only): 'refunded' or 'requested' say the money is already on its way; otherwise the plain promise.
-// ordersUrl: "Meus pedidos" on the site, where the "concluido" e-mail's button leads (with the tracking code there too).
+// ordersUrl: "Meus pedidos" on the site, where the button of the e-mails with the tracking code leads ("enviado", "saiu"
+// for delivery and "concluido", delivered), with the delivery step by step there.
 function renderDecisionEmail({summary, status, refund = null, lang = 'pt-BR', test = false, assetUrl, ordersUrl = ''}) {
   const language = DECISION[lang] ? lang : 'pt-BR';
   if (!DECISION[language][status]) throw new Error(`no e-mail for status ${status}`);
   const base = DECISION[language][status];
   const copy = {...CUSTOMER[language], ...base, next: (status === 'recusado' && base[refund]) || base.next};
   const hello = copy.hello(summary.customer.name.split(' ')[0] || '');
-  const shipped = status === 'concluido' && Boolean(summary.trackingCode);
+  const shipped = ['enviado', 'saiu', 'concluido'].includes(status) && Boolean(summary.trackingCode);
   const inner = [
     `<tr><td class="px" align="center" style="padding:18px 44px 0;"><p style="margin:0;color:${C.muted};font-family:${SANS};font-size:16px;line-height:25px;">${esc(hello)} ${esc(copy.intro)}</p></td></tr>`,
     section(copy.order, line(`<strong style="font-size:18px;color:${C.rose};letter-spacing:.5px;">${esc(summary.reference)}</strong>`)),

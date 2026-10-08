@@ -176,3 +176,131 @@ sem rolagem lateral: rótulo numa linha, demonstração abrindo, configurador ab
 Aviãoscopia sem “Ver encaixado”. Não houve teste em aparelho físico. As menções acima a
 “Escolha sua cor” descrevem a versão anterior.
 
+
+## Fundos temáticos em sombreado de nuvens (07/10/2026)
+
+> Substituído em 08/10/2026 pelas silhuetas brancas de nuvem (seção seguinte). Fica o registro.
+
+Pedido do dono: "Na vitrine, detalhar individualmente para cada objeto, em sombreado de nuvens". Atrás de cada peça há agora
+um desenho próprio, claro e macio, nas cores da própria peça:
+
+| Peça | Desenho (`SHOWCASE.<peça>.scenery`) | Brumas dos cantos |
+| --- | --- | --- |
+| MonkeyLamp | `bananas`: um cacho grande à direita e um menor à esquerda, sobre nuvenzinhas | samambaias |
+| UnicornLamp | `rainbow`: arco-íris de faixas arredondadas (como o da peça), nuvenzinhas nos pés e estrelas | nuvens fofas |
+| GiraffeLamp | `acacia`: a acácia de copa achatada à direita, o sol, passarinhos, uma acácia pequena ao longe e capim | capim |
+| Borboletoscópio | `flowers`: um jardim dos dois lados (flor rosa, margaridas lilás, botões e folhas) | pétalas |
+| Dinossauroscópio | `claw`: a pata de T-rex (referência: as luvas de garra) — três dedos escamados com garras curvas — e samambaias pré-históricas | samambaias |
+| Aviãoscopia | sem desenho: continua com as nuvens | nuvens |
+
+- **Dados, não código:** o desenho de cada peça vem de `scenery: {side, motif, tints}` em `products.js`; `hero-scenery.js`
+  é uma biblioteca de desenhos sem nome de produto, e `carousel.js`/`hero-demo.js` continuam sem nome de produto.
+- **Cores e contraste:** `hero-motion.js › sceneryVars` clareia cada cor da peça (`tints`) com branco só até a luminância
+  do tom do meio do degradê (`lightTint`). Cada forma tem o lado da luz (mais branco) e o lado da sombra, que é a cor
+  misturada a no máximo 8% da cor do texto (`SCENERY_SHADE`). Todas as cores são opacas e nada é mais escuro que esse lado da
+  sombra; `tests/carousel.cjs` confere o contraste do texto, do subtítulo e da categoria sobre ele, em todas as peças.
+- **SVG em linha**, sem filtros, sem scripts, sem animação própria e sem arquivos novos (sem mudança de CSP). Bordas
+  dissolvidas por degradês e pela máscara de `.scenery-back`. Ids dos degradês únicos por camada (`scn-<camada>-…`).
+- **Posição:** o desenho se prende ao palco medido no JS (`--stage-x`, `--stage-top`, `--scn-ped`); 1 unidade do desenho =
+  1/200 da largura da pilastra. Fica abaixo da faixa do header, fora da abertura da borboleta e do dinossauro, longe do texto
+  no computador e do preço no celular. Dos 901 aos ~1365 px os botões chegam perto da pilastra: à esquerda, nada desce até
+  eles (o arco-íris sobe um pouco nessa faixa). Ajustes por tela: `--m-scale` (.9 de 901 a 1100 px, .92 até 600 px) e `--m-dy`.
+- **Movimento:** no arraste o desenho acompanha a peça a 12% do caminho dela (`sceneryShift`, num `translate` próprio). Camadas
+  apagadas ficam com `visibility: hidden`. Parado, nada se mexe; com movimento reduzido, nem o parallax.
+- **"Ver encaixado":** o desenho está dentro da raiz da camada, então escurece com ela; com movimento, ainda desliza com a
+  câmera até ficar atrás da peça montada.
+- Conferido no Chrome headless em 390 (celular, 2x), 360, 800, 901, 1024, 1101, 1280, 1366 e 1920 px, no meio de um arraste,
+  com movimento reduzido e na demonstração do unicórnio e do dinossauro. Não testado em aparelho físico.
+
+## Silhuetas brancas de nuvem (08/10/2026)
+
+Pedido do dono (sobre a versão de 07/10): "Não gostei desse novo fundo da vitrine. Queria sombreamento com referências de luz,
+usando as nuvens BRANCAS que ficam nos cantos." Na girafa ele gostou do capim alto, da nuvenzinha branca no alto à direita e da
+árvore, mas tudo em forma de nuvem: só silhuetas das características de cada peça, limpas, otimizadas e integradas à dinâmica da
+página. Nada de ilustração colorida detalhada (a pata laranja com garras cinza do dinossauro saiu).
+
+| Peça | Cantos (`side`) | Em volta da peça (`motif`) |
+| --- | --- | --- |
+| GiraffeLamp | `grass`: o capim alto de que o dono gostou | `acacia`: o sol, a acácia com a copa em camadas de nuvem, uma acácia pequena ao longe e capim no pé da pilastra |
+| MonkeyLamp | `palms`: folhas de palmeira arqueando dos cantos | `bananas`: um cacho de bananas abertas em leque, deitado numa nuvem (e um menor do outro lado), com o cabinho e as pontinhas no tom quente da peça |
+| UnicornLamp | `puffs`: nuvens fofas baixas | `rainbow`: arco-íris de faixas de nuvem, brancas com um fio das cores da peça, nuvens fofas nos pés e brilhos |
+| Borboletoscópio | `daisies`: margaridas de pétalas brancas | `flowers`: margaridas dos dois lados, os miolos num amarelo bem claro, as hastes nascendo de nuvens |
+| Dinossauroscópio | `ferns`: samambaias pré-históricas | `tracks`: a pegada de três dedos do T-rex, macia como nuvem, e outra menor adiante (o rastro); samambaias à esquerda |
+| Aviãoscopia | `towers`: cúmulos altos em camadas | `sky`: cúmulos em camadas e o rastro pontilhado de um voo que dá uma volta no alto (antes era a única cena sem desenho) |
+
+- **Linguagem:** tudo branco translúcido, com degradês (branco no alto, a base se dissolvendo) e as bordas apagadas pela máscara.
+  O tom da peça só entra, bem de leve, nas sombras (`--scn-tN`, nunca mais escuro que o meio do degradê do banner) e em detalhes
+  miúdos. SVG em linha, sem filtros, 14 a 34 formas por cena (60 a 90 nós por camada, antes cerca de 170). `tests/carousel.cjs` confere: só branco ou degradês da própria
+  camada, paradas brancas ou no tom da peça, sem as classes dos desenhos coloridos de antes, e o contraste dos textos.
+- **Dinâmica:** em cada cena, duas ou três nuvenzinhas deslizam 9 px para cada lado em voltas de 19 a 27 s, os cantos balançam
+  4 px em 13 s e duas estrelinhas cintilam (opacity e scale, 5 a 7 s). Cada uma é um `<svg>` pequeno e próprio dentro de um
+  `<span>`, e o que anima é o `<span>`: no Chrome, uma animação no próprio `<svg>` não vai para o compositor (medido na revisão:
+  parado, 58 recálculos de estilo por segundo; com o `<span>`, 2). Tudo para com o banner fora da tela, com a aba escondida (`.hero-bg.is-still`), enquanto a
+  vitrine anda (`.is-moving`) e na camada apagada (`.is-off`). No arraste o desenho acompanha a peça a 12% do caminho e os cantos
+  a 5%. Com movimento reduzido nada se mexe (só o cruzamento de opacidade entre as cenas).
+- **Celular:** até 760 px as setas de vidro alcançam o desenho. Cada cena tem uma arrumação própria nessas telas (CSS:
+  `[data-motif] .scn-*`), sem nada atrás das setas nem do preço. As nuvenzinhas e estrelinhas vão para o lugar do celular
+  (`--cx/--cy`) até 900 px, em toda tela com o texto acima do palco (no tablet, no lugar do computador, passavam por trás do preço).
+  Dos 901 aos 1100 px os cúmulos baixos do céu do avião descem e chegam para a pilastra, saindo de trás de "Ver encaixado".
+- **Laço de quadros mais leve (revisão "movimento" 1):** o parallax escreve `translate` direto no desenho e nos cantos, só nas
+  duas camadas à vista (antes era a variável herdada `--scn-x` nas seis). As camadas apagadas saem da pintura com
+  `content-visibility: hidden` e só a camada da abertura nasce na pintura. Cada estilo só é escrito quando muda. As cores do tema,
+  no meio da troca, vão só para o header e as setas; o banner inteiro e o rodapé recebem a cor final quando a peça assenta. O
+  brilho do botão principal só corre no botão da peça à vista. Medido no Chrome headless, só durante o arraste (30 movimentos):
+  celular 390 px a 3x com a CPU 4x mais lenta, recálculo de estilo de 4,7 a 8,2 s para 1,4 a 2,0 s; desktop 1440 px, de 0,5 a
+  1,0 s para 0,1 a 0,3 s.
+- **Peteleco (revisão "movimento" 14):** soltar com o dedo rápido (acima de 0,35 px/ms) troca de peça mesmo num arraste curto, e
+  um peteleco de volta desfaz o arraste. A duração do assentar sai da velocidade do dedo (a curva começa na mesma velocidade, entre
+  320 e 780 ms), sem o tranco depois de um arraste lento.
+- **Acabamento (revisão "visual" 13 e 20):** o subtítulo quebra em linhas equilibradas (`text-wrap: balance`, até 18em) e cada
+  bloco de texto se alinha pelo pé, então o preço fica no mesmo lugar de peça para peça. Em telas mais largas que 1560 px as setas
+  acompanham a margem do contêiner (em 1920 px ficam a 55 px do texto, antes a mais de 250 px).
+- Conferido no Chrome headless em 360 e 390 (celular, 2x), 680, 768, 1024, 1366 e 1920 px nas seis peças, no meio de um arraste
+  (mouse e toque), em "Ver encaixado" (girafa, dinossauro, avião e unicórnio) e com movimento reduzido. Não testado em aparelho
+  físico.
+
+## Silhuetas nas bordas, ligadas à rolagem (08/10/2026)
+
+Pedido do dono, sobre a versão anterior: "deixar as coisas mais na borda, para se conectar com a página e ficar dando todo esse
+sentido… algo mais fluido, que conecte com o rolar da página… que não ocupe sem ser o espaço da vitrine". Nada mais atrás da peça:
+cada cena virou um conjunto de silhuetas presas às bordas esquerda e direita da vitrine (`hero-scenery.js › edge`), cada uma num
+`<svg>` pequeno dentro de um `<span>`, posicionada em unidades da pilastra a partir da borda (a do contêiner de 1560 px nas telas
+mais largas) e do alto do palco, com um lugar para o computador e outro para o celular e o tablet (`--x/--y/--s`, `--cx/--cy/--cs`).
+
+| Peça | Nas bordas |
+| --- | --- |
+| Borboletoscópio | margaridas de pétalas **e miolos brancos** ("eu não quero coisa colorida"; o amarelo saiu até das sombras), as hastes no fio das bordas, por fora das setas |
+| Dinossauroscópio | as pegadas de T-rex (as garras de que o dono gostou) subindo pela borda direita, cada vez menores, sombreadas para o lado da borda da página; uma samambaia entrando pela esquerda |
+| MonkeyLamp | só as folhas de palmeira embaixo; as nuvens viraram **nuvens em forma de banana** (barriga em bolhas, cabinho e pontinha no tom quente), nas duas bordas, e as nuvenzinhas que flutuam também são bananinhas |
+| GiraffeLamp | a acácia na borda direita (o tronco no fio da borda, a copa em nuvem no alto, longe da girafa também no celular), o sol baixo no alto à esquerda, uma acácia pequena ao longe e o capim de sempre |
+| UnicornLamp | nuvens presas nas bordas e, de cada uma, o arco-íris subindo e saindo pela borda (o centro do arco fica do lado de fora), com uma estrelinha que corre pelas faixas a cada 10 s |
+| Aviãoscopia | o rastro pontilhado do voo entrando e saindo pela borda direita com uma volta no alto, cúmulos presos nas bordas |
+
+- **Onde nada entra:** as contas estão no alto de `hero-scenery.js`, medidas de 360 a 2560 px. `tests/carousel.cjs` refaz a conta
+  com o contorno de cada desenho (caminhos achatados, com as transformações, na escala de cada tela e com a folga do deslizar das
+  nuvenzinhas) e falha se algo cair em cima das setas, da peça, da pilastra, do texto, do preço, dos botões ou do header. No navegador,
+  o mesmo conferido com `isPointInFill` em 10 larguras e nas seis peças.
+- **Rolagem:** da página no topo até a vitrine inteira sair da tela, os cantos ficam um pouco para trás (afundam) e esmaecem, as
+  silhuetas das bordas se abrem para fora e esmaecem, e o que está longe (nuvenzinhas, estrelinhas, o sol) se abre mais devagar
+  (`carousel.css › scn-scroll`, `hero-motion.js › SCENERY_SCROLL`: 6% e 3,5% da altura da vitrine para fora, 6% para baixo nos cantos).
+  As das bordas só andam para fora e os cantos nunca sobem: na revisão, com as bordas descendo 6% e 14% da vitrine e os cantos subindo
+  10%, no meio da rolagem as nuvenzinhas, as estrelinhas, as margaridas e as pegadas passavam por trás das setas (medido por pixel em
+  360, 390, 768, 1024, 1366 e 1920 px), e a conta de `tests/carousel.cjs` agora vale para todo o caminho da rolagem.
+  É uma animação ligada à rolagem (`animation-timeline: scroll(root block)`), só `transform` e `opacity`, no compositor; onde o
+  navegador não a tem (Firefox, Safari antigo), `carousel.js` faz o mesmo num laço passivo, um quadro por vez, só nas camadas à vista e
+  só quando a posição muda. Tudo continua recortado na vitrine (`.hero-scenery`) e a base se dissolve pela máscara antes do fim dela.
+  Com movimento reduzido, nada se mexe.
+- **Barato:** enquanto a página rola, o que é do ambiente (nuvenzinhas, estrelinhas, cantos, o brilho do arco-íris) para
+  (`.is-scrolling`): a cada quadro da rolagem o navegador recalcula o estilo de tudo o que está animando. Medido no Chrome (trace,
+  celular 390 px a 3x, 60 passos de rolagem pela vitrine): de 2870 para cerca de 960 elementos recalculados; parado, cerca de 3
+  recálculos por segundo, como antes.
+- **Arco-íris:** as paradas do degradê das faixas estavam de fora para dentro e o navegador as juntava todas na de fora (só a faixa
+  rosa aparecia); agora vão de dentro para fora e as quatro cores aparecem, bem claras. Na revisão: o pé de cada arco se dissolve dentro
+  da nuvem (a base dela é translúcida e as faixas apareciam por ela, cortadas retas embaixo) e o fim do arco se dissolve antes da borda
+  (`.scn-fade`; acima de 1560 px a borda é a do contêiner e o arco acabava num corte reto no meio do fundo).
+- **Folhas do macaco no computador** (revisão): mais embaixo (e, acima de 1560 px, mais para fora); antes passavam por trás da seta da
+  esquerda em 1920 px e do "Comprar" e do preço de 1280 a 1440 px. O capim alto da girafa ainda encosta na seta da esquerda de 1280 a
+  1440 px (a ponta de uma folha, ~10 px²); ficou como o dono aprovou.
+- Conferido no Chrome headless em 360 e 390 (celular, 2x), 768, 1024, 1366 e 1920 px nas seis peças, no meio da rolagem (um e dois
+  terços da vitrine), no meio de um arraste (toque e mouse), em "Ver encaixado" (unicórnio e dinossauro), com movimento reduzido e
+  com o laço de reserva. Não testado em aparelho físico.

@@ -1,0 +1,17 @@
+/* Página não encontrada (404.html): the info card of the site with a small drawing of the printer and two ways back. */
+.not-found { text-align: center; }
+.not-found .info-copy { margin-left: auto; margin-right: auto; }
+.not-found h1 { font-size: clamp(28px, 3.6vw, 42px); max-width: 24ch; margin: 0 auto; text-wrap: balance; }
+.not-found-art { width: min(220px, 62%); margin: 0 auto 20px; }
+.not-found-art svg { display: block; width: 100%; height: auto; }
+.nf-frame { stroke: var(--ink); stroke-width: 2.4; opacity: .7; }
+.nf-head, .nf-print { stroke: var(--rose); stroke-width: 2.4; fill: color-mix(in srgb, var(--rose) 12%, #fff); }
+.nf-filament { stroke: var(--pink); stroke-width: 2.6; stroke-dasharray: 4 5; animation: nf-flow 1.6s linear infinite; }
+.nf-dot { fill: var(--rose); }
+@keyframes nf-flow { to { stroke-dashoffset: -18; } }
+.not-found-actions { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; justify-content: center; margin-top: 30px; }
+.not-found .not-found-actions .primary { margin-top: 0; width: auto; max-width: none; gap: 16px; padding-inline: 22px; }
+.not-found-secondary { color: var(--rose); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+.not-found-help { margin: 26px 0 0; font-size: 13px; color: var(--muted); }
+.not-found-help a { color: var(--rose); text-decoration: underline; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .nf-filament { animation: none; } }

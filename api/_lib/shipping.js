@@ -115,7 +115,42 @@ function createShipping({env = process.env, fetchImpl = globalThis.fetch, now = 
     throw outcomes.some(o => o.error && o.error.code !== 'correios_rejected') ? fail('shipping_unavailable') : fail('no_service');
   }
 
-  return {status, quote, volumes: lines => volumesFor(lines, config), config};
+  // Abroad (the panel's "Envio internacional"): the Exporta Fácil services of the contract to one country (ISO 3166 alpha-2),
+  // for the same boxes. Each option: {service, label, code, priceCents, deliveryDays and deliveryDaysMin (the Correios'
+  // range in working days; null when they give no time)};
+  // a service the contract or the country does not take goes to `refused`, with the Correios' own words: the panel shows them,
+  // which is how the shop learns what its contract covers. Not cached: Ju asks for one country at a time.
+  async function quoteInternational({lines, country}) {
+    const intl = config.international;
+    if (!correiosSettings(env).ready || !intl?.services?.length) throw fail('shipping_off');
+    const iso = String(country ?? '').trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(iso) || iso === 'BR') throw fail('invalid_country');
+    const volumes = volumesFor(lines, config), count = volumes.reduce((sum, v) => sum + v.count, 0);
+    const outcomes = await Promise.all(intl.services.map(async service => {
+      try {
+        const [prices, days] = await Promise.all([
+          Promise.all(volumes.map(v => correios.priceInternational({code: service.code, country: iso, box: v.box}))),
+          // No time is no reason to lose the price; the reason goes to the server log (the Correios' words, never credentials).
+          correios.deadlineInternational({code: service.code, country: iso}).catch(error => {
+            console.error(`shipping: prazo de ${service.label} (${service.code}) para ${iso} — ${error.code || error.message}${error.status ? ` (${error.status})` : ''} ${(error.messages || []).join(' | ')}`);
+            return null;
+          })
+        ]);
+        const carrierCents = volumes.reduce((sum, v, i) => sum + v.count * prices[i], 0) + config.labelFeeCents * count;
+        // deliveryDays: the longest time the Correios give (what can be promised); deliveryDaysMin: the shortest.
+        return {option: {service: service.id, label: service.label, code: service.code, priceCents: carrierCents, deliveryDays: days?.max ?? null, deliveryDaysMin: days?.min ?? null, volumes: count}};
+      } catch (error) {
+        console.error(`shipping: ${service.label} (${service.code}) to ${iso} — ${error.code || error.message}${error.status ? ` (${error.status})` : ''} ${(error.messages || []).join(' | ')}`);
+        return {refused: {service: service.id, label: service.label, code: service.code, reason: error.code === 'correios_rejected' ? 'rejected' : 'unavailable', messages: error.messages || []}};
+      }
+    }));
+    const options = outcomes.filter(o => o.option).map(o => o.option).sort((a, b) => a.priceCents - b.priceCents);
+    const refused = outcomes.filter(o => o.refused).map(o => o.refused);
+    if (!options.length && refused.every(r => r.reason === 'unavailable')) throw fail('shipping_unavailable');
+    return {country: iso, options, refused, volumes: volumes.map(v => ({...v.box, count: v.count}))};
+  }
+
+  return {status, quote, quoteInternational, volumes: lines => volumesFor(lines, config), config};
 }
 
 // What the browser may know about an option (never the contract code or the shop's cost).

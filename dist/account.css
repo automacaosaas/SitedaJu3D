@@ -75,10 +75,6 @@
 .account-empty small { color: var(--auth-muted); font-size: 12px; }
 .account-panel .buy-now { background: #f3d7e1; color: #71334c; box-shadow: none; }
 .account-panel .primary + .text-button { min-height: 44px; }
-.order-preview { border: 1px solid var(--auth-line); padding: 16px; border-radius: 14px; margin: 12px 0; overflow-wrap: anywhere; }
-.order-preview h3 { font-size: 13px; margin: 0 0 9px; }
-.order-preview p { font-size: 12px; color: var(--auth-muted); line-height: 1.6; }
-.order-preview small { font-size: 12px; color: var(--auth-rose); }
 .account-page :is(a,button,summary):focus-visible { outline: 2px solid var(--auth-rose); outline-offset: 4px; }
 .account-panel form[aria-busy="true"] .account-submit::after { content: ''; width: 14px; height: 14px; border: 2px solid #ffffff60; border-top-color: white; border-radius: 50%; animation: auth-spin 800ms linear infinite; }
 .account-panel form[aria-busy="true"] .account-submit .icon { display: none; }
@@ -226,10 +222,7 @@
   .auth-reassurance { margin-top:18px; padding-top:15px; }
   .account-page .account-footer { margin-top:18px; }
 }
-/* Meus pedidos: status line and test marker; Excluir minha conta: a quiet link in Meus dados, then its own screen. */
-.order-preview small { display: block; }
-.order-preview .order-test { color: var(--auth-muted); margin-top: 3px; }
-.order-preview.status-cancelado small, .order-preview.status-recusado small { color: var(--auth-muted); }
+/* Excluir minha conta: a quiet link in Meus dados, then its own screen. */
 .account-danger { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--auth-line); }
 .account-danger h3 { font-size: 13px; margin: 0 0 6px; }
 .account-danger p { font-size: 12px; color: var(--auth-muted); line-height: 1.6; margin: 0 0 4px; }
@@ -247,10 +240,138 @@
 .auth-terms { margin: 14px 0 4px; font-size: 12px; line-height: 1.5; color: var(--auth-muted); }
 .auth-terms-links { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; font-size: 12px; }
 .auth-terms-links a { color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
-/* "Ver nota fiscal": the NF-e of the order, once authorized. */
-.order-tracking { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 8px 0; padding: 9px 11px; border-radius: 10px; background: #f3eefb; color: #56399a !important; font-size: 12px; }
-.order-tracking strong { letter-spacing: 1px; font-size: 13px; }
-.order-tracking a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.order-invoice { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
 /* Sign-up: the password is optional (without one, the buyer always signs in with an e-mailed code). */
 .auth-hint { margin: -4px 0 12px; font-size: 12px; line-height: 1.45; color: var(--auth-muted); }
+/* Meus pedidos (account.js): one card per order. On top the number, the date and a badge in the tone of the stage; in the
+   middle the pieces with their colours, the total and the invoice; at the bottom the four steps and the buttons, with the
+   details and the Correios timeline opening in place. Tones: neutral, wait (paid, waiting for Ju; or at the agency),
+   making (in production), transit, done (delivered) and stop (declined, not delivered, returned). */
+.orders-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 2px; }
+.orders-filter button { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 12px 0 14px; border: 1px solid var(--auth-line); border-radius: 999px; background: #fff; color: #6b5a74; font: 600 13px 'DM Sans', sans-serif; cursor: pointer; transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.orders-filter button:hover { border-color: #d9b9c8; color: #4a3550; }
+.orders-filter button[aria-pressed="true"] { background: var(--auth-rose); border-color: var(--auth-rose); color: #fff; box-shadow: 0 6px 14px -8px #ad426480; }
+.orders-filter-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #f6eef2; font-size: 12px; }
+.orders-filter button[aria-pressed="true"] .orders-filter-count { background: #ffffff33; }
+.orders-list { display: grid; gap: 14px; margin: 14px 0 6px; }
+.order-card { --tone: #6a5b78; --tone-soft: #f1edf4; padding: 18px 18px 14px; border: 1px solid #eee2ea; border-radius: 20px; background: #fff; box-shadow: 0 12px 28px -24px #6b2c4a66; overflow-wrap: anywhere; transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.order-card[hidden] { display: none; }
+.order-card:hover { transform: translateY(-2px); border-color: #e6d1dd; box-shadow: 0 18px 34px -24px #6b2c4a80; }
+.order-card.tone-wait { --tone: #855700; --tone-soft: #fff3d9; }
+.order-card.tone-making { --tone: #9c4a10; --tone-soft: #ffecdc; }
+.order-card.tone-transit { --tone: #1f5d8f; --tone-soft: #e5f0fb; }
+.order-card.tone-done { --tone: #1f6b47; --tone-soft: #e3f4ea; }
+.order-card.tone-stop { --tone: #a3273a; --tone-soft: #fde8ea; }
+.order-card-top { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 8px 12px; }
+.order-card-top h3 { margin: 0; font: 700 16px 'DM Sans', sans-serif; color: #2e2433; }
+.order-number { letter-spacing: .5px; }
+.order-card-top time { font-size: 12px; color: #8b7d91; white-space: nowrap; }
+.order-badge { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px; border-radius: 999px; background: var(--tone-soft); color: var(--tone); font-size: 12px; font-weight: 700; line-height: 1.3; }
+.order-badge::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.order-card-body { margin-top: 14px; }
+.order-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.order-items li { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 12px; }
+.order-thumb { width: 48px; height: 48px; border-radius: 12px; background: #faf3f6; overflow: hidden; display: grid; place-items: center; }
+.order-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.order-thumb-empty .icon { width: 20px; height: 20px; color: #c79aae; }
+.order-item-name { font-size: 14px; color: #3a2f40; line-height: 1.35; }
+.order-item-name strong { color: var(--auth-rose); margin-right: 2px; }
+.order-swatches { display: inline-flex; gap: 4px; }
+.order-swatches i { width: 12px; height: 12px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 1px #0000001f; }
+.order-last { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 9px 11px; border-radius: 12px; background: var(--tone-soft); color: var(--tone); font-size: 12px; line-height: 1.45; }
+.order-last .icon { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+.order-sum { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px dashed #eadfe7; }
+.order-sum span { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7d91; }
+.order-sum strong { font-size: 20px; color: #2e2433; }
+.order-flag { margin: 6px 0 0; font-size: 12px; color: #8b7d91; }
+.order-invoice { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 12px; border: 1px solid #ecdbe4; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--auth-rose); transition: background-color .2s ease; }
+.order-invoice:hover { background: #fdf3f7; }
+.order-invoice .icon { width: 15px; height: 15px; }
+.order-card-foot { margin-top: 16px; }
+/* The steps: a line from the first dot to the last, filled up to the stage the order is in (--fill, 0 to 1). */
+.order-steps { --dot: 10px; position: relative; list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+.order-steps::before, .order-steps::after { content: ''; position: absolute; top: calc(var(--dot) / 2 - 1px); left: 12.5%; height: 2px; border-radius: 2px; }
+.order-steps::before { right: 12.5%; background: #efe6ec; }
+.order-steps::after { width: calc(75% * var(--fill, 0)); background: var(--tone); transition: width .5s ease; }
+.order-steps li { position: relative; z-index: 1; display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 12px; line-height: 1.25; color: #9a8c9f; }
+.order-steps li::before { content: ''; width: var(--dot); height: var(--dot); border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #e3d6df; }
+.order-steps li.is-done { color: #6b5a74; }
+.order-steps li.is-done::before { background: var(--tone); box-shadow: none; }
+.order-steps li.is-now { color: var(--tone); font-weight: 700; }
+.order-steps li.is-now::before { box-shadow: inset 0 0 0 3px var(--tone), 0 0 0 4px var(--tone-soft); }
+.order-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.order-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: 999px; font: 700 13px 'DM Sans', sans-serif; cursor: pointer; transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease; }
+.order-more-toggle { border: 1px solid #e3d3de; background: #fff; color: #5b4766; }
+.order-more-toggle:hover, .order-more-toggle[aria-expanded="true"] { border-color: #d6b6c7; background: #fbf3f7; }
+.order-track-toggle { border: 1px solid transparent; background: var(--auth-rose); color: #fff; box-shadow: 0 8px 16px -10px #5a2a3c80; }
+.order-track-toggle:hover { transform: translateY(-1px); }
+.order-track-toggle .icon { width: 17px; height: 17px; }
+.order-actions button:disabled { opacity: .7; cursor: wait; }
+/* The panels open in place (grid rows from nothing to the content); closed, nothing in them is read or focused. */
+.order-collapse { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows .3s ease, opacity .2s ease, visibility 0s linear .3s; }
+.order-collapse[data-open="true"] { grid-template-rows: 1fr; opacity: 1; visibility: visible; transition: grid-template-rows .3s ease, opacity .25s ease .05s, visibility 0s; }
+.order-collapse-inner { min-height: 0; overflow: hidden; }
+.order-facts, .order-totals { margin: 14px 0 0; display: grid; gap: 7px; }
+.order-facts div, .order-totals div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.order-facts dt, .order-totals dt { color: #8b7d91; }
+.order-facts dd, .order-totals dd { margin: 0; text-align: right; color: #3a2f40; }
+.order-facts code { font: 600 13px 'DM Sans', sans-serif; letter-spacing: 1px; }
+.order-facts a { display: block; margin-top: 2px; font-size: 12px; color: var(--auth-rose); text-decoration: underline; text-underline-offset: 3px; }
+.order-lines { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid #f1e8ee; display: grid; gap: 9px; }
+.order-lines li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 13px; color: #3a2f40; }
+.order-lines small { grid-column: 1 / -1; font-size: 12px; color: #8b7d91; }
+.order-totals { padding-top: 12px; border-top: 1px solid #f1e8ee; }
+.order-totals .is-total { font-weight: 700; font-size: 14px; }
+.order-totals .is-total dt, .order-totals .is-total dd { color: #2e2433; }
+.order-timeline { list-style: none; margin: 14px 0 4px 5px; padding: 0 0 0 18px; border-left: 2px solid var(--tone-soft); display: grid; gap: 12px; }
+.order-timeline li { position: relative; display: grid; gap: 2px; color: #3a2f40; line-height: 1.4; }
+.order-timeline li::before { content: ''; position: absolute; left: -25px; top: 3px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; background: #d7c9d3; }
+.order-timeline li:first-child::before { background: var(--tone); }
+.order-timeline li.is-entregue::before { background: #1f6b47; }
+.order-timeline li.is-problema::before, .order-timeline li.is-devolvido::before { background: #a3273a; }
+.order-timeline li.is-empty::before { display: none; }
+.order-timeline strong { font-size: 13px; }
+.order-timeline span, .order-timeline small { font-size: 12px; color: #7d6e83; }
+.orders-empty { padding: 30px 22px; }
+.orders-empty-art { position: relative; display: inline-grid; place-items: center; width: 72px; height: 72px; margin-bottom: 10px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #f9e3eb); color: var(--auth-rose); box-shadow: 0 10px 24px -14px #ad426480; }
+.orders-empty-art .icon { width: 30px; height: 30px; }
+.orders-empty-art i { position: absolute; right: 4px; top: 2px; font-style: normal; font-size: 18px; color: #d16a8c; }
+.orders-empty h3 { margin: 4px 0 6px; font-size: 22px; line-height: 1.25; }
+.orders-empty p { margin: 0 0 6px; font-size: 14px; }
+@media (max-width: 420px) {
+  .order-card { padding: 16px 14px 12px; border-radius: 18px; }
+  .order-items li { grid-template-columns: 42px 1fr auto; gap: 10px; }
+  .order-thumb { width: 42px; height: 42px; }
+  .order-actions button { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-card, .order-track-toggle, .order-steps::after, .order-collapse, .order-collapse[data-open="true"] { transition: none; }
+  .order-card:hover, .order-track-toggle:hover { transform: none; }
+}
+
+/* ── "Continuar com o Google / com a Apple" (account.js socialBlock) ────────────────────────────────────────────────
+   After the brands' guidelines: Google's button is white with the "G" in its four colours, a #747775 outline and Roboto
+   Medium in #1F1F1F; Apple's is black with its logo and title in white, in the system font. Both the same size and
+   weight, full width, under the e-mail form, after a divider ("ou entre com"). */
+.social-login { margin: 22px 0 6px; }
+.social-divider { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 12px; letter-spacing: .4px; color: var(--auth-muted); }
+.social-divider::before, .social-divider::after { content: ''; flex: 1; height: 1px; background: var(--auth-line); }
+.social-buttons { display: grid; gap: 10px; }
+.social-button { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 16px; border-radius: 14px; font-size: 15px; line-height: 1; text-decoration: none; transition: background-color .2s, box-shadow .2s, opacity .2s; }
+.social-button .social-logo { flex: none; width: 20px; height: 20px; }
+.social-google { background: #fff; color: #1f1f1f; border: 1px solid #747775; font-family: 'Roboto', 'DM Sans', Arial, sans-serif; font-weight: 500; }
+.social-google:hover { background: #f8f9fa; box-shadow: 0 1px 3px #3c40434d; }
+.social-apple { background: #000; color: #fff; border: 1px solid #000; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 500; }
+.social-apple .social-logo { width: 17px; height: 20px; margin-top: -3px; }
+.social-apple:hover { background: #1d1d1f; }
+.social-button:focus-visible { outline: 2px solid var(--auth-rose); outline-offset: 3px; }
+.social-button.is-going { opacity: .6; pointer-events: none; }
+.social-button.is-going::after { content: ''; position: absolute; right: 16px; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: auth-spin .8s linear infinite; }
+.social-terms { margin-top: 12px; }
+
+/* The photo of a Google account, beside the name. */
+.profile-summary { position: relative; }
+.profile-avatar { float: right; width: 64px; height: 64px; margin: -4px -4px 8px 12px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 14px #4f223622; }
+
+/* The welcome after a first sign-in with Google or Apple: only the missing fields. */
+.id-compact .id-grid { grid-template-columns: 1fr; }
+@media (prefers-reduced-motion: reduce) { .social-button.is-going::after { animation: none; } }

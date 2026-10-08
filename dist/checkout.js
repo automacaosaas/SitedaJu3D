@@ -1,20 +1,21 @@
 import {returnFromCart} from './shopping-navigation.js';
-import {PRODUCTS, color} from './products.js';
-import {COMMERCE, money} from './commerce-config.js';
+import {PRODUCTS, color, itemColors} from './products.js';
+import {COMMERCE, money, installmentLabel} from './commerce-config.js';
+import {CONTACT} from './company.js';
 import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
-import {SDK_OPTIONS, loadPaymentConfig, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceId, currentDeviceId, newAttempt, keepAttempt, createPayment, paymentState, cancelPayment, paymentMessage, refusalMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
-import {freeShippingBar} from './free-shipping.js';
-import {installmentRows, installmentsTable} from './installments.js';
+import {freeShippingBar, barRatio, riseBar} from './free-shipping.js';
+import {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
 
 import {refreshHeader} from './site-shell.js';
-import {renderCart, cartSummary} from './cart-view.js';
+import {renderCart, cartSummary, wireRecArrows, updateRecArrows, wireSummaryLink, watchSummary, paymentBlock} from './cart-view.js';
 
 const direct = document.body.dataset.flow === 'direct';
 function readDirect() {try{return normalizeCart(JSON.parse(sessionStorage.getItem(DIRECT_KEY)||'[]'));}catch{return [];}}
@@ -54,15 +55,18 @@ function shippingInner() {
   return '<p class="ship-note">Digite o CEP para calcular o frete.</p>';
 }
 const shippingSection = () => real
-  ? `<div class="shipping-choice"><p class="ship-title"><strong>Como quer receber?</strong></p><div id="shipping-choice" aria-live="polite">${shippingInner()}</div></div>`
+  ? `<div class="shipping-choice"><p class="ship-title"><strong>Como quer receber?</strong><a href="envio.html" target="_blank" rel="noopener">Prazos e frete</a></p><div id="shipping-choice" aria-live="polite">${shippingInner()}</div></div>`
   : `<div class="shipping-option"><span aria-hidden="true">↗</span><div><strong>Entrega no seu endereço</strong><p>Frete e prazo finais serão definidos na integração.</p></div><strong>${money(COMMERCE.shippingCents)}<small>exemplo</small></strong></div>`;
-const cartOptions = () => ({realShipping: real, productionLabel: real && shipCfg.production ? formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays}) : '', freeShipping: real ? shipCfg.freeShipping : null, estimate: ship});
+// the payment marks of the cart: the Mercado Pago account's own list, when payments are on (asked once, after the page shows)
+let payMethods = null;
+const cartOptions = () => ({payMethods, realShipping: real, productionLabel: real && shipCfg.production ? formatDays({min: shipCfg.production.minDays, max: shipCfg.production.maxDays}) : '', freeShipping: real ? shipCfg.freeShipping : null, estimate: ship});
 function paintShipping() {
   if (stage === 'cart') {
     const aside = main.querySelector('.cart-order-summary');
     if (!aside) return;
     const focused = document.activeElement?.id, typed = main.querySelector('#cart-cep')?.value;
     aside.outerHTML = cartSummary(purchaseItems(), cartOptions());
+    watchSummary(main);
     const input = main.querySelector('#cart-cep');
     if (input && typed !== undefined && focused === 'cart-cep') { input.value = typed; input.focus({preventScroll: true}); }
     else if (focused) main.querySelector('#' + focused)?.focus({preventScroll: true});
@@ -116,8 +120,10 @@ function mobileBar(items) {
 const announce = message => {clearTimeout(noticeTimer);liveRegion.textContent = message;noticeTimer=setTimeout(()=>{liveRegion.textContent='';},7000);};
 const primary = (text, action, extra = '') => `<button class="primary shop-primary" data-action="${action}" ${extra}>${text}<span aria-hidden="true">↗</span></button>`;
 function heading(kicker, title, description) { return `<div class="shop-heading"><p class="eyebrow">${kicker}</p><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`; }
-function chips(item) { return `<ul class="color-chips">${PRODUCTS[item.productId].parts.map(p => {const c = color(item.selection[p.id]); return `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${p.name}: <strong>${c.name}</strong></span></li>`;}).join('')}</ul>`; }
-function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${color(item.selection.body).hex}40"><img src="${esc(item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`)}" alt="${esc(item.title)} — ${item.thumbnail ? 'prévia 3D da combinação' : 'imagem nas cores originais'}"><small>${item.thumbnail ? 'Suas cores' : 'Cores originais'}</small></div>`; }
+function chips(item) { return `<ul class="color-chips">${itemColors(item.productId, item.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i><span>${c.part ? `${c.part}: ` : ''}<strong>${c.name}</strong></span></li>`).join('')}</ul>`; }
+// as linhas de cor de um item no texto do pedido (WhatsApp, copiar): "Corpo: Verde-menta"; na peça de cores fixas, as cores dela
+const colorLines = item => itemColors(item.productId, item.selection).map(c => c.part ? `${c.part}: ${c.name}` : c.name).join('\n');
+function thumbnail(item) { return `<div class="cart-art" style="--item-aura:${(itemColors(item.productId, item.selection)[0]?.hex || '#cccccc')}40"><img src="${esc(item.thumbnail || `assets/${PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image}`)}" alt="${esc(item.title)} — ${item.thumbnail ? 'prévia 3D da combinação' : 'imagem nas cores originais'}"><small>${item.thumbnail ? 'Suas cores' : 'Cores originais'}</small></div>`; }
 // The Pix discount counts once the payment is Pix: chosen above the Brick, or the method of the order already created.
 const pixApplied = () => (stage === 'payment' || stage === 'confirmation') && Boolean(order) && (order.live ? (order.phase === 'form' ? payMethod === 'pix' : order.method === 'pix') : order.method === 'pix');
 function amounts(items) {
@@ -136,7 +142,7 @@ function deliveryView() {return `${heading(direct?'COMPRAR AGORA':'UM PASSO MAIS
 function qrIllustration() {let cells = '';for(let y=0;y<21;y++)for(let x=0;x<21;x++){const inFinder = (x<7&&y<7)||(x>13&&y<7)||(x<7&&y>13);if(inFinder){const a=x>13?x-14:x,b=y>13?y-14:y;if(a===0||a===6||b===0||b===6||(a>=2&&a<=4&&b>=2&&b<=4))cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}else if((x*13+y*7+x*y)%5<2)cells+=`<rect x="${x}" y="${y}" width="1" height="1"/>`;}return `<div class="demo-qr"><svg viewBox="-2 -2 25 25" role="img" aria-label="QR Code ilustrativo, sem valor de pagamento"><g fill="#49303b">${cells}</g></svg><span>DEMONSTRAÇÃO</span></div>`;}
 function progress() {const approved = order.status === 'approved';return `<ol class="order-progress" aria-label="Andamento do pedido">${['Pedido criado','Aguardando pagamento','Pagamento confirmado','Em preparação','Pronto para envio'].map((s,i)=>`<li class="${i < (approved?2:1) ? 'done' : i === (approved?2:1) ? 'current' : ''}" ${i === (approved?2:1) ? 'aria-current="step"' : ''}><i aria-hidden="true">${i < (approved?2:1) ? '✓' : i+1}</i><span>${s}</span></li>`).join('')}</ol>`;}
 function paymentView() {if(order.live)return livePaymentView();const expired =paymentStatus(order) === 'expired', pix = order.method === 'pix';return `${heading('PEDIDO ' + order.id, expired ? 'O tempo passou.<br><em>Suas escolhas ficaram.</em>' : 'Falta só<br><em>um pequeno passo.</em>', 'Pagamento de demonstração. Nenhum valor será movimentado.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento por ${pix?'Pix':'cartão'}">${progress()}${pix ? `<div class="payment-state"><span class="status-pill ${expired?'expired':''}">${expired?'Código expirado':'<i class="waiting-dot" aria-hidden="true"></i>Aguardando pagamento'}</span><h2>${expired?'Gere um novo código.':'Pague do seu jeito, com Pix.'}</h2><p>${expired?'Seu pedido e suas cores continuam aqui.':'No celular, copie o código. Em outro dispositivo, você usaria o QR Code.'}</p></div>${expired ? '<div class="expired-art" aria-hidden="true">↻</div>' : `${qrIllustration()}<p class="qr-note">Imagem ilustrativa • não permite pagamentos</p><p class="countdown">Válido por <strong id="pix-time" role="timer"></strong></p><label class="pix-code-label" for="pix-code">Pix copia e cola <small>demonstrativo</small></label><div class="pix-copy"><input id="pix-code" readonly value="${demoPixCode(order)}"><button data-action="copy-pix">Copiar código</button></div>`}<div class="payment-buttons">${expired?primary('Gerar novo código de demonstração','renew'):primary('Já realizei o pagamento · simular','approve')}</div>${!expired?'<details class="demo-controls"><summary>Testar outro cenário</summary><button class="text-button" data-action="expire">Simular expiração do Pix</button></details>':''}` : `<div class="payment-state"><span class="status-pill">Cartão · demonstração</span><h2>Seu cartão, em boas mãos.</h2><p>Na versão final, o intermediador de pagamentos cuidará dos dados do seu cartão.</p></div><div class="card-illustration" aria-hidden="true"><span>Ju, imprime pra mim?</span><i>▥</i><strong>•••• &nbsp; •••• &nbsp; •••• &nbsp; ••••</strong><small>PRÉVIA DE PAGAMENTO</small></div><p class="card-explanation">Você não precisa digitar número, validade ou código de segurança para testar esta etapa.</p>${primary('Simular aprovação no cartão','approve')}<details class="demo-controls"><summary>Testar outro cenário</summary><button class="text-button" data-action="decline">Simular cartão recusado</button></details><p id="card-error" class="inline-error" role="alert"></p>`}<button class="text-button payment-back" data-action="delivery">← Alterar dados ou pagamento</button></section>${summary(order.items)}</div>`;}
-function confirmationView() {const message = `Olá, Ju! Gostaria de falar sobre o pedido ${order.id}${order.live ? '' : ' (demonstração)'}.\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+PRODUCTS[i.productId].parts.map(p=>`${p.name}: ${color(i.selection[p.id]).name}`).join('\n')).join('\n\n');const whatsapp = /^\d{10,15}$/.test(COMMERCE.whatsapp) ? `<a class="primary shop-primary" href="https://wa.me/${COMMERCE.whatsapp}?text=${encodeURIComponent(message)}" target="_blank" rel="noopener">Falar com a Ju no WhatsApp ↗</a>` : '<button class="secondary-button" disabled>WhatsApp da Ju · em breve</button><p class="small-note">O contato será habilitado quando o número da loja for definido.</p>';
+function confirmationView() {const message = `Olá, Ju! Gostaria de falar sobre o pedido ${order.id}${order.live ? '' : ' (demonstração)'}.\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+colorLines(i)).join('\n\n');const whatsapp = /^\d{12,13}$/.test(CONTACT.whatsapp) ? `<a class="primary shop-primary" href="https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(message)}" target="_blank" rel="noopener">Falar com a Ju no WhatsApp ↗</a>` : '<button class="secondary-button" disabled>WhatsApp da Ju · em breve</button><p class="small-note">O contato será habilitado quando o número da loja for definido.</p>';
 return `${heading('PEDIDO ' + order.id, 'Suas cores.<br><em>Um novo começo.</em>', confirmationLead())}<div class="shop-layout"><section class="confirmation-panel"><div class="success-mark" aria-hidden="true">✓</div><h2>Seu pedido ganhou vida.</h2><p>${order.live ? 'A Ju recebeu todos os detalhes do seu pedido para preparar suas peças.' : 'Na loja final, a confirmação chega por aqui e a Ju recebe todos os detalhes para preparar suas peças.'}</p>${progress()}<div class="confirmation-facts"><div><small>Forma de pagamento</small><strong>${order.method==='pix'?'Pix':'Cartão'}</strong></div>${order.shipping ? `<div><small>Envio</small><strong>${esc(order.shipping.label)}</strong><small>${formatDays(order.shipping.days)}</small></div>` : `<div><small>Produção estimada</small><strong>${COMMERCE.productionLabel}</strong></div>`}</div>${whatsapp}<button class="text-button" data-action="copy-order">Copiar resumo para conversar com a Ju</button><a class="primary shop-primary" href="index.html">Continuar explorando <span aria-hidden="true">↗</span></a></section>${summary(order.items)}</div>`;}
 // ── real payments (Mercado Pago) ───────────────────────────────────────
 const lang = () => document.documentElement.lang || 'pt-BR';
@@ -168,10 +174,21 @@ function livePaymentView() {
 function payChoice() {
   const full = order.amounts.total, discount = pixDiscount(order.items), pix = payMethod === 'pix';
   const option = (value, checked, inner) => `<button type="button" class="pay-option pay-${value}" role="radio" aria-checked="${checked}" tabindex="${checked ? 0 : -1}" data-action="pay-method" data-method="${value}">${inner}</button>`;
-  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off"><strong>3X SEM JUROS</strong><span>ou até 12x no crédito</span></span>`)}</div>`;
+  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off" data-card-offer>${cardOffer(full)}</span>`)}</div>`;
 }
+// The card's promise (2026-10-08): "3X SEM JUROS" only as far as Mercado Pago really gives it — for the typed card, its own
+// table (cardFree); before that, the account's number from /api/payments/config (unknown: no promise) — and never past what
+// the site announces (COMMERCE.interestFreeInstallments). Otherwise the honest "EM ATÉ 12X". Both texts sit in the same place
+// and the larger one sets the size (cart-page.css), so switching never moves the Brick under the buyer's fingers.
+let cardFree = null;
+const freeInstallments = () => promisedInstallments(cardFree, live.interestFree, COMMERCE.interestFreeInstallments);
+function cardOffer(full) {
+  const n = freeInstallments(), free = n >= 2, shown = free ? n : COMMERCE.interestFreeInstallments, max = COMMERCE.maxInstallments;
+  return `<span class="card-offer"${free ? '' : ' aria-hidden="true"'}><strong>${shown}X SEM JUROS</strong><span><span>${installmentLabel(full, shown)}</span> · <span>ou até ${max}x no crédito</span></span></span><span class="card-offer"${free ? ' aria-hidden="true"' : ''}><strong>EM ATÉ ${max}X</strong><span><span>no crédito</span> · <span>veja as parcelas ao digitar o cartão</span></span></span>`;
+}
+const paintCardOffer = () => { const box = main.querySelector('[data-card-offer]'); if (box && order?.amounts) box.innerHTML = cardOffer(order.amounts.total); };
 function disposeLive() {
-  brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null;
+  brickToken++; clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null; cardFree = null;
   try { brick?.unmount?.(); } catch {}
   brick = null;
 }
@@ -179,11 +196,12 @@ function showPaymentError(message, detail = '') {
   const box = main.querySelector('#card-error');
   if (!box) return announce(message);
   box.textContent = message;
-  if (detail) { const small = document.createElement('small'); small.setAttribute('translate', 'no'); small.textContent = ` (${detail})`; box.append(small); }
+  if (detail) { const small = document.createElement('small'); small.setAttribute('translate', 'no'); small.style.fontSize = '12px'; small.textContent = ` (${detail})`; box.append(small); }   // test mode only: Mercado Pago's own code
 }
 async function mountBrick() {
   const token = ++brickToken, box = main.querySelector('#payment-brick');
   if (!box) return;
+  loadDeviceId();   // Mercado Pago's device id, ready by the time the buyer pays (never waited for)
   try {
     const MercadoPago = await loadSdk();
     if (token !== brickToken) return;
@@ -191,7 +209,7 @@ async function mountBrick() {
     const controller = await mp.bricks().create('payment', 'payment-brick', {
       // The server prices the order again (and applies the Pix discount itself); this amount is what the Brick shows.
       initialization: {amount: (order.amounts.total - (payMethod === 'pix' ? pixDiscount(order.items) : 0)) / 100, payer: {email: draft.email}},
-      customization: {paymentMethods: payMethod === 'pix' ? {bankTransfer: 'all'} : {creditCard: 'all', debitCard: 'all', maxInstallments: 12}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
+      customization: {paymentMethods: payMethod === 'pix' ? {bankTransfer: 'all'} : {creditCard: 'all', debitCard: 'all', maxInstallments: COMMERCE.maxInstallments}, visual: {hideFormTitle: true, style: BRICK_STYLE}},
       callbacks: {
         onReady: () => { box.removeAttribute('aria-busy'); main.querySelector('#brick-loading')?.remove(); },
         onSubmit: data => submitFromBrick(data),
@@ -210,13 +228,14 @@ async function mountBrick() {
   }
 }
 // With the card's first digits, Mercado Pago tells every installment option for this card and amount: the table shows
-// each installment, the total and the interest on top of the price. Asked once per card and amount.
+// each installment, the total and the interest on top of the price, and the card option promises "sem juros" only as far as
+// the table goes (cardOffer). Asked once per card and amount.
 let binToken = 0;
 const installmentCache = new Map();
 async function showInstallments(mp, bin) {
   const box = main.querySelector('#installments-info'), token = ++binToken, digits = String(bin ?? '').replace(/\D/g, '').slice(0, 8);
   if (!box) return;
-  if (payMethod === 'pix' || digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; return; }
+  if (payMethod === 'pix' || digits.length < 6 || !order?.amounts?.total || typeof mp?.getInstallments !== 'function') { box.hidden = true; box.innerHTML = ''; if (cardFree !== null) { cardFree = null; paintCardOffer(); } return; }
   const key = `${digits}:${order.amounts.total}`;
   let rows = installmentCache.get(key);
   if (!rows) {
@@ -227,31 +246,40 @@ async function showInstallments(mp, bin) {
   if (token !== binToken || !box.isConnected) return;
   box.innerHTML = installmentsTable(rows);
   box.hidden = !box.innerHTML;
+  const free = interestFreeCount(rows);
+  if (free !== cardFree) { cardFree = free; paintCardOffer(); }
 }
 // Called by the Brick when the customer presses its pay button. The promise tells the Brick when to stop spinning.
+// The attempt id stays the same until a definite answer: a retry after a timeout or a 5xx lands on the same order (and
+// the same Mercado Pago idempotency key) instead of a second charge. Mercado Pago's own code shows only in test mode.
 function submitFromBrick(data) {
   return new Promise(async (resolve, reject) => {
     showPaymentError('');
+    if (!order.attempt) order = {...order, attempt: newAttempt()};
+    const attempt = order.attempt, test = live.mode === 'test';
+    const settle = status => { if (order?.attempt === attempt && !keepAttempt(status)) order = {...order, attempt: null}; };
     try {
       const {status, data: result} = await createPayment({
-        attempt: newAttempt(), lang: lang(), notes: draft.notes || '', acceptTerms: draft.terms === 'on',
+        attempt, deviceId: currentDeviceId() || undefined, lang: lang(), notes: draft.notes || '', acceptTerms: draft.terms === 'on',
         shipping: order.shipping ? {service: order.shipping.service, priceCents: order.shipping.priceCents} : undefined,
         items: order.items.map(({productId, quantity, selection}) => ({productId, quantity, selection})),
         customer: {name: draft.name, email: draft.email, phone: draft.phone},
         address: {cep: draft.cep, street: draft.street, number: draft.number, district: draft.district, city: draft.city, state: draft.state, complement: draft.complement || ''},
         payment: {selectedPaymentMethod: data.selectedPaymentMethod || data.paymentMethod, formData: data.formData}
       });
+      settle(status);
       // The session ended or the identification is missing (both checked again by the server): back to that step.
       if (status === 401) { reject(new Error('unauthorized')); location.assign(signInPage()); return; }
       if (result?.error === 'profile_incomplete') { reject(new Error('profile_incomplete')); setTimeout(() => toIdentification().then(() => announce(paymentMessage(status, result))), 0); return; }
       if (['shipping_changed', 'shipping_unavailable', 'no_service'].includes(result?.error) || (result?.error === 'invalid_request' && result?.field === 'shipping')) { reject(new Error('shipping')); setTimeout(() => backToDelivery(result), 0); return; }
-      if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), result?.detail); return reject(new Error('payment_failed')); }
-      if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusedMessage(), result.statusDetail); return reject(new Error('payment_refused')); }
+      if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), test ? result?.reason || result?.detail : ''); return reject(new Error('payment_failed')); }
+      if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusalMessage(result.reason), test ? result.paymentStatusDetail || result.statusDetail : ''); return reject(new Error('payment_refused')); }
       const pix = result.method?.type === 'bank_transfer' || result.method?.id === 'pix';
       order = {...order, id: result.reference, mpId: result.id, method: pix ? 'pix' : 'card', pix: result.pix, expiresAt: pix ? parseExpiry(result.pix?.expiresAt) : null, phase: result.state === 'pending_pix' ? 'pix' : result.state === 'approved' ? 'done' : 'review'};
       resolve();
       setTimeout(() => { if (result.state === 'approved') { order = {...order, status: 'approved'}; finishPaid(); } else { render(); announce(result.state === 'pending_pix' ? 'Pix gerado. Pague com o código ou o QR Code.' : 'Pagamento em análise.'); } }, 0);
     } catch (error) {
+      settle(0);   // no answer at all: the same attempt goes again on the next click
       showPaymentError(paymentMessage(0, null));
       reject(error);
     }
@@ -262,16 +290,32 @@ function finishPaid() {
   catch { announce('Pagamento aprovado, mas não foi possível atualizar o carrinho neste navegador.'); }
   stage = 'confirmation'; render(); announce(order.mode === 'test' ? 'Pagamento de teste aprovado. Nenhum valor real foi cobrado.' : 'Pagamento confirmado.');
 }
-function applyState(state) {
+function applyState(state, reason) {
   if (!order?.live || stage !== 'payment') return;
   if (state === 'approved') { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); }
   else if (state === 'expired' && order.phase !== 'expired') { order = {...order, phase: 'expired'}; render(false); announce('O Pix expirou. Gere um novo código para continuar.'); }
-  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null}; render(); announce(refusedMessage()); }
+  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null, attempt: null}; render(); announce(refusalMessage(reason)); }
+}
+// Leaving a Pix that may still be paid ("Gerar novo código Pix", "← Alterar dados ou pagamento"): its code is cancelled at
+// Mercado Pago first, so the old QR code cannot be paid next to a new one. 'paid' when it was paid meanwhile (the
+// confirmation shows), 'gone' when it can no longer be paid, 'kept' when Mercado Pago could not be reached (stay, try again).
+async function dropPix(button) {
+  if (!order?.live || !order.mpId || !['pix', 'expired'].includes(order.phase)) return 'gone';
+  const label = button?.innerHTML, expired = order.phase === 'expired';
+  if (button) { button.disabled = true; button.textContent = 'Cancelando o código anterior…'; }
+  let result = null;
+  try { result = await cancelPayment(order.mpId); } catch {}
+  if (button?.isConnected) { button.disabled = false; button.innerHTML = label; }
+  const state = result?.status === 200 ? result.data?.state : null;
+  if (state === 'approved') { if (stage === 'payment' && order?.live) { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); } return 'paid'; }
+  if ((state && state !== 'pending_pix' && state !== 'in_review') || (!state && expired)) return 'gone';   // an expired code cannot be paid anyway
+  announce('Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.');
+  return 'kept';
 }
 async function checkNow(button) {
   if (!order?.mpId) return;
   const label = button.textContent; button.disabled = true; button.textContent = 'Verificando…';
-  try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state); else announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
+  try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state, data.reason); else announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
   catch { announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
   if (button.isConnected) { button.disabled = false; button.textContent = label; }
 }
@@ -286,7 +330,7 @@ function afterLiveRender() {
       };
       tick(); clockTimer = setInterval(tick, 1000);
     }
-    pollTimer = setInterval(async () => { try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state); } catch {} }, 5000);
+    pollTimer = setInterval(async () => { try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state, data.reason); } catch {} }, 5000);
   }
 }
 
@@ -298,8 +342,12 @@ function render(focus = true) {
   const steps = document.querySelector('.shop-steps');
   main.before(steps);
   document.querySelectorAll('[data-step]').forEach(el=>{const active = el.dataset.step === (stage==='confirmation'?'payment':stage);if(active)el.setAttribute('aria-current','step');else el.removeAttribute('aria-current');});
+  // the free-shipping bar rises from where it was when a quantity goes up
+  const barBefore = stage === 'cart' ? barRatio(main) : null;
   main.innerHTML = stage === 'cart' ? renderCart(cart, cartOptions()) : stage === 'identification' ? identificationView() : stage === 'delivery' ? deliveryView() : stage === 'payment' ? paymentView() : confirmationView();
   main.querySelector('#cart-steps-slot')?.append(steps);
+  if (barBefore !== null) riseBar(main, barBefore);
+  if (stage === 'cart') { updateRecArrows(main); watchSummary(main); }
   if (stage === 'identification') wireIdentification(main.querySelector('#identification-form'));
   ensureShipping();
   if (stage === 'delivery') setTimeout(autofillKnownCep, 0);
@@ -378,10 +426,10 @@ main.addEventListener('click',async e=>{
     if(action==='checkout'&&purchaseItems().length){await toIdentification();}
     if(action==='cart'&&direct&&cart[0]){location.assign(`index.html#produto/${cart[0].productId}`);return;}
     if(action==='cart'){const form=document.querySelector('#delivery-form');if(form)draft=Object.fromEntries(new FormData(form));stage='cart';order=null;render();}
-    if(action==='delivery'){stage='delivery';order=null;render();}
+    if(action==='delivery'){if(order?.live&&['pix','expired'].includes(order.phase)&&await dropPix(button)!=='gone')return;if(stage!=='payment')return;stage='delivery';order=null;render();}
     if(action==='retry-brick'){render(false);}
-    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
-    if(action==='new-pix'){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending'};render();}
+    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;order={...order,attempt:null};render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
+    if(action==='new-pix'){if(await dropPix(button)==='gone'&&stage==='payment'&&order?.live){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending',attempt:null};render();}}
     if(action==='copy-live-pix'){try{await navigator.clipboard.writeText(order.pix.qrCode);announce('Código Pix copiado.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código Pix.');}}
     if(action==='check-now'){await checkNow(button);}
     if(action==='copy-pix'){try{await navigator.clipboard.writeText(demoPixCode(order));announce('Código demonstrativo copiado. Ele não permite pagamentos.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código demonstrativo.');}}
@@ -400,10 +448,10 @@ main.addEventListener('click',async e=>{
       catch {announce('Demonstração aprovada, mas não foi possível atualizar o carrinho neste navegador.');}
       busy=false;stage='confirmation';render();announce('Pagamento confirmado na demonstração. Nenhum valor foi cobrado.');
     }
-    if(action==='copy-order'){const text=`Pedido ${order.id}${order.live ? '' : ' — demonstração'}\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+PRODUCTS[i.productId].parts.map(p=>`${p.name}: ${color(i.selection[p.id]).name}`).join('\n')).join('\n\n');try{await navigator.clipboard.writeText(text);announce('Resumo copiado.');}catch{announce('Não foi possível copiar automaticamente. As escolhas estão no resumo ao lado.');}}
+    if(action==='copy-order'){const text=`Pedido ${order.id}${order.live ? '' : ' — demonstração'}\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+colorLines(i)).join('\n\n');try{await navigator.clipboard.writeText(text);announce('Resumo copiado.');}catch{announce('Não foi possível copiar automaticamente. As escolhas estão no resumo ao lado.');}}
   } catch(error){busy=false;button.disabled=false;announce(error.message);}
 });
-window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=readCart();if(stage==='cart')render(false);else if(stage==='delivery'||stage==='payment'){order=null;stage='cart';render();announce('O carrinho foi alterado em outra aba. Confira os itens antes de continuar.');}});
+window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=readCart();if(stage==='cart')render(false);else if(stage==='delivery'||stage==='payment'){if(order?.live&&order.mpId&&order.phase==='pix')cancelPayment(order.mpId).catch(()=>{});order=null;stage='cart';render();announce('O carrinho foi alterado em outra aba. Confira os itens antes de continuar.');}});
 // Coming back from the account page (#identificacao) or starting a direct purchase: go straight to identification.
 if ((location.hash === '#identificacao' || stage === 'delivery') && purchaseItems().length) { history.replaceState(null, '', location.pathname + location.search); await toIdentification(); }
 else render(false);
@@ -469,6 +517,9 @@ main.addEventListener('change', e => {
   const option = ship.options.find(o => o.service === e.target.value);
   if (option) { ship = {...ship, chosen: option}; paintShipping(); }
 });
+wireRecArrows(main);
+wireSummaryLink(main);
+if (live.mode !== 'off') loadPaymentMethods().then(methods => { if (!methods) return; payMethods = methods; const block = main.querySelector('[data-cart-pay]'); if (block) block.outerHTML = paymentBlock(methods); });
 main.addEventListener('click', e => {
   if (!real || !e.target.closest('[data-action="retry-shipping"]')) return;
   const form = main.querySelector('#delivery-form'), cep = String(form?.elements.cep?.value ?? draft.cep ?? '').replace(/\D/g, '');

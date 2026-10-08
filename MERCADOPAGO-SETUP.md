@@ -1,6 +1,6 @@
 # Pagamentos com o Mercado Pago
 
-Este documento explica o que foi construído, como ligar em modo de **teste** (sem cobrança real) e o que falta antes de vender de verdade.
+Este documento explica o que foi construído, como ligar em modo de **teste** (sem cobrança real) e o que falta antes de vender de verdade. O roteiro para validar, do teste à primeira venda real, está em **`MERCADOPAGO-VALIDACAO.md`**.
 
 ## A escolha: Checkout Transparente com Bricks e API de Orders
 
@@ -20,6 +20,7 @@ A aplicação no painel do Mercado Pago precisa ser do tipo **Checkout Transpare
 4. O servidor confere a sessão e a identificação, **recalcula os preços** (`api/_lib/catalog.js`), **grava o pedido no banco** e só então cria a order no Mercado Pago e responde com o estado: aprovado, Pix aguardando (com QR Code e copia-e-cola), em análise ou recusado.
 5. O Mercado Pago avisa por **webhook** (`POST /api/payments/webhook`). O servidor confere a assinatura, **lê o pedido de volta no Mercado Pago** confere se a referência e o valor batem com o pedido gravado e, se estiver pago, marca o pedido como pago no banco e manda um e-mail para a Ju (o que produzir, cores, endereço, contato) e outro para o cliente (comprovante no idioma dele).
 6. Enquanto um Pix espera, a página consulta `GET /api/payments/status` a cada 5 segundos e avança sozinha quando o pagamento cai.
+7. Os selos de "Métodos de pagamento aceitos" no carrinho vêm da própria conta: `GET /api/payments/methods` lê `GET /v1/payment_methods` no Mercado Pago com o Access Token (no servidor). Ficam só os ativos de Pix, crédito e débito, e a resposta é guardada por 6 horas. Com os pagamentos desligados, ou se o Mercado Pago não responder, o carrinho mostra a lista padrão (`FALLBACK_METHODS` em `dist/payment-marks.js`): Pix, Visa, Mastercard, Elo, American Express, Hipercard e o débito virtual Caixa. **O Pix aparece sempre**, porque é regra da loja e o checkout sempre o oferece. As credenciais de teste não listam o Pix: em 05/10/2026, a conta de teste respondeu Visa, Mastercard, Elo, American Express, MP Card e Elo Débito.
 
 Os pedidos ficam no banco (MySQL: `orders`, `order_items` e `order_events`, em `db/migrations/002_pedidos.sql`), com um retrato do comprador e da entrega no momento da compra; CPF e telefone vão criptografados. A resposta do pagamento, o webhook e a consulta do Pix atualizam o mesmo pedido, e quem chega primeiro faz a mudança: o pedido é marcado como pago uma vez só e cada e-mail sai uma vez só. O cliente vê os pedidos em "Meus pedidos" (conta) e a Ju no painel `/admin.html` (ver `ADMIN-SETUP.md`). Se a conta for excluída, o pedido continua guardado para a nota fiscal, sem o vínculo com a conta.
 
@@ -39,33 +40,50 @@ Quem paga com Pix paga 5% a menos **nas peças** (o frete não tem desconto, e o
 Em **Suas integrações** → sua aplicação → **Credenciais de teste**: copie a **Public Key** e o **Access Token**.
 Quem cola o Access Token é você. Ele nunca deve ir para o GitHub, para um chat ou para um arquivo do projeto. As credenciais de teste só aparecem em aplicações do tipo Checkout Transparente e, como as de produção, começam com `APP_USR`; o que as torna "de teste" é vir da aba **Credenciais de teste**.
 
-### 2. Variáveis na Vercel
+Se o Mercado Pago recusar as credenciais de teste na API de Orders (erro 401 `invalid_credentials` no log do site),
+use **contas de teste**: Suas integrações → **Contas de teste** → crie um vendedor e um comprador (Brasil); entre com o
+vendedor de teste, crie nele uma aplicação Checkout Transparente e use as credenciais **de produção dessa conta de
+teste**. O dinheiro dela é de mentira.
 
-Projeto `siteda-ju3-d` → **Settings** → **Environment Variables**. Salve cada uma marcando **Preview** (a de segredo como *Sensitive*):
+### 2. Onde colocar as variáveis
+
+Os valores só são colados direto no servidor, por quem tem o acesso. Nunca no chat, no e-mail ou no Git.
+
+- **Servidor próprio** (`SERVIDOR-SETUP.md`): `sudo nano /srv/juimprime/shared/.env`, uma linha `NOME=valor` por
+  variável (comentários só em linhas próprias), e depois `sudo systemctl restart juimprime.service`.
+- **Hostinger** (site de teste, `HOSTINGER-SETUP.md`, seção 4): hPanel → o site → **Variáveis de ambiente**. Salvar
+  republica o app. A Hostinger não lê arquivo `.env`.
 
 | Nome | Valor | Segredo? |
 |---|---|---|
-| `MP_PUBLIC_KEY` | Public Key de teste | não |
-| `MP_ACCESS_TOKEN` | Access Token de teste | **sim** |
+| `MP_PUBLIC_KEY` | Public Key (de teste ou de produção) | não |
+| `MP_ACCESS_TOKEN` | Access Token (de teste ou de produção) | **sim** |
 | `MP_WEBHOOK_SECRET` | "Assinatura secreta" do webhook (passo 3) | **sim** |
-| `ORDER_NOTIFY_EMAIL` | e-mail onde a Ju recebe os pedidos pagos | não |
+| `MP_MODE` | `test` ou `live`, só com `APP_ENV=production` (vazio = pagamentos desligados) | não |
+| `ORDER_NOTIFY_EMAIL` | e-mail onde a Ju recebe os pedidos pagos (e os avisos do servidor) | não |
 
-O envio de e-mails já usa a chave do Resend que está configurada (`RESEND_API_KEY`).
+O envio de e-mails usa o Resend (`RESEND_API_KEY`, `MAIL_FROM`).
 
-**Segurança embutida:** em Preview e no computador o modo é sempre "teste". No site publicado (Production) os pagamentos ficam **desligados** mesmo que as chaves estejam salvas, até existir `MP_MODE`:
+**Segurança embutida:** com `APP_ENV=preview` (site de teste) e no computador o modo é sempre "teste". Com
+`APP_ENV=production` os pagamentos ficam **desligados** mesmo com as chaves salvas, até existir `MP_MODE`:
 
-- `MP_MODE=test` na Production: o site público passa a usar as credenciais de **teste** (nenhum valor real se move).
-- `MP_MODE=live` na Production: cobra de verdade. **Só depois do checklist abaixo.**
+- `MP_MODE=test`: o site de produção usa as credenciais de **teste** (nenhum valor real se move);
+- `MP_MODE=live`: cobra de verdade. **Só depois do roteiro de `MERCADOPAGO-VALIDACAO.md`.**
+
+Nunca coloque credenciais de **produção** num site com `APP_ENV=preview`: o site diria "teste" (faixa e e-mails
+`[TESTE]`) enquanto o Mercado Pago cobraria de verdade.
 
 ### 3. Webhook
 
 No painel: sua aplicação → **Webhooks** → **Configurar notificações**.
 
 - URL do modo de teste: `https://wheat-llama-936569.hostingersite.com/api/payments/webhook` (Hostinger; ver `HOSTINGER-SETUP.md`, seção 4.1)
-- Evento: **Order** (`orders`)
+- Evento: **só Order** (Mercado Pago). Outros eventos marcados são respondidos com 200 e ignorados.
 - Copie a **assinatura secreta** e salve como `MP_WEBHOOK_SECRET` (passo 2).
 
-Atenção: as prévias da Vercel ficam atrás de login, então o Mercado Pago **não consegue** entregar o webhook nelas. O cartão e o Pix funcionam nas prévias (o navegador consulta o estado), mas os **e-mails de pedido pago só saem** quando o webhook chega. Para testar os e-mails: use `MP_MODE=test` na Production (mesmas credenciais de teste) ou faça o teste pelo servidor local com `--fake-mp`.
+Os e-mails de pedido pago saem por quem souber primeiro do pagamento: a resposta do cartão, a consulta do Pix que a
+página faz a cada 5 segundos ou o webhook. Sem o webhook, um Pix pago depois que o cliente fechou a página só é
+registrado quando alguém consultar; por isso o webhook precisa chegar (endereço público com HTTPS).
 
 ### 4. Conferir
 
@@ -78,9 +96,12 @@ No checkout aparece a faixa **AMBIENTE DE TESTE** e um bloco "Como testar neste 
 - Cartão aprovado: Mastercard `5480 8328 0103 3311`, validade `11/30`, código `123`, nome do titular **APRO**, CPF `12345678909`. Também há Visa `4235 6477 2802 5682` e Elo (débito) `5067 7667 8388 8311`, com o mesmo código e validade.
 - O nome do titular escolhe o resultado: `APRO` aprova, `OTHE` recusa (erro geral), `CONT` deixa pendente; a tabela oficial tem outros casos (`FUND` saldo insuficiente, `SECU` código inválido etc.).
 - No campo de e-mail do pagamento use um endereço **diferente** do e-mail da sua conta do Mercado Pago. Se o ambiente de teste exigir o e-mail de comprador de teste (`test@testuser.com`), o servidor tenta primeiro o e-mail real e, só no modo teste, repete com o de teste; o e-mail real fica guardado no pedido para o comprovante.
-- **Pix de teste fica sempre pendente** (não existe pagamento real para confirmar). Para ver um pedido aprovado, use o cartão.
+- **Pix de teste:** em geral fica pendente. A documentação do Mercado Pago diz que um Pix de teste com o nome do
+  comprador **APRO** é aprovado sozinho; no site, o nome vem da conta, então crie uma conta de teste com o nome APRO
+  para tentar (`MERCADOPAGO-VALIDACAO.md`, etapa 3). Se continuar pendente, o Pix é comprovado na compra real.
 
-Lista oficial dos cartões de teste: painel do Mercado Pago → Documentação → Cartões de teste.
+Lista oficial dos cartões de teste: painel do Mercado Pago → Documentação → Cartões de teste. O roteiro completo de
+validação, com o que conferir em cada caso, está em `MERCADOPAGO-VALIDACAO.md`.
 
 ## Testar sem credenciais
 
@@ -115,16 +136,21 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 - [x] **Banco de pedidos** com histórico, painel da Ju e "Meus pedidos". Faltam rastreio, nota fiscal e reenvio de e-mails pelo painel.
 - [ ] Conferir as **taxas** vigentes no Mercado Pago.
 - [ ] Frete real ligado: `/api/health` mostra `"shipping":"correios"` (ver `FRETE-SETUP.md`). Sem isso o site cobra o frete fixo de exemplo (R$ 18,00).
-- [ ] Só então salvar as credenciais de produção **e** `MP_MODE=live` na Production, e fazer uma compra real de valor baixo com estorno.
+- [ ] Só então salvar as credenciais de produção **e** `MP_MODE=live` com `APP_ENV=production`, e fazer uma compra real de valor baixo com estorno (`MERCADOPAGO-VALIDACAO.md`, etapas 6 e 7).
+- [x] *Device id* do Mercado Pago (`security.js` + `X-meli-session-id`), webhook só do tópico Order, Pix antigo cancelado, motivos de recusa em português, NF-e real nunca para pedido de teste (07/10/2026).
 
 ## O que o código garante
 
 - O Access Token e o segredo do webhook só existem no servidor; o navegador recebe apenas a Public Key.
 - O navegador não decide preço: o servidor recalcula tudo e recusa carrinho inválido.
 - O número do cartão nunca passa pelo nosso servidor; o token do cartão não é registrado em log nem devolvido ao navegador.
-- Cada clique em pagar gera um identificador; repetir o pedido (duplo clique, falha de rede) cai no mesmo pedido e na mesma order em vez de cobrar duas vezes.
+- Cada tentativa de pagamento tem um identificador, mantido até uma resposta definitiva: repetir (duplo clique, falha de rede, *timeout*) cai no mesmo pedido e na mesma order em vez de cobrar duas vezes. Trocar Pix por cartão começa outra tentativa.
 - Um pedido só vira "pago" se a referência e o valor informados pelo Mercado Pago baterem com o que foi gravado no banco.
-- O webhook só age depois de conferir a assinatura e de ler o pedido no Mercado Pago; e-mails repetidos são descartados pela chave de idempotência do Resend.
+- O webhook só age depois de conferir a assinatura (recusada se tiver mais de 15 minutos) e de ler o pedido no Mercado Pago; e-mails repetidos são descartados pela chave de idempotência do Resend. Outros tópicos e pedidos que o Mercado Pago não conhece respondem 200 (sem novas tentativas sem fim); sem banco, 503 (o Mercado Pago tenta de novo).
+- Quem sai de um Pix que espera ("Gerar novo código Pix", "← Alterar dados ou pagamento") tem o código antigo cancelado no Mercado Pago (`POST /api/payments/cancel`): ele não pode mais ser pago junto com o novo. Se já tinha sido pago, o pedido é confirmado.
+- O *device id* do Mercado Pago (`https://www.mercadopago.com/v2/security.js`, carregado só na etapa de pagamento com os pagamentos ligados) vai com o pagamento como `X-meli-session-id`, sem script inline.
+- Um cartão recusado mostra o motivo em português (sem limite, dado errado, ligar para o banco…); o código do Mercado Pago só aparece no modo de teste. O log guarda a nossa referência e o `x-request-id` do Mercado Pago, nunca o corpo das respostas nem o token.
+- Uma NF-e real (`NFE_ENVIRONMENT=producao`) nunca é emitida para um pedido pago no modo de teste.
 - Sem chaves (ou na Production sem `MP_MODE`) tudo volta ao protótipo de demonstração.
 
 ## Solução de problemas
@@ -134,9 +160,10 @@ Nada disto foi decidido ainda. Cada item precisa de uma decisão da Ju:
 | O checkout continua no modo de demonstração | Faltam `MP_PUBLIC_KEY`/`MP_ACCESS_TOKEN`, ou estão só em outro ambiente (Preview x Production), ou a Production está sem `MP_MODE`. Veja `/api/health`. |
 | "Não foi possível carregar as formas de pagamento" | O navegador bloqueou `sdk.mercadopago.com` (bloqueador de anúncios) ou está sem internet. |
 | Erro ao pagar com detalhe entre parênteses (só no modo teste) | É o motivo devolvido pelo Mercado Pago; ele mostra o campo ou a regra que falhou. |
-| Pagou o cartão mas não chegou e-mail | Webhook não chegou (prévia com login, URL errada, `MP_WEBHOOK_SECRET` diferente) ou `ORDER_NOTIFY_EMAIL`/`RESEND_API_KEY` ausentes. O log da função na Vercel diz qual. |
+| Pagou o cartão mas não chegou e-mail | `ORDER_NOTIFY_EMAIL`/`RESEND_API_KEY` ausentes, ou o Resend sem domínio verificado. O log do site diz qual (`journalctl -u juimprime` no servidor próprio; os logs do app na Hostinger). |
+| O webhook responde 401 | `MP_WEBHOOK_SECRET` diferente da assinatura do painel (a de produção é outra que a de teste?) ou o relógio do servidor atrasado (`stale_signature` no log). |
 | E-mail chegou para a Ju mas não para o cliente | Sem domínio verificado o Resend só entrega ao dono da conta. |
-| Pix parado em "aguardando" no teste | É o esperado no ambiente de teste. |
+| Pix parado em "aguardando" no teste | É o esperado no ambiente de teste (veja a exceção do nome APRO acima). |
 | "Muitas tentativas seguidas" | Limite de segurança por endereço de internet e por conta (20 e 8 em 10 minutos); espere um pouco. |
 
 ## Depois

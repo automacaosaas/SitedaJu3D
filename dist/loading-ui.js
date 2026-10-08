@@ -11,8 +11,12 @@ export function imageReady(img, timeout = 12000) {
       resolve(ok);
     };
     const loaded = () => {
-      if (img.decode) img.decode().then(() => finish(true), () => finish(img.naturalWidth > 0));
-      else finish(img.naturalWidth > 0);
+      if (!img.decode) { finish(img.naturalWidth > 0); return; }
+      img.decode().then(() => finish(true), () => finish(img.naturalWidth > 0));
+      // decode() waits for the page to draw, and a background tab draws nothing: without this, a page opened or left in
+      // another tab hit the timeout and showed "Imagem indisponível" for good. A loaded image is enough there.
+      if (document.hidden) finish(img.naturalWidth > 0);
+      else document.addEventListener('visibilitychange', () => finish(img.naturalWidth > 0), {once:true});
     };
     const failed = () => finish(false);
     const timer = setTimeout(failed, timeout);

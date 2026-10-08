@@ -38,6 +38,24 @@ async function contract(store, label) {
   await store.sessions.revokeAllFor(id, at);
   assert.ok((await store.sessions.find(tokenHash)).revokedAt, `${label}: revoke all`);
 
+  // Google / Apple identities: one row per provider account, several per customer, gone with the customer.
+  const subject = `sub-${id.slice(0, 8)}`;
+  assert.equal(await store.identities.find('google', subject), null);
+  const identity = await store.identities.create({provider: 'google', subject, customerId: id, email, privateEmail: false, createdAt: at, lastLoginAt: at});
+  assert.deepEqual([identity.provider, identity.subject, identity.customerId, identity.email, identity.privateEmail], ['google', subject, id, email, false], `${label}: identity row`);
+  await assert.rejects(store.identities.create({provider: 'google', subject, customerId: other}), e => e.code === 'identity_exists', `${label}: one row per provider account`);
+  await store.identities.create({provider: 'apple', subject, customerId: id, email: `x${id.slice(0, 6)}@privaterelay.appleid.com`, privateEmail: true, createdAt: new Date(at.getTime() + 1000)});
+  assert.deepEqual((await store.identities.listByCustomer(id)).map(i => [i.provider, i.privateEmail]), [['google', false], ['apple', true]], `${label}: both providers, oldest first`);
+  const lastSeen = new Date(at.getTime() + 5000);
+  assert.equal(await store.identities.touch('google', subject, {at: lastSeen, email: null}), true);
+  const touched = await store.identities.find('google', subject);
+  assert.equal(new Date(touched.lastLoginAt).getTime(), lastSeen.getTime(), `${label}: last sign-in`);
+  assert.equal(touched.email, email, `${label}: touch without an e-mail keeps the one saved`);
+  assert.equal(await store.identities.remove('apple', subject), true);
+  assert.equal(await store.identities.find('apple', subject), null);
+  const withPhoto = await store.customers.update(id, {avatarUrl: 'https://lh3.googleusercontent.com/a/x=s96-c'});
+  assert.equal(withPhoto.avatarUrl, 'https://lh3.googleusercontent.com/a/x=s96-c', `${label}: profile photo`);
+
   const challengeId = crypto.randomUUID(), codeHash = crypto.randomBytes(32);
   await store.challenges.create({id: challengeId, email, purpose: 'access', codeHash, expiresAt});
   assert.equal((await store.challenges.recordAttempt(challengeId)), 1);
@@ -105,6 +123,25 @@ async function contract(store, label) {
   const cashBalance = before => store.cashBalance({statuses: ['pendente'], refundStates: ['refunded'], before, until: '2000-01-01'});
   assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 14700, `${label}: a paid order counts from the instant it was paid`);
 
+  // Painel: a page of paid orders, newest first (ties by id), with what the panel shows; the next page starts right
+  // below the last order of the previous one. Far in the future, so rows from earlier runs sit below these.
+  const top = new Date(Date.now() + 100 * 365 * 86400e3), later = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse(), older = crypto.randomUUID();
+  const pageShippedAt = new Date(t + 2000);
+  for (const [orderAt, pageId] of [[top, later[1]], [top, later[0]], [new Date(top.getTime() - 1), older]]) {
+    await store.orders.create({...draft, id: pageId, reference: `JU-P${pageId.slice(0, 8).toUpperCase()}`, customerId: null, status: 'concluido', paidAt, trackingCode: 'AA123456789BR', shippedAt: pageShippedAt, createdAt: orderAt});
+  }
+  const firstPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: new Date(top.getTime() + 1), id: 'z'}});
+  assert.deepEqual(firstPage.map(o => o.id), later, `${label}: newest first, ties by id`);
+  assert.deepEqual(firstPage[0].shipTo, draft.shipTo, `${label}: the page carries what the panel shows`);
+  assert.equal(firstPage[0].notes, draft.notes); assert(Buffer.from(firstPage[0].phoneEnc).equals(draft.phoneEnc));
+  // the tracking code of Enviados and Concluídos (2026-10-05: the MySQL list did not read it)
+  assert.equal(firstPage[0].trackingCode, 'AA123456789BR', `${label}: the page carries the tracking code`);
+  assert.equal(new Date(firstPage[0].shippedAt).getTime(), pageShippedAt.getTime(), `${label}: and when it was shipped`);
+  assert.deepEqual(firstPage[0].items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), draft.items.map(i => [i.productId, i.title, i.quantity, i.unitCents, i.selection]), `${label}: items in order`);
+  const nextPage = await store.orders.listForAdmin({statuses: ['concluido'], limit: 2, before: {createdAt: firstPage[1].createdAt, id: firstPage[1].id}});
+  assert.equal(nextPage[0].id, older, `${label}: the next page starts right below the cursor`);
+  assert(!(await store.orders.listForAdmin({statuses: ['pendente'], limit: 500})).some(o => later.includes(o.id)), `${label}: only the statuses asked`);
+
   // Deleting the account keeps the order (fiscal record) and drops the link, the sessions and the codes.
   const sessionHash = crypto.randomBytes(32);
   await store.sessions.create({tokenHash: sessionHash, customerId: id, expiresAt, ip: null, userAgent: null});
@@ -112,6 +149,7 @@ async function contract(store, label) {
   assert.equal(await store.customers.findById(id), null);
   assert.equal(await store.sessions.find(sessionHash), null, `${label}: sessions go with the account`);
   assert.equal(await store.challenges.find(challengeId), null, `${label}: codes for the address go too`);
+  assert.equal(await store.identities.find('google', subject), null, `${label}: the Google / Apple links go too`);
   const kept = await store.orders.findById(orderId);
   assert.equal(kept.customerId, null, `${label}: the order stays without the account link`);
   assert.equal(kept.items.length, 2);
@@ -162,6 +200,33 @@ async function contract(store, label) {
   assert.equal(authorized.providerId, null);
   assert.equal((await store.invoices.update(invoiceId, {providerId: '987654321'})).providerId, '987654321', `${label}: the note's code at the NF-e service`);
 
+  // The NF-e queue (011_bling_fila.sql): due notes, oldest first, never one an attempt holds; a hold is taken once and
+  // frees itself when its time is up. Other rows may exist: only this note is checked.
+  const when = new Date(Date.UTC(2026, 9, 5, 12, 0, 0)), ours = list => list.filter(i => i.id === invoiceId);
+  assert.equal(madeInvoice.invoice.nextAttemptAt ?? null, null); assert.equal(Number(madeInvoice.invoice.retries), 0); assert.equal(madeInvoice.invoice.lockedUntil ?? null, null);
+  const queued = await store.invoices.update(invoiceId, {status: 'fila', nextAttemptAt: new Date(when.getTime() - 60000), retries: 3, message: 'O Bling não respondeu.'});
+  assert.equal(new Date(queued.nextAttemptAt).getTime(), when.getTime() - 60000, `${label}: the next attempt keeps milliseconds`); assert.equal(Number(queued.retries), 3);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 1, `${label}: due once its time came`);
+  assert.equal(ours(await store.invoices.due({now: new Date(when.getTime() - 120000)})).length, 0, `${label}: not before`);
+  assert.equal(await store.invoices.lease(invoiceId, {until: new Date(when.getTime() + 120000), now: when}), true, `${label}: held`);
+  assert.equal(await store.invoices.lease(invoiceId, {until: new Date(when.getTime() + 120000), now: when}), false, `${label}: held once`);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 0, `${label}: a held note is not due`);
+  const second = new Date(when.getTime() + 300000);
+  assert.equal(await store.invoices.lease(invoiceId, {until: second, now: new Date(when.getTime() + 180000)}), true, `${label}: a hold whose time is up is taken again`);
+  // Only the attempt holding it lets it go: the first one (its hold expired) ending late must not free the second's.
+  await store.invoices.release(invoiceId, new Date(when.getTime() + 120000));
+  assert.equal(new Date((await store.invoices.findById(invoiceId)).lockedUntil).getTime(), second.getTime(), `${label}: another attempt's hold stays`);
+  await store.invoices.release(invoiceId, second);
+  assert.equal((await store.invoices.findById(invoiceId)).lockedUntil ?? null, null, `${label}: its own hold is let go`);
+  assert.equal(ours(await store.invoices.due({now: when})).length, 1, `${label}: free again`);
+  assert.equal(ours(await store.invoices.due({now: when, statuses: ['autorizada']})).length, 0, `${label}: only the statuses asked for`);
+  const line = await store.invoices.queue();
+  assert(line.waiting >= 1, `${label}: counted in the queue`); assert(new Date(line.nextAttemptAt).getTime() <= when.getTime() - 60000, `${label}: the earliest attempt`);
+  await store.invoices.update(invoiceId, {nextAttemptAt: null});   // parked (its order went back to Pendentes)
+  assert.equal((await store.invoices.queue()).waiting, line.waiting - 1, `${label}: a parked note is not waiting`);
+  await store.invoices.update(invoiceId, {status: 'autorizada', nextAttemptAt: null, retries: 0, message: null});
+  assert.equal(ours(await store.invoices.due({now: new Date(when.getTime() + 86400e3)})).length, 0, `${label}: done, out of the queue`);
+
   // Integrations: one row per name, partial saves keep the other fields, binary tokens survive, remove clears.
   const integration = `test-${crypto.randomUUID().slice(0, 8)}`, blob = crypto.randomBytes(3000);
   assert.equal(await store.integrations.get(integration), null);
@@ -170,8 +235,29 @@ async function contract(store, label) {
   const paused = await store.integrations.save(integration, {pausedReason: 'teste'});
   assert.equal(paused.pausedReason, 'teste'); assert.equal(paused.connectedBy, 'ju@site.test', 'a partial save keeps the rest'); assert(Buffer.from(paused.tokensEnc).equals(blob));
   assert.equal((await store.integrations.save(integration, {pausedReason: null})).pausedReason, null);
+  // The circuit breaker (011_bling_fila.sql), saved with the connection and without touching it.
+  assert.equal(saved.failures, 0, `${label}: no failures to start with`); assert.equal(saved.openUntil ?? null, null);
+  const failing = await store.integrations.save(integration, {failures: 3, failingSince: when, openUntil: new Date(when.getTime() + 60000), lastError: 'O Bling não respondeu.', alertedAt: when});
+  assert.deepEqual([failing.failures, new Date(failing.openUntil).getTime(), failing.lastError, new Date(failing.alertedAt).getTime()], [3, when.getTime() + 60000, 'O Bling não respondeu.', when.getTime()]);
+  assert.equal(failing.connectedBy, 'ju@site.test', 'the breaker keeps the connection'); assert(Buffer.from(failing.tokensEnc).equals(blob));
+  const closed = await store.integrations.save(integration, {failures: 0, failingSince: null, openUntil: null, lastError: null});
+  assert.deepEqual([closed.failures, closed.openUntil, closed.failingSince], [0, null, null]);
   await store.integrations.remove(integration);
   assert.equal(await store.integrations.get(integration), null);
+
+  // The integration log: newest first, only the given name, 90 days.
+  const logName = `t${crypto.randomUUID().slice(0, 8)}`;
+  await store.integrationLog.add({name: logName, kind: 'falha', operation: 'POST /nfe', httpStatus: 503, durationMs: 120, reference, message: 'O Bling respondeu 503.', createdAt: when});
+  await store.integrationLog.add({name: logName, kind: 'recuperado', message: 'O Bling voltou a responder.', createdAt: new Date(when.getTime() + 1000)});
+  await store.integrationLog.add({name: `${logName}x`, kind: 'falha', createdAt: when});
+  const entries = await store.integrationLog.recent(logName, 10);
+  assert.deepEqual(entries.map(e => e.kind), ['recuperado', 'falha'], `${label}: newest first, one name`);
+  assert.deepEqual([entries[1].operation, Number(entries[1].httpStatus), Number(entries[1].durationMs), entries[1].reference], ['POST /nfe', 503, 120, reference]);
+  assert.equal((await store.integrationLog.recent(logName, 1)).length, 1);
+  await store.integrationLog.add({name: logName, kind: 'falha', message: 'antiga', createdAt: new Date(Date.now() - 100 * 86400e3)});
+  await store.purge(Date.now());
+  assert(!(await store.integrationLog.recent(logName, 10)).some(e => e.message === 'antiga'), `${label}: gone after 90 days`);
+  assert.equal((await store.integrationLog.recent(logName, 10)).length, 2, `${label}: the recent ones stay`);
 
   // Fluxo de caixa (009_caixa.sql): entries typed by hand and bills. Days come back as the same "YYYY-MM-DD", whatever
   // the time zone of the server; remove answers the row once, then null.
@@ -196,6 +282,54 @@ async function contract(store, label) {
   assert.equal((await store.bills.remove(billId)).id, billId);
   assert.equal(await store.bills.remove(billId), null);
 
+  // Mensagens do formulário de contato (015_mensagens.sql, 2026-10-07): a message round-trips (the encrypted phone as
+  // bytes); the panel's views (novas: not read, not archived, not spam), newest first with a cursor; the count of new ones;
+  // changes and removal. Far in the future, so rows from earlier runs sit below these.
+  {
+    const top = new Date(Date.now() + 150 * 365 * 86400e3), ids = [crypto.randomUUID(), crypto.randomUUID()].sort().reverse(), spamId = crypto.randomUUID(), phoneEnc = crypto.randomBytes(44);
+    const above = {createdAt: new Date(top.getTime() + 1), id: 'z'}, unreadBefore = await store.messages.countUnread();
+    const first = await store.messages.create({id: ids[1], name: 'Ana Contrato', email: 'ana@exemplo.com', phoneEnc, subject: 'produto', message: 'Linha 1\nLinha 2', orderRef: 'JU-ABCDEF1234', lang: 'en', status: 'nova', createdAt: top});
+    assert.deepEqual([first.name, first.email, first.subject, first.message, first.orderRef, first.lang, first.status, first.readAt, first.readBy, first.repliedAt, first.archivedAt, first.mailedAt],
+      ['Ana Contrato', 'ana@exemplo.com', 'produto', 'Linha 1\nLinha 2', 'JU-ABCDEF1234', 'en', 'nova', null, null, null, null, null], `${label}: a message round-trips`);
+    assert(Buffer.from(first.phoneEnc).equals(phoneEnc), `${label}: the encrypted phone comes back as the same bytes`);
+    assert.equal(new Date(first.createdAt).getTime(), top.getTime(), `${label}: the time keeps milliseconds`);
+    const second = await store.messages.create({id: ids[0], name: 'Bia', email: 'bia@exemplo.com', subject: 'outro', message: 'Mensagem dois', status: 'nova', createdAt: top});
+    assert.equal(second.phoneEnc, null, `${label}: no phone, null`);
+    await store.messages.create({id: spamId, name: 'Spam', email: 'spam@exemplo.com', subject: 'outro', message: 'http://a http://b http://c http://d', status: 'spam', createdAt: new Date(top.getTime() - 1)});
+    assert.equal(await store.messages.countUnread(), unreadBefore + 2, `${label}: spam is not counted as new`);
+    const page = await store.messages.list({view: 'todas', limit: 2, before: above});
+    assert.deepEqual(page.map(m => m.id), ids, `${label}: newest first, ties by id`);
+    const next = await store.messages.list({view: 'todas', limit: 2, before: {createdAt: page[1].createdAt, id: page[1].id}});
+    assert.equal(next[0].id, spamId, `${label}: the next page starts right below the cursor`);
+    assert.deepEqual((await store.messages.list({view: 'novas', limit: 3, before: above})).map(m => m.id), ids, `${label}: Novas leaves the spam out`);
+    const read = await store.messages.update(ids[1], {readAt: new Date(), readBy: 'ju@site.test', id: 'ignored', createdAt: new Date(0)});
+    assert(read.readAt && read.readBy === 'ju@site.test' && read.id === ids[1] && new Date(read.createdAt).getTime() === top.getTime(), `${label}: an update never changes the id or the time`);
+    assert.equal(await store.messages.countUnread(), unreadBefore + 1, `${label}: a read message is not new any more`);
+    assert.deepEqual((await store.messages.list({view: 'novas', limit: 3, before: above})).map(m => m.id), [ids[0]], `${label}: nor in Novas`);
+    await store.messages.update(ids[0], {archivedAt: new Date(), mailedAt: new Date()});
+    assert.equal(await store.messages.countUnread(), unreadBefore, `${label}: an archived message is not new`);
+    assert.deepEqual((await store.messages.list({view: 'arquivadas', limit: 3, before: above})).map(m => m.id), [ids[0]], `${label}: Arquivadas`);
+    assert.equal((await store.messages.update(spamId, {status: 'nova'})).status, 'nova', `${label}: not spam after all`);
+    assert.equal(await store.messages.countUnread(), unreadBefore + 1);
+    assert.equal(await store.messages.update(crypto.randomUUID(), {readAt: new Date()}), null, `${label}: an unknown message`);
+    for (const id of [...ids, spamId]) assert.equal(await store.messages.remove(id), true, `${label}: removed`);
+    assert.equal(await store.messages.findById(ids[0]), null);
+    assert.equal(await store.messages.remove(ids[0]), false, `${label}: and only once`);
+    assert.equal(await store.messages.countUnread(), unreadBefore);
+  }
+  // Their retention (Política de Privacidade): 12 months, spam 30 days.
+  {
+    const day = 86400000, nowMs = Date.now(), at = days => new Date(nowMs - days * day), make = (id, status, days) => store.messages.create({id, name: 'Prazo', email: 'prazo@exemplo.com', subject: 'outro', message: 'Mensagem de prazo', status, readAt: new Date(), createdAt: at(days)});
+    const [oldSpam, recentSpam, oldMessage, keptMessage] = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    await make(oldSpam, 'spam', 40); await make(recentSpam, 'spam', 10); await make(oldMessage, 'nova', 400); await make(keptMessage, 'nova', 300);
+    await store.purge(nowMs);
+    assert.equal(await store.messages.findById(oldSpam), null, `${label}: spam goes after 30 days`);
+    assert(await store.messages.findById(recentSpam), `${label}: recent spam stays`);
+    assert.equal(await store.messages.findById(oldMessage), null, `${label}: a message goes after 12 months`);
+    assert(await store.messages.findById(keptMessage), `${label}: a younger one stays`);
+    await store.messages.remove(recentSpam); await store.messages.remove(keptMessage);
+  }
+
   // Retention: expired sessions go after 6 months, e-mailed codes after 30 days; recent ones stay.
   const purger = crypto.randomUUID(), purgerEmail = `purge-${purger}@exemplo.com`, day = 86400000, nowMs = Date.now();
   await store.customers.create({id: purger, email: purgerEmail, emailVerifiedAt: new Date(), displayName: 'P'});
@@ -216,6 +350,21 @@ async function contract(store, label) {
 }
 
 await contract(createMemoryStore(), 'memory');
+
+// The panel's list reads from MySQL only the columns in ADMIN_ORDER_SELECT, while the memory store returns every field, so
+// the contract above only catches a missing column against a real database. Here, without one: every field the panel's
+// view of an order reads (orders.adminView) must be among the selected columns. (2026-10-05: tracking_code and shipped_at
+// were missing, and the panel would show Enviados and Concluídos without the tracking code.)
+{
+  const fs = require('node:fs'), path = require('node:path'), root = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '..');
+  const mysqlSource = fs.readFileSync(path.join(root, 'api/_lib/store-mysql.js'), 'utf8'), ordersSource = fs.readFileSync(path.join(root, 'api/_lib/orders.js'), 'utf8');
+  const map = /const ORDER_COLUMNS = \{([^}]+)\}/.exec(mysqlSource)[1], columns = Object.fromEntries([...map.matchAll(/(\w+): '([a-z_]+)'/g)].map(m => [m[1], m[2]]));
+  const selected = new Set([.../const ADMIN_ORDER_SELECT = \[([^\]]+)\]/.exec(mysqlSource)[1].matchAll(/'([a-z_]+)'/g)].map(m => m[1]));
+  const view = ordersSource.slice(ordersSource.indexOf('function adminView('), ordersSource.indexOf('function', ordersSource.indexOf('function adminView(') + 10));
+  const read = [...new Set([...view.matchAll(/order\.(\w+)/g)].map(m => m[1]))].filter(field => field !== 'items');
+  assert(read.includes('trackingCode') && read.length > 15, 'adminView found');
+  for (const field of read) assert(columns[field] && selected.has(columns[field]), `adminView reads ${field}: ADMIN_ORDER_SELECT needs ${columns[field]}`);
+}
 
 // Connection settings: separate variables, or one DATABASE_URL (what a panel wizard may write); separate ones win.
 {

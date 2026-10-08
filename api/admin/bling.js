@@ -1,19 +1,23 @@
 'use strict';
 // GET/POST /api/admin/bling — the store's Bling connection, in the "Nota fiscal · Bling" card of the panel.
-//   GET                                   → where it stands (set up, connected since/by, valid until, pause) and, when
-//                                           connected, Bling's "naturezas de operação" with their ids, to fill fiscal.js.
+//   GET                                   → where it stands (set up, connected since/by, valid until, pause, the circuit
+//                                           breaker and the last problems with Bling) and, when connected, Bling's
+//                                           "naturezas de operação" with their ids, to fill fiscal.js.
 //   POST {action: 'start'}                → {url} of Bling's authorization page (state tied to this admin session, 10 min).
 //   POST {action: 'connect', code, state} → back from Bling at /admin.html with a code: exchanged for tokens.
 //   POST {action: 'disconnect'}           → asks Bling to revoke and forgets the tokens.
 //   POST {action: 'resume'}               → lifts a pause, once its reason was checked.
+// Connecting and resuming send the notes waiting in the queue right after the answer.
 // Only with NFE_PROVIDER=bling (409 bling_off otherwise). Every change goes to the panel audit log.
 const {adminEndpoint} = require('../_lib/admin-http');
 const {nfeSettings, FISCAL, EXAMPLE} = require('../_lib/fiscal');
 const {createBling, signState, checkState, BlingError} = require('../_lib/bling');
+const {createInvoiceQueue} = require('../_lib/invoice-queue');
 
 const fail = (code, field) => Object.assign(new Error(code), {code, ...(field ? {field} : {})});
+const LOG_KINDS = new Set(['falha', 'limite', 'disjuntor', 'recuperado', 'conexao', 'pausa', 'incerta', 'achada', 'alerta']);   // what the card lists ("recusa" is in each order)
 
-module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, body, store, env, now, admin, auth, ip, token, fetchImpl}) {
+module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, body, store, env, now, admin, auth, ip, token, fetchImpl, outbox, waitUntil}) {
   // Every answer carries the current state, with the natures when connected, so the card is complete after each action.
   const settings = nfeSettings(env);
   if (settings.provider !== 'bling') throw fail('bling_off');
@@ -24,8 +28,11 @@ module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, bod
   async function view() {
     const status = await bling.status();
     let natures = null, naturesError = null;
-    if (status.connected) { try { natures = await bling.natures(); } catch (error) { naturesError = error instanceof BlingError ? error.message : 'Falha ao consultar o Bling.'; } }
-    return {ok: true, bling: {...status, natureIds, natures, naturesError}};
+    // The list of the last hour, or the last one seen while Bling does not answer: the card never waits for Bling.
+    if (status.connected) { try { natures = await bling.natures({kept: true}); } catch (error) { naturesError = error instanceof BlingError ? error.message : 'Falha ao consultar o Bling.'; } }
+    const problems = (await bling.recent(20)).filter(e => LOG_KINDS.has(e.kind)).slice(0, 6)
+      .map(e => ({kind: e.kind, at: new Date(e.createdAt).toISOString(), operation: e.operation || null, httpStatus: e.httpStatus || null, reference: e.reference || null, message: e.message || ''}));
+    return {ok: true, bling: {...status, natureIds, natures, naturesError, problems}};
   }
   if (req.method === 'GET') return {body: await view()};
 
@@ -41,5 +48,6 @@ module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, bod
   }
   if (action === 'disconnect') { await bling.disconnect(); await auth.audit(admin.id, 'bling_disconnected', null, ip); }
   if (action === 'resume') { await bling.resume(); await auth.audit(admin.id, 'bling_resumed', null, ip); }
+  if (action === 'connect' || action === 'resume') waitUntil(createInvoiceQueue({store, env, now, fetchImpl, outbox}).wakeAll());
   return {body: await view()};
 }});

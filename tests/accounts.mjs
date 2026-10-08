@@ -46,7 +46,7 @@ await rejects(accounts.register({grant: verified.grant, name: 'A'}), 'invalid_re
 await rejects(accounts.register({grant: verified.grant, name: 'Ana', password: 'curta'}), 'weak_password');
 const signup = await accounts.register({grant: verified.grant, name: 'Ana', password: 'senha-forte-123', marketingOptIn: false});
 { const row = await store.customers.findByEmail('ana.souza@exemplo.com.br'); assert.equal(row.termsVersion, TERMS_VERSION, 'the account records the Termos accepted at sign-up'); assert(row.termsAcceptedAt); }
-assert.deepEqual(signup.user, {name: 'Ana', email: 'ana.souza@exemplo.com.br', hasPassword: true, profileComplete: false, marketingOptIn: false});
+assert.deepEqual(signup.user, {name: 'Ana', email: 'ana.souza@exemplo.com.br', hasPassword: true, profileComplete: false, marketingOptIn: false, avatar: null});
 assert.match(signup.session.token, /^[\w-]{43}$/);
 await rejects(accounts.register({grant: verified.grant, name: 'Ana'}), 'invalid_grant', 'a grant is spent once');
 

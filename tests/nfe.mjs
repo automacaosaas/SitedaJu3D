@@ -176,13 +176,34 @@ function order(over = {}) {
 
   // Switched off: nothing happens.
   assert.equal(await createInvoicing({store, env: {APP_ENV: 'preview'}}).issue(saved), null);
+
+  // Real notes (production + NFE_ENVIRONMENT=producao) only for orders paid for real: a test-mode order (source "test")
+  // never reaches the service, not even by "Tentar de novo" or the queue; a live one goes as usual.
+  const PROD = {APP_ENV: 'production', SITE_URL: 'https://site.test', NFE_PROVIDER: 'bling', NFE_ENVIRONMENT: 'producao', DATA_KEY: crypto.randomBytes(32).toString('base64'), INDEX_KEY: crypto.randomBytes(32).toString('base64')};
+  const realEmits = [], realProvider = {name: 'bling', emit: async inv => { realEmits.push(inv.reference); return {status: 'autorizada', number: '11', series: '1', accessKey: '3'.repeat(44), environment: 'producao'}; }};
+  const real = createInvoicing({store, env: PROD, fetchImpl, provider: realProvider, lookup: lookupFrom({'30140071': BH})});
+  assert.equal(real.settings.environment, 'producao');
+  const prodOrder = over => order({buyerDocEnc: encrypt(PROD, '52998224725'), phoneEnc: encrypt(PROD, '31999991234'), ...over});
+  const {order: leftover} = await store.orders.create(prodOrder({source: 'test'}));
+  const refusedTest = await real.issue(leftover, {actor: 'ju@site.test'});
+  assert.equal(refusedTest.status, 'erro'); assert.match(refusedTest.message, /Pedido de teste/); assert.equal(refusedTest.nextAttemptAt, null, 'out of the queue');
+  assert.equal((await real.issue(leftover, {actor: 'ju@site.test', force: true})).status, 'erro', '"Tentar de novo" refuses it too');
+  assert.deepEqual(realEmits, [], 'the tax authority never saw it');
+  assert((await store.orders.events(leftover.id)).some(e => e.kind === 'nfe:erro' && /pedido de teste/.test(e.detail)), 'the reason is in the order history');
+  const {order: sale} = await store.orders.create(prodOrder({source: 'live'}));
+  assert.notEqual((await real.issue(sale)).message || '', 'Pedido de teste (pago no modo de teste do Mercado Pago): não emitimos nota fiscal real para ele.');
+  assert.deepEqual(realEmits, [sale.reference], 'a live sale gets its real note');
+  const homolog = createInvoicing({store, env: {...PROD, NFE_ENVIRONMENT: ''}, fetchImpl, provider: realProvider, lookup: lookupFrom({'30140071': BH})});
+  const {order: testInHomolog} = await store.orders.create(prodOrder({source: 'test'}));
+  await homolog.issue(testInHomolog);
+  assert.deepEqual(realEmits, [sale.reference, testInHomolog.reference], 'test orders still go to homologação (no fiscal value)');
 }
 
 // ── panel and "Meus pedidos" ──────────────────────────────────────────
 function makeRes() { return {statusCode: 200, headers: {}, body: '', setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, end(d) { this.body = d || ''; }, json() { return JSON.parse(this.body); }}; }
-async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
+async function call(handler, {method = 'POST', body = {}, cookie = '', url = '/'} = {}) {
   const res = makeRes();
-  await handler({method, headers: {origin: 'https://site.test', 'x-forwarded-for': '203.0.113.7', ...(cookie ? {cookie} : {})}, body, socket: {}, url: '/'}, res);
+  await handler({method, headers: {origin: 'https://site.test', 'x-forwarded-for': '203.0.113.7', ...(cookie ? {cookie} : {})}, body, socket: {}, url}, res);
   return res;
 }
 {
@@ -205,7 +226,9 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   const listed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json();
   assert.equal(listed.invoicing, 'test'); assert.equal(listed.orders[0].invoice.number, confirmed.json().order.invoice.number, 'the panel lists the note with the order');
 
-  // Notes still processing are checked again when the panel opens: all of them, a few at a time (3) and in parallel.
+  // Notes still processing are checked again when the panel opens, after the answer: all of them on the page, a few at
+  // a time (3) and in parallel. The answer shows them as saved; the next opening shows what came back.
+  const background = [], waitUntil = work => { background.push(work); }, settled = () => Promise.all(background.splice(0));
   const fake = providerFor(fiscal.nfeSettings(env)), check = fake.check;
   const slowOnes = [];
   for (let i = 0; i < 7; i++) {
@@ -216,10 +239,30 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   let active = 0, peak = 0;
   fake.check = async query => { active++; peak = Math.max(peak, active); await new Promise(r => setTimeout(r, 15)); active--; return check(query); };
   try {
-    const refreshed = (await call(adminOrders.create({env, store, fetchImpl}), {method: 'GET', cookie: admin})).json().orders;
-    assert.equal(refreshed.filter(o => o.invoice?.status === 'autorizada').length, 8, 'every note processing is authorized in the list');
+    const panel = adminOrders.create({env, store, fetchImpl, waitUntil});
+    const answered = (await call(panel, {method: 'GET', cookie: admin})).json().orders;
+    assert.equal(answered.filter(o => o.invoice?.status === 'processando').length, 7, 'the answer does not wait for the service');
+    assert.equal(background.length, 1, 'the checks were handed to waitUntil');
+    await settled();
+    const refreshed = (await call(panel, {method: 'GET', cookie: admin})).json().orders;
+    assert.equal(refreshed.filter(o => o.invoice?.status === 'autorizada').length, 8, 'every note processing is authorized on the next opening');
     assert.equal(peak, 3, 'checked 3 at a time, never more');
+    assert.equal(background.length, 0, 'nothing left to check: nothing handed to waitUntil');
   } finally { fake.check = check; }
+
+  // A page at a time: each page's cursor leads to the next, with no order repeated or skipped, until there is none.
+  const panel = adminOrders.create({env, store, fetchImpl}), page = (query = '') => call(panel, {method: 'GET', cookie: admin, url: `/api/admin/orders${query}`});
+  const whole = (await page()).json();
+  assert.equal(whole.orders.length, 8); assert.equal(whole.nextCursor, null, 'everything fits in the default page');
+  const paged = [];
+  let cursor = null, pages = 0;
+  do { const answer = (await page(`?limit=3${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)).json(); paged.push(...answer.orders); cursor = answer.nextCursor; pages++; } while (cursor);
+  assert.equal(pages, 3); assert.deepEqual(paged.map(o => o.id), whole.orders.map(o => o.id), 'the pages join into the same list, newest first');
+  assert.equal(paged.filter(o => o.invoice?.status === 'autorizada').length, 8, 'each page carries its notes');
+  for (const query of ['?limit=0', '?limit=201', '?limit=abc', '?cursor=nada', `?cursor=${Buffer.from('["ontem","x"]').toString('base64url')}`]) {
+    const refused = await page(query);
+    assert.equal(refused.statusCode, 400, `${query} is refused`); assert.equal(refused.json().field, query.includes('cursor') ? 'cursor' : 'limit');
+  }
   const retry = await call(orderInvoice.create({env, store, fetchImpl}), {body: {id: paid.id}, cookie: admin});
   assert.equal(retry.json().order.invoice.number, confirmed.json().order.invoice.number, 'retrying an authorized note changes nothing');
   assert((await store.adminAudit.list()).some(a => a.action === 'nfe_issue'));
@@ -250,4 +293,4 @@ async function call(handler, {method = 'POST', body = {}, cookie = ''} = {}) {
   }
 }
 
-console.log('PASS: NF-e — tax data one per product and still pending, never real notes by accident (homologação unless NFE_ENVIRONMENT=producao in production, simulator and example data never in production), invoice for a person or a company in the same or another state, CEP lookup, issued once on confirmation and e-mailed once, errors kept with the reason and retried, panel and "Meus pedidos".');
+console.log('PASS: NF-e — tax data one per product and still pending, never real notes by accident (homologação unless NFE_ENVIRONMENT=producao in production, simulator and example data never in production, never a real note for an order paid in test mode), invoice for a person or a company in the same or another state, CEP lookup, issued once on confirmation and e-mailed once, errors kept with the reason and retried, panel and "Meus pedidos".');

@@ -5,10 +5,39 @@ export const COMMERCE = Object.freeze({
   // Pix pays 5% less on the pieces (not on delivery), in basis points. The server applies the same rule
   // (api/_lib/catalog.js PIX_DISCOUNT_BPS); tests/payments.mjs fails if the two drift apart.
   pixDiscountBps: 500,
-  whatsapp: '',
-  prices: Object.freeze({borboletoscopio: 12900, dinossauroscopio: 13900, aviaoscopia: 15900})
+  // The card (decision of 01/10/2026): up to 3 installments without interest, up to 12 on credit. "Sem juros" is a setting
+  // of the Mercado Pago account (the shop pays the fee); the site only shows it and offers at most `maxInstallments`.
+  // interestFreeInstallments is the ONE source of the "3x sem juros" the pages announce (2026-10-08): the bar on top
+  // (announcement-bar.js), the product window (controller.js), the product pages, the home and Contato (written by
+  // node tools/build-product-pages.cjs) and the checkout's card option. To change it: this line (2 to 12), then that command.
+  // The checkout never promises more than the account really gives (/api/payments/config interestFree; MERCADOPAGO-VALIDACAO.md).
+  interestFreeInstallments: 3, maxInstallments: 12,
+  // o e-mail da Ju: o "entre em contato" das descrições abre ele (contact-link.js)
+  contactEmail: 'juimprimepramim@gmail.com',
+  // Preços confirmados em 05/10/2026. extraPrices: o preço de cada unidade a partir da segunda da mesma peça na mesma compra (o 2.º
+  // avião sai por R$ 215). O servidor tem a mesma tabela (api/_lib/catalog.js); tests/payments.mjs falha se as duas se separarem.
+  prices: Object.freeze({borboletoscopio: 26500, dinossauroscopio: 26500, aviaoscopia: 28500, macacoscopio: 9000, girafoscopio: 9000, unicornioscopio: 9000}),
+  extraPrices: Object.freeze({aviaoscopia: 21500}),
+  // Kits (07/10/2026): as peças de um kit, misturadas na mesma compra, saem em grupos com preço fechado — as lâmpadas (macaco, girafa e
+  // unicórnio, R$ 90 cada): 2 por R$ 160 e 3 por R$ 210. Os grupos maiores primeiro; o que sobra sem grupo paga o preço cheio (4 lâmpadas:
+  // R$ 210 + R$ 90). O servidor tem a mesma tabela (api/_lib/catalog.js KITS).
+  kits: Object.freeze({lampadas: Object.freeze({items: Object.freeze(['macacoscopio', 'girafoscopio', 'unicornioscopio']), groups: Object.freeze({2: 16000, 3: 21000})})})
 });
-export const money = cents => new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(cents / 100);
+// o kit de uma peça (o id em COMMERCE.kits) e a frase da oferta: "Leve 2 por R$ 160,00 ou 3 por R$ 210,00 (escolha os seus)"
+export const kitOf = productId => Object.keys(COMMERCE.kits || {}).find(id => COMMERCE.kits[id].items.includes(productId)) || null;
+export const kitOffer = productId => { const kit = kitOf(productId); if (!kit) return ''; const g = COMMERCE.kits[kit].groups; return Object.keys(g).map(Number).sort((a, b) => a - b).map((n, i) => `${i ? '' : 'Leve '}${n} por ${money(g[n])}`).join(' ou ') + ' (escolha os seus)'; };
+// "R$ 1.234,56" (a no-break space after R$), exactly what Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}) writes
+// (tests/pagespeed.mjs compares the two), but without Intl: the first Intl formatter of a page loads the locale data, ~130 ms of
+// a slow phone's main thread while the home is being built (PageSpeed, 2026-10-08).
+export const money = cents => {
+  const value = Math.round(Math.abs(cents)), whole = String(Math.floor(value / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${cents < 0 || Object.is(cents, -0) ? '-' : ''}R$ ${whole},${String(value % 100).padStart(2, '0')}`;
+};
+// "3x de R$ 43,00": the amount split into the interest-free installments, with nothing added (rounded down to the cent, as
+// Mercado Pago shows the installment; the last one carries the leftover cents). `n`: fewer, when the checkout knows the
+// Mercado Pago account gives fewer.
+export const installmentCents = (cents, n = COMMERCE.interestFreeInstallments) => Math.floor(cents / n);
+export const installmentLabel = (cents, n = COMMERCE.interestFreeInstallments) => `${n}x de ${money(installmentCents(cents, n))}`;
 // Pix: the server's rule (api/_lib/catalog.js), rounded per unit, so the page always shows what Mercado Pago will charge.
 export const pixUnitDiscount = unitCents => Math.round(unitCents * COMMERCE.pixDiscountBps / 10000);
 export const pixPercent = COMMERCE.pixDiscountBps / 100;

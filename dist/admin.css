@@ -190,6 +190,9 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .admin-reveal{border:0;background:none;padding:0 0 0 4px;color:var(--rose);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 /* NF-e line on each order: issued (green), being issued (yellow), problem (red, with a retry button). */
 .admin-invoice{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.5}.admin-invoice a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}.admin-invoice.is-ok{background:var(--g-bg);color:var(--g-fg)}.admin-invoice.is-waiting{background:var(--y-bg);color:var(--y-fg)}.admin-invoice.is-error{background:var(--r-bg);color:var(--r-fg)}.admin-invoice .admin-tag{margin-left:4px}
+/* A confirmed order with no note: the way to issue it is a real button, not a quiet link (the piece cannot leave without it). */
+.admin-invoice-missing{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 14px}.admin-invoice-missing p{margin:0}
+.btn-issue{border:0;border-radius:999px;padding:10px 16px;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:var(--r-solid);cursor:pointer;white-space:nowrap}.btn-issue:hover{background:var(--r-solid-hover)}.btn-issue:focus-visible{outline:2px solid var(--r-solid);outline-offset:2px}
 
 /* Two parts of the panel, Pedidos and Fluxo de caixa: one switch at the top, always in the same place. */
 .admin-sections{display:inline-flex;gap:4px;padding:4px;margin:0 0 26px;background:var(--panel);border:1px solid var(--line);border-radius:999px}
@@ -346,11 +349,144 @@ dialog.cash-dialog .admin-error{margin:0}
 .admin-tracking input:focus-visible{outline:2px solid var(--b-solid);outline-offset:1px}
 .btn-ship{border:0;border-radius:999px;padding:12px 18px;font-size:14px;font-weight:700;color:#fff;background:var(--b-solid);cursor:pointer;white-space:nowrap}
 .btn-ship:hover{background:var(--b-solid-hover)}
+/* Expedição: a complete code is confirmed only by the button (admin.js); the note says it was checked and the button stands out. */
+.admin-tracking-note{grid-column:1/-1;margin:0;font-size:13px;line-height:1.45;color:#1f6b47}.admin-tracking-note:empty{display:none}.admin-tracking.is-ready .btn-ship{box-shadow:0 0 0 3px #bfe6cc}
 .admin-secondary{display:flex;flex-wrap:wrap;gap:8px}
 .btn-reopen.is-danger{color:var(--r-fg);border-color:#f0c4cd}.btn-reopen.is-danger:hover{background:var(--r-bg)}
 .admin-tracking-line{margin:0;font-size:14px;color:var(--v-fg);background:var(--v-bg);border-radius:12px;padding:10px 12px}
 .admin-tracking-line code,.admin-decision-note code{font-family:inherit;font-weight:700;letter-spacing:1px}
+/* Rastreio dos Correios (api/_lib/tracking.js): where the package stands, in a chip, and the last event. */
+.admin-track{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0 10px;font-size:13px;line-height:1.45}
+.admin-track:empty{display:none}
+.admin-track.is-waiting{color:var(--muted)}
+.admin-track small{flex-basis:100%;font-size:12px;color:var(--muted)}
+.admin-track-state{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border-radius:999px;background:#eef1f7;color:#3b4a6b;font-size:12px;font-weight:700;white-space:nowrap}
+.admin-track.is-saiu_para_entrega .admin-track-state,.admin-track.is-aguardando_retirada .admin-track-state{background:#fff4dc;color:#7a5410}
+.admin-track.is-entregue .admin-track-state{background:#e3f4ea;color:#1f6b47}
+.admin-track.is-problema .admin-track-state,.admin-track.is-devolvido .admin-track-state{background:#fde8ea;color:#a3273a}
+.admin-track.is-nao_encontrado .admin-track-state{background:#f2f0f1;color:var(--muted)}
 .admin-fix{font-size:13px}
 .admin-fix summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
 .admin-fix[open] summary{margin-bottom:10px}
 @media(max-width:640px){.admin-tracking{grid-template-columns:1fr}.btn-ship{width:100%}}
+
+/* Bling sem parar a loja (BLING-RESILIENCIA.md): a note waiting in the queue is calm blue, never an error; the notice at
+   the top of Pedidos says how the integration is; the Bling card lists the last problems. */
+.admin-invoice.is-queued{background:var(--b-bg);color:var(--b-fg)}
+.admin-integration{margin:0 0 18px;padding:14px 16px;border-radius:14px;border:1px solid transparent;font-size:14px;line-height:1.55}
+.admin-integration a{color:inherit;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.admin-integration.is-warn{background:var(--y-bg);border-color:#efd98a;color:#5c4200}
+.admin-integration.is-error{background:var(--r-bg);border-color:#f0c4cf;color:var(--r-fg)}
+.admin-integration.is-info{background:var(--b-bg);border-color:#c6dbf2;color:var(--b-fg)}
+.admin-bling-log{margin-top:6px;font-size:13px}
+.admin-bling-log summary{cursor:pointer;color:var(--muted);text-decoration:underline;text-underline-offset:3px;width:max-content}
+.admin-bling-log ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.admin-bling-log li{line-height:1.5;padding-left:10px;border-left:3px solid var(--line)}
+.admin-bling-log li.is-falha,.admin-bling-log li.is-limite,.admin-bling-log li.is-disjuntor,.admin-bling-log li.is-incerta,.admin-bling-log li.is-conexao{border-left-color:var(--y-solid)}
+.admin-bling-log li.is-recuperado,.admin-bling-log li.is-achada{border-left-color:var(--g-solid)}
+.admin-bling-log time{color:var(--muted);font-variant-numeric:tabular-nums}
+/* The tracking code waits for the note: the piece never leaves without it. */
+.admin-ship-locked{margin:0;font-size:13.5px;color:#5c4200;background:var(--y-bg);border:1px solid #efd98a;border-radius:12px;padding:10px 12px;line-height:1.5}
+
+/* Envio internacional (admin-international.js): the order on the left, the Correios answer, customs data and steps on the right. */
+.intl-grid{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px;align-items:start}
+.intl-results{display:grid;gap:16px;min-width:0}
+.intl-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px}
+.intl-card h2{margin:0 0 14px;font:500 21px/1.2 'Playfair Display',Georgia,serif}
+.intl-card h3{margin:0 0 6px;font-size:13px;font-weight:700}
+.intl-country select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;font:inherit;color:var(--ink)}
+.intl-pieces{border:0;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.intl-pieces legend{padding:0;margin:0 0 8px;font-size:12px;font-weight:600;color:var(--muted)}
+.intl-piece{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.intl-piece span{display:grid;gap:2px}
+.intl-piece strong{font-size:14px;font-weight:600}
+.intl-piece small{font-size:12px;color:var(--muted)}
+.intl-piece input{width:64px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;text-align:center}
+.intl-go{width:100%;min-height:48px;border-radius:999px;font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.intl-meta{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.intl-meta strong{color:var(--ink)}
+.intl-table-wrap{overflow-x:auto}
+.intl-table{width:100%;border-collapse:collapse;font-size:13px}
+.intl-table th,.intl-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.intl-table thead th{font-size:12px;font-weight:600;color:var(--muted)}
+.intl-table tbody th{font-weight:600}
+.intl-table small{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--muted)}
+.intl-copy{margin-left:6px;padding:3px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;font:inherit;font-size:12px;color:var(--rose);cursor:pointer}
+.intl-copy:hover{border-color:var(--rose)}
+.intl-note{margin:12px 0 0;font-size:12px;line-height:1.55;color:var(--muted)}
+.intl-refused{margin-top:16px;padding:12px 14px;border-radius:12px;background:#fdf4ec;border:1px solid #f0dcc6;font-size:13px}
+.intl-refused ul{margin:0 0 8px;padding-left:18px}
+.intl-refused p{margin:0;font-size:12px;color:var(--muted)}
+.intl-steps{margin:0;padding-left:20px;display:grid;gap:10px;font-size:13px;line-height:1.55}
+.intl-steps a{color:var(--rose);text-decoration:underline;text-underline-offset:3px}
+@media(max-width:860px){.intl-grid{grid-template-columns:1fr}}
+
+/* "Data do pedido": the day filter above the tabs (the list is newest first). */
+.admin-day-filter{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;margin:0 0 14px}
+.admin-day-filter label{display:grid;gap:6px}
+.admin-day-filter label span{font-size:12px;font-weight:600;color:var(--muted)}
+.admin-day-filter input{padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;font:inherit;color:var(--ink);min-height:44px}
+.admin-day-filter input:focus-visible{outline:2px solid var(--rose);outline-offset:1px}
+.admin-day-filter-note{flex-basis:100%;margin:0;font-size:12.5px;color:var(--muted)}
+.admin-day-filter-note strong{color:var(--ink)}
+
+/* Mensagens (admin-messages.js, 07/10/2026): the chat icon with the number of new messages, in the topbar and in the
+   parts of the panel; the filters; the messages, each opening in place. Nothing moves but the colors on hover. */
+.admin-inbox{position:relative;display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--ink)}
+.admin-inbox:hover{background:#f6efef;color:var(--rose)}
+.admin-inbox svg{width:22px;height:22px}
+.admin-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--rose);color:#fff;font-size:12px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.admin-inbox .admin-badge{position:absolute;top:-6px;right:-8px;box-shadow:0 0 0 2px var(--panel)}
+.admin-sections button{min-height:44px}
+.admin-sections button[data-section=mensagens]{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.admin-sections button svg{flex:none;width:18px;height:18px}
+.admin-sections button[aria-current=page] .admin-badge{background:#fff;color:var(--rose)}
+/* "Ver pedido JU-…" on a message: the order it opened. */
+.admin-order.is-found{outline:3px solid var(--rose);outline-offset:3px}
+.inbox-fresh{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:10px 14px;border-radius:12px;background:#fbeaf0;color:#7d2f45;font-size:14px;font-weight:600}
+.inbox-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.inbox-filters button{min-height:44px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:10px 18px;font-size:14px;font-weight:600;color:var(--muted)}
+.inbox-filters button[aria-pressed=true]{background:var(--rose);border-color:var(--rose);color:#fff}
+.inbox-filters button span{margin-left:2px;font-variant-numeric:tabular-nums}
+.inbox-list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.inbox-item{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.inbox-item.is-new{border-color:#b64c6866;box-shadow:0 8px 24px #6536490f}
+.inbox-item.is-spam{background:#faf6f7}
+.inbox-head{display:grid;grid-template-columns:10px minmax(0,1fr) auto;grid-template-areas:"dot who when" ". preview preview";align-items:center;gap:4px 12px;width:100%;padding:16px 18px;border:0;background:none;text-align:left;color:var(--ink)}
+.inbox-head:hover{background:#fdf5f7}
+.inbox-head:focus-visible{outline:2px solid var(--rose);outline-offset:-2px;border-radius:16px}
+.inbox-dot{grid-area:dot;width:10px;height:10px;border-radius:50%}
+.is-new .inbox-dot{background:var(--rose)}
+.inbox-who{grid-area:who;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;min-width:0}
+.inbox-who strong{font-size:15px;font-weight:550;overflow-wrap:anywhere}
+.is-new .inbox-who strong{font-weight:700}
+.inbox-who small{font-size:13px;color:var(--muted)}
+.inbox-when{grid-area:when;font-size:13px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.inbox-preview{grid-area:preview;overflow:hidden;font-size:14px;color:#5f525a;white-space:nowrap;text-overflow:ellipsis}
+.inbox-body{padding:0 18px 18px 40px}
+.inbox-tag{align-self:center;padding:2px 9px;border-radius:999px;background:#f1eaee;color:#5f525a;font-size:12px;font-weight:650;line-height:1.5}
+.inbox-tag.is-ok{background:var(--g-bg);color:var(--g-fg)}
+.inbox-tag.is-spam{background:var(--r-bg);color:var(--r-fg)}
+.inbox-contact{margin:0 0 10px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.inbox-text{margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bg);font-size:15px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.inbox-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.inbox-actions .btn-reopen,.inbox-secondary .btn-reopen,.inbox-fresh .btn-reopen,.inbox-load{min-height:44px}
+.inbox-reply{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;background:var(--rose);color:#fff;font-size:14px;font-weight:700;text-decoration:none}
+.inbox-reply:hover{background:#a04360}
+.inbox-reply.is-whatsapp{background:#1d7a46}
+.inbox-reply.is-whatsapp:hover{background:#17643a}
+.inbox-reply svg{flex:none;width:18px;height:18px}
+.inbox-load{display:block;margin:16px auto 0}
+@media(max-width:700px){
+  /* Four parts: two by two, so none is squeezed. */
+  .admin-sections{display:grid;grid-template-columns:1fr 1fr;border-radius:24px}
+  .admin-sections button{padding:10px 8px}
+}
+@media(max-width:640px){
+  .admin-topbar-tools{gap:10px}
+  .admin-hello{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .inbox-head{padding:14px;gap:4px 10px}
+  .inbox-body{padding:0 14px 16px}
+  .inbox-preview{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .inbox-reply{flex:1 1 100%;justify-content:center}
+}

@@ -1,13 +1,14 @@
 'use strict';
-// POST /api/contact/send  {name, email, subject, message, website}: the form of contato.html (api/_lib/contact.js).
-//   200 {ok: true} · 400 {error: 'invalid_request', field} · 403 another site · 429 too_many_requests (Retry-After)
-//   503 contact_unavailable (no inbox or e-mail service set up) · 502 mail_failed (the e-mail service refused)
+// POST /api/contact/send  {name, email, phone?, subject, message, lang?, website}: the form of contato.html
+// (api/_lib/contact.js). The message is saved for Ju's panel (Mensagens) and then e-mailed as a notice, if it can be.
+//   200 {ok: true} (saved, e-mailed or both) · 400 {error: 'invalid_request', field} · 403 another site
+//   429 too_many_requests (Retry-After) · 503 contact_unavailable (no database here, or neither saved nor e-mailed)
 const {json, readJson, clientIp, sameOrigin} = require('../_lib/http');
 const {config} = require('../_lib/mail');
 const {storeFor} = require('../_lib/account-http');
 const {createContact} = require('../_lib/contact');
 
-const STATUS = {invalid_request: 400, too_many_requests: 429, contact_unavailable: 503, mail_failed: 502};
+const STATUS = {invalid_request: 400, too_many_requests: 429, contact_unavailable: 503};
 
 function create({env = process.env, store, now = () => Date.now(), fetchImpl = globalThis.fetch, outbox} = {}) {
   return async function handler(req, res) {

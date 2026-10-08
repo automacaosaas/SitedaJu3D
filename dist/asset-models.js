@@ -5,12 +5,24 @@ import {MeshoptDecoder} from './vendor/libs/meshopt_decoder.module.js';
 // GLBs are Meshopt-compressed (EXT_meshopt_compression, 16-bit positions); see PERFORMANCE-QA.md. Bump `v` whenever a
 // model file changes so browsers holding the cached copy fetch the new one.
 const ASSETS={
-  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=olhos-meshopt2',import.meta.url),
-  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=crista2-meshopt1',import.meta.url),
-  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-meshopt1',import.meta.url),
+  // A borboleta do arquivo de impressão (BORBOLETA COMPLETO.3mf, 06/10/2026): corpo e cabeça exatos, os encaixes das asas nos detalhes,
+  // (07/10/2026: a cabeça assenta no encaixe do corpo, 0,03 para dentro — sem saltar e sem afundar, como na foto da vitrine —, e o brilho dos olhos fica branco)
+  // rosto creme, olhos, sobrancelhas e sorriso pretos, bochechas rosadas (tools/modelo-borboleta)
+  borboletoscopio:new URL('./assets/models/borboletoscopio.glb?v=3mf-4',import.meta.url),
+  // O dinossauro do Meshy (05/10/2026), com os 2 espinhos da peça nova: corpo e detalhes coloríveis, olhos, dentes e brilho fixos
+  dinossauroscopio:new URL('./assets/models/dinossauroscopio.glb?v=meshy-1',import.meta.url),
+  aviaoscopia:new URL('./assets/models/aviaoscopia.glb?v=cad-21-08-estrelas1',import.meta.url),
   // O macaco do Meshy com as cores fixas do macaco em cinco materiais, sem textura (VITRINE-AVIAO-MACACO-QA.md)
-  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url)
+  macacoscopio:new URL('./assets/models/macacoscopio.glb?v=meshy-3',import.meta.url),
+  // Girafa e unicórnio do Rodin (06/10/2026) com as cores fixas de cada um em materiais, sem textura; por dentro, lisos; as estrelas
+  // do unicórnio refeitas (tools/modelo-novidades)
+  // (07/10/2026: as cores seguem o relevo — as manchas, os olhos, as narinas e o sorriso da girafa; as orelhas, as mãos, a crina, o
+  // chifre e a faixa da base do unicórnio; o arco-íris em três faixas, roxo, lavanda e dourado; tools/modelo-novidades/pintura.md)
+  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-5',import.meta.url),
+  unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-2',import.meta.url)
 };
+// The file each piece loads (tests read the same one).
+export const modelURL=key=>ASSETS[key];
 // Every product is fitted to the same 4.1 height; the butterfly's thin wings and antennae read small
 // at that height, so it alone is presented larger (proportions, camera and lighting unchanged).
 export const PRESENTATION_SCALE={borboletoscopio:1.25};

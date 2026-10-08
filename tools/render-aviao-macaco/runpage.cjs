@@ -8,7 +8,9 @@ withBrowser(async b => {
   await b.goto(`http://127.0.0.1:8851/${page}?${query}`, {wait: 300});
   const started = Date.now();
   let ok = false;
-  while (Date.now() - started < 280000) { try { if (await b.eval('window.done === true')) { ok = true; break; } } catch {} await b.sleep(400); }
+  // each check with its own time limit: a page whose GPU process hung never answers, and the loop must still reach its deadline
+  const ask = js => Promise.race([b.eval(js), new Promise((_, no) => setTimeout(() => no(new Error('page not answering')), 8000))]);
+  while (Date.now() - started < 280000) { try { if (await ask('window.done === true')) { ok = true; break; } } catch {} await b.sleep(400); }
   if (!ok) { console.log('TIMEOUT', JSON.stringify(b.consoleLog.slice(-8))); process.exitCode = 1; return; }
   const results = await b.eval('window.results || null');
   if (results) for (const [name, url] of Object.entries(results)) fs.writeFileSync(out.replace(/\.png$/, '') + '-' + name + '.png', Buffer.from(url.split(',')[1], 'base64'));

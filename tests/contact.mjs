@@ -26,12 +26,12 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const fetchImpl = async (url, init) => { sent.push({url, body: JSON.parse(init.body), headers: init.headers}); return {ok: answer[0] < 400, status: answer[0], json: async () => answer[1]}; };
   const handler = send.create({env, store, now: () => Date.parse('2026-10-04T15:00:00Z'), fetchImpl});
   const call = async ({method = 'POST', origin = SITE, body = MESSAGE, ip = '203.0.113.20'} = {}) => { const res = makeRes(); await handler({method, headers: {...(origin ? {origin} : {}), 'x-forwarded-for': ip}, body, socket: {}, url: '/api/contact/send'}, res); return res; };
-  return {sent, call};
+  return {sent, call, store};
 }
 
 // ── the endpoint ──────────────────────────────────────────────────────
 {
-  const {sent, call} = setup();
+  const {sent, call, store} = setup();
   assert.equal((await call({method: 'GET'})).statusCode, 405);
   assert.equal((await call({origin: ''})).statusCode, 403, 'no Origin');
   assert.equal((await call({origin: 'https://evil.example'})).statusCode, 403, 'another site');
@@ -58,6 +58,8 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const bot = await call({body: {...MESSAGE, website: 'http://spam.example'}, ip: '192.0.2.99'});
   assert.equal(bot.statusCode, 200, 'the hidden field filled: the bot sees success…');
   assert.equal(sent.length, 1, '…and nothing goes out');
+  assert.equal((await store.messages.list()).length, 1, 'only the real message is kept for the panel (2026-10-07)');
+  assert(mail.html.includes('/admin.html#mensagens') && mail.text.includes('/admin.html#mensagens'), 'the notice links to Mensagens in the panel');
   assert.deepEqual(Object.keys(SUBJECTS), ['produto', 'pedido', 'personalizado', 'outro']);
 }
 
@@ -72,18 +74,26 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.equal(sent.length, 8);
 }
 
-// ── where it goes, and when it cannot go ──────────────────────────────
+// ── where it goes, and when the e-mail cannot go ──────────────────────
+// 2026-10-07: the message is saved first (Mensagens in the panel); the e-mail is only a notice, so no inbox, no e-mail
+// service or a refusal no longer lose it (they used to answer 503 / 502 and drop it). tests/messages.mjs has the rest.
 {
+  const realError = console.error; console.error = () => {};
   const noInbox = setup({...ENV, ORDER_NOTIFY_EMAIL: ''});
   const res = await noInbox.call();
-  assert.equal(res.statusCode, 503); assert.equal(res.json().error, 'contact_unavailable'); assert.equal(noInbox.sent.length, 0);
-  assert.equal((await setup({...ENV, RESEND_API_KEY: '', AUTH_SECRET: ''}).call()).statusCode, 503, 'no e-mail service');
+  assert.equal(res.statusCode, 200, 'no inbox: saved all the same'); assert.equal(noInbox.sent.length, 0);
+  assert.equal((await noInbox.store.messages.list())[0].mailedAt, null, 'and marked as not e-mailed');
+  const noService = setup({...ENV, RESEND_API_KEY: '', AUTH_SECRET: ''});
+  assert.equal((await noService.call()).statusCode, 200, 'no e-mail service: saved all the same');
+  assert.equal((await noService.store.messages.list()).length, 1);
   const own = setup({...ENV, CONTACT_EMAIL: 'Contato@Site.Test'});
   await own.call();
   assert.deepEqual(own.sent[0].body.to, ['contato@site.test'], 'CONTACT_EMAIL wins over ORDER_NOTIFY_EMAIL');
   const refused = setup(ENV, [500, {message: 'boom'}]);
   const failed = await refused.call();
-  assert.equal(failed.statusCode, 502); assert.equal(failed.json().error, 'mail_failed');
+  assert.equal(failed.statusCode, 200, 'the e-mail service refused: the message is in the panel all the same');
+  assert.equal((await refused.store.messages.list())[0].mailedAt, null);
+  console.error = realError;
 }
 
 // ── the page ──────────────────────────────────────────────────────────
@@ -97,20 +107,46 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const channels = [...page.matchAll(/<article class="contact-channel[^"]*">[^]*?<h2>([^<]+)<\/h2>/g)].map(m => m[1]);
   assert.deepEqual(channels, ['WhatsApp', 'E-mail', 'Instagram']);
   assert.match(page, /<a class="contact-cta" href="#" data-whatsapp-link target="_blank" rel="noopener" hidden>Falar agora no WhatsApp →<\/a>/);
-  assert.match(script, /const number = \/\^\\d\{10,15\}\$\/\.test\(COMMERCE\.whatsapp\) \? COMMERCE\.whatsapp : '';/);
+  assert.match(script, /const number = \/\^\\d\{12,13\}\$\/\.test\(CONTACT\.whatsapp\) \? CONTACT\.whatsapp : '';/);
+  // The contact channels come from one place (api/_lib/legal.js → company.js, audit Q3): the e-mail link appears once the
+  // address is filled in, the hours show on the page, and nothing else on the site keeps its own copy.
+  const legal = require('../api/_lib/legal');
+  assert.match(script, /import \{CONTACT\} from '\.\/company\.js';/);
+  assert.match(page, /<a class="contact-link" href="#" data-email-link hidden><span translate="no" data-company="email">/);
+  assert.match(page, /<p class="contact-soon" data-email-soon>O e-mail oficial entra aqui em breve\./);
+  assert.match(script, /if \(CONTACT\.email && mail\) \{\n  mail\.href = `mailto:\$\{CONTACT\.email\}`;/);
+  assert.equal((page.match(new RegExp(`<span data-company="hours">${legal.COMPANY.hours}</span>`, 'g')) || []).length, 2, 'the hours, under the title and in the help card');
+  assert.doesNotMatch(read('dist/commerce-config.js'), /whatsapp/, 'no second WhatsApp number');
+  for (const file of ['dist/site-shell.js', 'dist/checkout.js', 'dist/contato.js']) assert.doesNotMatch(read(file), /COMMERCE\.whatsapp|contato@juimprimepramim/, `${file}: the channels come from company.js`);
   assert.match(script, /https:\/\/wa\.me\/\$\{number\}\?text=\$\{encodeURIComponent\(translate\('Olá, Ju! Vim pelo site e tenho uma dúvida\.'\)\)\}/);
   assert(page.includes(`href="${/const INSTAGRAM = '([^']+)'/.exec(read('dist/site-shell.js'))[1]}"`), 'the same Instagram as the menu and the footer');
   // The form: the same fields and subjects the server accepts, a hidden trap field and the privacy note.
-  for (const name of ['name', 'email', 'subject', 'message', 'website']) assert.match(page, new RegExp(`name="${name}"`), name);
+  for (const name of ['name', 'email', 'phone', 'subject', 'message', 'website']) assert.match(page, new RegExp(`name="${name}"`), name);
   assert.deepEqual([...page.matchAll(/<option value="([a-z]+)">/g)].map(m => m[1]), Object.keys(SUBJECTS));
   assert.match(page, /<div class="contact-trap" aria-hidden="true"><label>Não preencha este campo<input name="website" tabindex="-1" autocomplete="off"><\/label><\/div>/);
   assert.match(page, /<a href="privacidade\.html">Política de Privacidade<\/a>/);
   assert.match(script, /fetch\('\/api\/contact\/send'/);
   assert.match(page, /<h2>Mensagem enviada com sucesso!<\/h2>\n\s*<p>Responderemos em breve\.<\/p>/);
+  // 08/10/2026 (usabilidade 9): a problem with a field shows right under it and is tied to it; the field's own hint stays
+  assert.match(page, /<p class="contact-error" id="contact-error" role="alert" hidden><\/p>/);
+  assert.match(script, /input\.closest\('\.contact-field'\)\.after\(error\);/); assert.match(script, /else submit\.before\(error\);/, 'a sending failure stays above the button');
+  assert.match(script, /input\.setAttribute\('aria-describedby', \[input\.dataset\.describedby, error\.id\]\.filter\(Boolean\)\.join\(' '\)\);/);
+  assert.match(script, /if \(own\) el\.setAttribute\('aria-describedby', own\); else el\.removeAttribute\('aria-describedby'\);/, 'fixed: back to the hint alone');
+  // (visual 15) line icons from icons.js instead of emojis, tints from the page's theme, and one grid for both rows
+  assert.doesNotMatch(page, /[\u{1F300}-\u{1FAFF}\u{23F0}]/u, 'no emoji on the page');
+  assert.deepEqual([...page.matchAll(/data-icon="([a-z]+)"/g)].map(m => m[1]), ['cube', 'truck', 'palette', 'clock', 'check']);
+  assert.match(script, /import \{icon\} from '\.\/icons\.js';/);
+  const look = read('dist/contact.css');
+  assert.doesNotMatch(look, /#fbeaf0|#fdeef2|#b64c68/i, 'no fixed pink that fights the theme');
+  const tracks = 'grid-template-columns: minmax\\(0, 1\\.15fr\\) minmax\\(0, 1fr\\) minmax\\(0, 1fr\\); gap: 16px;';   // zero minimums: a long address cannot widen one column of one row only
+  assert.match(look, new RegExp(`\\.contact-grid \\{ display: grid; ${tracks}`)); assert.match(look, new RegExp(`\\.contact-channels \\{ display: grid; ${tracks}`));
   // The questions: opening one by one, with the shop's real numbers.
   assert.equal((page.match(/<details class="faq-item"/g) || []).length, 7);
   const faq = page.slice(page.indexOf('class="contact-faq"'));
   assert(faq.includes(`a produção leva de ${COMMERCE.productionLabel}`), 'production time = commerce-config.js');
+  assert(faq.includes('você acompanha a localização e o status do pacote diretamente em Meus pedidos, atualizados automaticamente pelos Correios'), 'tracking: automatic, in Meus pedidos');
+  assert.doesNotMatch(faq, /enviamos o código de rastreio dos Correios/, 'no promise of a code sent by hand');
+  for (const id of ['faq-prazo', 'faq-frete']) assert.match(faq, new RegExp(`<details class="faq-item" id="${id}">[^]*?<a href="envio\\.html">Ver Envio e prazos →</a>[^]*?</details>`), `${id}: links to Envio e prazos`);
   assert(faq.includes(`Pix, com ${pixPercent}% de desconto nas peças`), 'Pix discount = the server rule');
   assert(faq.includes(`a partir de ${money(shipping.freeShipping.fromCents).replace(/ /g, ' ')} em peças, o envio por PAC é grátis`), 'free shipping = shipping-config.js');
   assert(read('dist/trocas.html').includes('desistir em até 7 dias corridos') && faq.includes('desistir da compra em até 7 dias corridos'), 'returns as in the policy');
@@ -123,4 +159,4 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.match(read('tools/dev-server.cjs'), /'\/api\/contact\/send': require\('\.\.\/api\/contact\/send'\)/, 'the local server answers the form');
 }
 
-console.log('PASS: contact — the form reaches the shop inbox with the sender as reply-to, checked fields, a trap for bots, limits per address and per e-mail; the page with WhatsApp first, the same subjects as the server and questions that follow the shop settings.');
+console.log('PASS: contact — the form is saved for the panel and reaches the shop inbox with the sender as reply-to (a failed e-mail loses nothing), checked fields, a trap for bots, limits per address and per e-mail; the page with WhatsApp first, the same subjects as the server and questions that follow the shop settings.');

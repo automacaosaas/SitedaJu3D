@@ -4,6 +4,13 @@
 //   GET  /preco/v1/nacional/{service}         cepOrigem, cepDestino, psObjeto (g), tpObjeto=2 (package), comprimento, largura,
 //                                             altura (cm), nuContrato, nuDR → {pcFinal: "23,45", …}
 //   GET  /prazo/v1/nacional/{service}         cepOrigem, cepDestino → {prazoEntrega: 4, …}
+//   GET  /preco/v1/internacional/{service}    the same box and contract, sgPaisDestino (ISO 3166 alpha-2) instead of cepDestino,
+//                                             vlDeclarado optional → {pcFinal, …}  (Exporta Fácil: 45128 Standard, 45110 Expresso,
+//                                             45209 Econômico; only the services in the contract answer)
+//   GET  /prazo/v2/internacional/exportacao/{service}   sgPaisOrigem=BR, sgPaisDestino, dtPostagem (DD-MM-AAAA) → the time
+//   GET  /srorastro/v1/objetos/{code}?resultado=T       the tracking events of one package (API Rastro, same token; the
+//   GET  /srorastro/v1/objetos?codigosObjetos=…        contract must have it enabled); up to 50 codes at once (repeated
+//                                                       parameter) → {objetos: [{codObjeto, eventos: [...], mensagem?}]}
 // Errors carry a `code`: correios_auth (credentials or token refused), correios_unavailable (network, 5xx, 429, timeout)
 // and correios_rejected (the request itself was refused — a CEP or service the contract cannot ship; the caller drops that
 // option). Messages from the Correios are kept only for the server log, never sent to the browser.
@@ -73,7 +80,9 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     let response;
     const bearer = await currentToken();
     try {
-      response = await fetchImpl(`${BASE}${path}?${new URLSearchParams(params)}`, {headers: {Authorization: `Bearer ${bearer}`, Accept: 'application/json'}, ...signal()});
+      // The language goes explicitly: without it Node's fetch sends "Accept-Language: *", which the price and time APIs
+      // ignore but the API Rastro refuses (400 "SRO-018: Permitido apenas os valores pt-BR, en e es-ES para o idioma").
+      response = await fetchImpl(`${BASE}${path}?${new URLSearchParams(params)}`, {headers: {Authorization: `Bearer ${bearer}`, Accept: 'application/json', 'Accept-Language': 'pt-BR'}, ...signal()});
     } catch { throw fail('correios_unavailable'); }
     if (response.status === 401 || response.status === 403) {
       // An expired or revoked token looks the same as a service the contract does not include: renew once, then ask again.
@@ -101,7 +110,45 @@ function createCorreios({env = process.env, fetchImpl = globalThis.fetch, now = 
     if (!Number.isInteger(days) || days < 0) throw fail('correios_rejected', {messages: ['no delivery time in the answer']});
     return days;
   }
-  return {settings: config, price, deadline};
+  // International (export): contract price of one volume to a country (cents), and the delivery time when the Correios
+  // give one ({min, max} working days, or null: the price stands without it).
+  async function priceInternational({code, country, box, declaredCents = 0}) {
+    const params = {cepOrigem: config.originCep, sgPaisDestino: country, ...boxParams(box), nuContrato: config.contract, nuDR: config.dr};
+    if (declaredCents > 0) params.vlDeclarado = (declaredCents / 100).toFixed(2).replace('.', ',');
+    const data = await get(`/preco/v1/internacional/${encodeURIComponent(code)}`, params);
+    const cents = parseMoney(data?.pcFinal);
+    if (!(cents > 0)) throw fail('correios_rejected', {messages: messagesOf(data).length ? messagesOf(data) : ['no price in the answer']});
+    return cents;
+  }
+  async function deadlineInternational({code, country, date = new Date(now())}) {
+    const day = new Intl.DateTimeFormat('pt-BR', {timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric'}).format(date).replace(/\//g, '-');
+    const data = await get(`/prazo/v2/internacional/exportacao/${encodeURIComponent(code)}`, {sgPaisOrigem: 'BR', sgPaisDestino: country, dtPostagem: day});
+    const answer = Array.isArray(data) ? data[0] : data;
+    // The answer is a range of working days, as the real contract gave it (05/10/2026, to Mexico):
+    //   {coProduto, prazoMinimo: 9, prazoMaximo: 12, dataMinEntrega: "2026-10-16", dataMaxEntrega: "2026-10-21", sgPaisDestino, sgPaisOrigem}
+    // A single time (prazoEntrega and the like) counts as both ends.
+    const whole = value => { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : null; };
+    const single = whole(answer?.prazoEntrega ?? answer?.prazo ?? answer?.nuPrazo ?? answer?.prazoExportacao);
+    const max = whole(answer?.prazoMaximo) ?? single, min = whole(answer?.prazoMinimo) ?? max;
+    if (max) return {min: Math.min(min, max), max};
+    // The Correios manual does not show this answer: when it brings no time the site knows, the answer goes to the
+    // server log (no credentials nor customer data in it), so a new format shows up there.
+    console.error(`correios: prazo internacional ${code} para ${country} sem prazo reconhecido — resposta: ${JSON.stringify(data ?? null).slice(0, 600)}`);
+    return null;
+  }
+  // Tracking (API Rastro): every event of up to 50 packages in one call (resultado=T), as the Correios send them. A code
+  // the Correios do not know yet comes back with a `mensagem` and no events (not an error).
+  const TRACK_BATCH = 50;
+  async function track(codes) {
+    const list = [...new Set(codes.map(c => text(c).toUpperCase()).filter(Boolean))];
+    if (!list.length) return [];
+    if (list.length > TRACK_BATCH) throw fail('correios_rejected', {messages: [`more than ${TRACK_BATCH} codes`]});
+    const data = list.length === 1
+      ? await get(`/srorastro/v1/objetos/${encodeURIComponent(list[0])}`, {resultado: 'T'})
+      : await get('/srorastro/v1/objetos', [...list.map(code => ['codigosObjetos', code]), ['resultado', 'T']]);
+    return Array.isArray(data?.objetos) ? data.objetos : [];
+  }
+  return {settings: config, price, deadline, priceInternational, deadlineInternational, track, TRACK_BATCH};
 }
 
 module.exports = {createCorreios, settings, parseMoney, boxParams, MIN_BOX, BASE};

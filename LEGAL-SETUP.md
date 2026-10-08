@@ -27,7 +27,8 @@ Tudo fica em **um arquivo**, `api/_lib/legal.js` (`COMPANY`). Troque cada `[PREE
 node tools/sync-legal.cjs
 ```
 
-Ele copia os valores para os três documentos e para o rodapé de todas as páginas. `npm test` falha se alguma página
+Ele copia os valores para os três documentos, para o rodapé de todas as páginas, para a página de Contato (e-mail e horário)
+e para `dist/company.js`, de onde os scripts leem o e-mail e o WhatsApp (`WHATSAPP`, no mesmo arquivo, só números com 55 e DDD). `npm test` falha se alguma página
 ficar desatualizada, e `/api/health` mostra `"legal":"pending"` enquanto sobrar algum `[PREENCHER]`.
 
 ## Quando mudar um texto
@@ -38,6 +39,20 @@ ficar desatualizada, e `/api/health` mostra `"legal":"pending"` enquanto sobrar 
 
 Pedidos antigos continuam registrados com a versão que o cliente aceitou na época.
 
+## Cookies e ferramentas de análise
+
+Hoje o site não usa nenhuma ferramenta de análise nem de anúncios, então não mostra aviso de cookies (a Política de
+Privacidade diz isso). Para ligar o Google Analytics 4 ou o pixel da Meta:
+
+1. Preencha o id em `dist/analytics-config.js` (`ga4: 'G-…'` ou `metaPixel: '123…'`).
+2. Acrescente os endereços da ferramenta (`CSP_DOMAINS`, no mesmo arquivo) à Content-Security-Policy do `vercel.json` e rode
+   `node tools/sync-csp.cjs`. O `npm test` falha enquanto faltar este passo.
+3. Revise a seção "Cookies" da Política de Privacidade (dizer qual ferramenta é usada) e mude `TERMS_VERSION`.
+
+Com um id preenchido, o aviso aparece na primeira visita (Aceitar todos, Recusar ou Personalizar) e a ferramenta só carrega
+depois do aceite. A escolha muda a qualquer momento em "Preferências de cookies", no rodapé. Para ver o aviso antes de ligar
+qualquer ferramenta, abra uma página com `?cookies=preview` (vale para a aba; nada é carregado).
+
 ## Revisar com advogado ou contador antes do lançamento
 
 Os textos seguem a LGPD, o Código de Defesa do Consumidor, o Decreto nº 7.962/2013 e o Marco Civil da Internet, mas
@@ -47,11 +62,24 @@ não substituem uma revisão jurídica. Pontos que pedem decisão:
   as compras, sem exceção para peças feitas sob encomenda. Criar uma exceção é uma decisão jurídica.
 - **Natureza das peças.** Os Termos não dizem se as peças são acessórios decorativos ou equipamentos; se houver
   exigência regulatória ou orientação de uso junto aos instrumentos, ela deve entrar em "Os produtos".
-- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; confirmar com a Hostinger o prazo dos
-  registros do servidor e, se preciso, guardar os registros no banco por esse prazo.
+- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; os registros ficam no servidor próprio
+  da loja (o nginx e o journal do site), que precisa guardá-los por esse prazo. O padrão do Debian guarda bem menos.
 - **Prazos de reembolso** citados para cartão (até duas faturas) e a forma de devolução do Pix, conforme o Mercado Pago.
-- **Parceiros citados** (Mercado Pago, Correios/Melhor Envio, Resend, Hostinger, emissor de nota fiscal): manter a lista
-  igual aos serviços realmente usados.
+- **Parceiros citados** (Mercado Pago, Correios, ViaCEP/BrasilAPI, Resend, Bling, Backblaze, Google/Apple): manter a
+  lista igual aos serviços realmente usados. O site e o banco ficam no servidor próprio da loja, no Brasil; as cópias
+  diárias do banco vão criptografadas para o Backblaze B2 (EUA), por isso ele aparece também em "Dados fora do Brasil".
+  A conta do Backblaze precisa ter a região nos EUA (com a EU Central, o texto muda), e a cópia na nuvem precisa estar
+  ligada no lançamento (`SERVIDOR-SETUP.md`); se a loja desistir dela, tirar o Backblaze dos dois lugares.
+- **Provedor do servidor.** A Política diz que o servidor é da loja e mantido pela equipe, mas o administrador do
+  provedor já entrou nele por SSH (`deploy/firewall.sh`, `EXTRA_SSH_V4`). Se o provedor continuar com esse acesso, ou se
+  a máquina for dele, ele também trata os dados (como operador) e deve entrar em "Hospedagem", com o nome.
+- **Base das transferências** ("Dados fora do Brasil"): o art. 33, IX, da LGPD (necessário para o contrato e para
+  obrigação legal) vale para o Resend, os serviços de CEP e o Backblaze. No Backblaze a necessidade é discutível, porque
+  há nuvens com região no Brasil: confirmar essa base, usar as cláusulas-padrão da ANPD (Resolução CD/ANPD nº 19/2024)
+  ou levar as cópias para uma região no Brasil.
+- **Prazo das cópias de segurança.** "Por quanto tempo guardamos" não fala delas: um dado excluído (a conta, uma
+  mensagem) continua nas cópias até elas saírem (as 10 mais novas no servidor; 120 dias no Backblaze, pela regra do
+  bucket). Avaliar uma linha sobre isso.
 - **Canal de privacidade:** como microempresa, a loja está dispensada de nomear encarregado (Resolução CD/ANPD nº 2/2022),
   mas o e-mail indicado precisa ser lido e respondido em até 15 dias.
 

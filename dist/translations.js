@@ -6,6 +6,7 @@ Não foi possível carregar a demonstração. Tente novamente.|Could not load th
 Para verificar sua conta nesta prévia, crie uma conta ou solicite um novo código. O envio real de e-mail ainda não está conectado.|To verify your account in this preview, create an account or request a new code. Real email delivery is not connected yet.|Para verificar tu cuenta en esta vista previa, crea una cuenta o solicita un nuevo código. El envío real de correo aún no está conectado.
 ← Voltar à vitrine|← Back to showcase|← Volver a la vitrina
 Voltar à vitrine|Back to showcase|Volver a la vitrina
+Pular para o conteúdo|Skip to content|Saltar al contenido
 Retinoscópio|Retinoscope|Retinoscopio
 Borboletoscópio encaixado no retinoscópio.|Borboletoscópio fitted on the retinoscope.|Borboletoscópio encajado en el retinoscopio.
 Dinossauroscópio encaixado no retinoscópio.|Dinossauroscópio fitted on the retinoscope.|Dinossauroscópio encajado en el retinoscopio.
@@ -14,9 +15,60 @@ Novidade · em breve|New · coming soon|Novedad · próximamente
 Em breve|Coming soon|Próximamente
 Capa para lâmpada de fenda portátil|Cover for a handheld slit lamp|Funda para lámpara de hendidura portátil
 Lâmpada de fenda|Slit lamp|Lámpara de hendidura
-Macacoscópio encaixado na lâmpada de fenda.|Macacoscópio fitted on the slit lamp.|Macacoscópio encajado en la lámpara de hendidura.
-Macacoscópio, capa de macaco marrom com uma banana, sobre uma pilastra branca|Macacoscópio, a brown monkey cover holding a banana, on a white pedestal|Macacoscópio, funda de mono marrón con una banana, sobre un pedestal blanco
-Um macaquinho para acompanhar o olhar dos pequenos. Em breve.|A little monkey to keep the little ones company. Coming soon.|Un monito para acompañar la mirada de los pequeños. Próximamente.
+Novidades: encaixe para lâmpada de fenda|What's new: fits the slit lamp|Novedades: encaje para lámpara de hendidura
+Peça anterior|Previous piece|Pieza anterior
+Próxima peça|Next piece|Siguiente pieza
+Preço, cores e kit|Price, colors and kit|Precio, colores y kit
+Como funciona|How it works|Cómo funciona
+5% de desconto no Pix|5% off with Pix|5% de descuento con Pix
+Enviar a um colega|Send to a colleague|Enviar a un colega
+Falar com a Ju|Talk to Ju|Hablar con Ju
+Preço, cores e compra|Price, colors and purchase|Precio, colores y compra
+Ver detalhes|See details|Ver detalles
+Ofertas da novidade|What's new: offers|Ofertas de la novedad
+Leve mais,|Buy more,|Lleva más,
+pague menos.|pay less.|paga menos.
+a peça|each|cada una
+Escolha a sua|Pick yours|Elige la tuya
+Mais vantajoso|Best value|Más conveniente
+Enviar para um colega pelo WhatsApp|Send to a colleague on WhatsApp|Enviar a un colega por WhatsApp
+Ver as ofertas|See the offers|Ver las ofertas
+Escolha os seus: quanto mais peças, menor o preço de cada uma.|Pick yours: the more pieces, the lower the price of each.|Elige los tuyos: cuantas más piezas, menor el precio de cada una.
+Escolha os seus|Pick yours|Elige los tuyos
+escolha os seus|pick yours|elige los tuyos
+Escolher os meus|Pick mine|Elegir los míos
+No seu kit|In your kit|En tu kit
+Oferta anterior|Previous offer|Oferta anterior
+Próxima oferta|Next offer|Siguiente oferta
+Leve mais, pague menos|Buy more, pay less|Lleva más, paga menos
+Novas peças.|New pieces.|Nuevas piezas.
+Para a lâmpada de fenda.|For the slit lamp.|Para la lámpara de hendidura.
+Capas impressas em 3D que encaixam na lâmpada de fenda portátil, para acompanhar o olhar dos pequenos.|3D-printed covers that fit the handheld slit lamp, to keep the little ones company.|Fundas impresas en 3D que encajan en la lámpara de hendidura portátil, para acompañar la mirada de los pequeños.
+Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça:|Look how cute: 3D-printed covers for the handheld slit lamp, by Ju, imprime pra mim? Take a look:|Mira qué lindo: fundas impresas en 3D para la lámpara de hendidura portátil, de Ju, imprime pra mim? Conócelas:
+Olá, Ju! Vi as novidades para a lâmpada de fenda e tenho uma dúvida.|Hi, Ju! I saw the new slit lamp pieces and I have a question.|¡Hola, Ju! Vi las novedades para la lámpara de hendidura y tengo una duda.
+MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.
+MonkeyLamp, capa de macaco marrom com uma banana, sobre uma pilastra branca|MonkeyLamp, a brown monkey cover holding a banana, on a white pedestal|MonkeyLamp, funda de mono marrón con una banana, sobre un pedestal blanco
+Um macaquinho para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A little monkey to keep the little ones company. 3D printed, in the piece's own colors.|Un monito para acompañar la mirada de los pequeños. Impreso en 3D, en los colores de la pieza.
+Uma girafinha para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A little giraffe to keep the little ones company. 3D printed, in the piece's own colors.|Una jirafita para acompañar la mirada de los pequeños. Impresa en 3D, en los colores de la pieza.
+Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A unicorn to keep the little ones company. 3D printed, in the piece's own colors.|Un unicornio para acompañar la mirada de los pequeños. Impreso en 3D, en los colores de la pieza.
+Novidade|New|Novedad
+Comprar|Buy|Comprar
+Ver e comprar|See and buy|Ver y comprar
+Monte seu kit|Build your kit|Arma tu kit
+pode misturar|mix and match|puedes combinar
+Kits prontos|Ready-made kits|Kits listos
+Total do kit|Kit total|Total del kit
+Com o que já está no carrinho:|With what is already in your cart:|Con lo que ya está en el carrito:
+Adicionar o kit ao carrinho|Add the kit to the cart|Añadir el kit al carrito
+Kit adicionado ao carrinho|Kit added to the cart|Kit añadido al carrito
+Escolha pelo menos uma peça.|Choose at least one piece.|Elige al menos una pieza.
+Não foi possível adicionar o kit. Tente novamente.|We could not add the kit. Please try again.|No se pudo añadir el kit. Inténtalo de nuevo.
+Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.|Turn the little head to the side: the horn moves out of the lamp's way.|Gira la cabecita hacia un lado: el cuerno sale de delante de la lámpara.
+Cada peça é impressa depois do pedido, nas cores dela. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in its own colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en sus propios colores. La producción empieza cuando se confirma el pago.
+GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.
+UnicornLamp encaixado na lâmpada de fenda.|UnicornLamp fitted on the slit lamp.|UnicornLamp encajado en la lámpara de hendidura.
+GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca|GiraffeLamp, a yellow giraffe cover with brown spots, on a white pedestal|GiraffeLamp, funda de jirafa amarilla con manchas marrones, sobre un pedestal blanco
+UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca|UnicornLamp, a white unicorn cover with a mane, a rainbow and stars, on a white pedestal|UnicornLamp, funda de unicornio blanca con crin, arcoíris y estrellas, sobre un pedestal blanco
 Régua de esquiascopia|Skiascopy rack|Regla de esquiascopia
 CATÁLOGO JU|JU CATALOG|CATÁLOGO JU
 Produtos feitos para deixar a consulta mais lúdica, colorida e acolhedora.|Products made to make appointments more playful, colorful and welcoming.|Productos para hacer la consulta más lúdica, colorida y acogedora.
@@ -143,7 +195,7 @@ Sensoriais|Sensory|Sensoriales
 Categoria|Category|Categoría
 Cores|Colors|Colores
 Capa para retinoscópio|Retinoscope cover|Funda para retinoscopio
-Avião magnético para régua de grau|Magnetic airplane for lens rack|Avión magnético para regla de lentes
+Avião magnético para régua de esquiascopia|Magnetic airplane for a skiascopy rack|Avión magnético para regla de esquiascopia
 Preço ilustrativo|Sample price|Precio ilustrativo
 Personalize o seu|Customize yours|Personaliza el tuyo
 PERSONALIZE O SEU!|CUSTOMIZE YOURS!|¡PERSONALIZA EL TUYO!
@@ -396,9 +448,11 @@ Motores|Engines|Motores
 As janelas da cabine mantêm a cor original.|The cabin windows keep their original color.|Las ventanas de la cabina mantienen su color original.
 As duas peças sobre as asas|The two pieces on the wings|Las dos piezas sobre las alas
 As janelas da cabine, lentes e aros mantêm as cores originais. A numeração acompanha cada abertura.|Cabin windows, lenses and rims keep their original colors. Each opening has its own number.|Las ventanas de la cabina, las lentes y los aros mantienen sus colores originales. Cada abertura tiene su número.
-Uma borboleta para levar cor e imaginação à consulta. Feita em impressão 3D, com o espaço de encaixe do retinoscópio livre.|A butterfly to bring color and imagination to every appointment. 3D printed, with an open slot for the retinoscope.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D, con el espacio para encajar el retinoscopio libre.
-Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, com abertura para encaixar no retinoscópio.|A friendly dinosaur for every glance. A 3D-printed cover with an opening for the retinoscope.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D con abertura para encajar el retinoscopio.
-Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de grau, e a haste da régua sai pela base.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the lens rack with magnets, and the rack’s handle comes out at the base.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de lentes, y el mango de la regla sale por la base.
+Uma borboleta para levar cor e imaginação à consulta. Impressa em 3D e feita para encaixe no retinoscópio da marca Welch Allyn.|A butterfly to bring color and imagination to every appointment. 3D printed and made to fit Welch Allyn retinoscopes.|Una mariposa para llevar color e imaginación a la consulta. Impresa en 3D y hecha para encajar en el retinoscopio de la marca Welch Allyn.
+Um dinossauro simpático para acompanhar cada olhar. Capa impressa em 3D, feita para encaixe no retinoscópio da marca Welch Allyn.|A friendly dinosaur for every glance. A 3D-printed cover made to fit Welch Allyn retinoscopes.|Un dinosaurio simpático para acompañar cada mirada. Funda impresa en 3D, hecha para encajar en el retinoscopio de la marca Welch Allyn.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas, entre em contato.|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements, get in touch.|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas, ponte en contacto.
+Um convite para a imaginação decolar. As 16 aberturas lembram janelas de avião, com os graus identificados ao lado. As duas metades se prendem por ímãs ao redor da régua de esquiascopia, e a haste da régua sai pela base. Compatível com régua de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para saber mais medidas,|An invitation to let imagination take flight. The 16 openings resemble airplane windows, with lens powers labeled alongside. The two halves close around the skiascopy rack with magnets, and the rack’s handle comes out at the base. Compatible with skiascopy racks measuring 4.7 cm x 27.9 cm. Brand used as the mold: Luneau. For other measurements,|Una invitación a dejar volar la imaginación. Las 16 aberturas recuerdan a ventanas de avión, con las graduaciones indicadas al lado. Las dos mitades se cierran con imanes alrededor de la regla de esquiascopia, y el mango de la regla sale por la base. Compatible con reglas de esquiascopia de 4,7 cm x 27,9 cm. Marca usada como molde: Luneau. Para conocer otras medidas,
+entre em contato|get in touch|ponte en contacto
 Use uma senha com 8 a 128 caracteres.|Use a password with 8 to 128 characters.|Usa una contraseña de 8 a 128 caracteres.
 Aguarde 30 segundos antes de solicitar outro código.|Wait 30 seconds before requesting another code.|Espera 30 segundos antes de solicitar otro código.
 Preencha seu nome e um e-mail válido.|Enter your name and a valid email.|Introduce tu nombre y un correo válido.
@@ -641,6 +695,19 @@ O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.
 Os pagamentos ainda não estão disponíveis. Tente novamente mais tarde.|Payments are not available yet. Please try again later.|Los pagos aún no están disponibles. Inténtalo de nuevo más tarde.
 Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.|We could not confirm the payment right now. If you are sure you were not charged, try again.|No pudimos confirmar el pago ahora. Si estás seguro de que no hubo cobro, inténtalo de nuevo.
 O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.|The payment was not approved. Check your card details or choose another payment method.|El pago no fue aprobado. Revisa los datos de la tarjeta o elige otra forma de pago.
+Algum dado do cartão não confere (número, validade ou código de segurança). Confira e tente de novo.|Some card detail does not match (number, expiry date or security code). Check it and try again.|Algún dato de la tarjeta no coincide (número, vencimiento o código de seguridad). Revísalo e inténtalo de nuevo.
+O cartão não tem limite disponível para esta compra. Tente outro cartão ou pague com Pix.|The card does not have enough limit for this purchase. Try another card or pay with Pix.|La tarjeta no tiene límite disponible para esta compra. Prueba otra tarjeta o paga con Pix.
+O banco do cartão pediu para você autorizar esta compra. Fale com o banco e tente de novo.|Your card's bank asked you to authorize this purchase. Contact the bank and try again.|El banco de la tarjeta pidió que autorices esta compra. Habla con el banco e inténtalo de nuevo.
+Este cartão está bloqueado ou inativo. Use outro cartão ou pague com Pix.|This card is blocked or inactive. Use another card or pay with Pix.|Esta tarjeta está bloqueada o inactiva. Usa otra tarjeta o paga con Pix.
+Foram muitas tentativas com este cartão. Use outro cartão ou pague com Pix.|There were too many attempts with this card. Use another card or pay with Pix.|Hubo demasiados intentos con esta tarjeta. Usa otra tarjeta o paga con Pix.
+O cartão não aceita esse número de parcelas. Escolha outra quantidade e tente de novo.|The card does not accept this number of installments. Choose another number and try again.|La tarjeta no acepta esa cantidad de cuotas. Elige otra cantidad e inténtalo de nuevo.
+Um pagamento igual acabou de ser feito. Confira em Meus pedidos antes de tentar de novo.|An identical payment was just made. Check My orders before trying again.|Se acaba de hacer un pago igual. Revisa Mis pedidos antes de intentarlo de nuevo.
+O pagamento não passou pela análise de segurança do Mercado Pago. Tente outro cartão ou pague com Pix.|The payment did not pass Mercado Pago's security check. Try another card or pay with Pix.|El pago no pasó el análisis de seguridad de Mercado Pago. Prueba otra tarjeta o paga con Pix.
+O banco do cartão não aprovou o pagamento. Tente outro cartão ou pague com Pix.|Your card's bank did not approve the payment. Try another card or pay with Pix.|El banco de la tarjeta no aprobó el pago. Prueba otra tarjeta o paga con Pix.
+Não conseguimos processar o pagamento agora. Tente de novo em alguns instantes.|We could not process the payment right now. Try again in a few moments.|No pudimos procesar el pago ahora. Inténtalo de nuevo en unos instantes.
+O tempo para confirmar a compra com o banco acabou. Tente de novo.|The time to confirm the purchase with your bank ran out. Try again.|Se acabó el tiempo para confirmar la compra con el banco. Inténtalo de nuevo.
+Cancelando o código anterior…|Cancelling the previous code…|Cancelando el código anterior…
+Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.|We could not cancel the previous Pix code right now. Try again in a moment.|No pudimos cancelar el código Pix anterior ahora. Inténtalo de nuevo en unos instantes.
 Não foi possível carregar o pagamento. Recarregue a página e tente de novo.|Payment could not be loaded. Reload the page and try again.|No se pudo cargar el pago. Recarga la página e inténtalo de nuevo.
 Não foi possível carregar as formas de pagamento. Verifique sua conexão e tente de novo.|Payment options could not be loaded. Check your connection and try again.|No se pudieron cargar las formas de pago. Revisa tu conexión e inténtalo de nuevo.
 Tentar novamente|Try again|Intentar de nuevo
@@ -716,8 +783,9 @@ Não encontramos esse CEP. Preencha o endereço manualmente.|We could not find t
 Não foi possível buscar o endereço agora. Preencha manualmente.|We could not look up the address right now. Fill it in manually.|No pudimos buscar la dirección ahora. Complétala manualmente.
 Calcule o frete|Calculate shipping|Calcula el envío
 no Pix|with Pix|con Pix
-3X SEM JUROS|3X INTEREST-FREE|3X SIN INTERESES
 ou até 12x no crédito|or up to 12x on credit|o hasta 12 cuotas con crédito
+no crédito|on credit|con crédito
+veja as parcelas ao digitar o cartão|see the installments as you type the card|mira las cuotas al escribir la tarjeta
 No Pix|With Pix|Con Pix
 O pagamento é feito com segurança pelo Mercado Pago.|Payment is processed securely by Mercado Pago.|El pago se procesa de forma segura con Mercado Pago.
 Crédito ou débito|Credit or debit|Crédito o débito
@@ -743,7 +811,6 @@ Cartão escolhido.|Card selected.|Tarjeta elegida.
 ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
 Frete calculado pelo CEP|Shipping calculated by postal code|Envío calculado por código postal
 PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA
-5% off no Pix ou 3x sem juros no cartão|5% off with Pix or 3 interest-free card installments|5% de descuento con Pix o 3 cuotas sin interés con tarjeta
 FEITO SOB ENCOMENDA|MADE TO ORDER|HECHO POR ENCARGO
 Vantagens da loja|Shop highlights|Ventajas de la tienda
 mensagem|message|mensaje
@@ -754,13 +821,22 @@ Retomar mensagens|Resume messages|Reanudar mensajes
 Personalizar o meu|Customize mine|Personalizar el mío
 Ver encaixado|See it fitted|Ver encajado
 Ver em 3D|See it in 3D|Ver en 3D
-Ver o Macacoscópio em 3D|See the Macacoscópio in 3D|Ver el Macacoscópio en 3D
+Ver o MonkeyLamp em 3D|See the MonkeyLamp in 3D|Ver el MonkeyLamp en 3D
 Cores da peça|The piece's colors|Colores de la pieza
 Ainda não está à venda. Gire a peça e veja cada detalhe.|Not on sale yet. Turn the piece and see every detail.|Aún no está a la venta. Gira la pieza y mira cada detalle.
 Arraste para girar e ver cada detalhe.|Drag to rotate and see every detail.|Arrastra para girar y ver cada detalle.
-Ver o Macacoscópio encaixado|See the Macacoscópio fitted|Ver el Macacoscópio encajado
+Ver o MonkeyLamp encaixado|See the MonkeyLamp fitted|Ver el MonkeyLamp encajado
+Ver o GiraffeLamp em 3D|See the GiraffeLamp in 3D|Ver el GiraffeLamp en 3D
+Ver o GiraffeLamp encaixado|See the GiraffeLamp fitted|Ver el GiraffeLamp encajado
+Ver o UnicornLamp em 3D|See the UnicornLamp in 3D|Ver el UnicornLamp en 3D
+Ver o UnicornLamp encaixado|See the UnicornLamp fitted|Ver el UnicornLamp encajado
 Marrom|Brown|Marrón
 Bege|Beige|Beige
+Amarelo-ocre|Ochre yellow|Amarillo ocre
+Creme|Cream|Crema
+Dourado|Gold|Dorado
+Roxo|Purple|Morado
+Azul-lavanda|Lavender blue|Azul lavanda
 5% off no Pix|5% off with Pix|5% de descuento con Pix
 Suas cores|Your colors|Tus colores
 Original|Original|Original
@@ -779,19 +855,91 @@ Informações da peça|Piece information|Información de la pieza
 Mais sobre a peça|More about this piece|Más sobre la pieza
 Cor da parte|Part color|Color de la parte
 Combinações prontas|Ready-made combinations|Combinaciones listas
-ou 3x sem juros no cartão · valores ilustrativos nesta prévia|or 3 interest-free card installments · illustrative prices in this preview|o 3 cuotas sin interés con tarjeta · precios ilustrativos en esta vista previa
 Cada peça é feita sob encomenda: a produção leva|Each piece is made to order: production takes|Cada pieza se hace por encargo: la producción tarda
 O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são calculados pelo CEP no carrinho.|Shipping is by Correios, all over Brazil. The shipping cost and delivery time are calculated by postal code in the cart.|El envío es por Correios, a todo Brasil. El costo y el plazo de entrega se calculan por código postal en el carrito.
 Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
+· as cores mudam na hora.|· colors change instantly.|· los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
+FEITO PARA ENCAIXAR|MADE TO FIT|HECHO PARA ENCAJAR
+O 3D nas suas consultas|3D in your appointments|El 3D en tus consultas
+Cada peça é pensada para um equipamento da consulta.|Each piece is designed around an exam-room instrument.|Cada pieza está pensada para un equipo de la consulta.
+Encaixe para retinoscópio|Fits the retinoscope|Encaje para retinoscopio
+Encaixe para régua de esquiascopia|Fits the skiascopy rack|Encaje para regla de esquiascopia
+Encaixe para lâmpada de fenda|Fits the slit lamp|Encaje para lámpara de hendidura
+Uma borboleta para levar cor e imaginação à consulta.|A butterfly to bring color and imagination to every appointment.|Una mariposa para llevar color e imaginación a la consulta.
+Um dinossauro simpático para acompanhar cada olhar.|A friendly dinosaur for every glance.|Un dinosaurio simpático para acompañar cada mirada.
+Um convite para a imaginação decolar: as aberturas lembram janelas de avião.|An invitation to let imagination take flight: the openings resemble airplane windows.|Una invitación a que la imaginación despegue: las aberturas recuerdan ventanillas de avión.
+Um macaquinho para acompanhar o olhar dos pequenos.|A little monkey to keep the little ones company.|Un monito para acompañar la mirada de los pequeños.
+Espaço do retinoscópio livre|Open slot for the retinoscope|Espacio del retinoscopio libre
+Abertura para o retinoscópio|Opening for the retinoscope|Abertura para el retinoscopio
+Cores à sua escolha|Colors of your choice|Colores a tu elección
+16 aberturas com os graus ao lado|16 openings with the lens powers alongside|16 aberturas con las graduaciones al lado
+Metades presas por ímãs|Halves held by magnets|Mitades unidas con imanes
+Cores fixas|Fixed colors|Colores fijos
+Impresso em 3D|3D printed|Impreso en 3D
+Peças|Pieces|Piezas
+Escolha o seu|Choose yours|Elige el tuyo
+Escolha o seu · Ju, imprime pra mim?|Choose yours · Ju, imprime pra mim?|Elige el tuyo · Ju, imprime pra mim?
+O 3D NAS SUAS CONSULTAS|3D IN YOUR APPOINTMENTS|EL 3D EN TUS CONSULTAS
+Comece pelo equipamento da sua consulta.|Start with the instrument you use in your appointments.|Empieza por el equipo de tu consulta.
+Encaixe para|Made to fit the|Encaje para
+Ver as peças|See the pieces|Ver las piezas
+Ver todas as peças|See all pieces|Ver todas las piezas
+Outros encaixes|Other fits|Otros encajes
+FICHA TÉCNICA|SPECIFICATIONS|FICHA TÉCNICA
+Encaixe|Fits|Encaje
+Produção|Production|Producción
+Para todo o Brasil|All over Brazil|A todo Brasil
+Feito em|Made with|Hecho con
+Impressão 3D|3D printing|Impresión 3D
+Disponibilidade|Availability|Disponibilidad
+Peças de oftalmologia|Ophthalmology pieces|Piezas de oftalmología
+ENCONTRE A PEÇA DO SEU EQUIPAMENTO|FIND THE PIECE FOR YOUR INSTRUMENT|ENCUENTRA LA PIEZA DE TU EQUIPO
+Você também pode gostar|You may also like|También te puede gustar
+Comece por uma destas|Start with one of these|Empieza por una de estas
+Informações da compra|Purchase information|Información de la compra
+Entrega e frete.|Delivery and shipping.|Entrega y envío.
+Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.|We ship with Correios all over Brazil; shipping cost and time come from your CEP (postal code).|Enviamos por Correios a todo Brasil; el envío y el plazo salen del CEP (código postal).
+Formas de pagamento.|Payment options.|Formas de pago.
+Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.|Pix with 5% off, or credit and debit card, through Mercado Pago.|Pix con 5% de descuento o tarjeta de crédito y débito, por Mercado Pago.
+Feito sob encomenda.|Made to order.|Hecho por encargo.
+A produção leva 3 a 5 dias úteis e começa depois da confirmação do pagamento.|Production takes 3 to 5 business days and starts once payment is confirmed.|La producción tarda de 3 a 5 días hábiles y empieza después de confirmarse el pago.
+Trocas e devoluções.|Exchanges and returns.|Cambios y devoluciones.
+Você pode desistir em até 7 dias depois de receber.|You can cancel within 7 days of receiving it.|Puedes desistir hasta 7 días después de recibirlo.
+Métodos de pagamento aceitos|Accepted payment methods|Métodos de pago aceptados
+Pagamento processado pelo Mercado Pago|Payment processed by Mercado Pago|Pago procesado por Mercado Pago
+Ver a peça|See the piece|Ver la pieza
+Girar em 360°|Turn 360°|Girar en 360°
+Arraste para girar|Drag to rotate|Arrastra para girar
+A prévia 3D não abriu neste navegador; a foto mostra as cores originais.|The 3D preview did not open in this browser; the photo shows the original colors.|La vista previa 3D no se abrió en este navegador; la foto muestra los colores originales.
+Escolha a cor de cada parte|Choose the color of each part|Elige el color de cada parte
+Partes da peça|Parts of the piece|Partes de la pieza
+Adicionar com estas cores|Add in these colors|Añadir con estos colores
+Desistência em até 7 dias|Cancel within 7 days|Desistimiento hasta 7 días
+Cada peça é impressa depois do pedido, nas cores escolhidas. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in the chosen colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en los colores elegidos. La producción empieza después de confirmarse el pago.
+Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho.|We ship with Correios. Shipping cost and delivery time come from your CEP (postal code), right in the cart.|Enviamos por Correios. El envío y el plazo de entrega salen del CEP (código postal), ya en el carrito.
+Ver mais|See more|Ver más
+Ver todas|See all|Ver todas
+sem frete|without shipping|sin envío
+Recolher o resumo da compra|Collapse the purchase summary|Contraer el resumen de compra
+Abrir o resumo da compra|Open the purchase summary|Abrir el resumen de compra
+Fotos da peça|Photos of the piece|Fotos de la pieza
+Todas as peças|All pieces|Todas las piezas
+Peças anteriores|Previous pieces|Piezas anteriores
+Mais peças|More pieces|Más piezas
+Ver mais peças|See more pieces|Ver más piezas
+Pausar a troca automática|Pause auto-advance|Pausar el avance automático
+Retomar a troca automática|Resume auto-advance|Reanudar el avance automático
+Produção em|Production in|Producción en
 Canais de atendimento|Ways to reach us|Canales de atención
 Mensagem|Message|Mensaje
 Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…).|Tell us how we can help. If it is about an order, include its number (JU-…).|Cuéntanos cómo podemos ayudarte. Si es sobre un pedido, indica el número (JU-…).
 Ficou com alguma dúvida sobre um produto, seu pedido ou deseja algo personalizado? Fale com a gente.|Have a question about a product or your order, or would you like something custom-made? Talk to us.|¿Tienes alguna duda sobre un producto o tu pedido, o quieres algo personalizado? Habla con nosotros.
 Resposta rápida e atendimento direto.|Quick replies and direct support.|Respuesta rápida y atención directa.
 Falar agora no WhatsApp →|Chat on WhatsApp now →|Hablar ahora por WhatsApp →
+· só mensagens, sem ligações|· messages only, no calls|· solo mensajes, sin llamadas
 O número do WhatsApp entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our WhatsApp number is coming soon. Meanwhile, send us a message using the form below.|El número de WhatsApp llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
 Envie sua dúvida ou arquivo.|Send your question or file.|Envía tu duda o archivo.
 Acompanhe os bastidores e novidades da Ju.|Follow Ju's behind-the-scenes and news.|Sigue los bastidores y las novedades de Ju.
@@ -823,12 +971,12 @@ Cada peça é impressa sob encomenda, nas cores que você escolheu: a produção
 Posso encomendar um modelo personalizado que não está no site?|Can I order a custom design that is not on the site?|¿Puedo encargar un modelo personalizado que no está en el sitio?
 Sim! Adoramos criar projetos especiais. Conte a sua ideia pelo formulário desta página ou pelo WhatsApp e preparamos um orçamento. Se já tiver um arquivo 3D ou uma referência, avise na mensagem que combinamos como enviar.|Yes! We love creating special projects. Tell us your idea using the form on this page or on WhatsApp and we will prepare a quote. If you already have a 3D file or a reference, mention it in your message and we will arrange how to send it.|¡Sí! Nos encanta crear proyectos especiales. Cuéntanos tu idea con el formulario de esta página o por WhatsApp y preparamos un presupuesto. Si ya tienes un archivo 3D o una referencia, avísanos en el mensaje y acordamos cómo enviarlo.
 Como acompanho o status do meu pedido?|How do I track my order?|¿Cómo sigo el estado de mi pedido?
-Na sua conta, em Meus pedidos, você vê a situação de cada compra. Você também recebe um e-mail quando o pagamento é aprovado e outro quando o pedido é confirmado. Quando a peça for postada, enviamos o código de rastreio dos Correios.|In your account, under My orders, you can see the status of each purchase. You also get an email when the payment is approved and another when the order is confirmed. When the piece ships, we send you the Correios tracking code.|En tu cuenta, en Mis pedidos, ves el estado de cada compra. También recibes un correo cuando se aprueba el pago y otro cuando se confirma el pedido. Cuando la pieza se envíe, te mandamos el código de seguimiento de Correios.
+Na sua conta, em Meus pedidos, você acompanha cada compra pelas etapas: pagamento, produção, envio e entrega. Depois que a peça é postada, você acompanha a localização e o status do pacote diretamente em Meus pedidos, atualizados automaticamente pelos Correios, sem precisar copiar o código de rastreio.|In your account, under My orders, you follow each purchase step by step: payment, production, shipping and delivery. Once the piece is posted, you follow the package's location and status right there in My orders, updated automatically by the Correios, with no need to copy the tracking code.|En tu cuenta, en Mis pedidos, sigues cada compra por etapas: pago, producción, envío y entrega. Cuando la pieza se despacha, sigues la ubicación y el estado del paquete directamente en Mis pedidos, actualizados automáticamente por Correios, sin necesidad de copiar el código de seguimiento.
+Você também recebe um e-mail quando o pagamento é aprovado, quando a Ju confirma o pedido, quando ele é postado (com o código de rastreio), quando sai para entrega e quando é entregue.|You also get an email when the payment is approved, when Ju confirms the order, when it is posted (with the tracking code), when it is out for delivery and when it is delivered.|También recibes un correo cuando se aprueba el pago, cuando Ju confirma el pedido, cuando se despacha (con el código de seguimiento), cuando sale para entrega y cuando se entrega.
 Ver meus pedidos →|See my orders →|Ver mis pedidos →
 Quais são os cuidados com as peças impressas em 3D?|How should I care for 3D-printed pieces?|¿Qué cuidados necesitan las piezas impresas en 3D?
 Evite deixar as peças no calor forte ou no sol direto por muito tempo, como dentro de um carro estacionado, para preservar o acabamento e o formato. Para limpar, use um pano macio e seco.|Avoid leaving the pieces in strong heat or direct sunlight for long periods, such as inside a parked car, to preserve their finish and shape. To clean them, use a soft, dry cloth.|Evita dejar las piezas con calor fuerte o al sol directo por mucho tiempo, como dentro de un auto estacionado, para conservar el acabado y la forma. Para limpiarlas, usa un paño suave y seco.
 Quais são as formas de pagamento?|Which payment methods do you accept?|¿Cuáles son las formas de pago?
-Pix, com 5% de desconto nas peças, ou cartão de crédito em até 12x, sendo até 3x sem juros. O pagamento é feito pelo Mercado Pago, com segurança.|Pix, with 5% off the pieces, or credit card in up to 12 installments, up to 3 of them interest-free. Payment is processed securely by Mercado Pago.|Pix, con 5% de descuento en las piezas, o tarjeta de crédito en hasta 12 cuotas, hasta 3 sin intereses. El pago lo procesa Mercado Pago, con seguridad.
 O frete é grátis?|Is shipping free?|¿El envío es gratis?
 Nas compras a partir de R$ 500,00 em peças, o envio por PAC é grátis. Abaixo disso, o frete é calculado pelo CEP, e você escolhe entre PAC e SEDEX.|On orders of R$ 500,00 or more in pieces, PAC shipping is free. Below that, shipping is calculated from your CEP and you choose between PAC and SEDEX.|En compras desde R$ 500,00 en piezas, el envío por PAC es gratis. Por debajo de eso, el envío se calcula por el CEP y eliges entre PAC y SEDEX.
 Posso trocar ou devolver uma peça?|Can I exchange or return a piece?|¿Puedo cambiar o devolver una pieza?
@@ -839,9 +987,13 @@ Digite seu nome.|Please enter your name.|Escribe tu nombre.
 Digite um e-mail válido.|Please enter a valid email.|Escribe un correo válido.
 Escolha um assunto.|Please choose a subject.|Elige un asunto.
 Escreva sua mensagem, com pelo menos 10 caracteres.|Write your message, with at least 10 characters.|Escribe tu mensaje, con al menos 10 caracteres.
+WhatsApp (opcional)|WhatsApp (optional)|WhatsApp (opcional)
+Se preferir, a Ju responde por lá.|If you prefer, Ju can reply there.|Si prefieres, Ju te responde por allí.
+Confira o WhatsApp: com DDD, como (31) 99999-9999. De fora do Brasil, comece com + e o código do país.|Please check the WhatsApp number: from Brazil, with the area code, like (31) 99999-9999. From abroad, start with + and the country code.|Revisa el WhatsApp: en Brasil, con el código de área, como (31) 99999-9999. Desde fuera de Brasil, empieza con + y el código del país.
 Enviando…|Sending…|Enviando…
 Muitas mensagens seguidas. Tente de novo daqui a pouco.|Too many messages in a row. Please try again in a little while.|Demasiados mensajes seguidos. Inténtalo de nuevo en un rato.
-Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para contato@juimprimepramim.com.br.|We could not send it right now. Try again in a few minutes or write to contato@juimprimepramim.com.br.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a contato@juimprimepramim.com.br.
+Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para|We could not send it right now. Try again in a few minutes or write to|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos o escribe a
+Não foi possível enviar agora. Tente de novo em alguns minutos.|We could not send it right now. Try again in a few minutes.|No se pudo enviar ahora. Inténtalo de nuevo en unos minutos.
 Não foi possível enviar agora. Confira a sua conexão e tente de novo.|We could not send it right now. Check your connection and try again.|No se pudo enviar ahora. Revisa tu conexión e inténtalo de nuevo.
 Vistas da peça|Views of the piece|Vistas de la pieza
 Escolher a vista|Choose a view|Elegir la vista
@@ -852,11 +1004,130 @@ vista|view|vista
 Frente|Front|Frente
 Três quartos|Three-quarter|Tres cuartos
 Costas|Back|Parte trasera
+Lado|Side|Lado
+Três quartos de trás|Three-quarter back|Tres cuartos trasero
+De cima|From above|Desde arriba
 Rostinho de perto|Face up close|Carita de cerca
 Rosto de perto|Face up close|Cara de cerca
 Cabine de perto|Cockpit up close|Cabina de cerca
+Cores originais:|Original colors:|Colores originales:
+Observação:|Note:|Observación:
+Crédito|Credit|Crédito
+Débito|Debit|Débito
+Cartão de débito virtual Caixa|Caixa virtual debit card|Tarjeta de débito virtual Caixa
 Pedido confirmado · preparando o envio|Order confirmed · preparing shipment|Pedido confirmado · preparando el envío
 Pedido enviado|Order shipped|Pedido enviado
 Código de rastreio|Tracking code|Código de seguimiento
 Rastrear nos Correios ↗|Track with Correios ↗|Rastrear en Correios ↗
+Pedido entregue|Order delivered|Pedido entregado
+Postado|Posted|Enviado
+Em trânsito|In transit|En tránsito
+Saiu para entrega|Out for delivery|Salió para entrega
+Aguardando retirada|Waiting to be picked up|Esperando retiro
+Entregue|Delivered|Entregado
+Entrega não realizada|Delivery not completed|Entrega no realizada
+Devolvido ao remetente|Returned to the sender|Devuelto al remitente
+Aguardando registro nos Correios|Waiting for the Correios to register it|Esperando el registro en Correios
+Acompanhar entrega|Track the delivery|Seguir la entrega
+Ocultar entrega|Hide the delivery|Ocultar la entrega
+Carregando…|Loading…|Cargando…
+Os Correios ainda não registraram este pacote. Volte a olhar mais tarde.|The Correios have not registered this package yet. Check again later.|Correios todavía no registró este paquete. Vuelve a mirar más tarde.
+Não foi possível carregar o rastreio agora. Tente de novo em instantes.|We could not load the tracking right now. Try again in a moment.|No pudimos cargar el seguimiento ahora. Inténtalo de nuevo en un momento.
+Acompanhe a produção e a entrega dos seus pedidos.|Follow the production and delivery of your orders.|Sigue la producción y la entrega de tus pedidos.
+Filtrar pedidos|Filter orders|Filtrar pedidos
+Todos|All|Todos
+Em produção|In production|En producción
+Enviados|Shipped|Enviados
+Concluídos|Completed|Completados
+Não pôde ser atendido|Could not be fulfilled|No pudo ser atendido
+Produção 3D|3D production|Producción 3D
+Detalhes do pedido|Order details|Detalles del pedido
+Ocultar detalhes|Hide details|Ocultar detalles
+Rastrear pacote|Track package|Rastrear paquete
+Ocultar rastreio|Hide tracking|Ocultar seguimiento
+Código completo|Full code|Código completo
+Data da compra|Purchase date|Fecha de compra
+Cartão de crédito|Credit card|Tarjeta de crédito
+Cartão de débito|Debit card|Tarjeta de débito
+Frete|Shipping|Envío
+Desconto no Pix|Pix discount|Descuento en Pix
+Nota fiscal|Invoice|Factura
+Você ainda não fez nenhum pedido.|You have not placed any orders yet.|Aún no has hecho ningún pedido.
+Que tal dar uma olhada nas nossas coleções?|How about a look at our collections?|¿Qué tal echar un vistazo a nuestras colecciones?
+Ver as coleções|See the collections|Ver las colecciones
+Remover dados de pessoa jurídica|Remove company details|Eliminar los datos de persona jurídica
+Dados de pessoa jurídica retirados. Ao confirmar, a nota fiscal passa a sair no seu CPF.|Company details removed. Once you confirm, the invoice will be issued to your CPF.|Datos de persona jurídica eliminados. Al confirmar, la factura se emitirá a tu CPF.
+Atendimento|Support hours|Atención
+Página não encontrada|Page not found|Página no encontrada
+ou entre com|or continue with|o continúa con
+Continuar com o Google|Continue with Google|Continuar con Google
+Continuar com a Apple|Continue with Apple|Continuar con Apple
+Ao continuar, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.|By continuing, you agree to the Terms of Use and confirm you have read the Privacy Policy.|Al continuar, aceptas los Términos de Uso y declaras haber leído la Política de Privacidad.
+BOAS-VINDAS|WELCOME|BIENVENIDA
+Sua conta está pronta. Para comprar sem pausas, faltam só estes dados para a nota fiscal e os avisos do pedido:|Your account is ready. To shop without stops, we only need these details for the invoice and the order updates:|Tu cuenta está lista. Para comprar sin pausas, solo faltan estos datos para la factura y los avisos del pedido:
+Sua conta está pronta, com tudo o que precisamos para as suas compras.|Your account is ready, with everything we need for your purchases.|Tu cuenta está lista, con todo lo que necesitamos para tus compras.
+Salvar e continuar|Save and continue|Guardar y continuar
+Agora não|Not now|Ahora no
+Ir para minha conta|Go to my account|Ir a mi cuenta
+Telefone (WhatsApp)|Phone (WhatsApp)|Teléfono (WhatsApp)
+CPF e telefone são usados na nota fiscal e nos avisos do pedido.|CPF and phone are used for the invoice and the order updates.|El CPF y el teléfono se usan en la factura y en los avisos del pedido.
+Este jeito de entrar ainda não está disponível. Entre com o seu e-mail.|This sign-in option is not available yet. Sign in with your email.|Esta forma de entrar aún no está disponible. Entra con tu correo.
+A entrada foi cancelada. Tudo bem: escolha outro jeito de entrar.|Sign-in was cancelled. That's fine: choose another way to sign in.|Se canceló el acceso. No pasa nada: elige otra forma de entrar.
+O acesso demorou demais ou foi aberto em outra janela. Tente de novo.|Sign-in took too long or was opened in another window. Please try again.|El acceso tardó demasiado o se abrió en otra ventana. Inténtalo de nuevo.
+Não foi possível entrar agora. Tente de novo ou use o seu e-mail.|We couldn't sign you in right now. Try again or use your email.|No fue posible entrar ahora. Inténtalo de nuevo o usa tu correo.
+Não conseguimos confirmar o e-mail dessa conta. Entre com o código enviado ao seu e-mail.|We couldn't confirm that account's email. Sign in with the code sent to your email.|No pudimos confirmar el correo de esa cuenta. Entra con el código enviado a tu correo.
+O e-mail oficial entra aqui em breve. Enquanto isso, mande sua mensagem pelo formulário abaixo.|Our official email is coming soon. Meanwhile, send us your message with the form below.|Nuestro correo oficial llegará pronto. Mientras tanto, envíanos tu mensaje con el formulario de abajo.
+Ver Envio e prazos →|See Shipping and delivery times →|Ver Envío y plazos →
+Envio e prazos|Shipping and delivery times|Envío y plazos
+Prazos e frete|Delivery times and shipping|Plazos y envío
+Ver envio e prazos|See shipping and delivery times|Ver envío y plazos
+ENVIO E PRAZOS|SHIPPING AND DELIVERY TIMES|ENVÍO Y PLAZOS
+Do ateliê até você.|From the studio to you.|Del taller hasta ti.
+Cada peça é impressa sob encomenda, nas cores que você escolheu. Aqui estão os prazos, o frete e a entrega, num lugar só.|Each piece is printed to order, in the colors you chose. Here are the delivery times, shipping and delivery, all in one place.|Cada pieza se imprime por encargo, en los colores que elegiste. Aquí están los plazos, el envío y la entrega, en un solo lugar.
+Do pedido à entrega|From order to delivery|Del pedido a la entrega
+Começa depois da confirmação do pagamento.|Starts once the payment is confirmed.|Empieza después de la confirmación del pago.
+Postagem|Posting|Despacho
+Correios, PAC ou SEDEX|Correios, PAC or SEDEX|Correios, PAC o SEDEX
+Você recebe um e-mail com o código de rastreio.|You get an email with the tracking code.|Recibes un correo con el código de seguimiento.
+Prazo pelo CEP|Delivery time by postal code|Plazo por código postal
+Aparece no carrinho e na finalização da compra, antes do pagamento.|Shown in the cart and at checkout, before payment.|Aparece en el carrito y al finalizar la compra, antes del pago.
+Nesta página|On this page|En esta página
+Prazo total|Total delivery time|Plazo total
+Frete grátis|Free shipping|Envío gratis
+Acompanhe o seu pedido|Follow your order|Sigue tu pedido
+Onde entregamos|Where we deliver|Dónde entregamos
+Endereço e problemas na entrega|Address and delivery problems|Dirección y problemas en la entrega
+O prazo total é a soma da produção (3 a 5 dias úteis) com o transporte dos Correios. O transporte depende do CEP e do serviço escolhido, e o prazo já somado aparece no carrinho e na finalização da compra, antes de você pagar.|The total delivery time is production (3 to 5 business days) plus the Correios transit. Transit depends on the postal code and the service you choose, and the combined time appears in the cart and at checkout, before you pay.|El plazo total es la suma de la producción (3 a 5 días hábiles) y el transporte de Correios. El transporte depende del código postal y del servicio elegido, y el plazo ya sumado aparece en el carrito y al finalizar la compra, antes de pagar.
+Os prazos contam em dias úteis, a partir da confirmação do pagamento. O Pix é confirmado na hora; no cartão, a confirmação costuma levar poucos minutos.|Times are counted in business days from payment confirmation. Pix is confirmed instantly; card payments usually take a few minutes.|Los plazos se cuentan en días hábiles desde la confirmación del pago. Pix se confirma al instante; con tarjeta, la confirmación suele tardar pocos minutos.
+O frete é calculado pelo CEP, com o contrato da Ju com os Correios. Você escolhe entre o PAC, mais econômico, e o SEDEX, mais rápido.|Shipping is calculated by postal code, under Ju's contract with the Correios. You choose between PAC, the cheaper option, and SEDEX, the faster one.|El envío se calcula por código postal, con el contrato de Ju con Correios. Eliges entre PAC, más económico, y SEDEX, más rápido.
+O valor e o prazo de cada serviço aparecem no carrinho e na finalização da compra, antes do pagamento.|The price and delivery time of each service appear in the cart and at checkout, before payment.|El precio y el plazo de cada servicio aparecen en el carrito y al finalizar la compra, antes del pago.
+Nas compras a partir de|On orders from|En compras desde
+em peças, o envio por PAC é grátis para todo o Brasil.|in pieces, PAC shipping is free all over Brazil.|en piezas, el envío por PAC es gratis a todo Brasil.
+O valor considera as peças pelo preço cheio, sem o frete. Se preferir receber mais rápido, o SEDEX continua disponível, com o frete calculado normalmente.|The amount counts the pieces at full price, without shipping. If you prefer faster delivery, SEDEX is still available, with shipping calculated as usual.|El monto considera las piezas a precio completo, sin el envío. Si prefieres recibir más rápido, SEDEX sigue disponible, con el envío calculado normalmente.
+Em Meus pedidos, na sua conta, você acompanha cada etapa: pagamento, produção, envio e entrega. Depois da postagem, a localização e o status do pacote aparecem ali mesmo, atualizados automaticamente pelos Correios.|In My orders, in your account, you follow every step: payment, production, shipping and delivery. Once posted, the package's location and status appear right there, updated automatically by the Correios.|En Mis pedidos, en tu cuenta, sigues cada etapa: pago, producción, envío y entrega. Después del despacho, la ubicación y el estado del paquete aparecen ahí mismo, actualizados automáticamente por Correios.
+Você também recebe um e-mail quando o pedido é postado (com o código de rastreio), quando sai para entrega e quando é entregue.|You also get an email when the order is posted (with the tracking code), when it is out for delivery and when it is delivered.|También recibes un correo cuando el pedido se despacha (con el código de seguimiento), cuando sale para entrega y cuando se entrega.
+Entregamos em todo o Brasil, pelos Correios. Para enviar para outro país, fale com a Ju antes de comprar.|We deliver all over Brazil with the Correios. To ship to another country, talk to Ju before buying.|Entregamos en todo Brasil, por Correios. Para enviar a otro país, habla con Ju antes de comprar.
+Confira o endereço com atenção antes de pagar: uma entrega que não se completa por endereço errado pode exigir um novo frete.|Check the address carefully before paying: a delivery that fails because of a wrong address may need new shipping.|Revisa la dirección con atención antes de pagar: una entrega que no se completa por una dirección equivocada puede requerir un nuevo envío.
+Se a peça chegar danificada, fotografe a embalagem antes de jogá-la fora e fale com a gente: produzimos uma peça nova, com o frete por nossa conta.|If the piece arrives damaged, take a photo of the package before throwing it away and get in touch: we make a new piece, with shipping on us.|Si la pieza llega dañada, fotografía el embalaje antes de tirarlo y habla con nosotros: producimos una pieza nueva, con el envío por nuestra cuenta.
+Veja também:|See also:|Ver también:
+Contato e perguntas frequentes|Contact and FAQ|Contacto y preguntas frecuentes
+ERRO 404|ERROR 404|ERROR 404
+Ops! Essa página sumiu no meio das impressões 3D.|Oops! This page got lost among the 3D prints.|¡Ups! Esta página se perdió entre las impresiones 3D.
+O endereço pode ter mudado ou a página não existe mais. Que tal voltar para a vitrine ou ver as nossas peças?|The address may have changed, or the page no longer exists. How about going back to the showcase or seeing our pieces?|La dirección puede haber cambiado o la página ya no existe. ¿Qué tal volver a la vitrina o ver nuestras piezas?
+Ir para a vitrine|Go to the showcase|Ir a la vitrina
+Ver a coleção de produtos|See the product collection|Ver la colección de productos
+Procurando algo específico?|Looking for something specific?|¿Buscas algo en particular?
+Sua privacidade|Your privacy|Tu privacidad
+Usamos o essencial para o site funcionar e, com a sua permissão, cookies de análise e de anúncios para entender as visitas e melhorar a loja. Você escolhe.|We use what is essential for the site to work and, with your permission, analytics and advertising cookies to understand visits and improve the shop. You choose.|Usamos lo esencial para que el sitio funcione y, con tu permiso, cookies de análisis y de anuncios para entender las visitas y mejorar la tienda. Tú eliges.
+Essenciais|Essential|Esenciales
+Carrinho, login, idioma e esta escolha. Sempre ativos.|Cart, sign-in, language and this choice. Always on.|Carrito, inicio de sesión, idioma y esta elección. Siempre activos.
+Análise|Analytics|Análisis
+Medir as visitas e o desempenho das páginas, sem identificar você (Google Analytics).|Measure visits and page performance without identifying you (Google Analytics).|Medir las visitas y el rendimiento de las páginas, sin identificarte (Google Analytics).
+Anúncios|Advertising|Anuncios
+Mostrar anúncios da Ju para quem já visitou a loja (pixel da Meta).|Show Ju's ads to people who have visited the shop (Meta pixel).|Mostrar anuncios de Ju a quienes ya visitaron la tienda (píxel de Meta).
+Salvar minhas escolhas|Save my choices|Guardar mis elecciones
+Aceitar todos|Accept all|Aceptar todo
+Recusar|Decline|Rechazar
+Personalizar|Customize|Personalizar
+Preferências de cookies|Cookie preferences|Preferencias de cookies
 `.trim().split('\n').map(line => { const [pt, en, es] = line.split('|'); return [pt, [en, es]]; }));
