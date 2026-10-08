@@ -18,7 +18,7 @@ const ASSETS={
   // do unicórnio refeitas (tools/modelo-novidades)
   // (07/10/2026: as cores seguem o relevo — as manchas, os olhos, as narinas e o sorriso da girafa; as orelhas, as mãos, a crina, o
   // chifre e a faixa da base do unicórnio; o arco-íris em três faixas, roxo, lavanda e dourado; tools/modelo-novidades/pintura.md)
-  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-4',import.meta.url),
+  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-5',import.meta.url),
   unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-2',import.meta.url)
 };
 // The file each piece loads (tests read the same one).

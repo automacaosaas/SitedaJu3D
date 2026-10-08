@@ -18,13 +18,26 @@ const exact = require('./exact.cjs');
 async function run(file, out, opt) {
   const t0 = Date.now(), m = await lib.load(file);
   // 0. reshaped reliefs before anything else reads the geometry: the nostrils rebuilt as two equal, aligned domes (exact.cjs domes)
+  const early = {};
   let rebuilt = null; if (opt.domes) { rebuilt = exact.domes(m, Uint8Array.from(m.label), m.names, opt.domes); console.log('0 domes:', rebuilt.info, '· vertices moved', rebuilt.moved.size); }
+  // 0b. smooth patches (folds and dents of the mesh beside the features): the eyes (their ellipses, from the exact targets named in
+  // keepExact) and the new domes stay; everything else in the patch lies on the surface around it
+  if (opt.smoothRegions?.length) {
+    const ring0 = lib.vertexRing(m), keeps = [];
+    // the eyes are measured here, before the patches move anything, and the same outlines paint them later (step 5)
+    for (const i of opt.smoothKeepExact || []) { const t = opt.exact[i], det = exact.contour(m, Uint8Array.from(m.label), m.names, t); early[i] = det; keeps.push((x, y) => -det.s(x, y) - (opt.smoothKeepMargin ?? .006) / frame(m).s); }
+    for (const e of rebuilt?.ellipses || []) { const c = Math.cos(e.ang), s = Math.sin(e.ang); keeps.push((x, y) => { const u = ((x - e.cx) * c + (y - e.cy) * s) / (e.a * 1.04), w = (-(x - e.cx) * s + (y - e.cy) * c) / (e.b * 1.04); return (Math.hypot(u, w) - 1) * Math.min(e.a, e.b); }); }
+    const keep = (x, y) => Math.min(...keeps.map(f => f(x, y)));
+    for (const r of opt.smoothRegions) { const out = exact.smoothRegion(m, r, keep, ring0); console.log('0b smooth', JSON.stringify(r.at), 'moved', out.moved.size, 'fitted on', out.fitted); rebuilt ||= {moved: new Set(), ellipses: []}; for (const v of out.moved) rebuilt.moved.add(v); }
+  }
   const topo = lib.topology(m), ring = lib.vertexRing(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
   const idOf = n => names.indexOf(n), label = Uint8Array.from(m.label);
   const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
   const count = () => names.map((n, k) => `${n} ${label.filter(l => l === k).length}`).join(' · ');
   log('in', count());
   // 0. forced colours inside boxes (where the texture was simply wrong)
+  // forceRender: the same with a box in render units [x0, y0, x1, y1] seen from the front (a stray fragment of a colour beside an eye)
+  { const fr = frame(m); for (const {box, name, only} of opt.forceRender || []) { const k = idOf(name); let c = 0; for (let f = 0; f < nf; f++) { const x = (C[f * 3] - fr.ctr[0]) * fr.s, y = (C[f * 3 + 1] - fr.lo[1]) * fr.s - 1.9, z = (C[f * 3 + 2] - fr.ctr[2]) * fr.s; if (z > 0 && x >= box[0] && y >= box[1] && x <= box[2] && y <= box[3] && (!only || only.includes(names[label[f]]))) { label[f] = k; c++; } } log('forceRender', name, JSON.stringify(box), c); } }
   for (const {box, name, only} of opt.force || []) { const k = idOf(name); let c = 0; for (let f = 0; f < nf; f++) { const x = C[f * 3], y = C[f * 3 + 1], z = C[f * 3 + 2]; if (x >= box[0] && y >= box[1] && z >= box[2] && x <= box[3] && y <= box[4] && z <= box[5] && (!only || only.includes(names[label[f]]))) { label[f] = k; c++; } } log('force', name, c); }
   // 1. base patches
   const base = new Set((opt.base || []).map(idOf)), detail = new Set((opt.details || []).map(idOf));
@@ -104,7 +117,7 @@ async function run(file, out, opt) {
   for (const t of opt.tube || []) { const r = exact.tube(m, fl, K, names, ring, t); log('5 tube', t.name, 'vertices', r.n, 'inside', r.inside, process.env.HIST ? '\n' + r.hist : ''); }
   const overrides = [], claimed = names.map(() => new Uint8Array(m.nv)), vn = crisp.vertexNormals(m);
   if (rebuilt) log('0 domes: normals rebuilt for', exact.rebuildNormals(m, vn, rebuilt.moved, ring), 'vertices');
-  const dets = (opt.exact || []).map(t => t.mode === 'line' ? exact.line(m, label, names, t) : exact.contour(m, label, names, t));
+  const dets = (opt.exact || []).map((t, i) => early[i] || (t.mode === 'line' ? exact.line(m, label, names, t) : exact.contour(m, label, names, t)));
   // mirrored pairs ('mirror': same group name): the same axes (the mean), the angle mirrored across the vertical — the two nostrils alike
   for (const g of new Set((opt.exact || []).map(t => t.mirror).filter(Boolean))) {
     const pair = dets.filter((d, i) => opt.exact[i].mirror === g && d.ell); if (pair.length !== 2) continue;

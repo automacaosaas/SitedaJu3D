@@ -230,5 +230,66 @@
   "profile": 0.6,
   "relax": 1.55,
   "relaxIterations": 80
- }
+ },
+ "smoothKeepExact": [
+  1,
+  2
+ ],
+ "smoothRegions": [
+  {
+   "at": [
+    -0.29,
+    1.265
+   ],
+   "radii": [
+    0.09,
+    0.075
+   ],
+   "relax": 0,
+   "ring": [
+    1.15,
+    1.6
+   ],
+   "blend": 0.008
+  },
+  {
+   "at": [
+    0.25,
+    0.95
+   ],
+   "radii": [
+    0.09,
+    0.13
+   ],
+   "relax": 0,
+   "blend": 0.03
+  }
+ ],
+ "smoothKeepMargin": 0,
+ "forceRender": [
+  {
+   "box": [
+    -0.45,
+    1.12,
+    -0.18,
+    1.36
+   ],
+   "name": "coat",
+   "only": [
+    "spots"
+   ]
+  },
+  {
+   "box": [
+    0.18,
+    1.12,
+    0.45,
+    1.36
+   ],
+   "name": "coat",
+   "only": [
+    "spots"
+   ]
+  }
+ ]
 }

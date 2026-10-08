@@ -233,4 +233,30 @@ function rebuildNormals(m, vn, moved, ring) {
   return near.size;
 }
 
-module.exports = {contour, line, override, applyVertices, onlyClaimed, tube, domes, rebuildNormals};
+// ── smoothRegion: a patch of the front surface rebuilt smooth ──
+// r: {at: [x, y], radii: [rx, ry] (render units), ring: [from, to] (× radii: where the surface around is fitted), relax (x/y passes),
+// depth (render: how far behind the front surface a vertex still counts as front), blend (render: how far from a kept feature the patch
+// reaches its own surface)}; keepDist(x, y) → signed distance (local units) to the features that must not move (≤ 0: inside, kept)
+// (the eyes, the new domes). Inside the patch the vertices are re-netted in x/y (their neighbours' mean; the edge stays) and laid on the
+// quadric fitted to the ring around, blended out toward the edge (smoothstep from .7 to 1 of the radius).
+function smoothRegion(m, r, keepDist, ring) {
+  const keep = (x, y) => keepDist(x, y) <= 0;
+  const fr = P2.frame(m), P = m.P, cx = r.at[0] / fr.s + fr.ctr[0], cy = (r.at[1] + 1.9) / fr.s + fr.lo[1], ax = r.radii[0] / fr.s, ay = r.radii[1] / fr.s;
+  const [g0, g1] = r.ring ?? [1.15, 1.6], rho = v => Math.hypot((P[v * 3] - cx) / ax, (P[v * 3 + 1] - cy) / ay);
+  // the front surface over the patch (a vertex behind it by more than depth is the back or the bore)
+  const box = [cx - ax * g1 * 1.1, cy - ay * g1 * 1.1, cx + ax * g1 * 1.1, cy + ay * g1 * 1.1], res = 1 / (1600 * fr.s), map = D.rasterize(m, box, res), dz = (r.depth ?? .02) / fr.s;
+  const front = v => { const px = Math.floor((P[v * 3] - box[0]) / res), py = Math.floor((P[v * 3 + 1] - box[1]) / res); if (px < 1 || py < 1 || px > map.W - 2 || py > map.H - 2) return false; let zf = -Infinity; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const z = map.Z[(py + dy) * map.W + px + dx]; if (Number.isFinite(z)) zf = Math.max(zf, z); } return P[v * 3 + 2] >= zf - dz; };
+  const near = []; for (let v = 0; v < m.nv; v++) if (rho(v) < g1 && front(v)) near.push(v);
+  const rows = [], ys = [];
+  for (const v of near) { const q = rho(v); if (q < g0 || keep(P[v * 3], P[v * 3 + 1])) continue; const u = (P[v * 3] - cx) / ax, w = (P[v * 3 + 1] - cy) / ay; rows.push([1, u, w, u * u, u * w, w * w]); ys.push(P[v * 3 + 2]); }
+  const c = fit(rows, ys), surf = (x, y) => { const u = (x - cx) / ax, w = (y - cy) / ay; return c[0] + c[1] * u + c[2] * w + c[3] * u * u + c[4] * u * w + c[5] * w * w; };
+  const inner = new Set(near.filter(v => rho(v) < 1 && !keep(P[v * 3], P[v * 3 + 1]))), frontSet = new Set(near);
+  const X = new Float64Array(m.nv), Y = new Float64Array(m.nv); for (const v of inner) { X[v] = P[v * 3]; Y[v] = P[v * 3 + 1]; }
+  for (let it = 0; it < (r.relax ?? 40); it++) { const next = []; for (const v of inner) { let sx = 0, sy = 0, n = 0; for (const u of ring[v]) { if (!frontSet.has(u)) continue; sx += inner.has(u) ? X[u] : P[u * 3]; sy += inner.has(u) ? Y[u] : P[u * 3 + 1]; n++; } if (n) next.push([v, sx / n, sy / n]); } for (const [v, x, y] of next) { X[v] = x; Y[v] = y; } }
+  const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  const bl = (r.blend ?? .03) / fr.s;
+  for (const v of inner) { const q = rho(v), w = (1 - sm(.7, 1, q)) * sm(0, bl, keepDist(P[v * 3], P[v * 3 + 1])); P[v * 3] = X[v]; P[v * 3 + 1] = Y[v]; P[v * 3 + 2] = w * surf(X[v], Y[v]) + (1 - w) * P[v * 3 + 2]; }
+  return {moved: inner, fitted: rows.length};
+}
+
+module.exports = {contour, line, override, applyVertices, onlyClaimed, tube, domes, rebuildNormals, smoothRegion};
