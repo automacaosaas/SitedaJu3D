@@ -65,7 +65,7 @@ const n = COMMERCE.interestFreeInstallments;
   assert.match(checkout, /<span class="card-off" data-card-offer>\$\{cardOffer\(full\)\}<\/span>/, 'the card option carries the promise');
   assert.match(checkout, /<strong>\$\{shown\}X SEM JUROS<\/strong><span><span>\$\{installmentLabel\(full, shown\)\}<\/span> · <span>ou até \$\{max\}x no crédito<\/span><\/span>/, 'with the installment value');
   assert.match(checkout, /<strong>EM ATÉ \$\{max\}X<\/strong><span><span>no crédito<\/span> · <span>veja as parcelas ao digitar o cartão<\/span><\/span>/, 'or the honest one when Mercado Pago gives fewer');
-  assert.match(checkout, /const freeInstallments = \(\) => \{ const given = cardFree \?\? live\.interestFree; return Number\.isInteger\(given\) \? Math\.min\(COMMERCE\.interestFreeInstallments, given\) : 0; \};/, 'the typed card first, then the account; never past the site\'s number; unknown promises nothing');
+  assert.match(checkout, /const freeInstallments = \(\) => promisedInstallments\(cardFree, live\.interestFree, COMMERCE\.interestFreeInstallments\);/, 'the typed card first, then the account; never past the site\'s number (the rule itself: checkout-extras.mjs)');
   assert.match(checkout, /const free = interestFreeCount\(rows\);\r?\n  if \(free !== cardFree\) \{ cardFree = free; paintCardOffer\(\); \}/, 'the card\'s own table decides once it is typed');
   assert.match(checkout, /pollTimer = clockTimer = null; cardFree = null;/, 'and a new form starts from the account again (disposeLive)');
   assert.doesNotMatch(checkout, /<strong>\d+X SEM JUROS|ATÉ 12X NO CRÉDITO/, 'no number written by hand');

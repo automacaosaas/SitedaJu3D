@@ -5,7 +5,8 @@
 // Token for its installment plans on a reference amount, the price of a lamp (the cheapest piece; a larger cart never gets
 // fewer), and the answer is kept for hours. /api/payments/config hands the number to the checkout, which never promises more,
 // and /api/health shows it to the owner. null = unknown (payments off, or Mercado Pago did not answer): the checkout then
-// promises nothing beyond what the buyer's own card table shows. Never throws, and never holds a request for long.
+// promises nothing beyond what the buyer's own card table shows. Never throws; only the first ask after a start waits for
+// Mercado Pago (at most WAIT_MS), every later one is answered at once from what is kept.
 const mp = require('./mercadopago');
 const {PRODUCTS} = require('./catalog');
 
@@ -17,7 +18,7 @@ const REFERENCE_CENTS = Math.min(...Object.values(PRODUCTS).map(p => p.price));
 const BRANDS = ['master', 'visa'];
 
 function createInterestFree({fetchImpl = globalThis.fetch, now = () => Date.now(), wait = WAIT_MS} = {}) {
-  let kept = null, running = null;   // kept: {token, at, value, failed}
+  let kept = null, running = null;   // kept: {token, at, value, failed}; running: the ask in flight, {token, done}
   async function ask(s) {
     const answers = await Promise.all(BRANDS.map(id => mp.installmentOptions({settings: s, fetchImpl, amountCents: REFERENCE_CENTS, paymentMethodId: id}).catch(() => null)));
     const counts = answers.map(answer => mp.interestFreeCount(answer, REFERENCE_CENTS)).filter(Number.isInteger);
@@ -28,15 +29,19 @@ function createInterestFree({fetchImpl = globalThis.fetch, now = () => Date.now(
     const s = mp.settings(env);
     if (s.mode === 'off') return null;
     const current = () => kept && kept.token === s.token ? kept.value : null;
-    if (kept && kept.token === s.token && now() - kept.at < (kept.failed ? RETRY_MS : KEEP_MS)) return kept.value;
-    if (!running) {
-      const token = s.token;
-      running = ask(s).catch(() => null).then(value => { kept = {token, at: now(), value, failed: value === null}; }).finally(() => { running = null; });
+    const mine = kept && kept.token === s.token ? kept : null;
+    if (mine && now() - mine.at < (mine.failed ? RETRY_MS : KEEP_MS)) return mine.value;
+    if (!running || running.token !== s.token) {
+      const token = s.token, done = ask(s).catch(() => null).then(value => { kept = {token, at: now(), value, failed: value === null}; }).finally(() => { if (running?.done === done) running = null; });
+      running = {token, done};
     }
+    // Once these credentials have an answer (even an old one, or null after a failure), it is handed over at once and the new
+    // one comes in the background (2026-10-08, review): only the first ask after the site starts waits, and never past `wait`.
+    if (mine) return mine.value;
     let timer;
-    await Promise.race([running, new Promise(resolve => { timer = setTimeout(resolve, wait); timer.unref?.(); })]);
+    await Promise.race([running.done, new Promise(resolve => { timer = setTimeout(resolve, wait); timer.unref?.(); })]);
     clearTimeout(timer);
-    return current();   // a refresh still running leaves the last answer (or null) for now
+    return current();   // still asking: null for now, the number on a later request
   };
 }
 

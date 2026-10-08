@@ -9,7 +9,7 @@ import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceI
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
 import {freeShippingBar, barRatio, riseBar} from './free-shipping.js';
-import {installmentRows, installmentsTable, interestFreeCount} from './installments.js';
+import {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
@@ -181,7 +181,7 @@ function payChoice() {
 // the site announces (COMMERCE.interestFreeInstallments). Otherwise the honest "EM ATÉ 12X". Both texts sit in the same place
 // and the larger one sets the size (cart-page.css), so switching never moves the Brick under the buyer's fingers.
 let cardFree = null;
-const freeInstallments = () => { const given = cardFree ?? live.interestFree; return Number.isInteger(given) ? Math.min(COMMERCE.interestFreeInstallments, given) : 0; };
+const freeInstallments = () => promisedInstallments(cardFree, live.interestFree, COMMERCE.interestFreeInstallments);
 function cardOffer(full) {
   const n = freeInstallments(), free = n >= 2, shown = free ? n : COMMERCE.interestFreeInstallments, max = COMMERCE.maxInstallments;
   return `<span class="card-offer"${free ? '' : ' aria-hidden="true"'}><strong>${shown}X SEM JUROS</strong><span><span>${installmentLabel(full, shown)}</span> · <span>ou até ${max}x no crédito</span></span></span><span class="card-offer"${free ? ' aria-hidden="true"' : ''}><strong>EM ATÉ ${max}X</strong><span><span>no crédito</span> · <span>veja as parcelas ao digitar o cartão</span></span></span>`;

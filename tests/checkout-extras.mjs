@@ -10,7 +10,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const {freeShippingProgress, freeShippingBar, freeShippingNote} = await site('free-shipping.js');
-const {installmentRows, installmentsTable, interestFreeCount} = await site('installments.js');
+const {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} = await site('installments.js');
 const {cartSummary} = await site('cart-view.js');
 
 // ── free shipping ─────────────────────────────────────────────────────
@@ -51,6 +51,15 @@ const {cartSummary} = await site('cart-view.js');
   assert.equal(interestFreeCount(rows.slice(0, 1)), 1);
   assert.equal(interestFreeCount([{installments: 1, interestCents: 0}, {installments: 2, interestCents: 5}, {installments: 3, interestCents: 0}]), 1, 'stops at the first interest');
   assert.equal(interestFreeCount([]), null); assert.equal(interestFreeCount(null), null, 'no table yet: the account\'s number decides');
+  // what the card option promises (checkout.js cardOffer), with the site announcing 3 — the rule, not its source text
+  for (const [card, account, promised, why] of [[null, 3, 3, 'before the card: the account'], [null, 6, 3, 'never past what the site announces'], [null, 2, 2, 'the account gives fewer'],
+    [null, 0, 0, 'the account charges interest from 2x on'], [null, undefined, 0, 'the account unknown: no promise'], [null, null, 0, 'unknown'],
+    [1, 3, 0, 'the typed card has interest from 2x on, whatever the account says'], [2, 3, 2, 'the typed card gives 2'], [0, 3, 0, 'interest even in 1x'],
+    [12, 0, 3, 'the typed card\'s own table beats the account, still up to the site\'s number'], [3, undefined, 3, 'the typed card, the account unknown'],
+    [null, 2.5, 0, 'not a count'], [null, '3', 0, 'not a count']]) assert.equal(promisedInstallments(card, account, 3), promised, why);
+  assert.equal(promisedInstallments(null, 6, 6), 6); assert.equal(promisedInstallments(null, 3, 1), 0, 'the site announcing less than 2: nothing to promise');
+  // together: a card whose table charges from 3x on promises 2, never the account's 3
+  assert.equal(promisedInstallments(interestFreeCount(rows), 3, 3), 2);
 }
 
 // ── cart summary: estimate by CEP and the free-shipping bar ───────────

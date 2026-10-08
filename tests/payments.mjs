@@ -167,7 +167,7 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
 
 // ── "sem juros": what the Mercado Pago account really gives (2026-10-08) ─
 {
-  const {createInterestFree, REFERENCE_CENTS} = require('../api/_lib/interest-free');
+  const {createInterestFree, REFERENCE_CENTS, KEEP_MS, RETRY_MS} = require('../api/_lib/interest-free');
   const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
   assert.equal(REFERENCE_CENTS, Math.min(...Object.values(COMMERCE.prices)), 'asked for the cheapest piece, a lamp');
   // A plan is interest-free with rate 0, collected by Mercado Pago, and a total that does not pass the amount.
@@ -215,6 +215,23 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
   assert.equal(await slow(ENV), null);
   await new Promise(resolve => setTimeout(resolve, 150));
   assert.equal(await slow(ENV), 3);
+  // After the first answer nothing waits on Mercado Pago again (review): an old answer is handed over at once while it is asked
+  // again, and the new one (or null, when Mercado Pago does not answer) serves the next request.
+  let open, asked = 0, held = Promise.resolve(), offline = false, account = createFakeMercadoPago({interestFree: 3});
+  const hold = () => { held = new Promise(resolve => { open = resolve; }); };
+  const settle = () => new Promise(resolve => setTimeout(resolve, 20));
+  const atOnce = promise => Promise.race([promise, new Promise(resolve => setTimeout(resolve, 300, 'waited'))]);
+  const later = createInterestFree({fetchImpl: async (url, init) => { asked++; await held; if (offline) throw new Error('offline'); return account.fetchImpl(url, init); }, now: () => clock, wait: 5000});
+  assert.equal(await later(ENV), 3);
+  account = createFakeMercadoPago(); hold(); clock += KEEP_MS;   // the account turned it off, and Mercado Pago is slow
+  assert.equal(await atOnce(later(ENV)), 3, 'the old answer at once, not a wait on Mercado Pago'); assert.equal(asked, 4);
+  open(); await settle();
+  assert.equal(await later(ENV), 0, 'the new answer on the next request'); assert.equal(asked, 4);
+  offline = true; clock += KEEP_MS; assert.equal(await later(ENV), 0); await settle();
+  assert.equal(await later(ENV), null, 'Mercado Pago did not answer: unknown, never the old number');
+  hold(); clock += RETRY_MS;
+  assert.equal(await atOnce(later(ENV)), null, 'asking again after a failure does not wait either'); assert.equal(asked, 8);
+  open(); await settle();
 
   // /api/payments/config and /api/health hand over the number, never anything else.
   const known = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3})).fetchImpl});
