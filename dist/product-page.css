@@ -34,6 +34,9 @@
 #product-dialog[open] .detail-copy > * { animation-delay: .1s; }
 #product-dialog[open] .detail-copy > * + * { animation-delay: .16s; }
 #product-dialog[open] .modal-actions { animation-delay: .18s; }
+/* abrindo (controller.js syncProduct): até a peça nova estar montada (dois quadros; mais num celular lento) o miolo fica parado no
+   começo da entrada, invisível, e só o topo aparece; montada, ela sobe como sempre — nunca a foto e o preço da peça de antes */
+#product-dialog.is-filling :is(.detail-visual, .detail-copy > *, .modal-actions) { animation-play-state: paused; }
 
 /* ── Topo ─────────────────────────────────────────────────────────────────────── */
 .pdp-head { grid-column: 1 / -1; grid-row: 1; position: relative; z-index: 4; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: 16px 22px 14px; background: var(--pd-tint); border-bottom: 1px solid color-mix(in srgb, var(--pd-accent) 10%, transparent); }
@@ -120,6 +123,9 @@
 }
 /* afunda ao toque (depois do hover, para valer também com o mouse em cima) */
 #product-dialog .pdp-surprise:active { transform: scale(.96); transition-duration: .08s; }
+/* computador estreito ("Suas cores" só com as bolinhas): no meio do vão entre o Foto | 3D e as bolinhas, não no meio da área, onde
+   ficaria colado no Foto | 3D */
+@media (min-width: 901px) and (max-width: 1023px) { #product-dialog .pdp-surprise { translate: calc(-50% + 28px) 0; } }
 #product-dialog:is([data-fixed], [data-mode=preview]) .pdp-surprise { display: none; }
 
 /* ── "Dê o seu toque." ────────────────────────────────────────────────────────── */
@@ -340,7 +346,7 @@
 /* Tela baixa até 900 px de largura (celular deitado, zoom de 200% num notebook: 08/10/2026, usabilidade 1): a janela inteira rola e a
    compra, recolhida (purchase-sheet.js), fica presa embaixo — o preço e os botões estão sempre à mão. O topo fica mais baixo, a peça cabe
    entre ele e a compra, e os botões vão para os lados dela: Foto | 3D no canto de cima, o Surpreenda-me no de baixo e as ferramentas do 3D
-   em pé, à direita (a área é larga e baixa; a peça fica no meio). A dica de girar sai. */
+   no outro canto de cima (a área é larga e baixa; a peça fica no meio). A dica de girar sai. */
 @media (max-width: 900px) and (max-height: 560px) {
   #product-dialog { overflow: hidden auto; overscroll-behavior: contain; }
   /* em bloco, não em grade: um item de grade só fica preso dentro da própria linha, e a compra precisa ficar presa na janela toda */
@@ -354,7 +360,8 @@
   #product-dialog .view-tabs { top: 10px; left: 26px; }
   #product-dialog .image-area { inset: 4px 0 4px; }
   #product-dialog #viewer-host { inset: 4px 0; }
-  #product-dialog .viewer-tools { top: 50%; right: 16px; transform: translateY(-50%); flex-direction: column; padding: 2px; border-radius: 24px; }
+  /* as ferramentas do 3D numa linha no canto de cima, espelhando o Foto | 3D: em pé elas passam da altura da área (180 px) */
+  #product-dialog .viewer-tools { top: 10px; right: 26px; transform: none; flex-direction: row; align-items: center; padding: 2px; gap: 0; border-radius: 999px; }
   #product-dialog .pdp-surprise { top: auto; bottom: 4px; left: 16px; right: auto; translate: none; }
   #product-dialog .gallery-dots, #product-dialog:not([data-fixed]):not([data-mode=preview]) .gallery-dots { justify-content: center; padding-left: 0; }
   #product-dialog .view-note { display: none; }

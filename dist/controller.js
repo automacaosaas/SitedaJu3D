@@ -91,18 +91,21 @@ function syncProduct(){
   const changed=key!==activeProduct||!dialog.open||!!closing;cancelClose();activeProduct=key;dialog.dataset.mode=soon?'preview':'compact';dialog.toggleAttribute('data-fixed',!soon&&fixedColors(key));
   if(changed){fillHead(key);selectedPart='body';closeSheet(false);}
   // Movimento 8 (08/10/2026): a janela entra já no quadro do toque, só com o topo; a galeria, as cores, o kit e a trava da página vêm
-  // dois quadros depois, enquanto ela ainda está quase transparente (a entrada começa em opacidade 0).
-  const opening=!dialog.open,asked=request;
-  if(opening){const focused=document.activeElement;opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;dialog.showModal();}trigger=null;
+  // dois quadros depois, enquanto ela ainda está quase transparente (a entrada começa em opacidade 0). Até lá o miolo fica parado no
+  // começo da entrada, invisível (.is-filling): nunca a foto e o preço da peça de antes debaixo do nome da nova, nem num celular lento.
+  // Com movimento reduzido a janela aparece inteira de uma vez, então tudo vem no mesmo quadro.
+  const opening=!dialog.open,later=opening&&!calm.matches,asked=request;
+  if(opening){const focused=document.activeElement;opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;dialog.classList.toggle('is-filling',later);dialog.showModal();}trigger=null;
   const rest=()=>{
     if(activeProduct!==key||!dialog.open)return;lockPage();
     if(changed){fillProduct(key);if(!soon&&!fixedColors(key))renderControls();}
+    dialog.classList.remove('is-filling');
     // a vista já escolhida nesse meio-tempo vale (o cart-bridge.js reabre no 3D a peça que se edita do carrinho)
     if(request!==asked)return;
     if(step==='personalizar'||step==='3d'){if(changed||view!=='model')setView('model');if(!soon&&!fixedColors(key))requestAnimationFrame(()=>$('#palette [aria-checked="true"]')?.focus({preventScroll:true}));}
     else if(changed)setView('photo');
   };
-  if(opening)requestAnimationFrame(()=>requestAnimationFrame(rest));else rest();
+  if(later)requestAnimationFrame(()=>requestAnimationFrame(rest));else rest();
 }
 let lockedScroll=null;
 function lockPage(){if(lockedScroll!==null)return;lockedScroll=window.scrollY;document.documentElement.classList.add('modal-open');Object.assign(document.body.style,{position:'fixed',top:`-${lockedScroll}px`,width:'100%',overflow:'hidden'});}
@@ -220,7 +223,8 @@ $('.purchase-actions').addEventListener('click',e=>{
   if(!b||!kitPick||$('#pdp-kit').hidden||dialog.hasAttribute('data-cart-edit'))return;
   e.stopPropagation();
   const lines=kitPick.lines.map(({productId,selection,quantity})=>({productId,selection,quantity})),status=$('#purchase-status');
-  if(!lines.length){status.textContent='Escolha pelo menos uma peça.';return;}
+  // o aviso sai da linha do "3x" e vai para a linha que se anuncia (não aparece duas vezes); paintPrice o devolve
+  if(!lines.length){$('#product-installments').textContent='';status.textContent='Escolha pelo menos uma peça.';return;}
   if(buying)return;buying=true;setTimeout(()=>{buying=false;},900);
   if(b.id==='add-to-cart'){addKit(lines).catch(error=>{status.textContent=error.message;});return;}
   try{sessionStorage.setItem(DIRECT_KEY,JSON.stringify(putItems([],lines)));location.assign('comprar-agora.html');}

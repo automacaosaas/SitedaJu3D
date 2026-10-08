@@ -124,7 +124,9 @@ assert(js.includes('.product-rail-card.is-active[data-product-id="${activeProduc
 
 // Abrir e fechar (movimentos 8 e 12): a janela abre no quadro do toque (o resto vem dois quadros depois) e sai esmaecendo com o fundo.
 {
-  assert(js.includes('if(opening)requestAnimationFrame(()=>requestAnimationFrame(rest));else rest();') && /if\(opening\)\{[^}]*dialog\.showModal\(\);\}/.test(js), 'showModal primeiro, a galeria e o kit depois');
+  assert(js.includes('if(later)requestAnimationFrame(()=>requestAnimationFrame(rest));else rest();') && /if\(opening\)\{[^}]*dialog\.showModal\(\);\}/.test(js) && js.includes('later=opening&&!calm.matches'), 'showModal primeiro, a galeria e o kit depois (com movimento reduzido, tudo junto)');
+  // até a peça nova estar montada, o miolo fica parado no começo da entrada (invisível): nunca a foto e o preço da peça de antes
+  assert(js.includes("dialog.classList.toggle('is-filling',later);dialog.showModal();") && js.includes("dialog.classList.remove('is-filling');") && css.includes('#product-dialog.is-filling :is(.detail-visual, .detail-copy > *, .modal-actions) { animation-play-state: paused; }'), 'sem a peça de antes enquanto a nova monta');
   assert(js.includes("dialog.classList.add('is-closing');") && js.includes("/^pd-(out|down)$/.test(e.animationName))finishClose();") && js.includes("$('.close').addEventListener('click',e=>closeProduct(e.isTrusted));"), 'fechar espera a animação de saída');
   assert(css.includes('#product-dialog[open]::backdrop { animation: pd-fade .22s ease both; }') && css.includes('#product-dialog[open].is-closing { animation: pd-out .18s cubic-bezier(.4, 0, 1, 1) forwards;') && css.includes('#product-dialog.is-closing::backdrop { animation: pd-fade-out .18s ease forwards; }'));
 }
@@ -152,6 +154,8 @@ assert(css.includes('mask-image: linear-gradient(#000 calc(100% - 26px), transpa
 {
   const short = css.slice(css.indexOf('@media (max-width: 900px) and (max-height: 560px) {'));
   assert(short.includes('#product-dialog { overflow: hidden auto;') && short.includes('#product-dialog[open] { display: block; }') && short.includes('#product-dialog .modal-actions { position: sticky; bottom: 0; z-index: 5; }'), 'rola, com a compra presa embaixo');
+  // as ferramentas do 3D numa linha no alto (em pé, com 4 botões de 44 px, passariam dos 180 px da área no celular deitado)
+  assert(short.includes('#product-dialog .viewer-tools { top: 10px; right: 26px; transform: none; flex-direction: row;'), 'as ferramentas do 3D cabem na tela baixa');
   assert((await read('purchase-sheet.js')).includes("const phone = matchMedia('(max-width: 600px), (max-width: 900px) and (max-height: 560px)');"), 'a compra recolhida também na tela baixa');
 }
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
