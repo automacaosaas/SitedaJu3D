@@ -58,9 +58,11 @@ da geometria, em passos:
      site e nas fotos (`lamp-assets.cjs` usa `smooth=0`, as do modelo);
    - `ownNormals` (segunda rodada, os fiapos claros em volta do focinho e na base do olho): os triângulos compridos do pé do focinho
      ligam o amarelo plano à parede do focinho, e a parte amarela deles levava a normal inclinada da parede para longe. Perto do
-     contorno do focinho (`reach`), cada cor passa a usar a normal da própria superfície (média a distância fixa das faces daquela cor
-     que não tocam outra, `crisp.metricField`); a forma não muda e a luz só quebra na borda da tinta, onde a cor já muda. No creme,
-     só onde a superfície olha para a frente (`facing`);
+     contorno do focinho (`reach`), o amarelo passa a usar a normal da própria superfície (média a distância fixa das faces daquela
+     cor que não tocam outra, `crisp.metricField`); a forma não muda e a luz só quebra na borda da tinta, onde a cor já muda. O creme
+     fica com as normais da forma (`geometry`): com a média dele, a borda de trás do focinho — a mesma faixa do contorno, que de frente
+     se vê de chapa — saía salpicada de claro na foto de lado, a 45° e de baixo, qualquer que fosse o `facing` ou o `radius`; de
+     frente, a diferença não passava de um fio de pixels no contorno;
    - `domes.maxFoot`: o raio do pé de cada narina fica limitado a 1,35× a elipse dela — um raio da narina esquerda escapava (0,13 em
      vez de 0,07) até a pele sob o olho esquerdo, e o afundamento amassava a pele já refeita ali (a mancha clara na base do olho);
      `smoothRegions` ganhou o par espelhado do lado esquerdo, embaixo da narina.

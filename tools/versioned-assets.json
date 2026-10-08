@@ -32,8 +32,8 @@
     "sha256": "9666d569dfc29d25"
   },
   "assets/models/girafoscopio.glb": {
-    "v": "rodin10-6",
-    "sha256": "60f3f263136632db"
+    "v": "rodin10-7",
+    "sha256": "7da96b641c445304"
   },
   "assets/models/macacoscopio.glb": {
     "v": "meshy-3",
@@ -44,171 +44,171 @@
     "sha256": "a4cd9ac819a419e8"
   },
   "assets/vistas/aviaoscopia-costas-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "de18fe442839e194"
   },
   "assets/vistas/aviaoscopia-costas.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "51f363ce66fc1e7b"
   },
   "assets/vistas/aviaoscopia-detalhe-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "2566239872404f2c"
   },
   "assets/vistas/aviaoscopia-detalhe.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "9693f09695394d3a"
   },
   "assets/vistas/aviaoscopia-frente-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "8b6310b8f155bf10"
   },
   "assets/vistas/aviaoscopia-frente.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "bf73a5ec9442e060"
   },
   "assets/vistas/aviaoscopia-tres-quartos-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "33003c8a4380d997"
   },
   "assets/vistas/aviaoscopia-tres-quartos.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "ec38a93505f89d79"
   },
   "assets/vistas/borboletoscopio-costas-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "f8b45b2f8b8f4643"
   },
   "assets/vistas/borboletoscopio-costas.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "de2cd052b146ade3"
   },
   "assets/vistas/borboletoscopio-detalhe-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "b78c7a4e931c897f"
   },
   "assets/vistas/borboletoscopio-detalhe.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "c89e8dd4b05140a6"
   },
   "assets/vistas/borboletoscopio-frente-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "81385f9803c996fc"
   },
   "assets/vistas/borboletoscopio-frente.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "a2ec63f7b163572a"
   },
   "assets/vistas/borboletoscopio-tres-quartos-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "9626a10a432f2ac1"
   },
   "assets/vistas/borboletoscopio-tres-quartos.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "d00dbd619ef4543d"
   },
   "assets/vistas/dinossauroscopio-costas-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "b56380e2c331ace0"
   },
   "assets/vistas/dinossauroscopio-costas.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "d24ed6c4abcded45"
   },
   "assets/vistas/dinossauroscopio-detalhe-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "6bd2fb8d68662005"
   },
   "assets/vistas/dinossauroscopio-detalhe.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "b5c86f36009314c5"
   },
   "assets/vistas/dinossauroscopio-frente-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "ad24e9ad5fd76d3d"
   },
   "assets/vistas/dinossauroscopio-frente.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "29f466c60e903523"
   },
   "assets/vistas/dinossauroscopio-tres-quartos-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "5e41940ce3218c0f"
   },
   "assets/vistas/dinossauroscopio-tres-quartos.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "bfac6b6e2135b55e"
   },
   "assets/vistas/girafoscopio-costas-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "f70dfa955a0d26de"
   },
   "assets/vistas/girafoscopio-costas.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "74e3a68f5cce8254"
   },
   "assets/vistas/girafoscopio-detalhe-mini.webp": {
-    "v": "22",
-    "sha256": "e071e7a82ac20447"
+    "v": "23",
+    "sha256": "38e1cf181ee3c4f1"
   },
   "assets/vistas/girafoscopio-detalhe.webp": {
-    "v": "22",
-    "sha256": "abbbab9813e14f3e"
+    "v": "23",
+    "sha256": "f9fa0afee8d004e7"
   },
   "assets/vistas/girafoscopio-frente-mini.webp": {
-    "v": "22",
-    "sha256": "9ff50077a7d232eb"
+    "v": "23",
+    "sha256": "68870ff868fd5a7b"
   },
   "assets/vistas/girafoscopio-frente.webp": {
-    "v": "22",
-    "sha256": "426c6f8ac7204cc6"
+    "v": "23",
+    "sha256": "d318412bcc3ed061"
   },
   "assets/vistas/girafoscopio-lado-mini.webp": {
-    "v": "22",
-    "sha256": "58eceac7b13a813c"
+    "v": "23",
+    "sha256": "a182eb9b08d8eb46"
   },
   "assets/vistas/girafoscopio-lado.webp": {
-    "v": "22",
-    "sha256": "c7f2a3259e0c3294"
+    "v": "23",
+    "sha256": "6dd226725360dffa"
   },
   "assets/vistas/macacoscopio-frente-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "d0c51b31de7488f8"
   },
   "assets/vistas/macacoscopio-frente.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "48b1764b5b71b67c"
   },
   "assets/vistas/unicornioscopio-costas-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "fc21262b497e6036"
   },
   "assets/vistas/unicornioscopio-costas.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "d4374aa2551bc0ea"
   },
   "assets/vistas/unicornioscopio-detalhe-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "7706b4dcc2dc1ef7"
   },
   "assets/vistas/unicornioscopio-detalhe.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "78108f6429b36684"
   },
   "assets/vistas/unicornioscopio-frente-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "566c89815b7f5592"
   },
   "assets/vistas/unicornioscopio-frente.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "1b6e361d46e4fea2"
   },
   "assets/vistas/unicornioscopio-lado-mini.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "a3eac901b8f55009"
   },
   "assets/vistas/unicornioscopio-lado.webp": {
-    "v": "22",
+    "v": "23",
     "sha256": "246435e53a069223"
   }
 }
