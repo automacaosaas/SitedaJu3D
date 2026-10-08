@@ -101,17 +101,27 @@ tela mostrou, o pedido no painel da Ju e os e-mails.
 | `BLAC` | "O pagamento não passou pela análise de segurança do Mercado Pago…" | nada |
 | Elo **débito** com `APRO` | aprovado, só em 1x | "Cartão de débito" |
 
-No ambiente de teste, o código do Mercado Pago aparece pequeno entre parênteses depois da frase (por exemplo
+Cada recusa abre um aviso no meio da tela (no celular, uma folha que sobe de baixo): **"Pagamento não aprovado"**, o
+motivo em uma frase curta, o que fazer e os botões **"Tentar outro cartão"** (ou "Corrigir os dados do cartão",
+"Escolher outras parcelas", "Tentar de novo", conforme o motivo) e **"Pagar com Pix"**, que troca para o Pix. No `OTHE`
+o motivo do aviso é "O banco do seu cartão recusou esta compra."; nos outros, o começo da frase da tabela. Esc, o ×
+ou o botão principal fecham o aviso e devolvem o cursor ao formulário do cartão, e a frase da tabela fica logo abaixo
+dele, como lembrete.
+
+No ambiente de teste, o código do Mercado Pago aparece pequeno no aviso e entre parênteses depois da frase (por exemplo
 `(insufficient_amount)`). Anote-o se a frase não combinar com a tabela: o Mercado Pago às vezes usa outro nome, e a
 frase volta para a geral ("O pagamento não foi aprovado…"). **No site real esse código nunca aparece.**
 
 ### 3.3 Pix de teste
 
-1. Escolha **Pix**: aparecem o QR Code, o copia e cola e "Válido por 59:59".
+1. Escolha **Pix**: aparecem as etapas (Pedido criado ✓ · Código Pix gerado ✓ · Aguardando pagamento, com o sinal de
+   espera · Pagamento confirmado), o valor, "Válido por 59:59", o QR Code, o copia e cola com **"Copiar código"**
+   (vira "Copiado!") e o passo a passo. Quando o Pix é pago, as etapas ganham o ✓ e a página segue sozinha para
+   "Seu pedido ganhou vida.".
 2. Um Pix de teste normalmente **fica pendente** (não há banco de verdade para pagar). A documentação do Mercado Pago diz
    que um Pix de teste com o nome do comprador **APRO** é aprovado sozinho: crie uma conta no site com o nome "APRO" e
    tente. Se não aprovar, tudo bem: o Pix é comprovado na compra real (etapa 6).
-3. Com um Pix esperando, clique em **"← Alterar dados ou pagamento"** e gere outro. No painel do Mercado Pago, o
+3. Com um Pix esperando, clique em **"← Voltar"** (no alto) ou em **"← Alterar dados ou pagamento"** e gere outro. No painel do Mercado Pago, o
    primeiro pedido deve aparecer **cancelado**: o código antigo não pode mais ser pago junto com o novo.
 4. Deixe um Pix passar de 1 hora: a página mostra "O tempo passou." e **"Gerar novo código Pix"**. O novo código nasce e
    o antigo é cancelado. Pix que não foi pago some de "Meus pedidos" depois de 2 horas.

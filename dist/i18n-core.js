@@ -90,6 +90,8 @@ const dynamic = [
   [/^Frete grátis \((.+)\) garantido!$/, 'Free shipping ($1) unlocked!', '¡Envío gratis ($1) garantizado!'],
   [/^Frete grátis \((.+)\) em compras a partir de (R\$ [\d.,]+)$/, 'Free shipping ($1) on orders from $2', 'Envío gratis ($1) en compras desde $2'],
   [/^(\d+)x de (R\$ [\d.,]+)$/, '$1x of $2', '$1x de $2'],
+  // the card's installments at a glance under the payment form (installments.js installmentsInfo)
+  [/^Até (\d+)x de (R\$ [\d.,]+)$/, 'Up to $1x of $2', 'Hasta $1x de $2'],
   [/^ou (\d+)x de (R\$ [\d.,]+) sem juros no cartão$/, 'or $1 interest-free card installments of $2', 'o $1 cuotas sin interés de $2 con tarjeta'],
   // the card offer with its number from commerce-config.js (interestFreeInstallments): the bar on top, the home's product
   // window, the Contato FAQ and the checkout's card option (with the honest "EM ATÉ 12X" when Mercado Pago gives fewer)

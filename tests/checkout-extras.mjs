@@ -1,5 +1,6 @@
 // Checkout improvements of 30/09/2026: the free-shipping bar (product, cart, checkout), the shipping estimate in the cart,
-// the installments table with the interest of each option, the mobile total bar and the optional sign-up password.
+// the installments table with the interest of each option (since 2026-10-08 behind a short summary: tests/checkout-ux.mjs),
+// the mobile total bar and the optional sign-up password.
 // Run: node tests/checkout-extras.mjs — no network, no browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -93,12 +94,15 @@ const {cartSummary} = await site('cart-view.js');
   // real site, and a waiting Pix cancelled before a new one is made.
   assert.match(checkout, /if \(!order\.attempt\) order = \{\.\.\.order, attempt: newAttempt\(\)\};/, 'the attempt is kept across retries');
   assert.match(checkout, /if \(order\?\.attempt === attempt && !keepAttempt\(status\)\) order = \{\.\.\.order, attempt: null\};/, 'and dropped after a definite answer');
-  assert.match(checkout, /payMethod=button\.dataset\.method;order=\{\.\.\.order,attempt:null\};/, 'switching Pix/card starts a new attempt (another total)');
+  assert.match(checkout, /payMethod = next; order = \{\.\.\.order, attempt: null\};/, 'switching Pix/card starts a new attempt (another total)');
+  assert.match(checkout, /if\(action==='pay-method'\)\{switchMethod\(button\.dataset\.method\);\}/, 'the options, the arrow keys and the refusal notice\'s "Pagar com Pix" all switch the same way');
   assert.match(checkout, /attempt, deviceId: currentDeviceId\(\) \|\| undefined,/, 'the device id goes with the payment');
   assert.match(checkout, /loadDeviceId\(\);/);
-  assert.match(checkout, /showPaymentError\(refusalMessage\(result\.reason\), test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code in parentheses only in test mode');
+  // a refusal opens the notice (tests/checkout-ux.mjs); Mercado Pago's code goes along only in test mode
+  assert.match(checkout, /refuse\(result\.reason, test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code only in test mode');
+  assert.match(checkout, /refuse\(result\.reason, test \? result\.reason \|\| result\.detail : ''\)/, 'also for Mercado Pago\'s 402');
   assert.doesNotMatch(checkout, /refusedMessage\(\), result\.statusDetail/);
-  assert.match(checkout, /if\(action==='new-pix'\)\{if\(await dropPix\(button\)==='gone'/, '"Gerar novo código Pix" cancels the old one first');
+  assert.match(checkout, /if\(action==='new-pix'\|\|action==='pix-back'\)\{if\(await dropPix\(button\)==='gone'/, '"Gerar novo código Pix" and the Pix screen\'s "Voltar" cancel the old one first');
   assert.match(checkout, /if\(action==='delivery'\)\{if\(order\?\.live&&\['pix','expired'\]\.includes\(order\.phase\)&&await dropPix\(button\)!=='gone'\)return;/, 'and so does going back from a waiting Pix');
   assert.match(checkout, /try \{ result = await cancelPayment\(order\.mpId\); \} catch \{\}/);
   assert.match(fake, /window\.MP_DEVICE_SESSION_ID = /, 'the simulator stands in for security.js');

@@ -4,12 +4,14 @@ import {COMMERCE, money, installmentLabel} from './commerce-config.js';
 import {CONTACT} from './company.js';
 import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
-import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceId, currentDeviceId, newAttempt, keepAttempt, createPayment, paymentState, cancelPayment, paymentMessage, refusalMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceId, currentDeviceId, newAttempt, keepAttempt, createPayment, paymentState, cancelPayment, paymentMessage, refusalNotice, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {openRefusalNotice} from './payment-notice.js';
+import {pixSteps, formatPixClock, pixClockNotice, pixHowTo} from './pix-panel.js';
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
 import {freeShippingBar, barRatio, riseBar} from './free-shipping.js';
-import {installmentRows, installmentsTable, interestFreeCount, promisedInstallments} from './installments.js';
+import {installmentRows, installmentsInfo, interestFreeCount, promisedInstallments} from './installments.js';
 import {icon} from './icons.js';
 import {saveDemoOrder, getSession, refreshSession, loadProfile, saveProfile} from './auth-service.js';
 import {identificationForm, wireIdentification, readIdentification, showIdentificationError} from './identification.js';
@@ -162,13 +164,20 @@ function livePaymentView() {
   const test = live.mode === 'test', phase = order.phase, expired = phase === 'expired';
   const back = '<button class="text-button payment-back" data-action="delivery">← Alterar dados ou pagamento</button>';
   if (phase === 'pix' || expired) {
-    const qr = safeBase64(order.pix?.qrCodeBase64);
-    return `${heading('PEDIDO ' + order.id, expired ? 'O tempo passou.<br><em>Suas escolhas ficaram.</em>' : 'Falta só<br><em>um pequeno passo.</em>', test ? 'Pix de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Pague com o Pix e o pedido é confirmado na hora.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento por Pix">${progress()}<div class="payment-state"><span class="status-pill ${expired ? 'expired' : ''}">${expired ? 'Código expirado' : '<i class="waiting-dot" aria-hidden="true"></i>Aguardando pagamento'}</span><h2>${expired ? 'Gere um novo código.' : 'Pague do seu jeito, com Pix.'}</h2><p>${expired ? 'Seu pedido e suas cores continuam aqui.' : 'No celular, copie o código. Em outro dispositivo, use o QR Code.'}</p></div>${expired ? '<div class="expired-art" aria-hidden="true">↻</div>' : `${qr ? `<div class="live-qr"><img src="data:image/png;base64,${qr}" width="200" height="200" alt="QR Code do Pix"></div>` : ''}<p class="countdown">Válido por <strong id="pix-time" role="timer"></strong></p><label class="pix-code-label" for="pix-code">Pix copia e cola</label><div class="pix-copy"><input id="pix-code" readonly value="${esc(order.pix?.qrCode)}"><button data-action="copy-live-pix">Copiar código</button></div>${test ? '<p class="small-note">No ambiente de teste o Pix fica pendente: não existe pagamento real para confirmar. Para ver um pedido aprovado, use um cartão de teste.</p>' : ''}`}<div class="payment-buttons">${expired ? primary('Gerar novo código Pix', 'new-pix') : '<button class="secondary-button" data-action="check-now">Já paguei · verificar agora</button>'}</div>${back}</section>${summary(order.items)}</div>`;
+    // The Pix screen (2026-10-08): "Voltar" on top (back to choosing how to pay, the old code cancelled first, like "Alterar
+    // dados ou pagamento"), the four steps with the wait shown on the third, the amount and the time left, the QR Code and
+    // the copy-and-paste code, and how to pay in three lines. The steps' first check draws itself once, when the code is new.
+    const qr = safeBase64(order.pix?.qrCodeBase64), fresh = !expired && !order.pixShown;
+    order.pixShown = true;
+    const pixBack = `<div class="pix-top"><button type="button" class="pix-back" data-action="pix-back"><span class="pix-back-icon" aria-hidden="true">${icon('arrow')}</span><span>Voltar</span><span class="sr-only"> para as formas de pagamento</span></button></div>`;
+    const waiting = `<div class="pix-head"><h2>Pague do seu jeito, com Pix.</h2><p>No celular, copie o código. Em outro dispositivo, use o QR Code.</p></div><dl class="pix-facts"><div><dt>Valor no Pix</dt><dd>${money(order.amounts.total - pixDiscount(order.items))}</dd></div><div><dt>Válido por</dt><dd><strong id="pix-time" role="timer">${formatPixClock((order.expiresAt - Date.now()) / 1000)}</strong></dd></div></dl><div class="pix-pay">${qr ? `<div class="live-qr"><img src="data:image/png;base64,${qr}" width="240" height="240" alt="QR Code do Pix"></div>` : ''}<div class="pix-code"><label class="pix-code-label" for="pix-code">Pix copia e cola</label><div class="pix-copy"><input id="pix-code" readonly value="${esc(order.pix?.qrCode)}"><button type="button" class="pix-copy-button" data-action="copy-live-pix"><span class="pix-copy-icon" aria-hidden="true">${icon('document')}${icon('check')}</span><span class="pix-copy-labels"><span class="pix-copy-idle">Copiar código</span><span class="pix-copy-done" aria-hidden="true">Copiado!</span></span></button></div><p class="pix-copy-hint" id="pix-copy-hint" hidden>Não deu para copiar sozinho. O código ficou selecionado: use a opção Copiar do seu aparelho.</p></div></div>${pixHowTo()}${test ? '<p class="small-note">No ambiente de teste o Pix fica pendente: não existe pagamento real para confirmar. Para ver um pedido aprovado, use um cartão de teste.</p>' : ''}<div class="payment-buttons"><button type="button" class="secondary-button" data-action="check-now">Já paguei · verificar agora</button></div>`;
+    const ended = `<div class="payment-state pix-ended"><div class="expired-art" aria-hidden="true">↻</div><h2>Gere um novo código.</h2><p>Seu pedido e suas cores continuam aqui.</p></div><div class="payment-buttons">${primary('Gerar novo código Pix', 'new-pix')}</div>`;
+    return `${heading('PEDIDO ' + order.id, expired ? 'O tempo passou.<br><em>Suas escolhas ficaram.</em>' : 'Falta só<br><em>um pequeno passo.</em>', test ? 'Pix de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Pague com o Pix e o pedido é confirmado na hora.')}<div class="shop-layout"><section class="payment-panel pix-panel" aria-label="Pagamento por Pix">${pixBack}${pixSteps(expired ? 'expired' : 'waiting', {fresh: fresh ? [1] : []})}${expired ? ended : waiting}${back}</section>${summary(order.items)}</div>`;
   }
   if (phase === 'review') {
     return `${heading('PEDIDO ' + order.id, 'Estamos<br><em>confirmando.</em>', 'O pagamento está em análise. Costuma levar poucos minutos.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento em análise">${progress()}<div class="payment-state"><span class="status-pill"><i class="waiting-dot" aria-hidden="true"></i>Em análise</span><h2>Só mais um instante.</h2><p>Você não precisa fazer nada. Quando o pagamento for confirmado, esta página avança sozinha.</p></div><div class="payment-buttons"><button class="secondary-button" data-action="check-now">Verificar agora</button></div></section>${summary(order.items)}</div>`;
   }
-  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${payChoice()}${testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true"></div><div id="installments-info" class="installments-info" aria-live="polite" hidden></div><p id="card-error" class="inline-error" role="alert"></p>${back}</section>${summary(order.items)}</div>`;
+  return `${heading('PAGAMENTO', 'Falta só<br><em>um pequeno passo.</em>', test ? 'Ambiente de teste do Mercado Pago. Nenhum valor real será cobrado.' : 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.')}<div class="shop-layout"><section class="payment-panel" aria-label="Pagamento">${progress()}${payChoice()}${testHelp()}<p id="brick-loading" class="small-note">Carregando as formas de pagamento…</p><div id="payment-brick" class="payment-brick" translate="no" aria-busy="true" tabindex="-1"></div><p id="card-error" class="inline-error" role="alert"></p><div id="installments-info" class="installments-info" aria-live="polite" hidden></div>${back}</section>${summary(order.items)}</div>`;
 }
 // Pix and card side by side, above the Brick. The Brick then opens with only the chosen method and its amount.
 function payChoice() {
@@ -192,11 +201,37 @@ function disposeLive() {
   try { brick?.unmount?.(); } catch {}
   brick = null;
 }
-function showPaymentError(message, detail = '') {
+// The line right under the payment form. `quiet`: a refusal, which the notice already says aloud (the line stays as a
+// reminder beside the form, without a second alert).
+function showPaymentError(message, detail = '', {quiet = false} = {}) {
   const box = main.querySelector('#card-error');
   if (!box) return announce(message);
+  if (quiet) box.removeAttribute('role'); else box.setAttribute('role', 'alert');
   box.textContent = message;
-  if (detail) { const small = document.createElement('small'); small.setAttribute('translate', 'no'); small.style.fontSize = '12px'; small.textContent = ` (${detail})`; box.append(small); }   // test mode only: Mercado Pago's own code
+  if (detail) { const small = document.createElement('small'); small.className = 'inline-error-code'; small.setAttribute('translate', 'no'); small.textContent = ` (${detail})`; box.append(small); }   // test mode only: Mercado Pago's own code
+}
+// A refused card (2026-10-08): the notice opens with the reason and what to do; "Tentar outro cartão" (or whatever fits the
+// reason), Esc or × bring focus back to the card form, with the same sentence left as a reminder right under it (written
+// only then, as an answer to that click or key, so nothing moves on the page by itself); "Pagar com Pix" switches to Pix.
+// `code`: Mercado Pago's own code, test only.
+function refuse(reason, code = '') {
+  const notice = refusalNotice(reason);
+  openRefusalNotice({notice, code, pixPrice: order?.amounts ? money(order.amounts.total - pixDiscount(order.items)) : '', onChoice: choice => {
+    if (choice === 'pix' && notice.pix) return switchMethod('pix');
+    showPaymentError(notice.text, code, {quiet: true});
+    const form = main.querySelector('#payment-brick');
+    if (!form) return;
+    form.focus({preventScroll: true});
+    form.scrollIntoView({block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  }});
+}
+// Pix or card above the Brick (the options, the arrow keys and the refusal notice's "Pagar com Pix"): another total, so a new attempt.
+function switchMethod(next) {
+  if (next === payMethod || !order?.live || order.phase !== 'form') return;
+  payMethod = next; order = {...order, attempt: null};
+  render(false);
+  main.querySelector(`[data-method="${payMethod}"]`)?.focus();
+  announce(payMethod === 'pix' ? 'Pix escolhido: 5% de desconto nas peças.' : 'Cartão escolhido.');
 }
 async function mountBrick() {
   const token = ++brickToken, box = main.querySelector('#payment-brick');
@@ -244,7 +279,7 @@ async function showInstallments(mp, bin) {
     installmentCache.set(key, rows);
   }
   if (token !== binToken || !box.isConnected) return;
-  box.innerHTML = installmentsTable(rows);
+  box.innerHTML = installmentsInfo(rows, {open: Boolean(box.querySelector('details')?.open)});   // "Ver todas as parcelas" stays as the buyer left it
   box.hidden = !box.innerHTML;
   const free = interestFreeCount(rows);
   if (free !== cardFree) { cardFree = free; paintCardOffer(); }
@@ -272,8 +307,9 @@ function submitFromBrick(data) {
       if (status === 401) { reject(new Error('unauthorized')); location.assign(signInPage()); return; }
       if (result?.error === 'profile_incomplete') { reject(new Error('profile_incomplete')); setTimeout(() => toIdentification().then(() => announce(paymentMessage(status, result))), 0); return; }
       if (['shipping_changed', 'shipping_unavailable', 'no_service'].includes(result?.error) || (result?.error === 'invalid_request' && result?.field === 'shipping')) { reject(new Error('shipping')); setTimeout(() => backToDelivery(result), 0); return; }
+      if (result?.error === 'payment_rejected') { refuse(result.reason, test ? result.reason || result.detail : ''); return reject(new Error('payment_refused')); }   // Mercado Pago's 402: a refusal too
       if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), test ? result?.reason || result?.detail : ''); return reject(new Error('payment_failed')); }
-      if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusalMessage(result.reason), test ? result.paymentStatusDetail || result.statusDetail : ''); return reject(new Error('payment_refused')); }
+      if (result.state === 'refused' || result.state === 'expired') { refuse(result.reason, test ? result.paymentStatusDetail || result.statusDetail : ''); return reject(new Error('payment_refused')); }
       const pix = result.method?.type === 'bank_transfer' || result.method?.id === 'pix';
       order = {...order, id: result.reference, mpId: result.id, method: pix ? 'pix' : 'card', pix: result.pix, expiresAt: pix ? parseExpiry(result.pix?.expiresAt) : null, phase: result.state === 'pending_pix' ? 'pix' : result.state === 'approved' ? 'done' : 'review'};
       resolve();
@@ -291,12 +327,30 @@ function finishPaid() {
   stage = 'confirmation'; render(); announce(order.mode === 'test' ? 'Pagamento de teste aprovado. Nenhum valor real foi cobrado.' : 'Pagamento confirmado.');
 }
 function applyState(state, reason) {
-  if (!order?.live || stage !== 'payment') return;
-  if (state === 'approved') { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); }
+  if (!order?.live || stage !== 'payment' || order.closing) return;
+  if (state === 'approved' && order.phase === 'pix') closePixSteps();
+  else if (state === 'approved') { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); }
   else if (state === 'expired' && order.phase !== 'expired') { order = {...order, phase: 'expired'}; render(false); announce('O Pix expirou. Gere um novo código para continuar.'); }
-  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null, attempt: null}; render(); announce(refusalMessage(reason)); }
+  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null, attempt: null}; render(); refuse(reason); }
 }
-// Leaving a Pix that may still be paid ("Gerar novo código Pix", "← Alterar dados ou pagamento"): its code is cancelled at
+// The Pix was paid: the waiting step and "Pagamento confirmado" get their checks on the Pix screen, then the confirmation
+// that already existed shows (a moment later, so the steps can be seen closing; shorter with reduced motion). Nothing on the
+// screen can be pressed meanwhile, and the clock and the checks stop.
+function closePixSteps() {
+  const paid = order;
+  order = {...order, status: 'approved', closing: true};
+  clearInterval(pollTimer); clearInterval(clockTimer); pollTimer = clockTimer = null;
+  const steps = main.querySelector('.pix-steps');
+  if (steps) steps.outerHTML = pixSteps('paid', {fresh: [2, 3]});
+  main.querySelectorAll('.pix-panel button').forEach(button => { button.disabled = true; });
+  main.querySelector('.pix-panel')?.classList.add('is-paid');
+  setTimeout(() => {
+    if (!order?.closing || order.mpId !== paid.mpId || stage !== 'payment') return;
+    order = {...order, phase: 'done', closing: false};
+    finishPaid();
+  }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 500 : 1300);
+}
+// Leaving a Pix that may still be paid ("Gerar novo código Pix", "← Voltar", "← Alterar dados ou pagamento"): its code is cancelled at
 // Mercado Pago first, so the old QR code cannot be paid next to a new one. 'paid' when it was paid meanwhile (the
 // confirmation shows), 'gone' when it can no longer be paid, 'kept' when Mercado Pago could not be reached (stay, try again).
 async function dropPix(button) {
@@ -307,10 +361,28 @@ async function dropPix(button) {
   try { result = await cancelPayment(order.mpId); } catch {}
   if (button?.isConnected) { button.disabled = false; button.innerHTML = label; }
   const state = result?.status === 200 ? result.data?.state : null;
-  if (state === 'approved') { if (stage === 'payment' && order?.live) { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); } return 'paid'; }
+  if (state === 'approved') { applyState('approved'); return 'paid'; }
   if ((state && state !== 'pending_pix' && state !== 'in_review') || (!state && expired)) return 'gone';   // an expired code cannot be paid anyway
   announce('Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.');
   return 'kept';
+}
+// "Copiar código": the button says "Copiado!" for a moment (the words sit on top of each other, so its width never changes);
+// when the browser refuses the clipboard, the code is selected and a line under it says how to copy it by hand.
+let copiedTimer = null;
+async function copyPixCode(button) {
+  const input = main.querySelector('#pix-code'), hint = main.querySelector('#pix-copy-hint');
+  const mark = copied => { button.classList.toggle('is-copied', copied); button.querySelector('.pix-copy-idle')?.setAttribute('aria-hidden', String(copied)); button.querySelector('.pix-copy-done')?.setAttribute('aria-hidden', String(!copied)); };
+  try {
+    await navigator.clipboard.writeText(order.pix.qrCode);
+    if (hint) hint.hidden = true;
+    mark(true); announce('Código Pix copiado.');
+    clearTimeout(copiedTimer); copiedTimer = setTimeout(() => { if (button.isConnected) mark(false); }, 2500);
+  } catch {
+    mark(false);
+    if (input) { input.focus(); input.setSelectionRange(0, input.value.length); }
+    if (hint) hint.hidden = false;
+    announce('Não deu para copiar sozinho. O código ficou selecionado: use a opção Copiar do seu aparelho.');
+  }
 }
 async function checkNow(button) {
   if (!order?.mpId) return;
@@ -323,9 +395,13 @@ function afterLiveRender() {
   if (order.phase === 'form') mountBrick();
   else if (order.phase === 'pix' || order.phase === 'review') {
     if (order.phase === 'pix') {
+      // the clock (role="timer") changes quietly every second; it speaks only at 5 minutes and at 1 minute left (pixClockNotice)
+      let before = null;
       const tick = () => {
-        const left = Math.max(0, Math.ceil((order.expiresAt - Date.now()) / 1000)), clock = document.querySelector('#pix-time');
-        if (clock) clock.textContent = left >= 3600 ? `${Math.floor(left / 3600)} h ${String(Math.floor(left % 3600 / 60)).padStart(2, '0')} min` : `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
+        const left = Math.max(0, Math.ceil((order.expiresAt - Date.now()) / 1000)), clock = document.querySelector('#pix-time'), notice = before === null ? '' : pixClockNotice(before, left);
+        before = left;
+        if (clock) clock.textContent = formatPixClock(left);
+        if (notice) announce(notice);
         if (!left) { order = {...order, phase: 'expired'}; render(false); announce('O Pix expirou. Gere um novo código para continuar.'); }
       };
       tick(); clockTimer = setInterval(tick, 1000);
@@ -428,9 +504,10 @@ main.addEventListener('click',async e=>{
     if(action==='cart'){const form=document.querySelector('#delivery-form');if(form)draft=Object.fromEntries(new FormData(form));stage='cart';order=null;render();}
     if(action==='delivery'){if(order?.live&&['pix','expired'].includes(order.phase)&&await dropPix(button)!=='gone')return;if(stage!=='payment')return;stage='delivery';order=null;render();}
     if(action==='retry-brick'){render(false);}
-    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;order={...order,attempt:null};render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
-    if(action==='new-pix'){if(await dropPix(button)==='gone'&&stage==='payment'&&order?.live){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending',attempt:null};render();}}
-    if(action==='copy-live-pix'){try{await navigator.clipboard.writeText(order.pix.qrCode);announce('Código Pix copiado.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código Pix.');}}
+    if(action==='pay-method'){switchMethod(button.dataset.method);}
+    // "Gerar novo código Pix" and the Pix screen's "← Voltar": back to choosing how to pay, the waiting code cancelled first (dropPix)
+    if(action==='new-pix'||action==='pix-back'){if(await dropPix(button)==='gone'&&stage==='payment'&&order?.live){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending',attempt:null};render();if(action==='pix-back')announce('O código Pix anterior não vale mais. Escolha como prefere pagar.');}}
+    if(action==='copy-live-pix'){await copyPixCode(button);}
     if(action==='check-now'){await checkNow(button);}
     if(action==='copy-pix'){try{await navigator.clipboard.writeText(demoPixCode(order));announce('Código demonstrativo copiado. Ele não permite pagamentos.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código demonstrativo.');}}
     if(action==='expire'){order={...order,expiresAt:Date.now()-1};render();}

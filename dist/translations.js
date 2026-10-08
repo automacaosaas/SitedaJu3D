@@ -808,6 +808,53 @@ Crédito ou débito|Credit or debit|Crédito o débito
 Copia e cola ou QR Code · 5% off|Copy and paste or QR code · 5% off|Copia y pega o código QR · 5% de descuento
 Pix escolhido: 5% de desconto nas peças.|Pix selected: 5% off the pieces.|Pix elegido: 5% de descuento en las piezas.
 Cartão escolhido.|Card selected.|Tarjeta elegida.
+Pagamento não aprovado|Payment not approved|Pago no aprobado
+Fechar aviso|Close notice|Cerrar aviso
+Pagar com Pix|Pay with Pix|Pagar con Pix
+Tentar outro cartão|Try another card|Probar otra tarjeta
+Corrigir os dados do cartão|Fix the card details|Corregir los datos de la tarjeta
+Escolher outras parcelas|Choose other installments|Elegir otras cuotas
+Entendi|Got it|Entendido
+Código do Mercado Pago (teste):|Mercado Pago code (test):|Código de Mercado Pago (prueba):
+Algum dado do cartão não confere (número, validade ou código de segurança).|Some card detail does not match (number, expiry date or security code).|Algún dato de la tarjeta no coincide (número, vencimiento o código de seguridad).
+O cartão não tem limite disponível para esta compra.|The card does not have enough limit for this purchase.|La tarjeta no tiene límite disponible para esta compra.
+O banco do cartão pediu para você autorizar esta compra.|Your card's bank asked you to authorize this purchase.|El banco de la tarjeta pidió que autorices esta compra.
+Este cartão está bloqueado ou inativo.|This card is blocked or inactive.|Esta tarjeta está bloqueada o inactiva.
+Foram muitas tentativas com este cartão.|There were too many attempts with this card.|Hubo demasiados intentos con esta tarjeta.
+O cartão não aceita esse número de parcelas.|The card does not accept this number of installments.|La tarjeta no acepta esa cantidad de cuotas.
+Um pagamento igual acabou de ser feito.|An identical payment was just made.|Se acaba de hacer un pago igual.
+O pagamento não passou pela análise de segurança do Mercado Pago.|The payment did not pass Mercado Pago's security check.|El pago no pasó el análisis de seguridad de Mercado Pago.
+O banco do seu cartão recusou esta compra.|Your card's bank declined this purchase.|El banco de tu tarjeta rechazó esta compra.
+Não conseguimos processar o pagamento agora.|We could not process the payment right now.|No pudimos procesar el pago ahora.
+O tempo para confirmar a compra com o banco acabou.|The time to confirm the purchase with your bank ran out.|Se acabó el tiempo para confirmar la compra con el banco.
+O cartão não foi aceito desta vez.|The card was not accepted this time.|La tarjeta no fue aceptada esta vez.
+Confira e tente de novo.|Check it and try again.|Revísalo e inténtalo de nuevo.
+Tente outro cartão ou pague com Pix.|Try another card or pay with Pix.|Prueba otra tarjeta o paga con Pix.
+Fale com o banco e tente de novo.|Contact the bank and try again.|Habla con el banco e inténtalo de nuevo.
+Use outro cartão ou pague com Pix.|Use another card or pay with Pix.|Usa otra tarjeta o paga con Pix.
+Escolha outra quantidade e tente de novo.|Choose another number and try again.|Elige otra cantidad e inténtalo de nuevo.
+Confira em Meus pedidos antes de tentar de novo.|Check My orders before trying again.|Revisa Mis pedidos antes de intentarlo de nuevo.
+Tente de novo em alguns instantes.|Try again in a few moments.|Inténtalo de nuevo en unos instantes.
+Tente de novo.|Try again.|Inténtalo de nuevo.
+Confira os dados do cartão ou escolha outra forma de pagamento.|Check your card details or choose another payment method.|Revisa los datos de la tarjeta o elige otra forma de pago.
+com juros|with interest|con intereses
+Ver todas as parcelas|See all installments|Ver todas las cuotas
+Código Pix gerado|Pix code created|Código Pix generado
+Etapas do pagamento por Pix|Pix payment steps|Pasos del pago con Pix
+(etapa concluída)|(step completed)|(paso completado)
+(etapa atual)|(current step)|(paso actual)
+(o tempo acabou)|(time ran out)|(se acabó el tiempo)
+para as formas de pagamento|to the payment methods|a las formas de pago
+Valor no Pix|Pix amount|Importe con Pix
+Copiado!|Copied!|¡Copiado!
+Não deu para copiar sozinho. O código ficou selecionado: use a opção Copiar do seu aparelho.|We couldn't copy it automatically. The code is selected: use your device's Copy option.|No se pudo copiar automáticamente. El código quedó seleccionado: usa la opción Copiar de tu dispositivo.
+Como pagar|How to pay|Cómo pagar
+Abra o app do seu banco e entre na área Pix.|Open your bank's app and go to the Pix area.|Abre la app de tu banco y entra en el área Pix.
+Escolha “Ler QR Code” ou “Pix copia e cola”.|Choose “Scan QR Code” or “Pix copy and paste”.|Elige “Leer código QR” o “Pix copia y pega”.
+Confira o valor e confirme. Esta página avança sozinha.|Check the amount and confirm. This page moves on by itself.|Revisa el importe y confirma. Esta página avanza sola.
+Falta 1 minuto para o código Pix expirar.|1 minute left before the Pix code expires.|Falta 1 minuto para que el código Pix caduque.
+Faltam 5 minutos para o código Pix expirar.|5 minutes left before the Pix code expires.|Faltan 5 minutos para que el código Pix caduque.
+O código Pix anterior não vale mais. Escolha como prefere pagar.|The previous Pix code is no longer valid. Choose how you prefer to pay.|El código Pix anterior ya no es válido. Elige cómo prefieres pagar.
 ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
 Frete calculado pelo CEP|Shipping calculated by postal code|Envío calculado por código postal
 PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA
