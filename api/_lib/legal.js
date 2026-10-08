@@ -29,8 +29,9 @@ const COMPANY = {
   website: 'https://juimprimepramim.com.br'
 };
 
-// 2026-10-07: the Privacidade says how long the contact messages are kept (Mensagens in Ju's panel).
-const TERMS_VERSION = '2026-10-07';
+// 2026-10-08: the Privacidade says the site and the database are on the shop's own server in Brazil (no longer the
+// Hostinger), names the Bling and adds the Backblaze B2 (the encrypted daily copies of the database, in the US).
+const TERMS_VERSION = '2026-10-08';
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const termsDate = (version = TERMS_VERSION) => { const [y, m, d] = version.split('-').map(Number); return `${d} de ${MONTHS[m - 1]} de ${y}`; };

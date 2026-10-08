@@ -62,11 +62,24 @@ não substituem uma revisão jurídica. Pontos que pedem decisão:
   as compras, sem exceção para peças feitas sob encomenda. Criar uma exceção é uma decisão jurídica.
 - **Natureza das peças.** Os Termos não dizem se as peças são acessórios decorativos ou equipamentos; se houver
   exigência regulatória ou orientação de uso junto aos instrumentos, ela deve entrar em "Os produtos".
-- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; confirmar com a Hostinger o prazo dos
-  registros do servidor e, se preciso, guardar os registros no banco por esse prazo.
+- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; os registros ficam no servidor próprio
+  da loja (o nginx e o journal do site), que precisa guardá-los por esse prazo. O padrão do Debian guarda bem menos.
 - **Prazos de reembolso** citados para cartão (até duas faturas) e a forma de devolução do Pix, conforme o Mercado Pago.
-- **Parceiros citados** (Mercado Pago, Correios/Melhor Envio, Resend, Hostinger, emissor de nota fiscal): manter a lista
-  igual aos serviços realmente usados.
+- **Parceiros citados** (Mercado Pago, Correios, ViaCEP/BrasilAPI, Resend, Bling, Backblaze, Google/Apple): manter a
+  lista igual aos serviços realmente usados. O site e o banco ficam no servidor próprio da loja, no Brasil; as cópias
+  diárias do banco vão criptografadas para o Backblaze B2 (EUA), por isso ele aparece também em "Dados fora do Brasil".
+  A conta do Backblaze precisa ter a região nos EUA (com a EU Central, o texto muda), e a cópia na nuvem precisa estar
+  ligada no lançamento (`SERVIDOR-SETUP.md`); se a loja desistir dela, tirar o Backblaze dos dois lugares.
+- **Provedor do servidor.** A Política diz que o servidor é da loja e mantido pela equipe, mas o administrador do
+  provedor já entrou nele por SSH (`deploy/firewall.sh`, `EXTRA_SSH_V4`). Se o provedor continuar com esse acesso, ou se
+  a máquina for dele, ele também trata os dados (como operador) e deve entrar em "Hospedagem", com o nome.
+- **Base das transferências** ("Dados fora do Brasil"): o art. 33, IX, da LGPD (necessário para o contrato e para
+  obrigação legal) vale para o Resend, os serviços de CEP e o Backblaze. No Backblaze a necessidade é discutível, porque
+  há nuvens com região no Brasil: confirmar essa base, usar as cláusulas-padrão da ANPD (Resolução CD/ANPD nº 19/2024)
+  ou levar as cópias para uma região no Brasil.
+- **Prazo das cópias de segurança.** "Por quanto tempo guardamos" não fala delas: um dado excluído (a conta, uma
+  mensagem) continua nas cópias até elas saírem (as 10 mais novas no servidor; 120 dias no Backblaze, pela regra do
+  bucket). Avaliar uma linha sobre isso.
 - **Canal de privacidade:** como microempresa, a loja está dispensada de nomear encarregado (Resolução CD/ANPD nº 2/2022),
   mas o e-mail indicado precisa ser lido e respondido em até 15 dias.
 

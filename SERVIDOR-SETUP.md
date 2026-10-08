@@ -275,7 +275,9 @@ cópias mais novas também ficam no servidor, em `shared/backups`.
 
 Ligar (uma vez):
 
-1. **Backblaze:** criar a conta em backblaze.com (B2 Cloud Storage). Em **Buckets → Create a Bucket**: um nome único
+1. **Backblaze:** criar a conta em backblaze.com (B2 Cloud Storage), com a região dos dados nos EUA (**US West** ou
+   **US East**): é o que diz a Política de Privacidade; com a da Europa (EU Central), o texto dela muda
+   (`LEGAL-SETUP.md`). Em **Buckets → Create a Bucket**: um nome único
    (por exemplo `juimprime-backup-<algo>`), **Private**, criptografia padrão ligada. Em **Lifecycle Settings** do bucket,
    regra própria: arquivos ficam 120 dias e depois saem (`daysFromUploadingToHiding` 120, `daysFromHidingToDeleting` 1).
 2. **Chave do servidor:** em **Application Keys → Add a New Application Key**: nome `servidor-juimprime`, acesso só ao
