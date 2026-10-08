@@ -223,7 +223,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.deepEqual(home.contactPoint, {'@type': 'ContactPoint', contactType: 'customer service', telephone: '+55-31-99198-1151', email: 'juimprimepramim@gmail.com', areaServed: 'BR', availableLanguage: ['Portuguese', 'English', 'Spanish']});
   assert.match(read('dist/contato.html'), /<meta property="og:description" content="Fale com a Ju pelo WhatsApp, pelo formulário, e-mail ou Instagram/);
   const page = read('dist/contato.html');
-  assert.match(page, /<p class="contact-number" data-whatsapp-number hidden><span translate="no" data-company="phone">\(31\) 99198-1151<\/span><\/p>/, 'the number under the WhatsApp button');
+  assert.match(page, /<p class="contact-number" data-whatsapp-number hidden><span translate="no" data-company="phone">\(31\) 99198-1151<\/span> <small>· só mensagens, sem ligações<\/small><\/p>/, 'the number under the WhatsApp button, messages only (08/10/2026: no calls)');
   assert.match(read('dist/site-shell.js'), /\$\{icon\('chat'\)\}<span>Fale com a Ju<\/span>/, 'the phone menu with the chat icon');
   assert.match(read('dist/icons.js'), /\n {2}chat: '/);
   // customers' numbers stay theirs: the order card and the owner e-mail open the BUYER's WhatsApp
