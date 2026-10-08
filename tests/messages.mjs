@@ -254,6 +254,11 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.match(card, /href="\$\{esc\(mailto\(m\)\)\}"/); assert.match(card, /href="\$\{esc\(whatsappLink\(m\)\)\}"/, 'the reply links are escaped too');
   assert.match(part, /<div class="inbox-text">\$\{esc\(m\.message\)\}<\/div>/, 'the text as written, never turned into links');
   assert.match(part, /confirm\('Excluir esta mensagem de vez\?/);
+  // 08/10/2026 (usabilidade 13): after an action the keyboard keeps its place — the same message if it stays in the list,
+  // otherwise the next one (or the one before) — instead of going back to the title; the WhatsApp answer says it opens a new tab
+  assert.match(part, /neighbour = ids\[at \+ 1\] \?\? ids\[at - 1\]/); assert.match(part, /focusId = answer\.message && stays\(answer\.message\) \? id : neighbour;/);
+  assert.match(part, /\}\), \(\) => toggleOf\(focusId\)\);/, 'the focus moves once the list is drawn again');
+  assert.match(card, /<span>Responder no WhatsApp<\/span><span class="sr-only"> \(abre em uma nova aba\)<\/span>/);
   assert.match(client, /request\('\/api\/admin\/messages\?summary=1'/);
   assert.match(css, /\.inbox-text\{[^}]*white-space:pre-wrap/); assert.match(css, /\.admin-badge\{[^}]*font-size:12px/);
   assert.match(read('tools/dev-server.cjs'), /'order-invoice', 'messages', 'bling', 'cash', 'international-quote'\]/, 'the local server answers /api/admin/messages');

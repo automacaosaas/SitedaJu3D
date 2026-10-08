@@ -14,7 +14,9 @@ body:not(.home) .header:not(.site-header) .shop-nav { grid-column:3; justify-sel
 .primary,.account-page .account-submit { background:var(--theme-accent); border-color:var(--theme-accent); }
 .primary:hover,.account-page .account-submit:hover,.product-customize:hover,.product-cart:hover { background:var(--theme-accent-strong); }
 .header.site-header.is-floating { background:var(--theme-wash); }
-body:not(.home) .site-header { background:linear-gradient(105deg,var(--theme-wash),var(--bg)); }
+/* Inner pages: no panel of its own behind the header (it was as wide as the content and ended in a hard seam); the page's own
+   gradient runs under it, from edge to edge, and the hairline below is the only divider. */
+body:not(.home) .site-header { background:none; }
 .demo-banner,.mobile-drawer { background:var(--bg); color:var(--muted); }
 .header-icon:hover,.language-button:hover,.language-button[aria-expanded=true],.language-option[aria-checked=true],.trash-button:hover { background:var(--theme-soft); }
 .buy-now { background:var(--theme-soft); color:var(--theme-text); border-color:var(--line); }
@@ -103,6 +105,17 @@ html { scrollbar-gutter:stable; }
 @media(max-width:600px) {
   .account-header .showcase-return { width:44px; min-width:44px; padding:4px; }
   .account-header .showcase-return-label { display:none; }
+}
+/* Narrow phones (≤374 px): the language pill shows just the code, without the globe, so the two sides of the centred logo
+   are about as wide (the menu + pill used to leave 10 px to the logo on the left, 23 px to the cart on the right). */
+@media(max-width:374px) { .site-header .language-button .language-globe { display:none; } }
+/* Tablets upright at 801–940 px (iPad Air 820, iPad Pro 834): the centred menu ran under the language pill ("Contato" covered by
+   "PT"). The menu closes up a little and the pill drops its caret, as on the phone, leaving ~30 px between them. */
+@media(min-width:801px) and (max-width:940px) {
+  .site-header .primary-nav { gap:28px; }
+  .site-header .shop-nav { gap:8px; }
+  .site-header .language-button { padding:0 13px; }
+  .site-header .language-button .language-caret { display:none; }
 }
 @media(max-width:360px) {
   .shop-header { gap:7px; padding-inline:12px; }
