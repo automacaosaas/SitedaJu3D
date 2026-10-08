@@ -80,6 +80,24 @@ export async function internationalQuote(country, items, options) {
   throw Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
 }
 
+// Mensagens (api/admin/messages.js): the count of new ones (the chat icon), a page of a view, and one change.
+const inboxError = answer => Object.assign(new Error(answer.status === 401 ? 'unauthorized' : 'unavailable'), {status: answer.status, code: answer.status === 401 ? 'unauthorized' : answer.data?.error || 'unavailable'});
+export async function messagesSummary(options) {
+  const answer = await request('/api/admin/messages?summary=1', options);
+  if (answer.status === 200 && Number.isInteger(answer.data?.unread)) return answer.data.unread;
+  throw inboxError(answer);
+}
+export async function loadMessages({view = 'novas', cursor = null} = {}, options) {
+  const answer = await request(`/api/admin/messages?view=${encodeURIComponent(view)}&limit=30${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, options);
+  if (answer.status === 200 && Array.isArray(answer.data?.messages)) return answer.data;
+  throw inboxError(answer);
+}
+export async function messageAction(action, id, options) {
+  const answer = await request('/api/admin/messages', {method: 'POST', body: {action, id}, ...options});
+  if (answer.status === 200 && answer.data?.ok) return answer.data;
+  throw inboxError(answer);
+}
+
 // The buyer's full CPF for issuing the invoice by hand (audited on the server).
 export async function revealDocument(id, options) {
   const answer = await request('/api/admin/order-document', {method: 'POST', body: {id}, ...options});

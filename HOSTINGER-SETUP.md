@@ -89,6 +89,7 @@ Com `APP_ENV=preview`, o Mercado Pago roda sempre em **modo de teste**: só as c
 | `MP_ACCESS_TOKEN` | Access Token **de teste** | **sim** |
 | `MP_WEBHOOK_SECRET` | assinatura secreta do webhook | **sim** |
 | `ORDER_NOTIFY_EMAIL` | e-mail da Ju que recebe os pedidos pagos (precisa do Resend para sair) | não |
+| `CONTACT_EMAIL` | e-mail que recebe o aviso de cada mensagem do formulário de Contato (sem ela, vai para o `ORDER_NOTIFY_EMAIL`). A mensagem fica no painel, em Mensagens, mesmo se o e-mail não sair | não |
 | `CRON_SECRET` | 24+ caracteres aleatórios; liga `/api/fila/rodar`, chamado por uma tarefa agendada (veja `BLING-RESILIENCIA.md`, seção 5) | **sim** |
 | `ADMIN_EMAIL` | e-mail da equipe que entra no painel `/admin.html` | não |
 | `ADMIN_PASSWORD` | senha do painel, com **12 caracteres ou mais** | **sim** |

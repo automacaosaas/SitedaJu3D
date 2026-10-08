@@ -42,7 +42,7 @@ for (const name of pages().filter(n => !internal.has(n))) {
 // ── the documents ─────────────────────────────────────────────────────
 const docs = {
   'termos.html': ['Termos de Uso', 'Código de Defesa do Consumidor', 'maiores de 18 anos', 'Cada CPF pode ter uma conta', 'Propriedade intelectual', 'foro do domicílio do consumidor', 'href="trocas.html"', 'href="privacidade.html"', 'Excluir minha conta'],
-  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'não usamos cookies de publicidade', 'só serão carregadas depois do seu consentimento', 'Preferências de cookies', 'não recebemos nem guardamos o número'],
+  'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'Hostinger', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'não usamos cookies de publicidade', 'só serão carregadas depois do seu consentimento', 'Preferências de cookies', 'não recebemos nem guardamos o número', 'Mensagens de atendimento:</strong> as mensagens do formulário de contato ficam guardadas por 12 meses', 'spam), por 30 dias', 'o número de WhatsApp que informar'],
   'trocas.html': ['Trocas e Devoluções', 'até 7 dias', 'art. 49', 'inclusive o frete', '90 dias', 'art. 26', '30 dias', 'art. 18', 'Decreto nº 7.962/2013', 'Pix', 'Cartão de crédito', 'Direito de arrependimento: 7 dias', 'href="#arrependimento">Como desistir']
 };
 for (const [file, musts] of Object.entries(docs)) {

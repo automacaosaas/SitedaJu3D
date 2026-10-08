@@ -129,7 +129,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - `dist/`: site estático (HTML, módulos JS, CSS). `api/`: funções servidas por `server/create-server.cjs`. `db/migrations/`: MySQL
   (aplicadas ao iniciar). `tools/`: servidor local, "fakes" e geradores. `tests/`: suítes (`npm test`, ou `node tests/x.mjs`).
 - **Migrações:** cada uma é gravada pelo nome do arquivo em `schema_migrations`. Por isso `010_pedidos_lista.sql` e `010_envio.sql`
-  convivem: as duas já rodaram e **não devem ser renomeadas**. A próxima migração nova é a **011**.
+  convivem: as duas já rodaram e **não devem ser renomeadas**. A última é a `015_mensagens.sql` (07/10: Mensagens do painel);
+  a próxima migração nova é a **016**.
 - **Lista do painel no MySQL:** `ADMIN_ORDER_SELECT` (`api/_lib/store-mysql.js`) escolhe as colunas que `orders.adminView` lê. Campo
   novo no painel entra nessa lista também; `tests/store-contract.mjs` confere isso, mesmo sem banco.
 - **Envio internacional (05/10/2026, branch `envio/internacional`):** parte nova do painel (`dist/admin-international.js`,
@@ -203,16 +204,18 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `15111617959`; ver `NFE-SETUP.md`), escolhidas pelo tipo de cliente; texto da contadora; empresa sem IE como não
   contribuinte. Falta no Bling: formas de pagamento (17/03/04) e conta em homologação. Depois, zip e teste real em
   homologação: próximo número (11, série 1), CFOP de cada caso, e se o Bling duplica o texto do Simples ou a linha do DIFAL.
-- **C. Atendimento.** Quando o Pedro passar e-mail, telefone, WhatsApp e horário: tudo em `api/_lib/legal.js` (`COMPANY.email`,
-  `COMPANY.phone`, `COMPANY.hours` e `WHATSAPP`, só números com 55 e DDD), depois `node tools/sync-legal.cjs` (atualiza as páginas e o
-  `dist/company.js`, de onde os scripts leem). Com o número, o botão do WhatsApp aparece no Contato, no menu do celular e na confirmação.
+- **C. Atendimento.** Feito em 07/10/2026: WhatsApp **(31) 99198-1151** (`WHATSAPP = '5531991981151'` em `api/_lib/legal.js`;
+  o telefone das páginas legais sai dele) e e-mail `juimprimepramim@gmail.com`; o botão do WhatsApp aparece no Contato (com o
+  número embaixo), no menu do celular e na confirmação do pedido, e o número entrou nos dados da loja para o Google. Para trocar:
+  `api/_lib/legal.js` (`COMPANY.email`, `COMPANY.hours`, `WHATSAPP`, só números com 55 e DDD), depois `node tools/sync-legal.cjs` e
+  `node tools/sync-meta.cjs`. As mensagens do formulário ficam guardadas no painel, em **Mensagens** (ícone de conversa; ver `ADMIN-SETUP.md`).
 - **D. Preços.** Feito em 05/10/2026 (valores acima; `dist/commerce-config.js` e `api/_lib/catalog.js` batem, `tests/payments.mjs` confere).
 
 ## Pendências por responsável
 
 - **Equipe (Pedro e Ju):** teste de pedido de ponta a ponta no site de teste (cartão de teste APRO e Pix de teste, e-mails, painel);
-  configurar os 3x sem juros no Mercado Pago e conferir se o webhook aponta para a Hostinger; confirmar preços; passar e-mail e WhatsApp;
-  passar o id da natureza do Bling.
+  configurar os 3x sem juros no Mercado Pago e conferir se o webhook aponta para a Hostinger; confirmar preços;
+  passar o id da natureza do Bling. (E-mail e WhatsApp: recebidos e publicados em 07/10.)
 - **Macacoscópio à venda (02/10/2026):** faltam preço, peso embalado, NCM e as lâmpadas compatíveis (o que muda em
   `VITRINE-AVIAO-MACACO-QA.md`). Hoje é novidade com "Ver em 3D", já com o modelo do Meshy em cores fixas.
 - **Depende de conteúdo ou decisão (auditoria):** ficha técnica (C2), fotos reais e vídeo (C4), Sobre e Contato (G1; depois remover o
@@ -223,7 +226,8 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   Pago); verificar o domínio no Resend (hoje os e-mails só chegam ao e-mail de teste); Mercado Pago em `live` na conta do CNPJ;
   Bling em produção (certificado A1, plano); revisão jurídica (`LEGAL-SETUP.md`); bloquear a indexação do site de teste.
 - **Antes do lançamento — página de Contato (`contato.html`, ficou como a prévia aprovada em 05/10):** confirmar com a equipe
-  (1) o número do WhatsApp (`WHATSAPP` em `api/_lib/legal.js` + `node tools/sync-legal.cjs`; o botão aparece sozinho na página e no menu do celular);
+  (1) ~~o número do WhatsApp~~ feito em 07/10: (31) 99198-1151 (`WHATSAPP` em `api/_lib/legal.js`); falta só confirmar se o número
+  atende ligações (hoje o site mostra só WhatsApp, sem link de ligação) e configurar o WhatsApp Business com mensagem de ausência;
   (2) se `contato@juimprimepramim.com.br` é o e-mail oficial (criar a caixa no domínio; se for, preencher `email` em
   `api/_lib/legal.js` e rodar `node tools/sync-legal.cjs`; criar `CONTACT_EMAIL` na Hostinger se as mensagens do formulário
   devem ir para ela em vez do `ORDER_NOTIFY_EMAIL`); (3) o horário "segunda a sexta, das 9h às 18h" (`COMPANY.hours`; aparece no topo do Contato e no cartão de ajuda). O FAQ do

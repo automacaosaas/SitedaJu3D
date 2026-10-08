@@ -141,7 +141,7 @@ async function main() {
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
-  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
+  for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'messages', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});
   for (const name of ['verify', 'register', 'login', 'reset', 'logout', 'me']) routes[`/api/auth/${name}`] = require(`../api/auth/${name}`).create({env});
   routes['/api/auth/providers'] = require('../api/auth/providers').create({env});
   for (const provider of ['google', 'apple']) {
