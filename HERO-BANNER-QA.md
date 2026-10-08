@@ -280,9 +280,12 @@ mais largas) e do alto do palco, com um lugar para o computador e outro para o c
   com o contorno de cada desenho (caminhos achatados, com as transformações, na escala de cada tela e com a folga do deslizar das
   nuvenzinhas) e falha se algo cair em cima das setas, da peça, da pilastra, do texto, do preço, dos botões ou do header. No navegador,
   o mesmo conferido com `isPointInFill` em 10 larguras e nas seis peças.
-- **Rolagem:** da página no topo até a vitrine inteira sair da tela, os cantos sobem um pouco mais depressa e esmaecem, as silhuetas das
-  bordas ficam um pouco para trás e se abrem para fora, e o que está longe (nuvenzinhas, estrelinhas, o sol) fica mais para trás ainda
-  (`carousel.css › scn-scroll`, `hero-motion.js › SCENERY_SCROLL`: 6% e 14% da altura da vitrine para trás, 10% para cima nos cantos).
+- **Rolagem:** da página no topo até a vitrine inteira sair da tela, os cantos ficam um pouco para trás (afundam) e esmaecem, as
+  silhuetas das bordas se abrem para fora e esmaecem, e o que está longe (nuvenzinhas, estrelinhas, o sol) se abre mais devagar
+  (`carousel.css › scn-scroll`, `hero-motion.js › SCENERY_SCROLL`: 6% e 3,5% da altura da vitrine para fora, 6% para baixo nos cantos).
+  As das bordas só andam para fora e os cantos nunca sobem: na revisão, com as bordas descendo 6% e 14% da vitrine e os cantos subindo
+  10%, no meio da rolagem as nuvenzinhas, as estrelinhas, as margaridas e as pegadas passavam por trás das setas (medido por pixel em
+  360, 390, 768, 1024, 1366 e 1920 px), e a conta de `tests/carousel.cjs` agora vale para todo o caminho da rolagem.
   É uma animação ligada à rolagem (`animation-timeline: scroll(root block)`), só `transform` e `opacity`, no compositor; onde o
   navegador não a tem (Firefox, Safari antigo), `carousel.js` faz o mesmo num laço passivo, um quadro por vez, só nas camadas à vista e
   só quando a posição muda. Tudo continua recortado na vitrine (`.hero-scenery`) e a base se dissolve pela máscara antes do fim dela.
@@ -292,7 +295,12 @@ mais largas) e do alto do palco, com um lugar para o computador e outro para o c
   celular 390 px a 3x, 60 passos de rolagem pela vitrine): de 2870 para cerca de 960 elementos recalculados; parado, cerca de 3
   recálculos por segundo, como antes.
 - **Arco-íris:** as paradas do degradê das faixas estavam de fora para dentro e o navegador as juntava todas na de fora (só a faixa
-  rosa aparecia); agora vão de dentro para fora e as quatro cores aparecem, bem claras.
+  rosa aparecia); agora vão de dentro para fora e as quatro cores aparecem, bem claras. Na revisão: o pé de cada arco se dissolve dentro
+  da nuvem (a base dela é translúcida e as faixas apareciam por ela, cortadas retas embaixo) e o fim do arco se dissolve antes da borda
+  (`.scn-fade`; acima de 1560 px a borda é a do contêiner e o arco acabava num corte reto no meio do fundo).
+- **Folhas do macaco no computador** (revisão): mais embaixo (e, acima de 1560 px, mais para fora); antes passavam por trás da seta da
+  esquerda em 1920 px e do "Comprar" e do preço de 1280 a 1440 px. O capim alto da girafa ainda encosta na seta da esquerda de 1280 a
+  1440 px (a ponta de uma folha, ~10 px²); ficou como o dono aprovou.
 - Conferido no Chrome headless em 360 e 390 (celular, 2x), 768, 1024, 1366 e 1920 px nas seis peças, no meio da rolagem (um e dois
   terços da vitrine), no meio de um arraste (toque e mouse), em "Ver encaixado" (unicórnio e dinossauro), com movimento reduzido e
   com o laço de reserva. Não testado em aparelho físico.

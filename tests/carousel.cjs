@@ -350,8 +350,9 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     assert.ok(shapes <= 32, `${key}: ${shapes} formas (no máximo 32)`);
     // cada silhueta da borda, nuvenzinha e estrelinha é um <span> com o lado, a profundidade na rolagem, o lugar no computador e no
     // celular e o tamanho do desenho, com um <svg> próprio cujo quadro é esse tamanho
-    const spans = [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-(far|mid)" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">/g)];
+    const spans = [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-(far|mid)(?: scn-fade)?" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">/g)];
     assert.equal(spans.length, (html.match(/<span class="scenery-(edge|drift|spark)\b/g) || []).length, key + ': todas no mesmo molde');
+    assert.ok(!/scn-fade/.test(html) || look.motif === 'rainbow' && !/class="scenery-(drift|spark)[^"]*scn-fade/.test(html), key + ': só os arcos do arco-íris se dissolvem antes da borda');
     for (const [, kind, , depthName, style, vw, vh] of spans) {
       assert.ok(/^--x:-?[\d.]+;--y:-?[\d.]+;--s:[\d.]+;--cx:-?[\d.]+;--cy:-?[\d.]+;--cs:[\d.]+;--w:[\d.]+;--h:[\d.]+(;--d:\d+(\.\d+)?s;--dl:-?\d+(\.\d+)?s)?$/.test(style), `${key}: ${kind} com o lugar nas duas arrumações (${style})`);
       assert.ok(style.includes(`--w:${vw};--h:${vh}`), `${key}: o quadro do ${kind} bate com o tamanho dele`);
@@ -393,10 +394,20 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     assert.deepEqual([...inner.matchAll(/class="m-t(\d)"/g)].map(m => +m[1]), [3, 2, 1, 4], 'dourado, lavanda, roxo e rosa, de dentro para fora');
   }
   assert.equal((rainbowHtml.match(/<span class="scenery-glint" style="left:-?[\d.]+%;top:-?[\d.]+%;width:[\d.]+%;height:[\d.]+%;--turn:-?1">/g) || []).length, 2, 'um brilho que corre por cada arco');
+  // o pé de cada arco no meio da nuvem, acima da base dela (que se dissolve: ali o pé aparecia cortado reto por baixo), e o fim do arco
+  // se dissolvendo antes da borda, com o brilho (acima de 1560 px a borda é a do contêiner: sem isso, um corte reto no meio do fundo)
+  const feet = [...rainbowHtml.matchAll(/fill="url\(#scn-\d+-bands([lr])\)" d="M[\d.]+ ([\d.]+)A[^"]*" mask="url\(#scn-\d+-foot\1\)"\/><path fill="url\(#scn-\d+-c\)" d="M[\d.]+ ([\d.]+)A/g)];
+  assert.equal(feet.length, 2, 'cada arco, com o pé dissolvido (máscara), seguido da nuvem dele');
+  for (const [, , foot, base] of feet) assert.ok(+base - +foot >= 8, `o pé do arco (y ${foot}) bem acima da base da nuvem (y ${base})`);
+  for (const [, k, foot] of feet) assert.ok(new RegExp(`<linearGradient id="scn-\\d+-foot${k}g" gradientUnits="userSpaceOnUse" x1="0" y1="${+foot - 36}" x2="0" y2="${+foot - 6}"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`).test(rainbowHtml), 'as faixas somem antes do pé, dentro da nuvem');
+  assert.equal((rainbowHtml.match(/<span class="scenery-edge scn-[lr] scn-\w+ scn-fade" style="[^"]+"><svg[^>]*>(?:(?!<\/svg>).)*-bands[lr](?:(?!<\/span>).)*<span class="scenery-glint"/g) || []).length, 2, 'os dois arcos (e o brilho deles) se dissolvem antes da borda');
+  assert.ok(css.includes('.scenery-back > .scn-fade.scn-l { -webkit-mask-image:linear-gradient(90deg, transparent, #000 14%); mask-image:linear-gradient(90deg, transparent, #000 14%); }') && css.includes('.scenery-back > .scn-fade.scn-r { -webkit-mask-image:linear-gradient(270deg, transparent, #000 12%); mask-image:linear-gradient(270deg, transparent, #000 12%); }'), 'a máscara do lado de fora de cada arco');
   // o macaco: só as folhas embaixo e nuvens em forma de banana (nenhuma nuvem comum nas bordas), com o cabinho e a pontinha
   const bananaHtml = layers.find(({look}) => look.motif === 'bananas').html;
   assert.ok(!/<span class="scenery-(edge|drift)[^"]*"[^>]*><svg[^>]*>(?:(?!<\/svg>).)*url\(#scn-\d+-c\)/.test(bananaHtml), 'bananas no lugar das nuvens');
   assert.ok((bananaHtml.match(/class="m-nub"/g) || []).length >= 3 && css.includes('.scenery-back .m-nub { fill:var(--scn-s1); }'), 'o cabinho e a pontinha das bananas na sombra quente da peça');
+  // e as folhas de palmeira embaixo também no computador (mais altas, passavam por trás da seta, do "Comprar" e do preço; medido por pixel)
+  assert.ok(/@media \(min-width: 901px\) \{\r?\n  \.scenery-palms \.scenery-left, \.scenery-palms \.scenery-right \{ bottom:-175px; \}\r?\n\}\r?\n@media \(min-width: 1561px\) \{\r?\n  \.scenery-palms \.scenery-left \{ left:-13%; \}\r?\n  \.scenery-palms \.scenery-right \{ right:-13%; \}/.test(css), 'as folhas do macaco embaixo, longe das setas e dos botões');
   // profundidade no arraste: o desenho anda com a peça a 12% do caminho dela e os cantos a 5%; tudo parado no movimento reduzido
   assert.equal(SCENERY_PARALLAX, .12); assert.equal(SCENERY_EDGE, .05);
   assert.equal(sceneryShift(0, 600), 0);
@@ -462,8 +473,8 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     }
     return pts;
   };
-  // os pontos de cada <span> da borda, na unidade da pilastra a partir da borda dele: [lado, tipo, [[x, y], …]] por arrumação
-  const placed = (html, compact, m) => [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-\w+" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">(.*?)<\/svg>/g)].map(([, kind, side, style, vw, , body]) => {
+  // os pontos de cada <span> da borda, na unidade da pilastra a partir da borda dele: [lado, tipo, [[x, y], …], profundidade] por arrumação
+  const placed = (html, compact, m) => [...html.matchAll(/<span class="scenery-(edge|drift|spark) scn-([lr]) scn-(\w+)(?: scn-fade)?" style="([^"]+)"><svg viewBox="0 0 ([\d.]+) ([\d.]+)" focusable="false">(.*?)<\/svg>/g)].map(([, kind, side, depth, style, vw, , body]) => {
     const v = Object.fromEntries([...style.matchAll(/--(\w+):(-?[\d.]+)/g)].map(([, k, n]) => [k, +n])), [x0, y0, s] = compact ? [v.cx, v.cy, v.cs] : [v.x, v.y, v.s];
     const stack = [[1, 0, 0, 1, 0, 0]], pts = [], slack = kind === 'drift' ? 9 / (compact ? 1.08 : 1.535) : 0;
     for (const [, close, tag, attrs] of body.matchAll(/<(\/?)(g|path|ellipse|circle|defs|linearGradient|radialGradient|stop)\b([^>]*)>/g)) {
@@ -479,21 +490,30 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
         for (const [ex, ey] of [[-stroke - slack, 0], [stroke + slack, 0], [0, -stroke], [0, stroke]]) pts.push([x0 + (fromEdge + ex) * s * m, y0 + (ly + ey) * s * m]);
       }
     }
-    return [side, kind, pts];
+    return [side, kind, pts, depth];
   });
+  // e em todo o caminho da rolagem (SCENERY_SCROLL: frações da altura da vitrine, que mede, em unidades da pilastra, de 556 a 666 no
+  // celular e no tablet e de 401 a 493 no computador): com as silhuetas descendo 6% e 14% da vitrine, no meio da rolagem as
+  // nuvenzinhas passavam por trás das setas
+  const HERO_UNITS = {wide: [401, 493], compact: [556, 666]};
   for (const {key, html} of layers) for (const [layout, compact, scales] of [['wide', false, [1, .9]], ['compact', true, [1, .92]]]) for (const m of scales) {
-    for (const [side, kind, pts] of placed(html, compact, m)) for (const zone of KEEP_OUT[layout]) {
+    for (const [side, kind, pts, depth] of placed(html, compact, m)) for (const zone of KEEP_OUT[layout]) {
       if (zone.side !== 'all' && zone.side !== side || zone.scale && !zone.scale.includes(m)) continue;
-      const hit = pts.find(([x, y]) => x > zone.x[0] && x < zone.x[1] && y > zone.y[0] && y < zone.y[1]);
-      assert.ok(!hit, `${key} (${compact ? 'celular' : 'computador'}, escala ${m}): ${kind} da borda ${side === 'l' ? 'esquerda' : 'direita'} em cima de ${zone.what} (${hit && hit.map(n => n.toFixed(0))})`);
+      for (const units of HERO_UNITS[layout]) for (const p of [0, .25, .5, .75, 1]) {
+        const dx = SCENERY_SCROLL[depth].x * units * p, dy = SCENERY_SCROLL[depth].y * units * p;
+        const hit = pts.map(([x, y]) => [x - dx, y + dy]).find(([x, y]) => x > zone.x[0] && x < zone.x[1] && y > zone.y[0] && y < zone.y[1]);
+        assert.ok(!hit, `${key} (${compact ? 'celular' : 'computador'}, escala ${m}${p ? `, ${p * 100}% da rolagem` : ''}): ${kind} da borda ${side === 'l' ? 'esquerda' : 'direita'} em cima de ${zone.what} (${hit && hit.map(n => n.toFixed(0))})`);
+      }
     }
   }
 
   // ── a rolagem da página: cada parte do fundo na sua profundidade, só transform e opacity, recortada na vitrine ──
   assert.deepEqual(Object.keys(SCENERY_SCROLL).sort(), ['far', 'mid', 'near']);
   const {near, mid: midDepth, far} = SCENERY_SCROLL;
-  assert.ok(near.y < 0 && near.fade < 1 && midDepth.y > 0 && far.y > midDepth.y && midDepth.fade < 1 && far.fade < 1, 'os cantos sobem e esmaecem; as bordas ficam para trás, e o que está longe mais ainda');
-  assert.ok(Object.values(SCENERY_SCROLL).every(d => Math.abs(d.y) <= .16 && d.x >= 0 && d.x <= .05 && d.fade >= .25 && d.fade < 1), 'de leve: no máximo 16% da altura da vitrine, 5% para fora');
+  // os cantos ficam embaixo das setas e dos botões: só afundam (subindo 10%, no computador as margaridas e as pegadas passavam por trás
+  // das setas no meio da rolagem)
+  assert.ok(near.y > 0 && near.x === 0 && near.fade < 1 && midDepth.y === 0 && far.y === 0 && midDepth.x > far.x && far.x > 0 && midDepth.fade < 1 && far.fade < 1, 'os cantos afundam um pouco e esmaecem; as bordas só se abrem para fora e esmaecem, e o que está longe se abre mais devagar');
+  assert.ok(Object.values(SCENERY_SCROLL).every(d => Math.abs(d.y) <= .16 && d.x >= 0 && d.x <= .06 && d.fade >= .25 && d.fade < 1), 'de leve: no máximo 16% da altura da vitrine, 6% para fora');
   assert.deepEqual(sceneryScroll(0, {depth: 'far', side: 1}, 800), {x: 0, y: 0, opacity: 1});
   assert.deepEqual(sceneryScroll(1, {depth: 'far', side: -1}, 800), {x: -far.x * 800, y: far.y * 800, opacity: far.fade});
   assert.deepEqual(sceneryScroll(3, {depth: 'near'}, 800), sceneryScroll(1, {depth: 'near'}, 800), 'depois de a vitrine sair, nada mais anda');

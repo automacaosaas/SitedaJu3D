@@ -175,8 +175,8 @@ function init() {
   let themeNow = {};
   // Enquanto a vitrine anda, as nuvenzinhas e os cantos param (o parallax já os move; assim os quadros não recalculam as animações).
   const moving = on => bgHost.classList.toggle('is-moving', on);
-  // O fundo acompanha a rolagem da página (carousel.css › scn-scroll): os cantos sobem e esmaecem, as silhuetas das bordas ficam para
-  // trás e se abrem, cada uma na sua profundidade. Onde o navegador não liga uma animação à rolagem (animation-timeline), este laço faz
+  // O fundo acompanha a rolagem da página (carousel.css › scn-scroll): os cantos afundam e esmaecem, as silhuetas das bordas se abrem
+  // para fora e esmaecem, cada uma na sua profundidade. Onde o navegador não liga uma animação à rolagem (animation-timeline), este laço faz
   // o mesmo com os mesmos números (hero-motion.js › sceneryScroll): só na rolagem (passiva), um quadro por vez, só nas camadas à vista
   // e só quando a posição muda, escrevendo transform e opacity direto nos cantos e nas silhuetas das bordas de cada camada (poucos
   // elementos) e só o que mudou. Com movimento reduzido, tudo no lugar.

@@ -270,6 +270,15 @@
 .scenery-puffs .scenery-right, .scenery-towers .scenery-right { right:-9%; bottom:-96px; transform:scaleX(-1); }
 .scenery-palms .scenery-left { left:-8%; bottom:-70px; transform:none; }
 .scenery-palms .scenery-right { right:-8%; bottom:-84px; transform:scaleX(-1); }
+/* no computador, as folhas de palmeira mais embaixo ("só as folhas que estão embaixo"): mais altas, passavam por trás da seta da
+   esquerda (1920 px), do "Comprar" e do preço (1280 a 1440 px) */
+@media (min-width: 901px) {
+  .scenery-palms .scenery-left, .scenery-palms .scenery-right { bottom:-175px; }
+}
+@media (min-width: 1561px) {
+  .scenery-palms .scenery-left { left:-13%; }
+  .scenery-palms .scenery-right { right:-13%; }
+}
 .scenery-daisies .scenery-left { left:-7%; bottom:-60px; transform:rotate(-6deg); }
 .scenery-daisies .scenery-right { right:-7%; bottom:-74px; transform:scaleX(-1) rotate(-8deg); }
 @media(max-width:900px) {
@@ -305,20 +314,26 @@
 .scenery-back > .scenery-spark { animation:scn-twinkle var(--d, 6s) ease-in-out var(--dl, 0s) infinite; }
 .scenery-glint { position:absolute; opacity:0; animation:scn-glint 10s ease-in-out infinite; }
 .scn-l .scenery-glint { animation-delay:-5s; }
+/* o arco-íris sai pela borda e se dissolve antes dela, com o brilho (.scn-fade): acima de 1560 px a borda é a do contêiner e, sem
+   isso, o arco acabava num corte reto no meio do fundo */
+.scenery-back > .scn-fade.scn-l { -webkit-mask-image:linear-gradient(90deg, transparent, #000 14%); mask-image:linear-gradient(90deg, transparent, #000 14%); }
+.scenery-back > .scn-fade.scn-r { -webkit-mask-image:linear-gradient(270deg, transparent, #000 12%); mask-image:linear-gradient(270deg, transparent, #000 12%); }
 @keyframes scn-drift { from { translate:-9px 0; } to { translate:9px 0; } }
 @keyframes scn-sway { from { translate:-4px 1px; } to { translate:4px -1px; } }
 @keyframes scn-twinkle { 0%, 100% { opacity:.35; scale:.72; } 50% { opacity:1; scale:1; } }
 @keyframes scn-glint { 0% { transform:rotate(0deg); opacity:0; } 12% { opacity:.9; } 46%, 100% { transform:rotate(calc(var(--turn, 1) * 104deg)); opacity:0; } }
-/* A rolagem da página ("algo mais fluido, que conecte com o rolar da página"): enquanto a vitrine sobe e sai da tela, os cantos sobem
-   um pouco mais depressa e esmaecem (perto), as silhuetas das bordas ficam um pouco para trás e se abrem para fora (.scn-mid) e o que
-   está mais longe fica mais para trás ainda (.scn-far: as nuvenzinhas, as estrelinhas, o sol). Do topo da página até a vitrine inteira
-   ter saído (--hero-h de rolagem), uma animação ligada à rolagem (animation-timeline), só transform e opacity, no compositor; onde o
-   navegador não liga animação à rolagem, carousel.js faz o mesmo num laço barato (hero-motion.js › SCENERY_SCROLL, os mesmos números).
-   --sy: o quanto desce até o fim (fração da altura da vitrine; negativo sobe), --sx: o quanto se abre para fora (--sd, o lado), --sf:
-   a opacidade no fim. Tudo continua recortado na vitrine. Com movimento reduzido, nada disso. */
-.scenery-mist { --sy:-.1; --sf:.3; }
-.scenery-back > .scn-mid { --sy:.06; --sx:.035; --sf:.55; }
-.scenery-back > .scn-far { --sy:.14; --sx:.02; --sf:.5; }
+/* A rolagem da página ("algo mais fluido, que conecte com o rolar da página"): enquanto a vitrine sobe e sai da tela, os cantos ficam
+   um pouco para trás, afundando, e esmaecem, as silhuetas das bordas se abrem para fora e esmaecem (.scn-mid) e o que está mais longe
+   se abre mais devagar (.scn-far: as nuvenzinhas, as estrelinhas, o sol). As das bordas só andam para fora: as setas, a peça, o preço
+   e os botões ficam logo acima e abaixo delas (descendo, no meio da rolagem as nuvenzinhas passavam por trás das setas); os cantos,
+   embaixo, nunca sobem até as setas (subindo, as margaridas e as pegadas passavam por trás delas no computador). Do topo da
+   página até a vitrine inteira ter saído (--hero-h de rolagem), uma animação ligada à rolagem (animation-timeline), só transform e
+   opacity, no compositor; onde o navegador não liga animação à rolagem, carousel.js faz o mesmo num laço barato (hero-motion.js ›
+   SCENERY_SCROLL, os mesmos números). --sy: o quanto desce até o fim (fração da altura da vitrine; negativo sobe), --sx: o quanto se
+   abre para fora (--sd, o lado), --sf: a opacidade no fim. Tudo continua recortado na vitrine. Com movimento reduzido, nada disso. */
+.scenery-mist { --sy:.06; --sf:.3; }
+.scenery-back > .scn-mid { --sy:0; --sx:.06; --sf:.45; }
+.scenery-back > .scn-far { --sy:0; --sx:.035; --sf:.4; }
 .scenery-back > .scn-l { --sd:-1; }
 .scenery-back > .scn-r { --sd:1; }
 @keyframes scn-scroll { to { transform:translate3d(calc(var(--sd, 0) * var(--sx, 0) * var(--hero-h, 720px)), calc(var(--sy, 0) * var(--hero-h, 720px)), 0); opacity:var(--sf, 1); } }

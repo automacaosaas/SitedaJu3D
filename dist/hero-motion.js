@@ -86,9 +86,12 @@ export function sceneryShift(distance, travel, {reduced = false, depth = SCENERY
 // A rolagem da página (08/10/2026: "algo mais fluido, que conecte com o rolar da página"; carousel.css › scn-scroll, com os mesmos
 // números, e carousel.js onde o navegador não liga animação à rolagem): da página no topo (progress 0) até a vitrine inteira ter saído
 // da tela (1), cada parte do fundo anda, em linha reta, até y (fração da altura da vitrine; negativo sobe) e até x para fora, pelo
-// seu lado (side: −1 a esquerda, 1 a direita), e esmaece até fade. near = os cantos (sobem mais depressa e esmaecem); mid = as
-// silhuetas das bordas (ficam um pouco para trás e se abrem); far = o que está longe (mais para trás ainda). Parado no movimento reduzido.
-export const SCENERY_SCROLL = Object.freeze({near: Object.freeze({y: -.1, x: 0, fade: .3}), mid: Object.freeze({y: .06, x: .035, fade: .55}), far: Object.freeze({y: .14, x: .02, fade: .5})});
+// seu lado (side: −1 a esquerda, 1 a direita), e esmaece até fade. near = os cantos (ficam um pouco para trás, afundando, e esmaecem);
+// mid = as silhuetas das bordas (se abrem para fora e esmaecem); far = o que está longe (se abre mais devagar). As das bordas só andam
+// para fora, nunca para cima ou para baixo: as setas, a peça, o preço e os botões ficam logo acima e abaixo delas (com 6% e 14% da
+// vitrine para trás, no meio da rolagem as nuvenzinhas passavam por trás das setas); e os cantos, embaixo, nunca sobem até as setas
+// (subindo 10%, no computador as margaridas e as pegadas passavam por trás delas). Parado no movimento reduzido.
+export const SCENERY_SCROLL = Object.freeze({near: Object.freeze({y: .06, x: 0, fade: .3}), mid: Object.freeze({y: 0, x: .06, fade: .45}), far: Object.freeze({y: 0, x: .035, fade: .4})});
 export function sceneryScroll(progress, {depth = 'mid', side = 0} = {}, height = 0, {reduced = false} = {}) {
   const p = reduced ? 0 : clamp(progress, 0, 1), d = SCENERY_SCROLL[depth] || SCENERY_SCROLL.mid;
   return {x: side * d.x * height * p + 0, y: d.y * height * p + 0, opacity: 1 + (d.fade - 1) * p};   // + 0: nunca -0

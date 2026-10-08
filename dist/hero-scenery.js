@@ -8,7 +8,7 @@
 //  · e as nuvenzinhas que flutuam e as estrelinhas que cintilam.
 // Cada silhueta da borda é um <svg> pequeno e próprio dentro de um <span>, e o que se mexe é sempre o <span> (no Chrome, uma animação
 // no próprio <svg> não vai para o compositor): o CSS só desliza, acende ou gira (transform e opacity), nada é redesenhado. Com a
-// rolagem da página, cada uma anda na sua profundidade (carousel.css › scn-scroll; .scn-far, .scn-mid) e os cantos sobem e esmaecem.
+// rolagem da página, cada uma anda na sua profundidade (carousel.css › scn-scroll; .scn-far, .scn-mid) e os cantos afundam e esmaecem.
 // Cores: branco translúcido. Só o lado da sombra, bem de leve, no tom claro da peça (--scn-tN, nunca mais escuro que o meio do
 // degradê: hero-motion.js › sceneryVars), então o desenho só clareia o fundo e nunca tira contraste de um texto.
 //
@@ -128,8 +128,9 @@ const glow = (uid, x, y, rx, ry = rx) => `<ellipse cx="${x}" cy="${y}" rx="${rx}
 // em unidades da pilastra (veja o alto do arquivo): at = [x, y, s] no computador — a distância do quadro à borda, o alto dele a
 // partir do alto do palco e a escala do desenho — e c = [x, y, s] no celular e no tablet (até 900 px) ──
 const place = ([x, y, s = 1], [cx, cy, cs = s]) => `--x:${x};--y:${y};--s:${s};--cx:${cx};--cy:${cy};--cs:${cs}`;
-// uma silhueta da borda: o desenho no quadro w × h, com x = 0 na borda da vitrine e crescendo para dentro (na direita, espelhado)
-const edge = (side, depth, at, c, w, h, art, more = '') => `<span class="scenery-edge scn-${side} scn-${depth}" style="${place(at, c)};--w:${w};--h:${h}"><svg viewBox="0 0 ${w} ${h}" focusable="false">${side === 'r' ? `<g transform="matrix(-1 0 0 1 ${w} 0)">${art}</g>` : art}</svg>${more}</span>`;
+// uma silhueta da borda: o desenho no quadro w × h, com x = 0 na borda da vitrine e crescendo para dentro (na direita, espelhado);
+// fade: se dissolve antes da borda (carousel.css › .scn-fade; o que passa do quadro some)
+const edge = (side, depth, at, c, w, h, art, more = '', fade = false) => `<span class="scenery-edge scn-${side} scn-${depth}${fade ? ' scn-fade' : ''}" style="${place(at, c)};--w:${w};--h:${h}"><svg viewBox="0 0 ${w} ${h}" focusable="false">${side === 'r' ? `<g transform="matrix(-1 0 0 1 ${w} 0)">${art}</g>` : art}</svg>${more}</span>`;
 // nuvenzinha que flutua (w × h a nuvem; o quadro tem folga para as bolhas): o CSS a desliza devagar (--d: a duração da ida; --dl: o
 // atraso, para cada uma andar no seu tempo). shape 'banana': uma bananinha em nuvem
 const drift = (uid, side, at, c, w, h, {d = 18, dl = 0, o = 1, shape = 'cloud'} = {}) => {
@@ -194,7 +195,9 @@ const bananas = uid => edge('r', 'mid', [6, -14, .9], [4, 6, .5], 184, 82, banan
 
 // Arco-íris: nuvens fofas presas nas bordas e, de cada uma, o arco-íris subindo e saindo pela borda da vitrine (o centro do arco fica
 // do lado de fora): faixas de nuvem brancas com o tom de cada cor da peça bem de leve, e um brilho que corre devagar pelas faixas.
-// O arco à direita, maior, sai da nuvem acima da seta; o da esquerda, menor e mais ao longe, da nuvem do canto de baixo.
+// O arco à direita, maior, sai da nuvem acima da seta; o da esquerda, menor e mais ao longe, da nuvem do canto de baixo. Os pés ficam
+// no meio da nuvem e se dissolvem nela (na base translúcida, o pé aparecia cortado reto por baixo) e o fim de cada arco se dissolve
+// antes da borda (.scn-fade; o quadro da direita tem folga para a nuvenzinha de dentro, que a máscara cortaria).
 const RAINBOW = {order: [4, 1, 2, 3]};   // de fora para dentro: rosa, roxo, lavanda, dourado
 const arc = (uid, k, cx, cy, R, band) => {
   const r = [0, 1, 2, 3, 4].map(i => R - i * band);
@@ -206,8 +209,12 @@ const arc = (uid, k, cx, cy, R, band) => {
   }).reverse().join('');
   // do pé (ângulo 0°, para dentro) até passar da borda (o alto, −100°)
   const at = (rr, a) => [n(cx + Math.cos(rad(a)) * rr), n(cy + Math.sin(rad(a)) * rr)], [ox, oy] = at(R, -104), [ix, iy] = at(r[4], -104);
-  return `<defs><radialGradient id="scn-${uid}-bands${k}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${R}">${stops}<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
-    + `<path fill="url(#scn-${uid}-bands${k})" d="M${n(cx + R)} ${cy}A${R} ${R} 0 0 0 ${ox} ${oy}L${ix} ${iy}A${r[4]} ${r[4]} 0 0 1 ${n(cx + r[4])} ${cy}Z"/>`;
+  // o pé se dissolve dentro da nuvem (a base dela é translúcida: sem isso, as faixas apareciam por ela, cortadas retas embaixo)
+  const box = `x="${n(cx - R - 4)}" y="${n(cy - R - 4)}" width="${2 * R + 8}" height="${R + 8}"`;
+  return `<defs><radialGradient id="scn-${uid}-bands${k}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${R}">${stops}<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
+    + `<linearGradient id="scn-${uid}-foot${k}g" gradientUnits="userSpaceOnUse" x1="0" y1="${cy - 36}" x2="0" y2="${cy - 6}"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+    + `<mask id="scn-${uid}-foot${k}" maskUnits="userSpaceOnUse" ${box}><rect ${box} fill="url(#scn-${uid}-foot${k}g)"/></mask></defs>`
+    + `<path fill="url(#scn-${uid}-bands${k})" d="M${n(cx + R)} ${cy}A${R} ${R} 0 0 0 ${ox} ${oy}L${ix} ${iy}A${r[4]} ${r[4]} 0 0 1 ${n(cx + r[4])} ${cy}Z" mask="url(#scn-${uid}-foot${k})"/>`;
 };
 // o brilho que corre pelas faixas, do pé até a borda: um <span> do tamanho do círculo do meio das faixas, que o CSS gira (transform) em
 // volta do centro do arco; o brilho, uma estrelinha numa luz macia da largura das quatro faixas, começa no pé. Na direita o desenho é espelhado, então o centro e o giro também.
@@ -215,8 +222,8 @@ const glint = (uid, side, w, h, cx, cy, R) => {
   const x = side === 'r' ? w - cx : cx, size = 2 * R, foot = side === 'r' ? 0 : size;
   return `<span class="scenery-glint" style="left:${n((x - R) / w * 100)}%;top:${n((cy - R) / h * 100)}%;width:${n(size / w * 100)}%;height:${n(size / h * 100)}%;--turn:${side === 'r' ? 1 : -1}"><svg viewBox="0 0 ${size} ${size}" focusable="false"><ellipse cx="${foot}" cy="${R}" rx="18" ry="14" ${F(uid, 'g')}/>${sparkle(foot, R, .8, 1)}</svg></span>`;
 };
-const rainbow = uid => edge('r', 'mid', [0, -30, 1.2], [0, -4, .6], 136, 152, arc(uid, 'r', -12, 120, 108, 7) + `<path ${F(uid, 'c')} d="${cumulus(76, 120, 120, 30)}"/><path ${F(uid, 'c')} d="${cumulus(120, 126, 48, 13)}" opacity=".85"/>`, glint(uid, 'r', 136, 152, -12, 120, 94))
-  + edge('l', 'far', [0, 142, 1.1], [0, 148, .56], 124, 136, arc(uid, 'l', -10, 112, 90, 6) + `<path ${F(uid, 'c')} d="${cumulus(60, 122, 104, 26)}"/>`, glint(uid, 'l', 124, 136, -10, 112, 78))
+const rainbow = uid => edge('r', 'mid', [0, -30, 1.2], [0, -4, .6], 148, 152, arc(uid, 'r', -12, 110, 108, 7) + `<path ${F(uid, 'c')} d="${cumulus(76, 120, 120, 30)}"/><path ${F(uid, 'c')} d="${cumulus(120, 126, 48, 13)}" opacity=".85"/>`, glint(uid, 'r', 148, 152, -12, 110, 94), true)
+  + edge('l', 'far', [0, 142, 1.1], [0, 148, .56], 124, 136, arc(uid, 'l', -10, 112, 90, 6) + `<path ${F(uid, 'c')} d="${cumulus(60, 122, 104, 26)}"/>`, glint(uid, 'l', 124, 136, -10, 112, 78), true)
   + edge('l', 'mid', [-22, -30], [-22, 30, .6], 140, 46, `<path ${F(uid, 'c')} d="${cumulus(62, 46, 116, 24)}"/><path ${F(uid, 'c')} d="${cumulus(110, 46, 46, 12)}" opacity=".8"/>`)
   + drift(uid, 'r', [60, 178], [8, 172, .8], 46, 11, {d: 20, dl: 3}) + drift(uid, 'l', [132, -22], [40, 76, .8], 40, 9, {d: 24, dl: 12, o: .9})
   + spark('r', [136, 34], [82, 92], .8, {d: 6}) + spark('l', [40, 96], [46, 250], .7, {d: 5, dl: 2.5});
