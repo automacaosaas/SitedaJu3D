@@ -198,11 +198,13 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', DEFAULT_CACHE);
     if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');   // also on a 304 (RFC 9110 §15.4.5)
     // RFC 9110 §13.2.2: If-None-Match first (weak comparison, "*" too); If-Modified-Since only without it. A browser sends
-    // both, and after a deploy only the ETag still matches (the date is the new commit's), so the ETag decides.
+    // both, and after a deploy only the ETag still matches (the date is the new commit's), so the ETag decides. The date
+    // alone counts only when it is the file's own (as nginx's "if_modified_since exact"): a rollback (deploy.sh --rollback)
+    // puts back files with an older date, and "not modified since" a later one would keep the newer file in that cache.
     const ifNoneMatch = req.headers['if-none-match'];
     const fresh = ifNoneMatch !== undefined
       ? ifNoneMatch.trim() === '*' || ifNoneMatch.split(',').some(tag => tag.trim().replace(/^W\//, '') === etag.slice(2))
-      : modified <= Date.parse(req.headers['if-modified-since'] || '');
+      : modified === Date.parse(req.headers['if-modified-since'] || '');
     if (fresh) { res.statusCode = 304; return res.end(); }   // no Content-Type or Last-Modified: the cache keeps its own
     res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
     res.setHeader('Last-Modified', stat.mtime.toUTCString());

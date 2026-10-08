@@ -284,6 +284,7 @@ try {
     assert.equal((await get('/app.js', {'if-modified-since': day2.toUTCString()})).status, 304, 'not modified since');
     assert.equal((await get('/app.js', {'if-modified-since': day1.toUTCString()})).status, 200, 'modified since: the new date');
     assert.equal((await get('/app.js', {'if-modified-since': 'ontem'})).status, 200, 'an invalid date is ignored');
+    assert.equal((await get('/app.js', {'if-modified-since': day3.toUTCString()})).status, 200, 'a later date (a rollback put back an older file): 200, never a 304 that keeps the newer one');
 
     // New content (same size, new date): new ETag, and the old one gets the new file.
     write('app.js', script.replace('vitrine', 'Vitrine'), day3);
