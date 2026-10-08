@@ -223,8 +223,9 @@
 }
 
 /* Peripheral petal and fern clouds dissolve into the active theme. */
-.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
-.hero-scenery svg { position:absolute; width:clamp(240px,32vw,510px); }
+.hero-scenery { position:absolute; inset:0 0 auto; height:var(--hero-h); overflow:hidden; pointer-events:none; }
+.scenery-mist { position:absolute; inset:0; -webkit-mask-image:linear-gradient(#000 66%,transparent 100%); mask-image:linear-gradient(#000 66%,transparent 100%); }
+.scenery-mist > svg { position:absolute; width:clamp(240px,32vw,510px); }
 .hero-scenery .scenery-left { left:-10%; bottom:-90px; transform:rotate(-18deg); }
 .hero-scenery .scenery-right { right:-10%; bottom:-125px; transform:scaleX(-1) rotate(-24deg); opacity:.82; }
 .scenery-ferns .scenery-left { left:-9%; bottom:-105px; transform:rotate(18deg); }
@@ -234,6 +235,59 @@
   .hero-scenery .scenery-right { width:57vw; right:-25%; bottom:-50px; }
   .scenery-ferns .scenery-left { left:-25%; bottom:-36px; }
   .scenery-ferns .scenery-right { right:-26%; bottom:-28px; }
+}
+.scenery-grass .scenery-left { left:-6%; bottom:-70px; transform:rotate(-4deg); }
+.scenery-grass .scenery-right { right:-6%; bottom:-80px; transform:scaleX(-1) rotate(-6deg); }
+.scenery-puffs .scenery-left { left:-9%; bottom:-80px; transform:none; }
+.scenery-puffs .scenery-right { right:-9%; bottom:-96px; transform:scaleX(-1); }
+@media(max-width:900px) {
+  .scenery-grass .scenery-left, .scenery-puffs .scenery-left { left:-24%; bottom:-30px; }
+  .scenery-grass .scenery-right, .scenery-puffs .scenery-right { right:-24%; bottom:-34px; }
+}
+/* Atrás da peça, o desenho de cada produto em sombreado de nuvens (hero-scenery.js › MOTIFS; o produto escolhe em SHOWCASE).
+   Preso ao palco medido no JS (--stage-x, --stage-top e --scn-ped, a largura da pilastra) em qualquer tela: 1 unidade do desenho
+   = 1/200 da pilastra, e o ponto (0, 90) do desenho (o meio da peça) fica no meio da peça. --m-scale/--m-dx/--m-dy ajustam por
+   tela e por desenho. No arraste ele acompanha a peça a 12% do caminho (--scn-x, num `translate` próprio: o `transform` da raiz é
+   da demonstração). As bordas se dissolvem pela máscara. */
+.scenery-back { --u:calc(var(--scn-ped, 360px) / 200 * var(--m-scale, 1)); --at:calc(var(--scn-ped, 360px) / 200); position:absolute; left:calc(var(--stage-x, 66%) + var(--m-dx, 0) * var(--at) - var(--u) * 180); top:calc(var(--stage-top, 200px) + (90 + var(--m-dy, 0)) * var(--at) - var(--u) * 150); width:calc(var(--u) * 360); height:calc(var(--u) * 340); translate:var(--scn-x, 0px) 0; transform-origin:50% 44.1%; opacity:var(--m-opacity, 1);
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(transparent, #000 11%, #000 86%, transparent); -webkit-mask-composite:source-in; -webkit-mask-repeat:no-repeat; mask-image:linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(transparent, #000 11%, #000 86%, transparent); mask-composite:intersect; mask-repeat:no-repeat; }
+.scenery-back > svg { display:block; width:100%; height:100%; }
+/* As cores: só as variáveis da camada (carousel.js › sceneryVars), todas opacas — t = a cor da peça clareada, h = o lado da luz,
+   s = o lado da sombra (no máximo 8% da cor do texto). */
+.scenery-back .m-k1 { --k:var(--scn-t1); --kh:var(--scn-h1); --ks:var(--scn-s1); }
+.scenery-back .m-k2 { --k:var(--scn-t2); --kh:var(--scn-h2); --ks:var(--scn-s2); }
+.scenery-back .m-k3 { --k:var(--scn-t3); --kh:var(--scn-h3); --ks:var(--scn-s3); }
+.scenery-back .m-k4 { --k:var(--scn-t4); --kh:var(--scn-h4); --ks:var(--scn-s4); }
+.scenery-back .m-gh { stop-color:var(--kh); }
+.scenery-back .m-gt { stop-color:var(--k); }
+.scenery-back .m-gs { stop-color:var(--ks); }
+.scenery-back .m-white { --kh:#fff; fill:#fff; }
+.scenery-back .m-fs { fill:var(--ks); }
+.scenery-back .m-lh, .scenery-back .m-ls, .scenery-back .m-line { fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.scenery-back .m-lh { stroke:var(--kh); }
+.scenery-back .m-ls { stroke:var(--ks); }
+.scenery-back .m-stem { stroke-width:2.2; }
+.scenery-back .m-scale { stroke-width:1.1; }
+.scenery-back .m-crease { stroke-width:2; }
+.scenery-back .m-gloss { stroke-width:1.9; }
+/* Cada desenho no seu lugar, em cada tela (as medidas do desenho estão em hero-scenery.js). Dos 901 aos ~1365 px os botões
+   chegam perto da pilastra, à esquerda: nada do desenho desce ali (o arco-íris fica menor e sobe um pouco, com as nuvens acima
+   deles e o alto abaixo da faixa do header). */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .scenery-back { --m-scale:.9; }
+}
+@media (min-width: 901px) and (max-width: 1365px) {
+  [data-motif="rainbow"] .scenery-back { --m-scale:.82; --m-dy:-15; }
+}
+/* Celular: o desenho fica entre o preço (logo acima do palco) e os botões (abaixo da pilastra); o arco-íris desce um pouco. */
+@media (max-width: 900px) {
+  [data-motif="rainbow"] .scenery-back { --m-dy:12; }
+}
+@media (max-width: 600px) {
+  .scenery-back { --m-scale:.92; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scenery-back { translate:none; }
 }
 
 /* Nossa coleção: só o card do centro ganha as cores da sua peça (catalog.js põe --rail-own-*, as mesmas do banner); os

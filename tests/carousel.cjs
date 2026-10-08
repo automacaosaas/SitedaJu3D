@@ -277,5 +277,69 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''))"), 'economia de dados e 3G/2G não pré-carregam a demonstração');
   assert.ok(js.includes("if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});"), 'mouse, foco ou toque na vitrine preparam a demonstração antes do clique');
 
+  // ── fundo desenhado atrás de cada peça, em sombreado de nuvens (07/10/2026: "detalhar individualmente para cada objeto") ──
+  const {scenery, MOTIF_NAMES} = await load('hero-scenery.js');
+  const {luminance: lum, lightTint, sceneryVars, sceneryShift, SCENERY_SHADE, SCENERY_PARALLAX} = motion;
+  const motifs = Object.fromEntries(Object.keys(PRODUCTS).map(key => [key, showcase(key).scenery.motif]));
+  assert.deepEqual(motifs, {borboletoscopio: 'flowers', dinossauroscopio: 'claw', aviaoscopia: null, macacoscopio: 'bananas', girafoscopio: 'acacia', unicornioscopio: 'rainbow'},
+    'macaco: bananas; unicórnio: arco-íris; girafa: acácia; borboleta: flores; dinossauro: pata de T-rex; o avião fica com as nuvens');
+  assert.deepEqual([...MOTIF_NAMES].sort(), ['acacia', 'bananas', 'claw', 'flowers', 'rainbow'], 'a biblioteca de desenhos');
+  assert.deepEqual(showcase('produto-novo').scenery, {...DEFAULT_SHOWCASE.scenery}, 'produto sem entrada: as pétalas de sempre, sem desenho');
+  for (let a = 0; a <= 1; a += .05) assert.ok(Math.abs(lum(mixColor('#000000', '#ffffff', a)) - luminance(mixColor('#000000', '#ffffff', a))) < 1e-12, 'a mesma luminância dos testes');
+  assert.ok(SCENERY_SHADE > 0 && SCENERY_SHADE <= .08, 'o sombreado do desenho: no máximo 8% da cor do texto');
+  const layers = Object.keys(PRODUCTS).map((key, i) => ({key, html: scenery(showcase(key).scenery, i), look: showcase(key).scenery, theme: showcase(key).theme}));
+  const allIds = [];
+  for (const {key, html, look, theme} of layers) {
+    // um elemento raiz só (a demonstração escurece e recua esse elemento, e o desenho tem de ir junto)
+    const tags = [...html.matchAll(/<(\/?)([a-zA-Z]+)\b[^>]*?(\/?)>/g)];
+    let depth = 0, roots = 0;
+    for (const [, close, , self] of tags) { if (close) depth--; else if (!self) { if (depth === 0) roots++; depth++; } else if (depth === 0) roots++; assert.ok(depth >= 0, key + ': marcação equilibrada'); }
+    assert.ok(depth === 0 && roots === 1 && html.startsWith('<div class="') && /^<div[^>]* aria-hidden="true"/.test(html), key + ': um elemento raiz, decorativo (aria-hidden)');
+    assert.ok(!/<filter|filter\s*[:=]|feGaussian|<animate|<set\b|<script|\son[a-z]+=|javascript:|<image|href="(?!#)/i.test(html), key + ': sem filtros, animação própria, scripts nem arquivos externos');
+    assert.ok(!/#[0-9a-f]{6}\b|#(?!fff\b)[0-9a-f]{3}\b|rgba?\(/i.test(html.replace(/url\(#[^)]+\)/g, '').replace(/id="[^"]*"/g, '')), key + ': cores só pelas variáveis da camada (e o branco)');
+    const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+    allIds.push(...ids);
+    for (const [, ref] of html.matchAll(/url\(#([^)]+)\)/g)) assert.ok(ids.includes(ref), `${key}: o degradê ${ref} está na própria camada`);
+    if (!look.motif) { assert.ok(!html.includes('scenery-back'), key + ': sem desenho atrás da peça'); continue; }
+    assert.ok(html.includes(`data-motif="${look.motif}"`) && /<div class="scenery-back"><svg class="scenery-motif" viewBox="-180 -60 360 340"/.test(html), key + ': o desenho dentro da raiz, no quadro da pilastra');
+    // cores: a cor da peça clareada nunca escurece o fundo; o lado da sombra (8% do texto) mantém os textos legíveis
+    const vars = sceneryVars(theme, look), [, mid] = stops(theme.bannerStops);
+    assert.ok(look.tints.length >= 1 && look.tints.every(c => /^#[0-9a-f]{6}$/i.test(c)), key + ': as cores da peça em #rrggbb');
+    assert.ok(Object.keys(vars).length === 12 && Object.values(vars).every(c => /^#[0-9a-f]{6}$/.test(c)), key + ': só cores opacas (nada translúcido escurecendo o fundo)');
+    for (let k = 1; k <= 4; k++) {
+      const t = vars[`--scn-t${k}`], h = vars[`--scn-h${k}`], s = vars[`--scn-s${k}`];
+      assert.ok([t, h, s].every(c => /^#[0-9a-f]{6}$/.test(c)), `${key}: cor ${k} opaca`);
+      assert.ok(luminance(t) >= luminance(mid) - 1e-9 && luminance(h) >= luminance(t), `${key}: cor ${k} (${t}) tão clara quanto o meio do degradê (${mid})`);
+      assert.equal(s, mixColor(t, theme.textColor, SCENERY_SHADE), `${key}: sombra ${k} = 8% do texto sobre a cor`);
+      assert.ok(contrast(theme.textColor, s) >= 7 && contrast(theme.mutedColor, s) >= 4.5 && contrast(theme.accentColor, s) >= 4.5, `${key}: textos legíveis até sobre a sombra do desenho (${s})`);
+    }
+    assert.equal(vars['--scn-t1'], lightTint(look.tints[0], mid));
+    const shade = mixColor(mid, theme.textColor, SCENERY_SHADE);
+    assert.ok(contrast(theme.textColor, shade) >= 7 && contrast(theme.mutedColor, shade) >= 4.5 && contrast(theme.accentColor, shade) >= 4.5, key + ': o sombreado sobre o meio do degradê mantém o contraste');
+  }
+  assert.equal(new Set(allIds).size, allIds.length, 'ids dos degradês únicos entre as seis camadas');
+  for (const color of ['#183c99', '#efcf59', '#60341e', '#000000', '#ffffff']) for (const floor of ['#d9f0e4', '#fbe4b0', '#e2e8d4']) {
+    // a cor da peça misturada ao branco só até a luminância do piso (a menor mistura que chega lá)
+    const tint = lightTint(color, floor), k = [...Array(101).keys()].find(i => luminance(mixColor(color, '#ffffff', i / 100)) >= luminance(floor));
+    assert.ok(luminance(tint) >= luminance(floor) && tint === mixColor(color, '#ffffff', k / 100), `lightTint(${color}, ${floor})`);
+  }
+  // profundidade no arraste: o desenho anda com a peça, a 12% do caminho dela, e fica parado no movimento reduzido
+  assert.equal(SCENERY_PARALLAX, .12);
+  assert.equal(sceneryShift(0, 600), 0);
+  for (let d = -1.5; d <= 1.5; d += .1) {
+    const shift = sceneryShift(d, 600), x = pose(d).x * 600;
+    assert.ok(Math.abs(shift - x * .12) < 1e-9 && (shift === 0 || Math.sign(shift) === Math.sign(x)) && Math.abs(shift) <= 600 * .12 * 1.25 + 1e-9, 'parallax a favor da peça, a 12%');
+    assert.equal(sceneryShift(d, 600, {reduced: true}), 0, 'movimento reduzido: o desenho não anda');
+  }
+  // regras do pedido no código: sem nome de produto, palco medido, parallax num translate próprio e camadas apagadas fora da pintura
+  const sceneryJs = read('hero-scenery.js');
+  assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(js + sceneryJs), 'vitrine e desenhos sem nome de produto (o desenho vem de SHOWCASE)');
+  assert.ok(js.includes("page.style.setProperty('--stage-x'") && js.includes("page.style.setProperty('--stage-top'") && js.includes("page.style.setProperty('--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
+  assert.ok(js.includes("bgLayers[i].style.visibility = opacity < .005 ? 'hidden' : 'visible';") && js.includes("bgLayers[i].style.setProperty('--scn-x', `${sceneryShift(wrapDistance(i, position, total), travel, motion)"), 'camadas apagadas fora da pintura; o desenho acompanha a peça');
+  assert.ok(/\.scenery-back \{[^}]*var\(--scn-ped[^}]*left:calc\(var\(--stage-x[^}]*top:calc\(var\(--stage-top[^}]*translate:var\(--scn-x, 0px\) 0;/.test(css), 'o desenho no palco, com o parallax num translate (o transform da raiz é da demonstração)');
+  assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > svg { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as brumas dos cantos não dimensionam o desenho');
+  assert.ok(/prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-back \{ translate:none; \}/.test(css) && !/scenery[^{]*\{[^}]*animation/.test(css), 'sem animação parada no fundo; movimento reduzido sem parallax');
+  assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css) && /@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css), 'o tamanho do desenho acompanha a pilastra em cada tela');
+
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

@@ -3,7 +3,7 @@
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES, fixedColors} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -29,10 +29,10 @@ function init() {
   const lower = text => text.charAt(0).toLowerCase() + text.slice(1);
   const themeVars = theme => `--text:${theme.textColor};--muted:${theme.mutedColor};--accent:${theme.accentColor};--strong:${mixColor(theme.accentColor, '#000000', .2)};--glow:${withAlpha(theme.accentColor, .32)}`;
   const entries = keys.map(key => {
-    const product = PRODUCTS[key] || SOON[key], soon = !PRODUCTS[key], {art, theme, demo} = showcase(key);
+    const product = PRODUCTS[key] || SOON[key], soon = !PRODUCTS[key], {art, theme, scenery: look, demo} = showcase(key);
     // colors: o que a peça empresta às outras páginas (journey.js); wash: o tom claro do card ativo do catálogo e do fundo.
     const colors = journeyColors(theme), wash = colors['--theme-wash'];
-    return {key, product, art, theme, demo, colors, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
+    return {key, product, art, theme, look, demo, colors, wash, soon, price: soon ? 0 : COMMERCE.prices[key], category: PRODUCT_CATEGORIES[product.category]?.label || product.category};
   });
 
   let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false, shared = '';
@@ -45,7 +45,9 @@ function init() {
   const initial = Math.max(0, fromHash() >= 0 ? fromHash() : keys.indexOf(window.juTheme?.product()));
 
   // ── Estrutura ────────────────────────────────────────────────────────────────
-  bgHost.innerHTML = entries.map(({key,theme}) => `<div class="hero-layer" style="--stops:${theme.bannerStops}">${scenery(key)}</div>`).join('');
+  // Cada camada de fundo: o degradê do tema e o desenho da peça (hero-scenery.js), com as cores dela já clareadas (sceneryVars).
+  const lookVars = (theme, look) => Object.entries(sceneryVars(theme, look)).map(([name, value]) => `${name}:${value}`).join(';');
+  bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer" style="--stops:${theme.bannerStops};${lookVars(theme, look)}">${scenery(look, i)}</div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
   region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price, soon}) =>
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : soon ? '<p class="copy-price"><span class="palette-soon">Novidade · em breve</span></p>' : ''}</div>`).join('');
@@ -121,6 +123,12 @@ function init() {
   function measure() {
     const viewport = document.documentElement.clientWidth, pedestal = slots[0].offsetWidth || 320;
     page.style.setProperty('--hero-h', shell.offsetHeight + 'px');
+    // O desenho do fundo (hero-scenery.js) se prende ao palco em qualquer tela: o centro e o alto dele, medidos na .page (onde
+    // o fundo começa), e a largura da pilastra.
+    const host = page.getBoundingClientRect(), box = stage.getBoundingClientRect();
+    page.style.setProperty('--stage-x', `${(box.left + box.width / 2 - host.left).toFixed(1)}px`);
+    page.style.setProperty('--stage-top', `${(box.top - host.top).toFixed(1)}px`);
+    page.style.setProperty('--scn-ped', `${pedestal}px`);
     travel = Math.max(pedestal * 1.3, viewport * .48);
     rise = Math.max(8, pedestal * .035);
     render();
@@ -143,6 +151,9 @@ function init() {
     for (let i = 0; i < total; i++) {
       const opacity = i === mix.from ? 1 : i === mix.to ? mix.t : 0, z = i === mix.to ? '2' : '1';
       for (const layer of [bgLayers[i], bandLayers[i]]) { layer.style.opacity = opacity.toFixed(3); layer.style.zIndex = z; }
+      // camada apagada sai da pintura; o desenho dela acompanha a peça a 12% do caminho (profundidade), parado no movimento reduzido
+      bgLayers[i].style.visibility = opacity < .005 ? 'hidden' : 'visible';
+      bgLayers[i].style.setProperty('--scn-x', `${sceneryShift(wrapDistance(i, position, total), travel, motion).toFixed(1)}px`);
     }
     const a = entries[mix.from].theme, b = entries[mix.to].theme, accent = mixColor(a.accentColor, b.accentColor, mix.t);
     const vars = {'--theme-text': mixColor(a.textColor, b.textColor, mix.t), '--theme-muted': mixColor(a.mutedColor, b.mutedColor, mix.t), '--theme-accent': accent, '--theme-accent-strong': mixColor(accent, '#000000', .2), '--theme-glow': withAlpha(accent, .32), '--theme-pulse': withAlpha(accent, .55), '--theme-pulse-off': withAlpha(accent, 0), '--theme-soft': mixColor(accent, '#ffffff', .78), '--theme-wash': mixColor(entries[mix.from].wash, entries[mix.to].wash, mix.t)};

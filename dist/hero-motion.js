@@ -60,6 +60,40 @@ export function journeyColors(theme) {
   };
 }
 
+// ── Fundo desenhado atrás da peça (hero-scenery.js) ──
+// Luminância relativa (WCAG), a mesma fórmula dos testes de contraste.
+const linear = value => { const c = value / 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+export function luminance(hex) {
+  const [r, g, b] = channels(hex).map(linear);
+  return .2126 * r + .7152 * g + .0722 * b;
+}
+// A cor da peça clareada com branco só até ficar tão clara quanto `floor` (o tom do meio do degradê): um desenho nessa cor
+// nunca escurece o fundo atrás de um texto, e ainda guarda o máximo da cor da peça.
+export function lightTint(hex, floor) {
+  const target = luminance(floor);
+  for (let k = 0; k <= 100; k++) { const tint = mixColor(hex, '#ffffff', k / 100); if (luminance(tint) >= target) return tint; }
+  return '#ffffff';
+}
+// O sombreado (o lado na sombra de cada forma e os detalhes) é a cor do texto do tema a no máximo 8%: dá volume sem tirar contraste.
+export const SCENERY_SHADE = .08;
+// Profundidade no arraste: o desenho do fundo acompanha a peça a 12% do caminho dela (pose(d).x); parado no movimento reduzido.
+export const SCENERY_PARALLAX = .12;
+export function sceneryShift(distance, travel, {reduced = false} = {}) {
+  return reduced ? 0 : pose(distance).x * travel * SCENERY_PARALLAX + 0;   // + 0: nunca -0
+}
+// As cores do desenho de uma peça, como variáveis CSS da camada, todas opacas: --scn-tN (a cor N clareada), --scn-hN (o lado da
+// luz, mais branco) e --scn-sN (o lado da sombra e os detalhes). Com menos de quatro cores, a última se repete; sem cores, o tom do meio.
+export function sceneryVars(theme, {tints = []} = {}) {
+  const [, mid] = theme.bannerStops.match(/#[0-9a-f]{6}/gi), list = tints.length ? tints : [mid], vars = {};
+  for (let i = 0; i < 4; i++) {
+    const tint = lightTint(list[Math.min(i, list.length - 1)], mid);
+    vars[`--scn-t${i + 1}`] = tint;
+    vars[`--scn-h${i + 1}`] = mixColor(tint, '#ffffff', .62);
+    vars[`--scn-s${i + 1}`] = mixColor(tint, theme.textColor, SCENERY_SHADE);
+  }
+  return vars;
+}
+
 // Fundo e header: cross-fade entre as duas camadas vizinhas da posição atual.
 export function layerMix(position, total) {
   const lo = Math.floor(position);
