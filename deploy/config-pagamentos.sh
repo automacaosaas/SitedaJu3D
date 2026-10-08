@@ -30,10 +30,15 @@ ask() {  # ask <VAR> <pergunta> <secreto 0|1> <regex>
 
 echo "== Mercado Pago"
 read -r -p "Modo: 1 = teste, 2 = produção (vendas de verdade) [1]: " choice
-case "${choice:-1}" in 1) mode=test; prefix='TEST-' ;; 2) mode=live; prefix='APP_USR-' ;; *) echo "Responda 1 ou 2."; exit 1 ;; esac
+# As credenciais de teste do Mercado Pago podem começar com TEST- (as antigas) ou APP_USR- (as de hoje, iguais às de
+# produção no formato): o prefixo não diz o modo. Quem diz é MP_MODE; por isso a confirmação logo abaixo.
+case "${choice:-1}" in 1) mode=test; label='de TESTE' ;; 2) mode=live; label='de PRODUÇÃO' ;; *) echo "Responda 1 ou 2."; exit 1 ;; esac
+read -r -p "Vai colar as credenciais $label da conta da Júlia (Suas integrações → a aplicação → Credenciais $label)? (s/N): " sure
+[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }
+prefix='(TEST-|APP_USR-)'
 NEW[MP_MODE]=$mode
-ask MP_PUBLIC_KEY "Public Key ($prefix…)" 0 "^${prefix}[A-Za-z0-9-]{20,120}$"
-ask MP_ACCESS_TOKEN "Access Token ($prefix…, não aparece na tela)" 1 "^${prefix}[A-Za-z0-9-]{30,200}$"
+ask MP_PUBLIC_KEY "Public Key $label (APP_USR-… ou TEST-…)" 0 "^${prefix}[A-Za-z0-9-]{20,120}$"
+ask MP_ACCESS_TOKEN "Access Token $label (não aparece na tela)" 1 "^${prefix}[A-Za-z0-9-]{30,200}$"
 ask MP_WEBHOOK_SECRET "Assinatura secreta do webhook (não aparece na tela)" 1 '^[A-Za-z0-9]{16,128}$'
 
 echo "== E-mail da loja (Resend)"

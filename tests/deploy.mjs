@@ -125,7 +125,7 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
 // the old .env stays beside it, and a test key can never stay in live mode.
 {
   assert(payments.includes('read -r -s -p "$label: " value') && payments.includes('ask MP_ACCESS_TOKEN') && payments.includes('ask RESEND_API_KEY') && /ask MP_ACCESS_TOKEN "[^"]*" 1 /.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 /.test(payments), 'secret keys are read without echo');
-  assert(payments.includes("1) mode=test; prefix='TEST-'") && payments.includes("2) mode=live; prefix='APP_USR-'") && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'each mode takes its own keys (Enter keeps a key only when it fits)');
+  assert(payments.includes("1) mode=test; label='de TESTE'") && payments.includes("prefix='(TEST-|APP_USR-)'") && payments.includes('[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }') && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'the prefix does not tell test from live (Mercado Pago test keys may start with APP_USR- too): MP_MODE does, after a confirmation');
   assert(payments.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && payments.includes('cp -p "$ENV_FILE" "$backup"') && payments.includes('chmod 600 "$tmp"') && payments.includes('mv -f "$tmp" "$ENV_FILE"'), 'rewritten by builtins, old copy kept, private, swapped at once');
   assert(payments.includes('NEW[APP_ENV]=production') && payments.includes('NEW[SITE_URL]=$DOMAIN') && payments.includes('systemctl restart juimprime.service'), 'production on the shop domain, then the restart');
 }
