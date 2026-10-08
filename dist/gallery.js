@@ -31,6 +31,8 @@ export function createGallery(root,{onChange}={}){
     [...track.children].forEach((slide,i)=>slide.setAttribute('aria-hidden',String(i!==index)));
     for(const list of [rail,dots])[...list.children].forEach((b,i)=>b.setAttribute('aria-current',String(i===index)));
     prev.disabled=index===0;next.disabled=index===items.length-1;
+    // a faixa (focável, troca com as setas) diz qual vista está à mostra (usabilidade 16)
+    if(items[index])track.setAttribute('aria-label',`${items[index].name}, ${index+1} de ${items.length}`);
     onChange?.(index,items[index]);
   }
   function go(i,{smooth=true}={}){

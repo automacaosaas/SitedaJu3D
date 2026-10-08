@@ -15,7 +15,7 @@ const dialog = html.match(/<dialog id="product-dialog"[\s\S]*?<\/dialog>/)[0];
 // Marcação: a galeria no lugar da foto única (sem a peça na pilastra), com miniaturas, faixa que rola, setas e pontinhos.
 assert(!dialog.includes('id="dialog-image"') && !controller.includes('#dialog-image'), 'sem a foto única da peça na pilastra');
 assert(dialog.includes('<div class="image-area gallery" role="region" aria-roledescription="galeria" aria-label="Vistas da peça">'));
-for (const part of ['class="gallery-rail" role="group" aria-label="Escolher a vista"', 'class="gallery-track" tabindex="0"', 'data-step="-1" aria-label="Vista anterior"', 'data-step="1" aria-label="Próxima vista"', 'class="gallery-dots" role="group" aria-label="Escolher a vista"']) assert(dialog.includes(part), part);
+for (const part of ['class="gallery-rail" role="group" aria-label="Escolher a vista"', 'class="gallery-track" tabindex="0" role="group" aria-label="Fotos da peça"', 'data-step="-1" aria-label="Vista anterior"', 'data-step="1" aria-label="Próxima vista"', 'class="gallery-dots" role="group" aria-label="Escolher a vista"']) assert(dialog.includes(part), part);
 
 // Só FOTOS REAIS (06/10/2026: "tem que ser as fotos reais" — nem render nem imagem gerada): as do Luiz em três vistas, 4 por peça, nesta
 // ordem; cada peça só diz o nome do detalhe dela. O macaco, sem fotos reais, mostra só a da vitrine.
@@ -110,17 +110,19 @@ assert(total < 4000000, `as imagens somam menos de 4 MB (${total} B)`);
 // Controlador: a galeria troca com a peça, com a cor do fundo das fotos; sem nota embaixo da foto; cor leva ao 3D.
 assert(controller.includes("import {staticViews,createGallery} from './gallery.js';"));
 assert(controller.includes("gallery.set(staticViews(key).map(item=>({...item,alt:`${p.title} — ${item.name}`})));"));
-assert(controller.includes("$('.view-note').textContent=next==='photo'?'':") && !controller.includes('foto real'), 'na aba Foto, sem nota embaixo da foto');
+assert(controller.includes("const note=$('.view-note');if(next==='photo')note.textContent='';") && !controller.includes('foto real'), 'na aba Foto, sem nota embaixo da foto');
 assert(/if\(view!=='model'\)setView\('model'\)/.test(controller), 'escolher uma cor leva ao 3D');
 assert(!/renderViews|createObjectURL/.test(controller + gallery + viewer), 'nada de gerar imagem no navegador de quem compra');
 
 // Galeria: arrastar, teclado, miniaturas (passar o mouse), pontinhos, setas; com uma foto só, nada disso aparece.
 for (const part of ["track.addEventListener('scroll'", "{ArrowLeft:-1,ArrowRight:1}[e.key]", "e.key==='Home'||e.key==='End'", "rail.addEventListener('pointermove'", "e.pointerType==='mouse'", "prev.disabled=index===0;next.disabled=index===items.length-1;", "slide.setAttribute('aria-roledescription','vista')", "matchMedia('(prefers-reduced-motion: reduce)')", "root.toggleAttribute('data-single',list.length<2)"]) assert(gallery.includes(part), part);
 
-// CSS: miniaturas à esquerda no computador; no celular, a faixa inteira e pontinhos com 24 px de toque; o fundo das fotos em volta delas.
-assert(css.includes('#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
+// CSS: miniaturas à esquerda no computador; no celular, a faixa inteira e pontinhos com 44 px de toque; o fundo das fotos em volta delas.
+assert(css.includes('#product-dialog .image-area { position: absolute; inset: 80px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr);'));
 assert(css.includes('.gallery-track { position: absolute; inset: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;'));
-assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-rail, \.gallery-arrows \{ display: none; \}[\s\S]*\.gallery-dots button \{ display: grid; place-items: center; width: 24px; height: 24px;/.test(css));
+assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-rail, \.gallery-arrows \{ display: none; \}[\s\S]*\.gallery-dots button \{ display: grid; place-items: center; width: 44px; height: 44px;/.test(css), 'pontinhos com 44 px de toque');
+// a faixa focável diz qual vista está à mostra (usabilidade 16)
+assert(gallery.includes("if(items[index])track.setAttribute('aria-label',`${items[index].name}, ${index+1} de ${items.length}`);"));
 assert(/\.gallery-main \{[^}]*border: 1px solid var\(--pd-line\);[^}]*background: #fff;/.test(css) && css.includes('#product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }') && /#product-dialog .gallery img {[^}]*mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none;/.test(css), 'as fotos num painel branco (sem emenda com o branco delas); as de perto enchem o painel');
 assert(/@media \(max-width: 900px\) \{[\s\S]*\.gallery-main \{ margin: 0 16px; border-radius: 20px;[^}]*\}\r?\n  \.gallery-slide \{ padding: 0; \}/.test(css), 'no tablet e no celular, o painel branco com margem dos lados');
 // A página da peça: o quadro da foto real branco, com borda (a foto, opaca, não cobre a borda), a foto inteira e sem a sombra do
@@ -129,8 +131,8 @@ assert(landingCss.includes('.pl-art.is-real { border: 1px solid #2a1c2214; backg
 assert(/\.pl-thumbs button \{[^}]*background: #fff;/.test(landingCss) && landingCss.includes('padding: 3px 3px 16px; margin-bottom: -13px;'), 'página da peça: miniaturas brancas, sombra sem corte');
 // A novidade sem venda continua sem os botões de compra no celular (o display: contents do resumo compacto passava por cima).
 assert(css.includes('#product-dialog:not([data-mode=preview]) .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }') && css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-price, #purchase-panel, .pdp-preview) { display: none; }'), 'novidade sem botões de compra no celular');
-// Surpreenda-me ao lado das cores, sempre à vista (fora de Combinações).
-assert(dialog.includes('<div class="pdp-palette-row"><div id="palette" role="radiogroup" aria-label="Cor da parte"></div><button type="button" class="pdp-surprise" id="surprise">') && controller.includes("PRESETS.filter(preset=>preset.id!=='surpresa')") && controller.includes("$('#surprise').addEventListener('click'"), 'Surpreenda-me ao lado das cores');
+// Surpreenda-me fora de Combinações: desde 08/10/2026 na área da peça (tests/product-page.mjs), e as cores na largura toda.
+assert(dialog.includes('<div id="palette" role="radiogroup" aria-label="Cor da parte"></div>') && dialog.includes('<button type="button" class="pdp-surprise" id="surprise">') && controller.includes("PRESETS.filter(preset=>preset.id!=='surpresa')") && controller.includes("$('#surprise').addEventListener('click'"), 'Surpreenda-me fora de Combinações');
 assert(css.includes('.gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }'));
 assert(css.includes('.gallery-rail button { flex: none; width: 64px; height: 80px;') && gallery.includes('img.width=1200;img.height=1500;') && gallery.includes('img.width=160;img.height=200;'), 'miniaturas e fotos no formato 4:5');
 assert(!/\.image-area img \{[^}]*mask-image: radial-gradient/.test(css), 'sem a máscara da foto antiga');
@@ -147,4 +149,4 @@ assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video
 // Tradução: nota, rótulos e texto alternativo das fotos.
 assert(i18n.includes('(Frente|Três quartos|Lado|Três quartos de trás|Costas|De cima|.+ de perto)'));
 
-console.log(`PASS: photo gallery — 4 photos per piece (the giraffe from the owner's render images), in the showcase colours, on pure white in a white panel and frame, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the sources, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me beside the colors, cleaner phone screen with the extras in the (i) sheet.`);
+console.log(`PASS: photo gallery — 4 photos per piece (the giraffe from the owner's render images), in the showcase colours, on pure white in a white panel and frame, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the sources, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me out of the presets (on the piece since 08/10), cleaner phone screen with the extras in the (i) sheet.`);

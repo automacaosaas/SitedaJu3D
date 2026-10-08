@@ -1,9 +1,11 @@
 // O resumo da compra da peça recolhe e abre por uma alça (06/10/2026, pedidos do Luiz). No topo da área de compra, uma linha: puxar
 // para baixo (ou tocar) recolhe o resumo numa linha só, com o preço, o carrinho e "Comprar agora"; puxar para cima abre de novo, e a área
 // acompanha o dedo. No celular o resumo começa abaixado e a linha pulsa de leve, chamando para puxar; ela para assim que a pessoa
-// começa a personalizar (parte, cor, "Surpreenda-me", combinação), troca Foto/3D ou mexe na própria linha. Sem o balão "Ver resumo"
+// começa a personalizar (parte, cor, "Surpreenda-me", combinação, o kit das lâmpadas), troca Foto/3D ou mexe na própria linha. Sem o balão "Ver resumo"
 // aqui (fica só no carrinho).
-const phone = matchMedia('(max-width: 600px)');
+// celular, e também tablet ou notebook de tela baixa (celular deitado, zoom de 200%: 08/10/2026, usabilidade 1), onde a janela inteira rola
+// e a compra fica presa embaixo: recolhida, ela não cobre a peça
+const phone = matchMedia('(max-width: 600px), (max-width: 900px) and (max-height: 560px)');
 
 export function setupPurchaseSheet(dialog) {
   const area = dialog?.querySelector('.modal-actions');
@@ -71,7 +73,7 @@ export function setupPurchaseSheet(dialog) {
 
   // a linha pulsa (no celular, recolhido) até a pessoa personalizar ou trocar Foto/3D
   dialog.addEventListener('click', event => {
-    if (event.target.closest('#part-tabs, #palette, #surprise, #presets, .view-tabs [data-view]')) calm();
+    if (event.target.closest('#part-tabs, #palette, #surprise, #presets, .pdp-kit button, .view-tabs [data-view]')) calm();
   });
   // cada vez que a área de compra aparece (a janela abre com outra peça), volta ao começo: no celular, abaixada e chamando
   const start = () => {

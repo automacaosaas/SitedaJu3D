@@ -30,7 +30,7 @@ async function site() {
 }
 
 function page(id, data, base) {
-  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery, fixedColors, kitOffer} = data;
+  const {PRODUCTS, PRODUCT_CATEGORIES, COMMERCE, money, pixPrice, installmentLabel, defaults, color, showcase, icon, splitContact, contactMail, staticViews, hasGallery, fixedColors, kitOffer, badgeStyle} = data;
   const product = PRODUCTS[id], price = COMMERCE.prices[id], theme = showcase(id).theme, chosen = defaults(id);
   // a peça de cores fixas (as lâmpadas, 07/10/2026): as cores dela, a oferta do kit e só o botão de compra (nada para personalizar);
   // logo depois do botão, o lugar do "Monte seu kit" (escondido; product-landing.js o monta com kit-builder.js)
@@ -58,6 +58,8 @@ function page(id, data, base) {
   }).map(line => '  ' + line).join('\n') + '\n';
   const header = /<header class="header">[^]*?<\/header>/.exec(lines)[0];
   const footer = /<footer class="site-footer">[^]*?<\/footer>/.exec(lines)[0];
+  // .pl-info: a piece with a "Novidade" badge (products.js badge: the lamps, 08/10/2026) shows it before the category, in the same
+  // colours as in the product dialog (badgeStyle; product-landing.css .pl-badge.is-badge)
   // the colors as dots on the top corner of the picture; with product-landing.js a click opens the color picker on that part
   const dots = fixed ? product.colors.map(c => `<li><span class="pl-dot is-fixed" role="img" title="${esc(c.name)}" aria-label="${esc(c.name)}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`).join('') : product.parts.map(part => { const c = color(chosen[part.id]); return `<li><button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${esc(part.name)}: ${esc(c.name)}" aria-label="${esc(part.name)}: ${esc(c.name)}"><i style="--chip:${c.hex}" aria-hidden="true"></i></button></li>`; }).join('');
   const colors = fixed ? product.colors.map(c => `<strong>${esc(c.name)}</strong>`).join(' · ') : product.parts.map(part => `${esc(part.name)}: <strong>${esc(color(chosen[part.id]).name)}</strong>`).join(' · ');
@@ -73,7 +75,7 @@ ${hasGallery(id) ? `
           <div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden><button type="button" data-pl-view="photo" aria-pressed="true">Foto</button><button type="button" data-pl-view="3d" aria-pressed="false">${icon('cube')}<span>Girar em 360°</span></button></div>
         </div>
         <div class="pl-info">
-          <p class="pl-badge">${esc(category)}</p>
+          ${product.badge ? `<p class="pl-badges"><span class="pl-badge is-badge" data-effect="${esc(product.eyebrowEffect || 'shine')}" style="${esc(badgeStyle(id))}">Novidade</span><span class="pl-badge">${esc(category)}</span></p>` : `<p class="pl-badge">${esc(category)}</p>`}
           <h1>${esc(product.title)}</h1>
           <p class="pl-sub">${esc(product.subtitle)}</p>
           <p class="pl-price"><strong>${nbsp(money(price))}</strong><span class="pl-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>

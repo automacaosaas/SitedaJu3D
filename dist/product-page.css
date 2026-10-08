@@ -17,6 +17,15 @@
   animation: pd-in .42s var(--pd-ease) both;
 }
 #product-dialog::backdrop { background: color-mix(in srgb, var(--pd-text) 42%, transparent); backdrop-filter: blur(10px); }
+/* entrada e saída (movimento 12, 08/10/2026): o fundo esmaece junto com a janela; ao fechar, ela desce um pouco e some em 180 ms
+   (controller.js closeDialog espera o fim desta animação para o close() de verdade) */
+#product-dialog[open]::backdrop { animation: pd-fade .22s ease both; }
+#product-dialog[open].is-closing { animation: pd-out .18s cubic-bezier(.4, 0, 1, 1) forwards; pointer-events: none; }
+#product-dialog.is-closing::backdrop { animation: pd-fade-out .18s ease forwards; }
+@keyframes pd-fade { from { opacity: 0; } }
+@keyframes pd-fade-out { to { opacity: 0; } }
+@keyframes pd-out { to { opacity: 0; transform: translateY(8px) scale(.99); } }
+@keyframes pd-down { to { opacity: 0; transform: translateY(28px); } }
 @keyframes pd-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
 @keyframes pd-rise { from { opacity: 0; transform: translateY(10px); } }
 @keyframes pd-up { from { opacity: 0; transform: translateY(32px); } }
@@ -25,6 +34,9 @@
 #product-dialog[open] .detail-copy > * { animation-delay: .1s; }
 #product-dialog[open] .detail-copy > * + * { animation-delay: .16s; }
 #product-dialog[open] .modal-actions { animation-delay: .18s; }
+/* abrindo (controller.js syncProduct): até a peça nova estar montada (dois quadros; mais num celular lento) o miolo fica parado no
+   começo da entrada, invisível, e só o topo aparece; montada, ela sobe como sempre — nunca a foto e o preço da peça de antes */
+#product-dialog.is-filling :is(.detail-visual, .detail-copy > *, .modal-actions) { animation-play-state: paused; }
 
 /* ── Topo ─────────────────────────────────────────────────────────────────────── */
 .pdp-head { grid-column: 1 / -1; grid-row: 1; position: relative; z-index: 4; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: 16px 22px 14px; background: var(--pd-tint); border-bottom: 1px solid color-mix(in srgb, var(--pd-accent) 10%, transparent); }
@@ -45,8 +57,9 @@
    puro (07/10/2026: "FUNDO BRANCO nas imagens"), com uma sombra leve no chão, num painel branco com um fio em volta (a foto e o painel
    sem emenda); as de perto (.is-zoom) enchem o painel todo, como um zoom. Todas no mesmo formato, 4:5, e as miniaturas também (brancas,
    como o painel). Peça ainda sem fotos reais: só a foto da vitrine, sem miniaturas nem setas. */
-#product-dialog .image-area { position: absolute; inset: 70px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
-.gallery-rail { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+#product-dialog .image-area { position: absolute; inset: 80px 24px 24px 18px; width: auto; height: auto; padding: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; place-items: stretch; background: transparent; }
+/* as miniaturas começam no alto, junto com a foto grande (visual 17) */
+.gallery-rail { display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
 .gallery-rail button { flex: none; width: 64px; height: 80px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
 .gallery-rail button:hover, .gallery-rail button[aria-current=true] { opacity: 1; }
@@ -67,7 +80,7 @@
 .gallery-track:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -3px; border-radius: 22px; }
 .gallery-slide { flex: 0 0 100%; min-width: 0; height: 100%; padding: 3%; scroll-snap-align: center; scroll-snap-stop: always; }
 .gallery-arrows { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 8px; }
-.gallery-arrows button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: var(--pd-text); box-shadow: 0 2px 10px #14231b1a; cursor: pointer; transition: opacity .2s, transform .2s var(--pd-ease); }
+.gallery-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: var(--pd-text); box-shadow: 0 2px 10px #14231b1a; cursor: pointer; transition: opacity .2s, transform .2s var(--pd-ease); }
 .gallery-arrows button:hover:not(:disabled) { transform: translateY(-1px); }
 .gallery-arrows button:disabled { opacity: .35; box-shadow: none; cursor: default; }
 .gallery-arrows svg { width: 18px; height: 18px; }
@@ -75,24 +88,51 @@
 #product-dialog .gallery[data-single] { grid-template-columns: minmax(0, 1fr); }
 .gallery[data-single] :is(.gallery-rail, .gallery-arrows, .gallery-dots) { display: none; }
 /* o 3D usa quase toda a área (os botões ficam numa coluna à esquerda, por cima) */
-#product-dialog #viewer-host { inset: 60px 12px 40px; }
-#product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 3px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffd9; box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
-#product-dialog .view-tabs button { min-height: 36px; min-width: 52px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--pd-muted); transition: background .2s, color .2s; }
+#product-dialog #viewer-host { inset: 70px 12px 40px; }
+/* Foto | 3D, as ferramentas do 3D e o Surpreenda-me: todos com 44 px de toque (usabilidade 11) */
+#product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 2px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffd9; box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
+#product-dialog .view-tabs button { min-height: 44px; min-width: 52px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--pd-muted); transition: background .2s, color .2s; }
+#product-dialog .view-tabs button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .view-tabs button[aria-pressed=true] { background: var(--pd-accent); color: #fff; box-shadow: 0 3px 10px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
 /* botões do 3D (girar, aproximar, afastar, início) em pé, no canto esquerdo */
 /* a barra do 3D do lado direito da peça (o Foto | 3D fica à esquerda) */
 #product-dialog .viewer-tools { top: 50%; bottom: auto; right: 14px; left: auto; transform: translateY(-50%); flex-direction: column; align-items: stretch; border-radius: 24px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffe6; box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
-#product-dialog .viewer-tools button { min-height: 40px; min-width: 40px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--pd-text); }
+#product-dialog .viewer-tools button { min-height: 44px; min-width: 44px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--pd-text); }
+#product-dialog .viewer-tools button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -2px; }
 #product-dialog .viewer-tools > span { width: 22px; height: 1px; margin: 2px auto; }
 #product-dialog .viewer-tools button:hover, #product-dialog .viewer-tools button[aria-pressed=true] { background: var(--pd-tint); color: var(--pd-accent); }
 #product-dialog .view-note { bottom: 16px; font-size: 12px; color: var(--pd-muted); }
 #product-dialog .viewer-message { color: var(--pd-muted); }
-#product-dialog .pdp-preview { position: absolute; top: 18px; right: 18px; left: auto; z-index: 3; display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); border-radius: 999px; background: #ffffffd9; font-size: 12px; color: var(--pd-muted); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
+#product-dialog .pdp-preview { position: absolute; top: 25px; right: 18px; left: auto; z-index: 3; display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); border-radius: 999px; background: #ffffffd9; font-size: 12px; color: var(--pd-muted); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
 #pdp-preview-dots { display: flex; gap: 3px; }
 #pdp-preview-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0002; }
+/* computador estreito: "Suas cores" fica só com as bolinhas, para o Surpreenda-me caber folgado no meio */
+@media (max-width: 1023px) { #product-dialog .pdp-preview > span:first-child { display: none; } }
+/* Surpreenda-me na área da peça (08/10/2026, pedido do dono: "na tela do 3D, sem atrapalhar a visualização… a área das cores fica para
+   a personalização"): uma pílula de vidro, só nas peças de personalizar. No computador e no tablet, no alto e no meio, entre o Foto | 3D
+   e "Suas cores" (acima da foto e do 3D, nunca por cima da peça); no celular, embaixo à direita, na linha dos pontinhos da galeria (Foto)
+   e da dica "Arraste para girar" (3D), longe das ferramentas do 3D, que ficam no alto. A estrelinha dá uma volta a cada sorteio. */
+#product-dialog .pdp-surprise { position: absolute; z-index: 3; top: 21px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin: 0; padding: 0 18px 0 15px; border: 1px solid color-mix(in srgb, var(--pd-accent) 20%, #fff); border-radius: 999px; background: #ffffffc7; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 1px 0 #fff, 0 8px 22px -12px color-mix(in srgb, var(--pd-accent) 60%, transparent), 0 1px 3px #14231b0f; color: var(--pd-text); font: inherit; font-size: 13.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .25s ease, border-color .25s ease, background-color .25s ease; }
+#product-dialog .pdp-surprise span { display: inline-block; font-size: 15px; line-height: 1; color: var(--pd-accent); transition: transform .4s var(--pd-ease); }
+#product-dialog .pdp-surprise:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 3px; }
+#product-dialog .pdp-surprise.is-sparkling span { animation: pdp-sparkle .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes pdp-sparkle { 45% { transform: rotate(200deg) scale(1.45); } 100% { transform: rotate(360deg); } }
+@media (hover: hover) {
+  #product-dialog .pdp-surprise:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); background-color: #fffffff2; box-shadow: inset 0 1px 0 #fff, 0 12px 26px -12px color-mix(in srgb, var(--pd-accent) 70%, transparent), 0 1px 3px #14231b14; transform: translateY(-1px); }
+  #product-dialog .pdp-surprise:hover span { transform: rotate(72deg) scale(1.15); }
+}
+/* afunda ao toque (depois do hover, para valer também com o mouse em cima) */
+#product-dialog .pdp-surprise:active { transform: scale(.96); transition-duration: .08s; }
+/* computador estreito ("Suas cores" só com as bolinhas): no meio do vão entre o Foto | 3D e as bolinhas, não no meio da área, onde
+   ficaria colado no Foto | 3D */
+@media (min-width: 901px) and (max-width: 1023px) { #product-dialog .pdp-surprise { translate: calc(-50% + 28px) 0; } }
+#product-dialog:is([data-fixed], [data-mode=preview]) .pdp-surprise { display: none; }
 
 /* ── "Dê o seu toque." ────────────────────────────────────────────────────────── */
-#product-dialog .detail-copy { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 26px 32px 22px; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+#product-dialog .detail-copy { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 26px 32px 32px; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+/* o que rola por baixo da barra de compra se dissolve nela, em vez de ser cortado ao meio (visual 17); a folga de baixo é maior que o
+   esmaecimento, então no fim da rolagem nada fica apagado */
+#product-dialog .detail-copy { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }
 .pdp-colors { display: grid; gap: 14px; padding: 0; border: 0; background: none; }
 .pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .pdp-colors-head h3 { margin: 0; font: 500 clamp(22px, 2vw, 26px) / 1.15 'Playfair Display', Georgia, serif; letter-spacing: -.3px; color: var(--pd-text); }
@@ -102,13 +142,8 @@
 #product-dialog #part-tabs button:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); }
 #product-dialog #part-tabs button[aria-pressed=true] { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 55%, #fff); color: var(--pd-text); font-weight: 650; box-shadow: inset 0 0 0 1px var(--pd-accent); }
 #product-dialog .part-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; flex: none; transition: background .25s; }
-/* as cores e, ao lado delas, o Surpreenda-me, sempre à vista */
-.pdp-palette-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#product-dialog #palette { position: relative; flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
-.pdp-surprise { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; color: var(--pd-text); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: border-color .2s, transform .2s var(--pd-ease); }
-.pdp-surprise span { color: var(--pd-accent); }
-.pdp-surprise:hover { border-color: var(--pd-accent); transform: translateY(-1px); }
-.pdp-surprise:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
+/* as cores na largura toda (o Surpreenda-me foi para a área da peça) */
+#product-dialog #palette { position: relative; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
 #product-dialog .swatch { width: 44px; height: 44px; min-height: 0; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; flex: none; }
 #product-dialog .swatch i { width: 32px; height: 32px; transition: transform .2s var(--pd-ease), box-shadow .2s; }
 #product-dialog .swatch:hover { background: transparent; }
@@ -147,6 +182,11 @@
 .pdp-price p { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; }
 #product-dialog .pdp-price strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; color: var(--pd-text); font-variant-numeric: tabular-nums; }
 .pdp-pix { padding: 4px 11px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; }
+/* o kit das lâmpadas com desconto: o preço cheio riscado ao lado do total (controller.js paintPrice; no celular, o desconto fica no kit) */
+#product-dialog .pdp-full { margin-left: -2px; font-size: 14px; font-weight: 500; color: var(--pd-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { #product-dialog .pdp-full { display: none; } }
+#product-dialog .modal-actions.is-compact .pdp-full { display: none; }
+#product-dialog .purchase-actions .primary[aria-disabled=true] { opacity: .5; box-shadow: none; cursor: not-allowed; }
 #product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--pd-muted); text-align: left; }
 #product-dialog .pdp-price .pdp-offer { display: block; margin-top: 2px; color: var(--pd-accent); font-weight: 650; }
 #product-dialog .pdp-price .pdp-offer[hidden] { display: none; }
@@ -196,6 +236,8 @@
 /* ── Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular ── */
 .pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: min(460px, 46%); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: #fff; box-shadow: -18px 0 40px #14231b24; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 .pdp-sheet.is-open { transform: none; }
+/* saindo (controller.js closeSheet): mais rápido que a entrada e acelerando, como quem sai do caminho */
+.pdp-sheet.is-leaving { transition-duration: .24s; transition-timing-function: cubic-bezier(.4, 0, 1, 1); }
 .pdp-sheet-head { display: flex; align-items: center; justify-content: space-between; }
 .pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', Georgia, serif; color: var(--pd-text); }
 .pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--pd-line); border-radius: 50%; background: #fff; font-size: 24px; line-height: 1; }
@@ -218,16 +260,20 @@
   /* a área da peça continua a cor do topo e vai clareando até o branco do ateliê, sem troca brusca de cor (nas duas abas) */
   .pdp-head { border-bottom: 0; }
   #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, #fff) 60%, #fff 100%); }
-  #product-dialog .image-area { inset: 58px 0 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
+  /* o Foto | 3D e o Surpreenda-me numa linha acima do painel da foto (nunca por cima dela) */
+  #product-dialog .view-tabs { top: 14px; left: 16px; }
+  #product-dialog .pdp-surprise { top: 17px; }
+  #product-dialog .image-area { inset: 74px 0 6px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
   .gallery-rail, .gallery-arrows { display: none; }
   /* o painel branco com uma margem dos lados e os cantos redondos (a área continua com a cor do topo em volta); a foto enche o painel */
   .gallery-main { margin: 0 16px; border-radius: 20px; box-shadow: 0 8px 22px #14231b0f; }
   .gallery-slide { padding: 0; }
   .gallery-dots { display: flex; justify-content: center; }
-  .gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+  /* cada pontinho com 44 px de toque (o ponto continua pequeno) */
+  .gallery-dots button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
   .gallery-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--pd-text) 28%, transparent); transition: width .25s var(--pd-ease), background .25s; }
   .gallery-dots [aria-current=true] i { width: 18px; background: var(--pd-text); }
-  #product-dialog #viewer-host { inset: 56px 0 34px; }
+  #product-dialog #viewer-host { inset: 70px 0 34px; }
   #product-dialog .viewer-tools { right: 10px; }
   #product-dialog .view-note { bottom: 10px; }
   #product-dialog .pdp-preview { display: none; }
@@ -236,19 +282,27 @@
   #product-dialog { inset: 0; width: 100vw; height: 100dvh; margin: 0; border-radius: 0; box-shadow: none; }
   /* as cores ficam sempre à vista: a área da peça fica com o que sobra da tela depois delas e da compra (pelo menos 190 px) */
   #product-dialog[open] { grid-template-rows: auto minmax(190px, 1fr) minmax(0, auto) auto; animation-name: pd-up; animation-duration: .45s; }
+  /* fechando, a tela cheia desce um pouco e some (a mesma direção em que entrou) */
+  #product-dialog[open].is-closing { animation-name: pd-down; animation-duration: .2s; }
   .pdp-head { padding: max(10px, env(safe-area-inset-top)) 12px 10px; gap: 8px; }
   #product-dialog .pdp-heading .eyebrow { letter-spacing: .18em; }
   #product-dialog .pdp-heading h2 { font-size: 23px; }
   #product-dialog .pdp-heading .detail-subtitle { display: block; font-size: 13px; }
-  #product-dialog .view-tabs { top: 12px; left: 12px; }
-  #product-dialog .view-tabs button { min-height: 34px; padding: 0 12px; }
-  /* a foto sobe até o topo da área: a peça já tem a margem dela no quadro e passa por baixo do Foto | 3D sem encostar */
-  #product-dialog .image-area { inset: 8px 0 8px; }
-  #product-dialog #viewer-host { inset: 50px 0 30px; }
+  /* três faixas (visual 12): no alto o Foto | 3D (e, no 3D, as ferramentas à direita), alinhados às bordas do painel da foto; no meio a
+     foto ou o 3D, sem nada por cima da peça; embaixo os pontinhos ou a dica de girar, e o Surpreenda-me. Foto | 3D no mesmo lugar nas duas abas */
+  #product-dialog .view-tabs { top: 8px; left: 16px; }
+  #product-dialog .view-tabs button { padding: 0 13px; }
+  #product-dialog .image-area { inset: 66px 0 10px; gap: 8px; }
+  #product-dialog #viewer-host { inset: 66px 0 60px; }
   /* a barra do 3D numa linha no alto, à direita, na altura do Foto | 3D: a peça fica livre no meio */
-  #product-dialog .viewer-tools { top: 12px; right: 12px; left: auto; transform: none; flex-direction: row; align-items: center; padding: 3px; gap: 0; border-radius: 999px; }
-  #product-dialog .viewer-tools button { min-height: 34px; min-width: 34px; padding: 0 9px; }
-  #product-dialog .view-note { bottom: 8px; left: 10px; right: 10px; line-height: 1.2; }
+  #product-dialog .viewer-tools { top: 8px; right: 16px; left: auto; transform: none; flex-direction: row; align-items: center; padding: 2px; gap: 0; border-radius: 999px; }
+  #product-dialog .viewer-tools button { padding: 0 9px; }
+  #product-dialog .view-note { bottom: 26px; left: 10px; right: 10px; line-height: 1.2; }
+  /* o Surpreenda-me embaixo, à direita, na linha dos pontinhos (Foto) e da dica de girar (3D); os pontinhos e a dica vão para a esquerda */
+  #product-dialog .pdp-surprise { top: auto; bottom: 10px; left: auto; right: 16px; translate: none; box-shadow: inset 0 1px 0 #fff, 0 4px 14px -8px color-mix(in srgb, var(--pd-accent) 60%, transparent), 0 1px 3px #14231b0f; }
+  #product-dialog:not([data-fixed]):not([data-mode=preview]) .gallery-dots { justify-content: flex-start; padding-left: 6px; }
+  #product-dialog:not([data-fixed]):not([data-mode=preview]) .view-note { left: 22px; right: auto; max-width: calc(100% - 200px); text-align: left; }
+  #product-dialog .view-note-more { display: none; }
   #product-dialog .detail-copy { padding: 16px 16px 14px; gap: 14px; }
   .pdp-colors { gap: 12px; }
   .pdp-colors-head h3 { font-size: 22px; }
@@ -264,6 +318,9 @@
   #product-dialog .part-hint { display: none; }
   /* o "Monte seu kit" com menos folga em volta: a largura fica para as linhas das peças */
   #product-dialog[data-fixed] .pdp-kit { gap: 12px; padding: 14px 14px 12px; border-radius: 20px; }
+  /* as lâmpadas (visual 2): a foto continua grande e o texto, com o kit, rola embaixo dela até a compra */
+  #product-dialog[data-fixed][open] { grid-template-rows: auto clamp(300px, 50dvh, 470px) minmax(0, 1fr) auto; }
+  #product-dialog[data-fixed] .detail-copy { padding-bottom: 30px; }
   /* A compra, mais baixa (06/10/2026, "reduzir essa seção"): preço, Pix e "3x" numa linha só (o "3x" à direita, em duas linhas
      curtas), a oferta do 2.º avião logo embaixo e os botões com 44 px de altura (o mínimo para o dedo). */
   #product-dialog .modal-actions { gap: 8px; padding: 16px 16px max(10px, env(safe-area-inset-bottom)); }
@@ -279,12 +336,40 @@
   .pdp-sheet { top: auto; left: 0; width: auto; max-height: 78%; border-radius: 20px 20px 0 0; padding: 16px 18px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 40px #14231b24; transform: translateY(100%); }
 }
 @media (max-width: 374px) { #product-dialog .modal-actions:not(.is-compact) #add-to-cart .icon, #product-dialog[data-cart-edit] #add-to-cart .icon { display: none; } }
-@media (max-width: 374px) { #product-dialog .viewer-tools button { min-width: 32px; padding: 0 7px; } }
+/* nos celulares mais estreitos, a barra do 3D fica sem o "Início" (os botões continuam com 44 px; arrastar e a pinça fazem o resto) e o
+   Surpreenda-me, abaixo de 360 px, só com a estrelinha (o nome continua para o leitor de tela) */
+@media (max-width: 374px) { #product-dialog .viewer-tools [data-camera="reset"] { display: none; } }
+@media (max-width: 359px) { #product-dialog .pdp-surprise { width: 44px; padding: 0; justify-content: center; font-size: 0; } #product-dialog .pdp-surprise span { font-size: 17px; } }
 @media (max-width: 600px) and (max-height: 700px) {
   #product-dialog .pdp-heading .detail-subtitle { display: none; }
 }
-/* Celular: na barra do 3D ficam "Girar", aproximar, afastar e "Início" (arrastar gira a peça; pinça também aproxima). */
-@media (max-width: 600px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools > span { display: none; } }
+/* Tela baixa até 900 px de largura (celular deitado, zoom de 200% num notebook: 08/10/2026, usabilidade 1): a janela inteira rola e a
+   compra, recolhida (purchase-sheet.js), fica presa embaixo — o preço e os botões estão sempre à mão. O topo fica mais baixo, a peça cabe
+   entre ele e a compra, e os botões vão para os lados dela: Foto | 3D no canto de cima, o Surpreenda-me no de baixo e as ferramentas do 3D
+   no outro canto de cima (a área é larga e baixa; a peça fica no meio). A dica de girar sai. */
+@media (max-width: 900px) and (max-height: 560px) {
+  #product-dialog { overflow: hidden auto; overscroll-behavior: contain; }
+  /* em bloco, não em grade: um item de grade só fica preso dentro da própria linha, e a compra precisa ficar presa na janela toda */
+  #product-dialog[open] { display: block; }
+  #product-dialog .detail-visual { height: max(180px, calc(100dvh - 200px)); }
+  .pdp-head { padding: 8px 14px 6px; }
+  #product-dialog .pdp-heading h2 { font-size: 21px; }
+  #product-dialog .pdp-heading .detail-subtitle { display: none; }
+  #product-dialog .detail-copy { overflow: visible; -webkit-mask-image: none; mask-image: none; padding-bottom: 18px; }
+  #product-dialog .modal-actions { position: sticky; bottom: 0; z-index: 5; }
+  #product-dialog .view-tabs { top: 10px; left: 26px; }
+  #product-dialog .image-area { inset: 4px 0 4px; }
+  #product-dialog #viewer-host { inset: 4px 0; }
+  /* as ferramentas do 3D numa linha no canto de cima, espelhando o Foto | 3D: em pé elas passam da altura da área (180 px) */
+  #product-dialog .viewer-tools { top: 10px; right: 26px; transform: none; flex-direction: row; align-items: center; padding: 2px; gap: 0; border-radius: 999px; }
+  #product-dialog .pdp-surprise { top: auto; bottom: 4px; left: 16px; right: auto; translate: none; }
+  #product-dialog .gallery-dots, #product-dialog:not([data-fixed]):not([data-mode=preview]) .gallery-dots { justify-content: center; padding-left: 0; }
+  #product-dialog .view-note { display: none; }
+  /* com o painel "Sobre a peça" aberto, a janela não rola por baixo dele (controller.js openSheet volta ao topo) */
+  #product-dialog.sheet-open { overflow: hidden; }
+}
+/* Celular e tablet: na barra do 3D ficam "Girar", aproximar, afastar e "Início" (arrastar gira a peça; pinça também aproxima). */
+@media (max-width: 900px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools > span { display: none; } }
 @media (prefers-reduced-motion: reduce) {
   .pdp-sheet, #product-dialog .swatch i { transition: none; }
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
@@ -296,16 +381,19 @@
    todo). Uma alça no topo (puxar para baixo ou tocar) recolhe o resumo numa linha só: o preço, o carrinho (só o ícone; o nome continua
    para o leitor de tela) e "Comprar agora". No celular começa recolhido, com a linha pulsando até a pessoa personalizar ou trocar
    Foto/3D (purchase-sheet.js). Sem balão aqui: o "Ver resumo" fica só no carrinho. */
-#product-dialog .pdp-grip { position: absolute; top: -12px; left: 50%; z-index: 3; display: grid; place-items: center; width: 72px; height: 24px; padding: 0; border: 0; background: transparent; cursor: grab; transform: translateX(-50%); touch-action: none; }
-#product-dialog .pdp-grip i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #c7d2cc; box-shadow: 0 0 0 3px #fff; transition: width .3s var(--pd-ease), background-color .25s ease; }
-#product-dialog .pdp-grip:hover i, #product-dialog .pdp-grip:focus-visible i { width: 52px; background: var(--pd-accent); }
-#product-dialog .pdp-grip:focus-visible { outline: none; }
+/* a alça: 44 px de toque (a linha continua fina) e o foco à vista (usabilidade 7) */
+#product-dialog .pdp-grip { position: absolute; top: -22px; left: 50%; z-index: 3; display: grid; place-items: center; width: 72px; height: 44px; padding: 0; border: 0; background: transparent; cursor: grab; transform: translateX(-50%); touch-action: none; }
+#product-dialog .pdp-grip i { display: block; width: 40px; height: 5px; border-radius: 3px; background: #c7d2cc; box-shadow: 0 0 0 3px #fff; transition: transform .3s var(--pd-ease), background-color .25s ease; }
+#product-dialog .pdp-grip:hover i, #product-dialog .pdp-grip:focus-visible i { transform: scaleX(1.3); background: var(--pd-accent); }
+#product-dialog .pdp-grip:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -8px; border-radius: 14px; }
 #product-dialog .pdp-grip:active { cursor: grabbing; }
 #product-dialog[data-mode=preview] .pdp-grip { display: none; }
-/* a linha chamando: pulsa e sobe um pouco, como quem diz "puxe" */
-#product-dialog .pdp-grip.is-calling i { animation: pdp-grip-call 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
-#product-dialog .pdp-grip.is-calling::after { content: ''; position: absolute; left: 50%; top: 50%; width: 40px; height: 5px; border-radius: 3px; background: var(--pd-accent); transform: translate(-50%, -50%); animation: pdp-grip-ring 1.6s cubic-bezier(.2, .6, .35, 1) infinite; pointer-events: none; }
-@keyframes pdp-grip-call { 0%, 100% { transform: translateY(0); width: 40px; background: #c7d2cc; } 45% { transform: translateY(-4px); width: 54px; background: var(--pd-accent); } }
+/* a linha chamando: sobe um pouco e se estica, como quem diz "puxe", quatro vezes e para (movimento 9: só transform) */
+#product-dialog .pdp-grip.is-calling i { background: var(--pd-accent); animation: pdp-grip-call 1.6s cubic-bezier(.45, 0, .55, 1) 4; }
+#product-dialog .pdp-grip.is-calling::after { content: ''; position: absolute; left: 50%; top: 50%; width: 40px; height: 5px; border-radius: 3px; background: var(--pd-accent); transform: translate(-50%, -50%); animation: pdp-grip-ring 1.6s cubic-bezier(.2, .6, .35, 1) 4 both; pointer-events: none; }
+#product-dialog .pdp-grip:focus-visible i { animation: none; }
+#product-dialog .pdp-grip:focus-visible::after { display: none; }
+@keyframes pdp-grip-call { 0%, 100% { transform: translateY(0) scaleX(1); } 45% { transform: translateY(-4px) scaleX(1.35); } }
 @keyframes pdp-grip-ring { 0% { opacity: .35; transform: translate(-50%, -50%) scale(1); } 70%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9, 3.2); } }
 #product-dialog .modal-actions.is-moving { overflow: clip; }
 #product-dialog .modal-actions.is-compact { grid-template-columns: max-content 48px minmax(0, 1fr); align-items: center; gap: 8px; }
@@ -331,15 +419,20 @@
 @media (max-width: 374px) { #product-dialog .modal-actions.is-compact { column-gap: 6px; } #product-dialog .modal-actions.is-compact .pdp-pix { padding: 1px 6px; } }
 @media (prefers-reduced-motion: reduce) { #product-dialog .pdp-grip.is-calling i, #product-dialog .pdp-grip.is-calling::after { animation: none; } }
 
-/* O "Novidade" do unicórnio, brilhando em arco-íris e em destaque (07/10/2026: "eu quero ela brilhando em arco-íris, com destaque nela…
-   com efeito das letras se passando de várias cores"; products.js eyebrowEffect: 'rainbow', controller.js põe .is-rainbow): um selo
-   escuro (berinjela) em que as próprias letras passam pelas cores do arco-íris vivo (o degradê, recortado nas letras, corre numa volta
-   de 4 s sem emenda: o fim é o começo e o desenho anda exatamente um ladrilho), um brilho branco que atravessa o selo (só transform) e
-   um halo lilás. Sobre o fundo escuro cada cor viva passa de 4,5:1 (tests/product-page.mjs confere). Movimento reduzido: parado.
-   Alto contraste: o texto e o contorno na cor do sistema. */
-#product-dialog .pdp-heading .eyebrow.is-rainbow { position: relative; isolation: isolate; overflow: hidden; width: fit-content; margin: 0 auto 6px; padding: 4px 11px 4px 13px; border-radius: 999px; background-color: #2a1236; background-image: linear-gradient(90deg, #ff8fc4, #ffb86b, #ffe36b, #8ff09a, #7fd2ff, #b9a4ff, #ff8fc4), linear-gradient(135deg, #2a1236, #3d1c50); background-size: 200% 100%, 100% 100%; background-repeat: repeat-x, no-repeat; -webkit-background-clip: text, padding-box; background-clip: text, padding-box; color: #ffe36b; -webkit-text-fill-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 0 0 2px rgba(255, 255, 255, .7), 0 6px 18px -5px rgba(166, 92, 190, .75); animation: pdp-rainbow 4s linear infinite; }
-#product-dialog .pdp-heading .eyebrow.is-rainbow::after { content: ''; position: absolute; z-index: -1; top: -4px; bottom: -4px; left: 0; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .55) 50%, transparent); transform: translateX(-140%); animation: pdp-rainbow-shine 3.2s cubic-bezier(.45, 0, .3, 1) infinite; pointer-events: none; }
-@keyframes pdp-rainbow { from { background-position: 0% 0, 0 0; } to { background-position: 200% 0, 0 0; } }
-@keyframes pdp-rainbow-shine { 0%, 35% { transform: translateX(-140%); } 75%, 100% { transform: translateX(300%); } }
-@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; } #product-dialog .pdp-heading .eyebrow.is-rainbow::after { animation: none; display: none; } }
-@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; box-shadow: none; border: 1px solid CanvasText; color: CanvasText; -webkit-text-fill-color: CanvasText; } }
+/* O selo "Novidade" das lâmpadas (07/10/2026, o do unicórnio: "brilhando em arco-íris, com destaque… com efeito das letras se passando
+   de várias cores"; 08/10/2026: "um selo bordado nas outras, brilhando conforme a paleta delas — arco-íris só no unicórnio"). Tudo vem
+   do dado (products.js badge, controller.js põe .is-badge e as --badge-*): uma pílula escura no tom da peça, com um fio branco em volta,
+   um pesponto tracejado por dentro (o bordado), um halo na cor dela e as letras passando pelas cores da peça (o arco-íris vivo no
+   unicórnio). As letras são brancas; por cima delas corre o degradê (::before) em darken: no branco ele aparece inteiro e na pílula, mais
+   escura que qualquer cor dele em todos os canais, não muda nada — e o degradê anda só por transform (movimento 10), exatamente um
+   ladrilho por volta, sem emenda (a última cor é a primeira). Um brilho branco atravessa o selo (só transform). Cada cor passa de 4,5:1
+   sobre a pílula (tests/product-page.mjs confere). Movimento reduzido: parado. Alto contraste: o texto e o contorno na cor do sistema. */
+#product-dialog .pdp-heading .eyebrow.is-badge { position: relative; isolation: isolate; overflow: hidden; width: fit-content; margin: 0 auto 6px; padding: 4px 11px 4px 13px; border-radius: 999px; background: var(--badge-pill); color: #fff; outline: 1px dashed rgba(255, 255, 255, .3); outline-offset: -3px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), 0 0 0 2px rgba(255, 255, 255, .72), 0 6px 18px -5px color-mix(in srgb, var(--badge-glow) 75%, transparent); }
+#product-dialog .pdp-heading .eyebrow.is-badge::before { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; left: 0; width: 400%; background: var(--badge-ink) 0 0 / 50% 100% repeat-x; mix-blend-mode: darken; animation: pdp-badge-flow 4s linear infinite; pointer-events: none; }
+#product-dialog .pdp-heading .eyebrow.is-badge::after { content: ''; position: absolute; z-index: 2; top: -4px; bottom: -4px; left: 0; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .5) 50%, transparent); transform: translateX(-140%); animation: pdp-badge-shine 3.2s cubic-bezier(.45, 0, .3, 1) infinite; pointer-events: none; }
+@keyframes pdp-badge-flow { to { transform: translateX(-50%); } }
+@keyframes pdp-badge-shine { 0%, 35% { transform: translateX(-140%); } 75%, 100% { transform: translateX(300%); } }
+/* no computador, um pouco maior: é o destaque do topo (visual 10) */
+@media (min-width: 901px) { #product-dialog .pdp-heading .eyebrow.is-badge { margin-bottom: 8px; padding: 6px 15px 6px 18px; font-size: 13.5px; letter-spacing: .24em; } }
+@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-badge::before { animation: none; } #product-dialog .pdp-heading .eyebrow.is-badge::after { animation: none; display: none; } }
+@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-badge { background: none; box-shadow: none; outline: 0; border: 1px solid CanvasText; color: CanvasText; } #product-dialog .pdp-heading .eyebrow.is-badge::before, #product-dialog .pdp-heading .eyebrow.is-badge::after { display: none; } }

@@ -119,12 +119,14 @@ function setup(root, key) {
       setTimeout(() => openMiniCart({itemId: addedItemId(cart, key, {}), original: true}), reduced.matches ? 0 : 650);
       setTimeout(() => { busy = false; add.classList.remove('is-added'); add.querySelector('span').textContent = 'Adicionar ao carrinho'; }, 2200);
     });
-    // "Monte seu kit" (kit-builder.js), logo depois do botão: as peças do kit entram juntas e o mini-carrinho confirma cada uma
-    // (com o bloco à vista, a frase do kit embaixo do preço sai: ela continua no HTML para quem está sem JavaScript)
+    // "Monte seu kit" (kit-builder.js), logo depois do preço: as peças do kit entram juntas e o mini-carrinho confirma cada uma. Uma
+    // compra só (08/10/2026): com o bloco à vista, ele é a compra — o botão de uma unidade e a frase do kit embaixo do preço saem (os dois
+    // continuam no HTML para quem está sem JavaScript)
     const kitHost = q('[data-pl-kit]');
     if (kitHost) {
       kitHost.hidden = false;
       const offer = q('.pl-offer'); if (offer) offer.hidden = true;
+      add.closest('.pl-actions').hidden = true;
       mountKit(kitHost.querySelector('[data-pl-kit-body]'), {current: key, onAdd: async lines => {
         const before = totals(readCart(), 0).subtotal, cart = writeCart(putItems(readCart(), lines));
         window.dispatchEvent(new Event('ju:cart'));
