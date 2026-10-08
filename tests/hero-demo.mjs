@@ -122,10 +122,17 @@ for (const text of ['Voltar à vitrine', 'Personalizar o meu']) { assert.notEqua
 // ── a saída (movimento 7): curta e própria com a peça montada; nada de filter nas trilhas (vai para a GPU) ──
 {
   const exit = demo.slice(demo.indexOf('function exitTracks(g)'), demo.indexOf('function show(on)'));
-  assert.ok(exit.length > 500 && /exiting = state === 'open' && !calm;/.test(demo) && /timeline\.load\(exitTracks\(g\)\)/.test(demo), 'Voltar com a peça montada usa a saída própria');
+  // (montada = depois de T.labels: fechada enquanto a ficha técnica e o convite ainda entram, a saída também é a curta, não a montagem
+  // inteira de trás para frente a 4×; o que estava aparecendo some da opacidade em que estava)
+  assert.ok(exit.length > 500 && /exiting = !calm && \(state === 'open' \|\| time >= assembled\);/.test(demo) && /assembled = T\.labels;/.test(demo) && /timeline\.load\(exitTracks\(g\)\)/.test(demo), 'Voltar com a peça montada usa a saída própria');
+  assert.ok(/keyframes: \[\{opacity: \+getComputedStyle\(el\)\.opacity\}, \{opacity: 0\}\]/.test(exit), 'a ficha técnica e o convite somem da opacidade de agora');
   const ends = [...exit.matchAll(/delay: (\d+), duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
   assert.ok(ends.length >= 8 && Math.max(...ends) <= 650, `a saída inteira em até 0,65 s (${Math.max(...ends)} ms)`);
   assert.ok(/\{el: d\.rig, delay: 40, duration: 540/.test(exit), 'a câmera começa a voltar logo (40 ms)');
+  // o equipamento esmaece desde cedo (a curva que acelera fica só no deslocamento): com ela na trilha inteira, ele descia opaco por
+  // cima do texto e do "Comprar" que voltavam
+  assert.ok(/const down = el => \(\{el, delay: [^,]+, duration: 260, keyframes: \[\s*\{offset: 0, opacity: 1, transform: 'translate3d\(0, 0, 0\)', easing: EASE\.away\}, \{offset: \.2, opacity: 1\}/.test(exit) && !/easing: EASE\.away, keyframes/.test(exit), 'o equipamento esmaece em linha reta, sem esperar o fim da curva');
+  assert.ok(/if \(exiting\) \{ run\('closing'\); return; \}/.test(demo), 'reaberta no meio da saída e fechada de novo: a saída segue');
   assert.ok(/-Math\.max\(CLOSE_RATE, timeline\.time \/ REWIND_MS\)/.test(demo) && /REWIND_MS = 600/.test(demo), 'uma entrada interrompida volta de trás para frente em até ~0,6 s');
   assert.ok(!/filter: '[^']*blur/.test(demo.slice(demo.indexOf('function tracks(g)'), demo.indexOf('function show(on)'))), 'nenhuma trilha anima filter: blur');
   assert.ok(/if \(top < 0\) scrollTo\(\{top: Math\.max\(0, scrollY \+ top\)/.test(demo) && /dom\.close\.focus\(\{preventScroll: true\}\)/.test(demo), 'aberta com a página rolada: a vitrine sobe antes de o foco ir para Voltar (usabilidade 3)');

@@ -138,7 +138,8 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.match(script, /import \{icon\} from '\.\/icons\.js';/);
   const look = read('dist/contact.css');
   assert.doesNotMatch(look, /#fbeaf0|#fdeef2|#b64c68/i, 'no fixed pink that fights the theme');
-  assert.match(look, /\.contact-grid \{ display: grid; grid-template-columns: 1\.15fr 1fr 1fr; gap: 16px;/); assert.match(look, /\.contact-channels \{ display: grid; grid-template-columns: 1\.15fr 1fr 1fr; gap: 16px;/);
+  const tracks = 'grid-template-columns: minmax\\(0, 1\\.15fr\\) minmax\\(0, 1fr\\) minmax\\(0, 1fr\\); gap: 16px;';   // zero minimums: a long address cannot widen one column of one row only
+  assert.match(look, new RegExp(`\\.contact-grid \\{ display: grid; ${tracks}`)); assert.match(look, new RegExp(`\\.contact-channels \\{ display: grid; ${tracks}`));
   // The questions: opening one by one, with the shop's real numbers.
   assert.equal((page.match(/<details class="faq-item"/g) || []).length, 7);
   const faq = page.slice(page.indexOf('class="contact-faq"'));

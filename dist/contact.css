@@ -10,7 +10,7 @@
 .contact-when svg { flex: none; width: 18px; height: 18px; color: var(--rose); }
 .contact-when strong { color: var(--ink); font-weight: 650; }
 
-.contact-channels { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; margin-top: clamp(30px, 5vw, 52px); }
+.contact-channels { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: clamp(30px, 5vw, 52px); }
 .contact-channel { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 26px 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 14px 40px #65364908; }
 .contact-channel h2 { margin: 10px 0 0; font-family: 'Playfair Display', Georgia, serif; font-size: 23px; font-weight: 500; }
 .contact-channel p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
@@ -23,14 +23,14 @@
 .contact-cta:active { transform: scale(.98); }
 .contact-channel .contact-cta, .contact-channel .contact-link, .contact-channel .contact-soon { margin-top: auto; }
 .contact-channel > p:not(.contact-soon) { margin-bottom: 12px; }
-.contact-link { padding-top: 14px; color: var(--rose); font-size: 15px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+.contact-link { padding-top: 14px; color: var(--rose); font-size: 15px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
 .contact-channel .contact-soon { padding-top: 12px; color: var(--muted); font-size: 13px; }
 .contact-channel.is-whatsapp .contact-soon { color: #1d6b40; }
 /* The number under the button, for whoever prefers to save it (from api/_lib/legal.js). */
 .contact-channel > p.contact-number { margin: 10px 0 0; color: #1d6b40; font-size: 14px; font-weight: 650; letter-spacing: .2px; font-variant-numeric: tabular-nums; }
 
 /* the same columns as the channels above: help under WhatsApp, the form under E-mail and Instagram */
-.contact-grid { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+.contact-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
 .contact-form-card { grid-column: 2 / -1; }
 .contact-help, .contact-form-card { padding: 30px 28px; border: 1px solid var(--line); border-radius: 22px; }
 .contact-help { background: linear-gradient(160deg, var(--panel) 0%, color-mix(in srgb, var(--rose) 7%, #fff) 100%); }
@@ -94,7 +94,11 @@
 .faq-answer p:last-child { margin: 0; }
 .faq-answer a { color: var(--rose); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 
-@media (max-width: 860px) {
+/* the narrowest three-column widths: a little less side padding in the channels, so the e-mail address keeps to one line */
+@media (min-width: 1011px) and (max-width: 1180px) { .contact-channel { padding-inline: 20px; } }
+/* one column up to 1010 px: below that the e-mail address no longer fits its third of the row (the columns above stopped matching
+   the ones below, and the WhatsApp button broke in two lines); the zero minimums keep the two rows' columns equal above it */
+@media (max-width: 1010px) {
   .contact-channels, .contact-grid { grid-template-columns: 1fr; }
   .contact-form-card { grid-column: auto; }
   .contact-channel .contact-cta { align-self: stretch; justify-content: center; }

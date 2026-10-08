@@ -109,6 +109,14 @@ html { scrollbar-gutter:stable; }
 /* Narrow phones (≤374 px): the language pill shows just the code, without the globe, so the two sides of the centred logo
    are about as wide (the menu + pill used to leave 10 px to the logo on the left, 23 px to the cart on the right). */
 @media(max-width:374px) { .site-header .language-button .language-globe { display:none; } }
+/* Tablets upright at 801–940 px (iPad Air 820, iPad Pro 834): the centred menu ran under the language pill ("Contato" covered by
+   "PT"). The menu closes up a little and the pill drops its caret, as on the phone, leaving ~30 px between them. */
+@media(min-width:801px) and (max-width:940px) {
+  .site-header .primary-nav { gap:28px; }
+  .site-header .shop-nav { gap:8px; }
+  .site-header .language-button { padding:0 13px; }
+  .site-header .language-button .language-caret { display:none; }
+}
 @media(max-width:360px) {
   .shop-header { gap:7px; padding-inline:12px; }
   .shop-header .brand img { width:64px; height:64px; }

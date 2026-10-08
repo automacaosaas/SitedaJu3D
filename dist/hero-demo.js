@@ -63,8 +63,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   const compact = matchMedia('(max-width: 900px)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const timeline = new Timeline();
-  // exiting: a linha do tempo carregada é a saída própria (exitTracks), não a entrada
-  let dom = null, prepared = -1, index = -1, state = 'idle', calm = false, float = null, tilt = null, exiting = false;
+  // exiting: a linha do tempo carregada é a saída própria (exitTracks), não a entrada; assembled: o instante da entrada (ms) a partir do
+  // qual a peça já está montada e só a ficha técnica e o convite ainda entram
+  let dom = null, prepared = -1, index = -1, state = 'idle', calm = false, float = null, tilt = null, exiting = false, assembled = Infinity;
 
   function build() {
     const image = className => `<img class="${className}" alt="" decoding="async" draggable="false">`;
@@ -251,6 +252,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const config = configs[index], asm = config.assemble || null;
     // encaixe simples · equipamento em duas partes (a cabeça desce depois que a base sobe) · montagem
     const T = asm ? {tool: 900, shade: 1660, labels: 2150, cta: 2260, glow: 2000, drop: 1900} : config.head ? {tool: 520, shade: 880, labels: 1650, cta: 1760, glow: 1700, drop: 1700, head: 1000} : {tool: 520, shade: 880, labels: 1120, cta: 1220, glow: 1220, drop: 1260};
+    assembled = T.labels;
     const assemble = () => {
       // cada metade quando aberta (vista explodida): z (px de perspectiva), x/y (% do quadrado) e giros em X/Y (graus); a da frente vem para perto, a de trás recua
       const at = ({z = 0, x = 0, y = 0, rx = 0, ry = 0} = {}) => `translate3d(${x}%, ${y}%, ${z}px) rotateX(${rx}deg) rotateY(${ry}deg)`;
@@ -349,14 +351,19 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const copy = region.querySelector('.hero-copy'), palette = region.querySelector('.hero-palette'), arrows = [...region.querySelectorAll('.hero-arrow')];
     const depth = PERSPECTIVE * (1 / g.s - 1), camera = (x, y, z) => `perspective(${PERSPECTIVE}px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)`;
     const [copyAway, paletteAway] = g.compact ? ['0, -12px', '0, 12px'] : ['-18px, 0', '18px, 0'];
-    const fadeOut = el => ({el, duration: 140, easing: 'ease-out', keyframes: [{opacity: 1}, {opacity: 0}]});
+    // da opacidade de agora: fechada enquanto a ficha técnica ou o convite ainda apareciam, nada pisca antes de sumir
+    const fadeOut = el => ({el, duration: 140, easing: 'ease-out', keyframes: [{opacity: +getComputedStyle(el).opacity}, {opacity: 0}]});
     const comeBack = (el, delay, duration, from) => ({el, delay, duration, easing: EASE.out, keyframes: [{opacity: 0, transform: from}, {opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)'}]});
-    const down = el => ({el, delay: config.head ? 70 : 0, duration: 300, easing: EASE.away, keyframes: [
-      {opacity: 1, transform: 'translate3d(0, 0, 0)'}, {offset: .75, opacity: 1}, {opacity: 0, transform: `translate3d(0, ${g.toolY.toFixed(1)}px, 0)`}]});
+    // o deslocamento acelera (EASE.away, por trecho) e a opacidade cai em linha reta desde cedo: com a curva na trilha inteira a
+    // opacidade só chegava ao trecho dela no fim, e o equipamento descia inteiro por cima do texto e do botão que voltavam
+    const down = el => ({el, delay: config.head ? 60 : 0, duration: 260, keyframes: [
+      {offset: 0, opacity: 1, transform: 'translate3d(0, 0, 0)', easing: EASE.away}, {offset: .2, opacity: 1}, {offset: 1, opacity: 0, transform: `translate3d(0, ${g.toolY.toFixed(1)}px, 0)`}]});
     return [
       {el: g.source, duration: 600, keyframes: [{visibility: 'hidden'}, {visibility: 'hidden'}]},
       ...[d.close, d.cta, ...(dom.hint.hidden ? [] : [dom.hint]), ...d.callouts.children].map(fadeOut),
-      ...(config.head ? [{el: d.head, duration: 260, easing: EASE.away, keyframes: [{opacity: 1, transform: 'translate3d(0, 0, 0)'}, {offset: .6, opacity: 1}, {opacity: 0, transform: 'translate3d(0, -34%, 0)'}]}] : []),
+      // o brilho do estalo (montagem), se ainda atravessa a peça: some onde está
+      ...(asm ? [(s => ({el: d.sheen, duration: 140, easing: 'ease-out', keyframes: [{opacity: +s.opacity, transform: s.transform}, {opacity: 0, transform: s.transform}]}))(getComputedStyle(d.sheen))] : []),
+      ...(config.head ? [{el: d.head, duration: 240, keyframes: [{offset: 0, opacity: 1, transform: 'translate3d(0, 0, 0)', easing: EASE.away}, {offset: .3, opacity: 1}, {offset: 1, opacity: 0, transform: 'translate3d(0, -34%, 0)'}]}] : []),
       down(d.tool), down(cast),
       {el: d.shade, duration: 160, easing: 'ease-out', keyframes: [{opacity: .56}, {opacity: 0}]},
       {el: d.drop, duration: 320, easing: 'ease-out', keyframes: [{opacity: .16, transform: DROP_REST}, {opacity: 0, transform: 'translate3d(0, 0, 0) scale(.92)'}]},
@@ -460,12 +467,13 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
   function closeDemo({immediate = false} = {}) {
     if (state === 'idle' || (state === 'closing' && !immediate)) return;
     if (immediate || !timeline.animations.length || timeline.time <= 0) { finish(); return; }
+    if (exiting) { run('closing'); return; }   // reaberta no meio da saída e fechada de novo: a saída segue do ponto em que está
     const time = timeline.time, g = {...measure(), closing: true};   // medidas novas: a janela pode ter mudado de tamanho enquanto estava aberta
     stopIdle(false);
     if (dom.giro) { if (dom.giro.p > 0) playTurn(0, calm ? 200 : 420, calm); else clearTimeout(dom.giro.timer); }
-    // montada (e com movimento): a saída própria, curta; no meio da entrada (ou com movimento reduzido, só esmaecimentos): a entrada
-    // de trás para frente, do ponto em que está
-    exiting = state === 'open' && !calm;
+    // montada (e com movimento), mesmo que a ficha técnica e o convite ainda estejam entrando: a saída própria, curta; no meio da
+    // montagem (ou com movimento reduzido, só esmaecimentos): a entrada de trás para frente, do ponto em que está
+    exiting = !calm && (state === 'open' || time >= assembled);
     if (exiting) timeline.load(exitTracks(g));
     else { dom.hint.classList.remove('is-shown'); timeline.load(tracks(g), time); }
     run('closing');
