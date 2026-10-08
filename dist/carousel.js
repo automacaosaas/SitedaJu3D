@@ -38,6 +38,9 @@ function init() {
 
   let position = 0, target = 0, active = -1, frame = 0, gesture = null, suppressUntil = 0, locked = false, shared = '';
   let travel = 600, rise = 12;
+  // a primeira medida da vitrine (measure(), pelo ResizeObserver): a página só aparece depois dela
+  let measured;
+  const firstMeasure = new Promise(resolve => { measured = resolve; });
 
   function fromHash() {
     const raw = location.hash.replace('#produto/', '').split('/')[0], index = keys.indexOf(ALIASES[raw] || raw);
@@ -60,10 +63,11 @@ function init() {
   region.querySelector('[data-hero-palette]').innerHTML = entries.map(({key, product, theme, demo, soon}) =>
     `<div class="palette" style="${themeVars(theme)}">${soon ? `<a class="palette-button" href="#produto/${key}/3d" data-role="palette">${icon('cube')}<span>Ver em 3D</span><span class="palette-go" aria-hidden="true">${icon('arrow')}</span><span class="sr-only"> ${product.title}</span></a>` : fixedColors(key) ? `<a class="palette-button" href="#produto/${key}" data-role="palette">${icon('cart')}<span>Comprar</span><span class="palette-go" aria-hidden="true">${icon('arrow')}</span><span class="sr-only"> ${product.title}</span></a>` : `<a class="palette-button" href="#produto/${key}/personalizar" data-role="palette">${icon('palette')}<span>Personalizar o meu</span><span class="palette-go" aria-hidden="true">${icon('arrow')}</span><span class="sr-only"> ${product.title}</span></a>`}${demo ? `<button class="hero-demo-button" type="button" data-demo-open>${icon('eye')}<span>Ver encaixado</span><span class="sr-only"> ${product.title}</span></button>` : ''}</div>`).join('');
   region.querySelector('[data-hero-stage]').innerHTML = entries.map(({key, product, art}, i) => {
-    const near = Math.abs(wrapDistance(i, initial, total)) <= 1, src = `assets/${product.catalogImage || product.image}`;
-    // 768 ou 1254 px conforme a tela (products.js); as distantes guardam os dois endereços até chegar a vez delas.
-    const set = artSrcset(product.catalogImage || product.image), sources = set ? ` sizes="${HERO_SIZES}" ${near ? '' : 'data-'}srcset="${set}"` : '';
-    return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img${sources} ${near ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${i === initial ? ' fetchpriority="high"' : ''}></span></a>`;
+    const first = i === initial, src = `assets/${product.catalogImage || product.image}`;
+    // 768 ou 1254 px conforme a tela (products.js). Só a peça da frente pede a foto agora (a mesma que o page-entry.js já
+    // pré-carregou: a banda fica toda para ela); as vizinhas, logo depois de ela aparecer, e as distantes na vez delas.
+    const set = artSrcset(product.catalogImage || product.image), sources = set ? ` sizes="${HERO_SIZES}" ${first ? '' : 'data-'}srcset="${set}"` : '';
+    return `<a class="slot" href="#produto/${key}" data-product="${key}" data-role="slot" draggable="false" aria-label="Conhecer ${product.title}, ${lower(product.subtitle)}" style="--art-h:${art.h};--art-bottom:${art.bottom};--art-foot:${art.foot}"><span class="ped" aria-hidden="true"><i class="ped-ground"></i><i class="ped-body"></i><i class="ped-top"></i></span><span class="piece"><i class="piece-shadow" aria-hidden="true"></i><img${sources} ${first ? `src="${src}"` : `data-src="${src}"`} alt="${art.alt || product.title}" width="1254" height="1254" decoding="async" draggable="false"${first ? ' fetchpriority="high"' : ''}></span></a>`;
   }).join('');
 
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
@@ -87,19 +91,34 @@ function init() {
     if (ok) img.classList.add('is-loaded');
     else {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend','<span class="image-unavailable">Imagem indisponível.<br>Conheça as cores da peça.</span>');}
   }
-  const drawn = Promise.all([ready[initial], Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 1600))])]);
+  // A página aparece assim que a peça da frente está decodificada e a primeira medida (ResizeObserver, measure()) aplicada — num
+  // celular lento ela pode vir depois da foto, e a página não aparece com o desenho do fundo fora do lugar para logo pular (CLS).
+  // As fontes ganham no máximo 150 ms a mais (com swap e os fallbacks métricos o texto já está no lugar). document.fonts só é
+  // consultado depois de um quadro desenhado: lido com o layout por fazer (na montagem), ele obrigava o navegador a calcular
+  // estilo e layout ali mesmo (PageSpeed, 08/10/2026).
+  const afterFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r)));
+  const drawn = Promise.all([ready[initial], firstMeasure]).then(afterFrame).then(() => Promise.race([document.fonts?.ready, new Promise(r => setTimeout(r, 150))]));
   // Volta à home (page-entry.js): a página aparece quando a peça da frente está pronta, ou 600 ms depois da estrutura.
   Promise.race([drawn, new Promise(r => setTimeout(r, 600))]).then(() => window.finishJuReturn?.());
   drawn.then(() => {
     stage.setAttribute('aria-busy', 'false');
     window.finishJuOpening?.();
-    // Pré-monta a demonstração (as imagens do equipamento, ~130 KB) num momento ocioso, no máximo 1,5 s depois, para estarem
-    // prontas no clique. Em 3G/2G ou com economia de dados ligada, só ao primeiro sinal de interesse na vitrine (mouse por
-    // cima, foco, toque), ainda antes do clique: quem não abre a demonstração não paga por ela.
+    // a primeira foto entra sem esmaecer (carousel.css); daqui em diante, as que chegam esmaecem
+    requestAnimationFrame(() => requestAnimationFrame(() => region.classList.add('is-drawn')));
+    // as vizinhas, para o primeiro arraste, só agora: até aqui a banda era toda da foto da frente
+    preloadAround(active);
+    // Pré-monta a demonstração (as imagens do equipamento, ~130 KB) para estar pronta no clique: ao primeiro sinal de interesse
+    // na vitrine (mouse por cima, foco, toque), ainda antes do clique, ou, em conexão folgada, um tempo depois que a página
+    // terminou de carregar e ficou ociosa — nunca nos primeiros segundos, disputando a banda com a página. Em 3G/2G ou com
+    // economia de dados ligada, só com o interesse: quem não abre a demonstração não paga por ela.
     const net = navigator.connection, roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''));
     const early = () => demo.prepare(active);
-    if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});
-    else if (window.requestIdleCallback) requestIdleCallback(early, {timeout: 1500}); else setTimeout(early, 300);
+    for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});
+    if (roomy) {
+      const idle = fn => window.requestIdleCallback ? requestIdleCallback(fn, {timeout: 2000}) : setTimeout(fn, 200);
+      const later = () => idle(() => setTimeout(() => idle(early), 3000));
+      if (document.readyState === 'complete') later(); else addEventListener('load', later, {once: true});
+    }
     demoFromRoute();   // chegou da página Produtos por "Ver encaixado"
   });
   region.setAttribute('aria-label', `Coleção de ${total} ${total === 1 ? 'produto' : 'produtos'}`);
@@ -126,18 +145,21 @@ function init() {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
+  // Todas as leituras antes de qualquer escrita, e chamado pelo ResizeObserver (depois do layout, antes da pintura): medir nunca
+  // obriga o navegador a refazer o layout no meio do script (PageSpeed, 08/10/2026: "forced reflow" na montagem).
   function measure() {
-    const viewport = document.documentElement.clientWidth, pedestal = slots[0].offsetWidth || 320;
-    page.style.setProperty('--hero-h', shell.offsetHeight + 'px');
+    const viewport = document.documentElement.clientWidth, pedestal = slots[0].offsetWidth || 320, height = shell.offsetHeight;
     // O desenho do fundo (hero-scenery.js) se prende ao palco em qualquer tela: o centro e o alto dele, medidos na .page (onde
     // o fundo começa), e a largura da pilastra.
     const host = page.getBoundingClientRect(), box = stage.getBoundingClientRect();
-    page.style.setProperty('--stage-x', `${(box.left + box.width / 2 - host.left).toFixed(1)}px`);
-    page.style.setProperty('--stage-top', `${(box.top - host.top).toFixed(1)}px`);
-    page.style.setProperty('--scn-ped', `${pedestal}px`);
+    put(page, '--hero-h', height + 'px');
+    put(page, '--stage-x', `${(box.left + box.width / 2 - host.left).toFixed(1)}px`);
+    put(page, '--stage-top', `${(box.top - host.top).toFixed(1)}px`);
+    put(page, '--scn-ped', `${pedestal}px`);
     travel = Math.max(pedestal * 1.3, viewport * .48);
     rise = Math.max(8, pedestal * .035);
     render();
+    measured();
   }
   // Um estilo só é escrito quando muda: a cada quadro quase nada muda (as peças longe, as camadas apagadas, a cor já certa).
   const written = new WeakMap();
@@ -319,8 +341,12 @@ function init() {
     requestAnimationFrame(open);
   }
   addEventListener('hashchange', fromRoute);
+  // A primeira medida vem do ResizeObserver, no primeiro quadro (depois do layout, antes da pintura): a montagem só escreve.
+  // Ele observa o banner (largura da tela, altura com as fontes) e a pilastra; o resize da janela segue (numa tela larga o
+  // banner para de crescer, mas o passo entre as peças ainda acompanha a janela).
   addEventListener('resize', measure);
-  if ('ResizeObserver' in window) new ResizeObserver(() => measure()).observe(shell);
+  if ('ResizeObserver' in window) { const sizes = new ResizeObserver(() => measure()); sizes.observe(shell); sizes.observe(slots[0]); }
+  else requestAnimationFrame(measure);
   reduced.addEventListener('change', () => { stop(); position = target; render(); report(); });
   // As nuvenzinhas e os cantos do fundo só se mexem com o banner na tela e a aba aberta (carousel.css › .hero-bg.is-still).
   let onScreen = true;
@@ -334,6 +360,6 @@ function init() {
   addEventListener('pageshow', e => { if (e.persisted) report(); });
 
   position = target = initial;
-  setActive(initial); preloadAround(initial); measure(); report();
+  setActive(initial); render(); report();
   shell.classList.add('is-ready');
 }

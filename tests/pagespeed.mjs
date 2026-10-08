@@ -46,7 +46,14 @@ for (const [href, attrs] of sheets) {
   } else assert.equal(attrs, '', `${href}: needed for the first paint`);
 }
 assert.match(read('dist/site-shell.js'), /^import '\.\/late-css\.js';/, 'site-shell.js, the first module, switches them on first');
-assert.match(read('dist/controller.js'), /const syncStyled=\(\)=>whenStyled\(syncProduct\);\nwindow\.addEventListener\('hashchange',syncStyled\);[^\n]*syncStyled\(\);/, 'the product window (also from #produto/<peça>/personalizar at load) opens styled');
+assert.match(read('dist/controller.js'), /const syncStyled=\(\)=>\{const hash=location\.hash;whenStyled\(\(\)=>syncProduct\(hash\)\);\};\nwindow\.addEventListener\('hashchange',syncStyled\);[^\n]*syncStyled\(\);/, 'the product window (also from #produto/<peça>, /personalizar or /3d at load) opens styled, for the address it was opened by');
+// #produto/<peça>/encaixe opens the demonstration (carousel.js), never the product window over it; the demonstration itself
+// opens only with hero-demo.css applied, and so does the mini-cart.
+assert.match(read('dist/controller.js'), /function syncProduct\(hash=location\.hash\)\{\n  const \[raw,step,combo\]=hash\.replace/);
+assert.match(read('dist/controller.js'), /if\(step==='encaixe'\|\|\(!PRODUCTS\[key\]/);
+assert.match(read('dist/hero-demo.js'), /const \[loaded\] = await Promise\.all\(\[ready, lateCss\]\);/);
+assert.match(read('dist/mini-cart.js'), /if \(!lateCssReady\(\)\) return void whenStyled\(\(\) => openMiniCart\(/);
+assert.doesNotMatch(read('dist/late-css.js'), /setTimeout/, 'no time limit: on a slow connection the window waits for its styles, never opens unstyled');
 // commerce.css (the checkout) no longer styles the showcase demonstration through a loose .demo-controls rule; the demonstration
 // keeps that look in its own stylesheet.
 const commerce = read('dist/commerce.css');
@@ -79,4 +86,82 @@ for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`d
   assert.equal(none.lateCssReady(), true, 'pages without late stylesheets (and Node) are ready from the start');
 }
 
-console.log('PASS: pagespeed — charset first, import map before modules, the home preloads its static module graph (generated), late stylesheets with <noscript> copies and nothing opening unstyled.');
+// ── Data the first scripts need from products.js, generated (tools/sync-entry.cjs) ──
+{
+  const {sync, data} = require('../tools/sync-entry.cjs');
+  for (const [file, [before, after]] of Object.entries(await sync())) assert.equal(after, before, `${file} out of date — run: node tools/sync-entry.cjs`);
+  const {PRODUCTS, SOON, artSrcset, HERO_SIZES, showcase} = await import(pathToFileURL(path.join(root, 'dist/products.js')).href);
+  const {journeyColors} = await import(pathToFileURL(path.join(root, 'dist/hero-motion.js')).href);
+  const {pieces, theme} = await data();
+  // journey.js wears, before anything runs, exactly the colours the showcase computes for the piece it opens on: no colour
+  // changes (and no transition of the announcement bar or the cards) at load
+  const first = Object.keys(PRODUCTS)[0];
+  assert.deepEqual(theme, journeyColors(showcase(first).theme));
+  assert(read('dist/journey.js').includes(`const defaults = {${Object.entries(theme).map(([k, v]) => `'${k}':'${v}'`).join(', ')}};`));
+  // page-entry.js preloads the photo of any piece of the showcase (all of them, in its order), with the showcase's srcset and sizes
+  assert.deepEqual(Object.keys(pieces), [...Object.keys(PRODUCTS), ...Object.keys(SOON)]);
+  for (const [key, [file, srcset]] of Object.entries(pieces)) { const name = PRODUCTS[key]?.catalogImage || PRODUCTS[key]?.image || SOON[key]?.catalogImage || SOON[key]?.image; assert.equal(file, `assets/${name}`); assert.equal(srcset, artSrcset(name)); assert(srcset, `${key}: a 768 px photo too (products.js ART_768)`); }
+  assert(read('dist/page-entry.js').includes(`const HERO_SIZES = '${HERO_SIZES}';`));
+}
+
+// ── Opening: the page shows as soon as the photo in front is decoded ───────────
+{
+  const entry = read('dist/page-entry.js'), showcase = read('dist/carousel.js'), experience = read('dist/experience.css'), carouselCss = read('dist/carousel.css');
+  // never held more than 2.5 s once the page's scripts have run (DOMContentLoaded), nor 7.5 s in all
+  assert.match(entry, /let fallback = setTimeout\(\(\) => window\.finishJuOpening\(\), 7500\);/);
+  assert.match(entry, /fallback = setTimeout\(\(\) => window\.finishJuOpening\(\), Math\.max\(0, Math\.min\(2500, 7500 - \(performance\.now\(\) - started\)\)\)\);/);
+  // the photo, then at most 150 ms for the fonts (swap + metric fallbacks), and document.fonts is read only after the photo
+  // …and only once the first measure is applied (it may come after the photo on a slow phone: no scenery jump, no CLS); the
+  // fonts are asked about after a drawn frame (clean layout: no forced reflow)
+  assert.match(showcase, /const drawn = Promise\.all\(\[ready\[initial\], firstMeasure\]\)\.then\(afterFrame\)\.then\(\(\) => Promise\.race\(\[document\.fonts\?\.ready, new Promise\(r => setTimeout\(r, 150\)\)\]\)\);/);
+  assert.match(showcase, /const afterFrame = \(\) => new Promise\(r => requestAnimationFrame\(\(\) => setTimeout\(r\)\)\);/);
+  assert.ok(showcase.indexOf('const firstMeasure = new Promise') < showcase.indexOf('const drawn ='), 'declared before it is awaited');
+  assert.match(showcase.slice(showcase.indexOf('function measure()'), showcase.indexOf('// Um estilo só é escrito quando muda')), /render\(\);\n    measured\(\);\n  \}/);
+  assert.equal((showcase.replace(/^\s*\/\/.*$/gm, '').match(/document\.fonts/g) || []).length, 1, 'document.fonts read in one place only (it forces a style and layout pass)');
+  // no fade on the first photo; the photos that come later still fade in
+  assert.match(carouselCss, /\.showcase:not\(\.is-drawn\) \.piece img \{ transition: none; \}/);
+  assert.match(showcase, /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => region\.classList\.add\('is-drawn'\)\)\);/);
+  // only the photo in front is asked for while the showcase is built: the neighbours after it, the demonstration much later
+  assert.match(showcase, /\$\{first \? `src="\$\{src\}"` : `data-src="\$\{src\}"`\}/);
+  assert.doesNotMatch(showcase.slice(showcase.indexOf('position = target = initial;')), /preloadAround/);
+  assert.doesNotMatch(showcase, /requestIdleCallback\(early, \{timeout: 1500\}\)/, 'the demonstration is never prepared in the first seconds');
+  // the loader leaves by opacity only (a visibility transition does not run on the compositor)
+  assert.match(experience, /\.page-opening \{[^}]*opacity:0; visibility:hidden; transition:opacity \.3s; \}/);
+  assert.match(experience, /\.page-opening\.is-leaving \{ visibility:visible; pointer-events:none; \}/);
+  assert(entry.indexOf("loader?.classList.add('is-leaving');") < entry.indexOf("root.classList.remove('ju-opening');"));
+  assert.doesNotMatch(experience.replace(/\/\*[^]*?\*\//g, ''), /transition:[^;}]*\bvisibility\b/, 'experience.css (the opening screen): no visibility transitions');
+}
+
+// ── No forced reflow while the page is built ───────────────────────────────────
+{
+  const header = read('dist/header-scroll.js'), setup = header.slice(header.indexOf('export function setupScrollHeader'), header.indexOf('const draw = () =>')).replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(setup, /offsetHeight|scrollY|getBoundingClientRect/, 'header-scroll.js reads no layout while setting up');
+  assert.match(header, /new ResizeObserver\(\(\[entry\]\) => measured\(entry\.borderBoxSize\?\.\[0\]\?\.blockSize \?\? entry\.target\.offsetHeight\)\)\.observe\(header\);/);
+  assert.doesNotMatch(header.slice(header.lastIndexOf("window.addEventListener('pageshow'")), /draw\(\)/, 'the first frame is drawn by the measure, not at setup');
+}
+
+// ── Prices without Intl (its first formatter loads the locale data: ~130 ms of a slow phone's main thread) ──
+{
+  const {money} = await import(pathToFileURL(path.join(root, 'dist/commerce-config.js')).href);
+  const intl = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'});
+  const values = [0, 1, 5, 10, 99, 100, 101, 999, 1000, 26500, 99999, 100000, 123456, 1234567, 100000000, 123456789012, -1, -100, -26500, -123456, 0.5, 1.5, 2.5, 26500.5, -0.5, -0.4, -0];
+  for (let c = 0; c < 300000; c += 13) values.push(c);
+  for (const cents of values) assert.equal(money(cents), intl.format(cents / 100), `money(${cents})`);
+  assert.equal(money(26500), 'R$ 265,00');
+  assert.doesNotMatch(read('dist/commerce-config.js'), /new Intl\./);
+}
+
+// ── Images: one card photo per card, the size the screen needs ─────────────────
+{
+  const catalog = read('dist/catalog.js');
+  assert.match(catalog, /const CARD_SIZES = '212px';/);
+  assert.match(catalog, /srcset="assets\/\$\{preview\} 384w, assets\/\$\{full\} 768w" sizes="\$\{CARD_SIZES\}"/);
+  assert.doesNotMatch(catalog, /data-full-src|new Image\(\)/, 'no preview first and the sharp one after');
+  assert(Math.max(...[...catalog.matchAll(/--art-h: (\d+)px/g)].map(m => +m[1]), 0) <= 212);
+  for (const css of ['catalog.css', 'carousel.css']) for (const m of read(`dist/${css}`).matchAll(/\.home \.product-carousel-stage \{[^}]*--art-h: (\d+)px/g)) assert(+m[1] <= 212, `${css}: the card photo is at most ${m[1]} px tall (CARD_SIZES)`);
+  // re-encoded (2026-10-08, WebP ~q78 through Chrome's encoder, the invisible alpha noise cleared): visually the same
+  const kb = file => fs.statSync(path.join(root, 'dist/assets', file)).size / 1024;
+  for (const [file, limit] of [['card-borboletoscopio.webp', 50], ['retinoscopio.webp', 60], ['aviaoscopia-ruler.webp', 70], ['product-girafoscopio-cutout-768.webp', 30], ['product-unicornioscopio-cutout-768.webp', 30]]) assert(kb(file) <= limit, `${file}: ${Math.round(kb(file))} KB (budget ${limit} KB)`);
+}
+
+console.log('PASS: pagespeed — charset first, import map before modules, the home preloads its static module graph (generated), late stylesheets with <noscript> copies and nothing opening unstyled; theme and hero preload generated from products.js; the page shows with the photo in front (no fade, fonts ≤ 150 ms, 2.5 s fallback); no forced reflow at setup; one card photo per card.');

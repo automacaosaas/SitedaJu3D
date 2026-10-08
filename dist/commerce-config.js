@@ -22,7 +22,13 @@ export const COMMERCE = Object.freeze({
 // o kit de uma peça (o id em COMMERCE.kits) e a frase da oferta: "Leve 2 por R$ 160,00 ou 3 por R$ 210,00 (pode misturar)"
 export const kitOf = productId => Object.keys(COMMERCE.kits || {}).find(id => COMMERCE.kits[id].items.includes(productId)) || null;
 export const kitOffer = productId => { const kit = kitOf(productId); if (!kit) return ''; const g = COMMERCE.kits[kit].groups; return Object.keys(g).map(Number).sort((a, b) => a - b).map((n, i) => `${i ? '' : 'Leve '}${n} por ${money(g[n])}`).join(' ou ') + ' (pode misturar)'; };
-export const money = cents => new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(cents / 100);
+// "R$ 1.234,56" (a no-break space after R$), exactly what Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}) writes
+// (tests/pagespeed.mjs compares the two), but without Intl: the first Intl formatter of a page loads the locale data, ~130 ms of
+// a slow phone's main thread while the home is being built (PageSpeed, 2026-10-08).
+export const money = cents => {
+  const value = Math.round(Math.abs(cents)), whole = String(Math.floor(value / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${cents < 0 || Object.is(cents, -0) ? '-' : ''}R$ ${whole},${String(value % 100).padStart(2, '0')}`;
+};
 // "3x de R$ 43,00": the amount split into the interest-free installments, with nothing added (rounded down to the cent, as
 // Mercado Pago shows the installment; the last one carries the leftover cents).
 export const installmentCents = cents => Math.floor(cents / COMMERCE.interestFreeInstallments);

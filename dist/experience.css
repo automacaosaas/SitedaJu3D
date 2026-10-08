@@ -18,7 +18,10 @@
 @keyframes ju-appear { from {opacity:0;translate:0 12px} to {opacity:1;translate:0 0} }
 .page-opening { display:none; }
 .ju-opening .page-opening { opacity:1; visibility:visible; }
-.page-opening { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; background:#f4faf5; color:#527262; opacity:0; visibility:hidden; transition:opacity .3s,visibility .3s; }
+.page-opening { position:fixed; inset:0; z-index:1000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; background:#f4faf5; color:#527262; opacity:0; visibility:hidden; transition:opacity .3s; }
+/* Leaving (page-entry.js): it stays visible while the opacity fades, already letting clicks through; a transition of
+   visibility itself would not run on the compositor (PageSpeed: non-composited animations). */
+.page-opening.is-leaving { visibility:visible; pointer-events:none; }
 .page-opening .ju-loader { width:112px; height:112px; margin:0; }
 .page-opening .ju-loader img { width:112px; height:112px; }
 .page-opening p { font:13px/1.6 'DM Sans','DM Sans Fallback',sans-serif; margin:0; }
