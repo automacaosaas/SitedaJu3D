@@ -102,4 +102,14 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
   assert(privacy.includes('Hoje não usamos cookies de publicidade nem de análise de audiência.') && privacy.includes('“Preferências de cookies”, no rodapé'), 'the Privacy Policy tells the same');
 }
 
-console.log('PASS: pre-launch — 404 page with the way back, Envio e prazos with the shop\'s own numbers and linked from every delivery fact, and a cookie notice that exists only with an analytics tool, asks before loading it and keeps the choice changeable.');
+// ── C11: the strip at the top of the checkout ─────────────────────────
+// Born invisible, already as tall as the test notice (the longest), and shown only when the payment settings answer: the
+// test notice, nothing with real payments, the demonstration notice when payments are off or the answer never comes. A shop
+// with real payments never shows "sem cobranças", not even while the page loads.
+{
+  for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`dist/${page}`), /<div class="demo-banner is-pending">AMBIENTE DE TESTE <span>/, `${page}: the strip is born hidden`);
+  assert.match(read('dist/commerce.css'), /\n\.demo-banner\.is-pending \{ visibility: hidden; \}\n/, 'hidden, but keeping its height (nothing jumps when it shows)');
+  assert.match(read('dist/checkout.js'), /\nelse if \(live\.mode === 'live' && banner\) banner\.remove\(\);\nelse if \(banner\) banner\.innerHTML = 'PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span>';\nbanner\?\.classList\.remove\('is-pending'\);/, 'the right text first, then shown');
+}
+
+console.log('PASS: pre-launch — 404 page with the way back, Envio e prazos with the shop\'s own numbers and linked from every delivery fact, a cookie notice that exists only with an analytics tool, asks before loading it and keeps the choice changeable, and a checkout strip that waits for the payment settings.');
