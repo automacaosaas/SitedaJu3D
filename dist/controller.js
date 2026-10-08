@@ -9,6 +9,7 @@ import {journeyColors} from './hero-motion.js';
 import {mountKit} from './kit-builder.js';
 import {readCart,writeCart,putItems,totals,DIRECT_KEY} from './cart-store.js';
 import {openMiniCart,addedItemId} from './mini-cart.js';
+import {whenStyled} from './late-css.js';
 // Página de produto compacta: uma tela só (preço, cores, combinações prontas e compra sempre à vista);
 // os detalhes ficam num painel com abas. Rotas: #produto/<peça> abre na imagem, #produto/<peça>/personalizar na prévia 3D.
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
@@ -250,6 +251,9 @@ $('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-prese
 $('#surprise').addEventListener('click',e=>{const preset=PRESETS.find(p=>p.id==='surpresa'),b=e.currentTarget;applyColors(presetSelection(activeProduct,preset),`Combinação ${preset.name} aplicada.`);if(!calm.matches){b.classList.remove('is-sparkling');void b.offsetWidth;b.classList.add('is-sparkling');}});
 $('#surprise').addEventListener('animationend',e=>e.currentTarget.classList.remove('is-sparkling'));
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
-window.addEventListener('hashchange',syncProduct);window.addEventListener('pagehide',()=>viewer?.hide());syncProduct();
+// A janela da peça só abre com as folhas dela já aplicadas (a home as carrega depois da primeira pintura, late-css.js): um
+// #produto/<peça>/personalizar que chega com a página nunca aparece sem estilo.
+const syncStyled=()=>whenStyled(syncProduct);
+window.addEventListener('hashchange',syncStyled);window.addEventListener('pagehide',()=>viewer?.hide());syncStyled();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);if(!fixedColors(activeProduct))renderControls();setView('model');}});
 setupPurchaseSheet(dialog);

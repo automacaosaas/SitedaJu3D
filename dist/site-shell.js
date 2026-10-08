@@ -1,3 +1,4 @@
+import './late-css.js';   // first: switches on the stylesheets the home loads late (index.html data-late-css)
 import {icon} from './icons.js';
 import {mountLanguagePicker, languageReady} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';

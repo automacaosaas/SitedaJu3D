@@ -8,7 +8,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-const {isProduction} = require('../api/_lib/runtime');
+const {isProduction, indexableHosts, requestHost} = require('../api/_lib/runtime');
 
 const PROJECT = path.join(__dirname, '..');
 
@@ -21,6 +21,8 @@ const TYPES = {
 // Text compresses well; Meshopt-compressed models still shrink by about a fifth.
 const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', '.glb']);
 const DEFAULT_CACHE = 'public, max-age=0, must-revalidate';   // same as Vercel: always revalidate, cheap 304 with the ETag
+const IMMUTABLE = 'public, max-age=31536000, immutable';
+const VERSIONED = /[?&]v=[^&]/;
 const COMPRESSED_CACHE_LIMIT = 64 * 1024 * 1024;
 
 // vercel.json `headers` → [{pattern, headers}]. Sources are plain "/prefix/(.*)" patterns (checked by tests/headers.mjs),
@@ -32,8 +34,9 @@ function readHeaderRules(file = path.join(PROJECT, 'vercel.json')) {
 
 function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PROJECT, 'api'), rules = readHeaderRules(), env = process.env, log = console} = {}) {
   root = path.resolve(root);
-  // Test deployments live at public addresses; keep them out of search results until APP_ENV=production.
-  const hideFromSearch = !isProduction(env);
+  // Search results only for the shop's own domain and its www/apex sibling (api/_lib/runtime.js), decided per request by
+  // the address asked for, not by APP_ENV: the temporary Hostinger domain, localhost and bare IPs stay out.
+  const searchHosts = indexableHosts(env);
   const handlers = new Map();
   const compressed = new Map();
   let compressedBytes = 0;
@@ -77,7 +80,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     return body;
   }
 
-  function serveStatic(req, res, pathname) {
+  function serveStatic(req, res, pathname, search = '') {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
     const found = resolveFile(pathname);
     if (!found) {
@@ -98,6 +101,9 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
     res.setHeader('ETag', etag);
     res.setHeader('Last-Modified', stat.mtime.toUTCString());
+    // A file asked for with ?v= (the fonts, the 3D models, the gallery views…) changes address whenever it changes: a year
+    // in the cache, never revalidated. Pages and the same files without ?v= keep the rules above.
+    if (ext !== '.html' && VERSIONED.test(search)) res.setHeader('Cache-Control', IMMUTABLE);
     if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', DEFAULT_CACHE);
     if (String(req.headers['if-none-match'] || '').split(/\s*,\s*/).includes(etag)) { res.statusCode = 304; return res.end(); }
 
@@ -116,17 +122,17 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   }
 
   return http.createServer(async (req, res) => {
-    let pathname;
-    try { pathname = new URL(req.url, 'http://localhost').pathname; } catch { res.statusCode = 400; return res.end(); }
+    let pathname, search;
+    try { ({pathname, search} = new URL(req.url, 'http://localhost')); } catch { res.statusCode = 400; return res.end(); }
     for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
-    if (hideFromSearch) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     try {
       if (pathname === '/api' || pathname.startsWith('/api/')) {
         const handler = apiHandler(pathname);
         if (!handler) { res.statusCode = 404; res.setHeader('Content-Type', 'application/json; charset=utf-8'); return res.end('{"error":"not_found"}'); }
         return await handler(req, res);
       }
-      return serveStatic(req, res, pathname);
+      return serveStatic(req, res, pathname, search);
     } catch (error) {
       log.error(`${req.method} ${pathname}:`, error);
       if (!res.headersSent) { res.statusCode = 500; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end('{"error":"internal_error"}'); }

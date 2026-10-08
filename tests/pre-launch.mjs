@@ -52,7 +52,7 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
 // ── Q2: the 404 page ──────────────────────────────────────────────────
 {
   const page = read('dist/404.html');
-  assert.match(page, /<head>\n  <meta http-equiv="Content-Security-Policy" content="[^"]+">\n  <base href="\/">\n  <meta name="robots" content="noindex">\n/, 'root links first, never indexed');
+  assert.match(page, /<head>\n  <meta charset="utf-8">\n  <meta http-equiv="Content-Security-Policy" content="[^"]+">\n  <base href="\/">\n  <meta name="robots" content="noindex">\n/, 'root links first (after the charset, 2026-10-07), never indexed');
   assert.match(page, /<p class="eyebrow">ERRO 404<\/p>/);
   assert.match(page, /<a class="primary" href="index\.html">Ir para a vitrine <span aria-hidden="true">→<\/span><\/a><a class="not-found-secondary" href="produtos\.html">Ver a coleção de produtos<\/a>/, 'the showcase and the collection');
   assert.match(page, /<header class="header">[^]*<nav class="shop-nav" data-shop-nav/, 'the header of the site (menu, cart, account)');
