@@ -65,7 +65,9 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
 // no fim da fileira, o "Ver mais +" para a página Produtos. Cada card aparece uma vez só (sem cópias): o carrossel dá a volta trocando
 // um card de ponta (wireRecArrows). Os botões (pausar, voltar, avançar) ficam acima, à direita do título (embaixo, no celular), longe
 // dos cards; com poucas peças, que cabem todas, eles somem e nada anda.
-const PLAY_ICONS = '<svg class="cart-rec-ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21"></circle></svg><svg class="cart-rec-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7v10M15 7v10"/></svg><svg class="cart-rec-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5v11l8.5-5.5z"/></svg>';
+// O botão de pausa é uma bolinha discreta (08/10/2026, segunda volta): um anel fino em duas metades que giram (cart-page.css) e, dentro,
+// o sinal pequeno de pausa ou de play.
+const PLAY_ICONS = '<span class="cart-rec-dot" aria-hidden="true"><span><i></i></span><span><i></i></span></span><svg class="cart-rec-pause" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.7 2.7v4.6M6.3 2.7v4.6"/></svg><svg class="cart-rec-play" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.8 2.5v5l4-2.5z"/></svg>';
 function recommendations(cart) {
   const inCart = new Set(cart.map(item => item.productId));
   const items = [...Object.keys(PRODUCTS).filter(id => !inCart.has(id)).map(id => ({id, href: `${id}.html`, title: PRODUCTS[id].title, price: money(COMMERCE.prices[id])})),
@@ -86,14 +88,16 @@ function recommendations(cart) {
 
 // O carrossel. A fileira (track) é uma lista só, deslocada por transform: à vista ficam os cards de lead a lead + k (k = 3, ou 2 no
 // celular, lido de --rec-k no CSS); para andar, o card de uma ponta passa para a outra (no DOM, fora da vista) e a fileira desliza um
-// card. Os que estão fora da vista ficam inertes (fora do Tab e do leitor de tela). Anda sozinho um card a cada AUTO_MS, com o anel do
-// botão de pausa mostrando o tempo; para com o mouse em cima, com o foco dentro, por 6 s depois de um toque, fora da tela, com a aba
-// escondida, com o botão de pausa e, sempre, com "reduzir movimento". Arrasta com o dedo ou o mouse (1:1, com velocidade); as setas do
-// teclado andam entre os cards e a fileira acompanha.
-const AUTO_MS = 4200;
-const HOLD_MS = 6000;
+// card. Os que estão fora da vista ficam inertes (fora do Tab e do leitor de tela). Anda sozinho um card a cada AUTO_MS (8,5 s desde a
+// segunda volta, 08/10/2026: "está muito rápido, quero mais lento"), com o anel da bolinha de pausa mostrando o tempo. A contagem para —
+// e o anel congela onde está — com o mouse em cima da seção (volta quando ele sai, de onde parou), com o dedo na fileira, nas setas ou
+// rolando por cima dela (volta HOLD_MS depois de soltar), com o foco do teclado dentro, enquanto a fileira anda, fora da tela e com a aba
+// escondida; o botão de pausa para de vez e, com "reduzir movimento", nada anda sozinho. Arrasta com o dedo ou o mouse (1:1, com
+// velocidade); as setas do teclado andam entre os cards e a fileira acompanha.
+const AUTO_MS = 8500;
+const HOLD_MS = 4000;
 const recStates = new WeakMap();
-const recState = root => { let state = recStates.get(root); if (!state) recStates.set(root, state = {lead: 0, paused: false, hover: false, focus: false, heldUntil: 0, onScreen: true}); return state; };
+const recState = root => { let state = recStates.get(root); if (!state) recStates.set(root, state = {lead: 0, paused: false, hover: false, focus: false, touching: false, heldUntil: 0, onScreen: true, left: AUTO_MS, since: 0}); return state; };
 const recParts = root => {
   const rail = root.querySelector('.cart-rec-rail');
   return rail && {rail, track: rail.querySelector('[data-rec-track]'), controls: rail.querySelector('.cart-rec-controls'), toggle: rail.querySelector('[data-rec-play]'), live: root.querySelector('[data-rec-live]')};
@@ -155,20 +159,31 @@ function paintToggle(parts, state) {
   parts.rail.classList.toggle('is-paused', state.paused);
   if (parts.toggle.getAttribute('data-label') !== label) { parts.toggle.setAttribute('data-label', label); parts.toggle.setAttribute('aria-label', label); parts.toggle.setAttribute('title', label); }
 }
+// conta (o anel aparece) quando há o que andar, sem o botão de pausa e sem "reduzir movimento"; anda quando, além disso, nada segura
+const countingRec = state => state.moving && !state.paused && !reduceRec();
 function playingRec(state) {
-  return state.moving && !state.paused && !state.hover && !state.focus && !state.drag && !state.anim && !document.hidden && state.onScreen && Date.now() >= state.heldUntil && !reduceRec();
+  return countingRec(state) && !state.hover && !state.focus && !state.touching && !state.drag && !state.anim && !document.hidden && state.onScreen && Date.now() >= state.heldUntil;
+}
+// O anel mostra o tempo já contado (AUTO_MS - state.left): corre enquanto conta e congela (is-held) quando algo segura. A posição dele
+// é acertada pela animação (currentTime), sem reflow; numa fileira recém-desenhada, do começo, nem isso.
+function paintRing(parts, state, on) {
+  const armed = countingRec(state), fresh = state.ringRail !== parts.rail, at = AUTO_MS - state.left;
+  state.ringRail = parts.rail;
+  parts.rail.classList.toggle('is-counting', armed);
+  parts.rail.classList.toggle('is-held', armed && !on);
+  if (!armed || (fresh && !at)) return;
+  for (const half of parts.rail.querySelectorAll('.cart-rec-dot i')) for (const anim of half.getAnimations?.() || []) anim.currentTime = at;
 }
 function scheduleRec(root) {
   const state = recState(root), parts = recParts(root);
   clearTimeout(state.timer);
   if (!parts || parts.rail !== state.rail) return;
+  // guarda o tempo que já correu: ao voltar, a contagem continua de onde parou
+  if (state.since) { state.left = Math.max(0, state.left - (Date.now() - state.since)); state.since = 0; }
   const on = playingRec(state);
-  // o anel do botão de pausa recomeça a cada card (a animação dele dura AUTO_MS); o reflow que o reinicia só quando ele já
-  // estava rodando (uma fileira recém-desenhada começa sem ele: nada de layout forçado na carga)
-  const restart = parts.rail.classList.contains('is-playing');
-  parts.rail.classList.remove('is-playing');
-  if (on) { if (restart) void parts.rail.offsetWidth; parts.rail.classList.add('is-playing'); state.timer = setTimeout(() => { if (playingRec(state)) goRec(root, 1, true); else scheduleRec(root); }, AUTO_MS); }
-  else if (state.moving && Date.now() < state.heldUntil) state.timer = setTimeout(() => scheduleRec(root), state.heldUntil - Date.now() + 30);
+  paintRing(parts, state, on);
+  if (on) { state.since = Date.now(); state.timer = setTimeout(() => { state.since = 0; state.left = 0; if (playingRec(state)) goRec(root, 1, true); else scheduleRec(root); }, Math.max(state.left, 600)); }
+  else if (countingRec(state) && Date.now() < state.heldUntil) state.timer = setTimeout(() => scheduleRec(root), state.heldUntil - Date.now() + 30);
 }
 // Anda um card. `offset` é onde a fileira está (no arraste); `auto` é a passagem sozinha, mais lenta e macia; a das setas, rápida.
 function goRec(root, direction, auto = false, offset = 0) {
@@ -180,7 +195,7 @@ function goRec(root, direction, auto = false, offset = 0) {
   if (state.anim) { from = new DOMMatrixReadOnly(getComputedStyle(parts.track).transform).m41; state.anim.cancel(); state.anim = null; }
   roomRec(parts, state, direction);
   from += (before - state.lead) * step;
-  state.lead += direction;
+  state.lead += direction; state.left = AUTO_MS; state.since = 0;   // cards novos à vista: a contagem recomeça do zero
   const to = -state.lead * step;
   markRec(parts, state);
   if (!auto) {
@@ -198,7 +213,7 @@ function goRec(root, direction, auto = false, offset = 0) {
 function holdRec(root) { const state = recState(root); state.heldUntil = Date.now() + HOLD_MS; scheduleRec(root); }
 
 export function wireRecArrows(root) {
-  const inRail = target => target?.closest?.('.cart-rec-rail');
+  const inRail = target => target?.closest?.('.cart-rec-rail'), inRecs = target => target?.closest?.('.cart-recs');
   root.addEventListener('click', event => {
     const state = recState(root);
     if (state.suppress && event.target.closest?.('[data-rec-track]')) { event.preventDefault(); event.stopPropagation(); state.suppress = false; return; }
@@ -219,8 +234,25 @@ export function wireRecArrows(root) {
     if ((direction > 0 && index >= last) || (direction < 0 && index <= state.lead)) { goRec(root, direction); target = parts.track.children[direction > 0 ? state.lead + k - 1 : state.lead]; }
     target?.querySelector('a')?.focus({preventScroll: true});
   });
-  root.addEventListener('pointerover', event => { if (event.pointerType === 'mouse' && inRail(event.target)) { recState(root).hover = true; scheduleRec(root); } });
-  root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && inRail(event.target) && !inRail(event.relatedTarget)) { recState(root).hover = false; scheduleRec(root); } });
+  // no computador, o mouse em qualquer lugar da seção (título, cards, setas, "Ver mais") segura a contagem; ao sair, ela continua
+  root.addEventListener('pointerover', event => { const state = recState(root); if (event.pointerType === 'mouse' && !state.hover && inRecs(event.target)) { state.hover = true; scheduleRec(root); } });
+  root.addEventListener('pointerout', event => { if (event.pointerType === 'mouse' && inRecs(event.target) && !inRecs(event.relatedTarget)) { recState(root).hover = false; scheduleRec(root); } });
+  // no celular, o dedo na seção segura enquanto estiver lá, também rolando a página por cima dela (os eventos de toque seguem durante a
+  // rolagem, os de ponteiro não); ao soltar, mais HOLD_MS. O fim do toque é ouvido no próprio alvo: se o carrinho se redesenhar no meio,
+  // o alvo sai da página e o evento não chegaria até aqui. Com outro dedo ainda na seção, segue segurando e volta a ouvir o alvo (o
+  // ouvinte é de uma vez só e o segundo dedo pode ter começado no mesmo lugar).
+  const lift = event => {
+    const state = recState(root);
+    if (!state.touching) return;
+    if ([...event.touches].some(touch => inRecs(touch.target))) { event.currentTarget.addEventListener(event.type, lift, {once: true, passive: true}); return; }
+    state.touching = false; holdRec(root);
+  };
+  root.addEventListener('touchstart', event => {
+    if (!inRecs(event.target)) return;
+    const state = recState(root);
+    for (const type of ['touchend', 'touchcancel']) event.target.addEventListener(type, lift, {once: true, passive: true});
+    if (!state.touching) { state.touching = true; scheduleRec(root); }
+  }, {passive: true});
   // o foco do teclado pausa (o de um clique com o mouse numa seta, não: o mouse já pausa enquanto está em cima)
   root.addEventListener('focusin', event => { if (inRail(event.target) && event.target.matches(':focus-visible')) { recState(root).focus = true; scheduleRec(root); } });
   root.addEventListener('focusout', event => { if (inRail(event.target) && !inRail(event.relatedTarget)) { recState(root).focus = false; scheduleRec(root); } });
