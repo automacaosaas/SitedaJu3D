@@ -67,12 +67,27 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.equal(swipeTarget({anchor: 3, dx: -16, stride: 600}), 3, 'arraste curto volta');
   assert.equal(swipeTarget({anchor: 3, dx: -300, stride: 600, cancelled: true}), 3, 'cancelado volta');
   assert.equal(swipeTarget({anchor: 0, dx: -20, stride: 100}), 1, 'limiar diminui em telas curtas (18% do curso)');
+  // o peteleco (movimento 14): rápido e curto troca; um peteleco de volta desfaz o arraste; devagar vale o limiar; nunca mais de uma peça
+  const {FLICK} = motion;
+  assert.ok(FLICK > .2 && FLICK < .6, 'peteleco a partir de ~0,35 px/ms');
+  assert.equal(swipeTarget({anchor: 2, dx: -30, stride: 600, velocity: -.8}), 3, 'peteleco curto para a esquerda: a próxima');
+  assert.equal(swipeTarget({anchor: 2, dx: 30, stride: 600, velocity: .8}), 1, 'peteleco curto para a direita: a anterior');
+  assert.equal(swipeTarget({anchor: 2, dx: -200, stride: 600, velocity: .8}), 2, 'arrastou e voltou num peteleco: fica');
+  assert.equal(swipeTarget({anchor: 2, dx: -30, stride: 600, velocity: -.1}), 2, 'devagar e curto: fica');
+  assert.equal(swipeTarget({anchor: 2, dx: -900, stride: 600, velocity: -2}), 3, 'nunca mais de uma peça');
+  assert.equal(swipeTarget({anchor: 2, dx: -20, stride: 600, velocity: -.8, position: 2.6}), 3, 'a partir de onde a vitrine está');
+  assert.equal(swipeTarget({anchor: 2, dx: -300, stride: 600, velocity: -2, cancelled: true}), 2, 'cancelado volta, com ou sem impulso');
 
   // ── tempo e curva ───────────────────────────────────────────────────────────────
   assert.ok(FULL_DURATION >= 600 && FULL_DURATION <= 900, 'transição completa entre 600 e 900 ms');
   assert.equal(settleDuration(1), FULL_DURATION);
   assert.equal(settleDuration(1, {reduced: true}), 320);
   assert.ok(settleDuration(5) <= 1100 && settleDuration(0) >= 320);
+  // ao soltar, a curva sai na velocidade do dedo: a ease-out começa a EASE[1]/EASE[0] vezes a média, entre 320 ms e FULL_DURATION
+  assert.equal(settleDuration(.5, {velocity: 3, stride: 600}), Math.round(EASE[1] / EASE[0] * 300 / 3));
+  assert.equal(settleDuration(.5, {velocity: .05, stride: 600}), FULL_DURATION, 'dedo parado: no máximo a duração cheia');
+  assert.equal(settleDuration(.05, {velocity: 3, stride: 600}), 320, 'quase lá: no mínimo 320 ms');
+  assert.equal(settleDuration(.5, {velocity: 1.5, stride: 600, reduced: true}), 320, 'movimento reduzido não muda');
   assert.deepEqual(EASE, [.22, 1, .36, 1]);
   const ease = cubicBezier(...EASE);
   assert.equal(ease(0), 0); assert.equal(ease(1), 1);
@@ -156,7 +171,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(/position: absolute; inset: 0/.test(heroBg) && html.indexOf('data-hero-bg') < html.indexOf('class="hero-shell"'), 'o fundo cobre a página inteira, atrás do banner e do catálogo');
   const tail = css.match(/--tail:\s*clamp\((\d+)px,[^,]+,\s*(\d+)px\)/);
   assert.ok(tail && Number(tail[1]) >= 300 && Number(tail[2]) <= 800, 'a dissolução do banner cobre o título e o começo dos cards');
-  assert.ok(/\.clouds \{[^}]*mask-image/.test(css), 'as nuvens esmaecem antes do limite do banner');
+  assert.ok(/\.scenery-mist \{[^}]*mask-image/.test(css) && !/\.clouds\b|\.cloud \{|class="clouds"/.test(css + read('hero-scenery.js')), 'as silhuetas dos cantos esmaecem antes do limite do banner (sem os discos chapados de antes)');
   assert.ok(js.includes("page.style.setProperty('--hero-h'"), 'altura do banner medida no JS');
   // Card central limpo: nada de sombra cortada pela borda do palco nem brilho no alto.
   assert.ok(/@supports \(overflow: clip\) \{ \.home \.product-carousel-stage \{ overflow-x: clip; overflow-y: visible; \} \}/.test(css), 'o palco só recorta na horizontal (a sombra não é cortada em retângulo)');
@@ -292,14 +307,17 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("roomy = !net || (!net.saveData && !/(^|-)2g$|^3g$/.test(net.effectiveType || ''))"), 'economia de dados e 3G/2G não pré-carregam a demonstração');
   assert.ok(js.includes("if (!roomy) for (const type of ['pointerenter', 'focusin', 'pointerdown']) region.addEventListener(type, early, {once: true, passive: true});"), 'mouse, foco ou toque na vitrine preparam a demonstração antes do clique');
 
-  // ── fundo desenhado atrás de cada peça, em sombreado de nuvens (07/10/2026: "detalhar individualmente para cada objeto") ──
-  const {scenery, MOTIF_NAMES} = await load('hero-scenery.js');
-  const {luminance: lum, lightTint, sceneryVars, sceneryShift, SCENERY_SHADE, SCENERY_PARALLAX} = motion;
-  const motifs = Object.fromEntries(Object.keys(PRODUCTS).map(key => [key, showcase(key).scenery.motif]));
-  assert.deepEqual(motifs, {borboletoscopio: 'flowers', dinossauroscopio: 'claw', aviaoscopia: null, macacoscopio: 'bananas', girafoscopio: 'acacia', unicornioscopio: 'rainbow'},
-    'macaco: bananas; unicórnio: arco-íris; girafa: acácia; borboleta: flores; dinossauro: pata de T-rex; o avião fica com as nuvens');
-  assert.deepEqual([...MOTIF_NAMES].sort(), ['acacia', 'bananas', 'claw', 'flowers', 'rainbow'], 'a biblioteca de desenhos');
+  // ── fundo da vitrine em silhuetas brancas de nuvem (08/10/2026: "usando as nuvens BRANCAS… só silhuetas de características que
+  //    lembram [cada peça], limpas e otimizadas"; antes, 07/10, cada peça tinha um desenho colorido) ──
+  const {scenery, MOTIF_NAMES, SIDE_NAMES} = await load('hero-scenery.js');
+  const {luminance: lum, lightTint, sceneryVars, sceneryShift, SCENERY_SHADE, SCENERY_PARALLAX, SCENERY_EDGE} = motion;
+  const looks = Object.fromEntries(Object.keys(PRODUCTS).map(key => [key, [showcase(key).scenery.side, showcase(key).scenery.motif]]));
+  assert.deepEqual(looks, {borboletoscopio: ['daisies', 'flowers'], dinossauroscopio: ['ferns', 'tracks'], aviaoscopia: ['towers', 'sky'], macacoscopio: ['palms', 'bananas'], girafoscopio: ['grass', 'acacia'], unicornioscopio: ['puffs', 'rainbow']},
+    'borboleta: margaridas; dinossauro: samambaias e a pegada; avião: cúmulos e o rastro; macaco: palmeiras e bananas; girafa: o capim (o dono gostou) e a acácia; unicórnio: nuvens e o arco-íris');
+  assert.deepEqual([...MOTIF_NAMES].sort(), ['acacia', 'bananas', 'flowers', 'rainbow', 'sky', 'tracks'], 'a biblioteca de desenhos (sem a pata colorida de T-rex)');
+  assert.deepEqual([...SIDE_NAMES].sort(), ['daisies', 'ferns', 'grass', 'palms', 'petals', 'puffs', 'towers'], 'as silhuetas dos cantos');
   assert.deepEqual(showcase('produto-novo').scenery, {...DEFAULT_SHOWCASE.scenery}, 'produto sem entrada: as pétalas de sempre, sem desenho');
+  assert.ok(scenery(showcase('produto-novo').scenery, 9).includes('scenery-petals') && !scenery(showcase('produto-novo').scenery, 9).includes('scenery-back'), 'e a vitrine dele só com os cantos');
   for (let a = 0; a <= 1; a += .05) assert.ok(Math.abs(lum(mixColor('#000000', '#ffffff', a)) - luminance(mixColor('#000000', '#ffffff', a))) < 1e-12, 'a mesma luminância dos testes');
   assert.ok(SCENERY_SHADE > 0 && SCENERY_SHADE <= .08, 'o sombreado do desenho: no máximo 8% da cor do texto');
   const layers = Object.keys(PRODUCTS).map((key, i) => ({key, html: scenery(showcase(key).scenery, i), look: showcase(key).scenery, theme: showcase(key).theme}));
@@ -310,13 +328,30 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     let depth = 0, roots = 0;
     for (const [, close, , self] of tags) { if (close) depth--; else if (!self) { if (depth === 0) roots++; depth++; } else if (depth === 0) roots++; assert.ok(depth >= 0, key + ': marcação equilibrada'); }
     assert.ok(depth === 0 && roots === 1 && html.startsWith('<div class="') && /^<div[^>]* aria-hidden="true"/.test(html), key + ': um elemento raiz, decorativo (aria-hidden)');
-    assert.ok(!/<filter|filter\s*[:=]|feGaussian|<animate|<set\b|<script|\son[a-z]+=|javascript:|<image|href="(?!#)/i.test(html), key + ': sem filtros, animação própria, scripts nem arquivos externos');
+    assert.ok(!/<filter|filter\s*[:=]|feGaussian|<animate|<set\b|<script|\son[a-z]+=|javascript:|<image|href="(?!#)/i.test(html), key + ': sem filtros, animação SVG, scripts nem arquivos externos');
     assert.ok(!/#[0-9a-f]{6}\b|#(?!fff\b)[0-9a-f]{3}\b|rgba?\(/i.test(html.replace(/url\(#[^)]+\)/g, '').replace(/id="[^"]*"/g, '')), key + ': cores só pelas variáveis da camada (e o branco)');
+    // branco: o preenchimento é sempre branco (direto ou por um degradê); o tom da peça só entra nas paradas da sombra (m-tN) e nos detalhes
+    assert.ok([...html.matchAll(/\s(fill|stroke)="([^"]+)"/g)].every(([, , value]) => /^(#fff|none|url\(#scn-\d+-[a-z0-9-]+\))$/.test(value)), key + ': silhuetas brancas (sem cor chapada)');
+    assert.ok([...html.matchAll(/<stop\b[^>]*>/g)].every(([stop]) => /stop-color="#fff"/.test(stop) || /class="m-t[1-4]"/.test(stop)), key + ': degradês brancos, com o tom da peça só na sombra');
+    assert.ok(!/class="m-(k|g[hts]|fs|lh|ls|scale|crease|gloss)\b/.test(html), key + ': sem os desenhos coloridos de antes (escamas, garras, contornos)');
     const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
     allIds.push(...ids);
     for (const [, ref] of html.matchAll(/url\(#([^)]+)\)/g)) assert.ok(ids.includes(ref), `${key}: o degradê ${ref} está na própria camada`);
-    if (!look.motif) { assert.ok(!html.includes('scenery-back'), key + ': sem desenho atrás da peça'); continue; }
-    assert.ok(html.includes(`data-motif="${look.motif}"`) && /<div class="scenery-back"><svg class="scenery-motif" viewBox="-180 -60 360 340"/.test(html), key + ': o desenho dentro da raiz, no quadro da pilastra');
+    assert.ok(html.includes(`class="hero-scenery scenery-${look.side}"`) && html.includes(`data-motif="${look.motif}"`) && /<div class="scenery-back"><svg class="scenery-motif" viewBox="-180 -60 360 340"/.test(html), key + ': os cantos e o desenho dentro da raiz, no quadro da pilastra');
+    // limpo e leve: poucas formas (o navegador pinta uma vez; depois só desliza)
+    const shapes = (html.match(/<(path|circle|ellipse)\b/g) || []).length;
+    assert.ok(shapes <= 48, `${key}: ${shapes} formas (no máximo 48)`);
+    // as nuvenzinhas que flutuam: cada uma num <svg> próprio, dentro do <span> que se mexe, no quadro do desenho, com a posição do
+    // celular e o seu tempo
+    const drifts = [...html.matchAll(/<span class="scenery-drift" style="([^"]+)"><svg viewBox="([-\d. ]+)"/g)].map(([, style, box]) => [, box, style]);
+    assert.ok(drifts.length >= 2 && drifts.length <= 3, key + ': duas ou três nuvenzinhas');
+    // o que anima nunca é um <svg> (no Chrome, a animação dele não vai para o compositor): as silhuetas dos cantos também num <span>
+    assert.ok(!/<svg class="scenery-(drift|spark|left|right)"/.test(html) && (html.match(/<span class="scenery-(left|right)"><svg viewBox="0 0 360 440"/g) || []).length === 2, key + ': o que se mexe é um <span> em volta do <svg>');
+    for (const [, box, style] of drifts) {
+      const [x, y, w, h] = box.split(' ').map(Number);
+      assert.ok(style.startsWith(`--x:${x};--y:${y};--w:${w};--h:${h};--cx:`) && /--d:\d+s;--dl:-?\d+s/.test(style), key + ': o quadro da nuvenzinha bate com a posição dela');
+      assert.ok(x >= -180 && x + w <= 180 && y >= -40, key + ': nuvenzinha dentro do quadro e abaixo do header');
+    }
     // cores: a cor da peça clareada nunca escurece o fundo; o lado da sombra (8% do texto) mantém os textos legíveis
     const vars = sceneryVars(theme, look), [, mid] = stops(theme.bannerStops);
     assert.ok(look.tints.length >= 1 && look.tints.every(c => /^#[0-9a-f]{6}$/i.test(c)), key + ': as cores da peça em #rrggbb');
@@ -338,23 +373,55 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     const tint = lightTint(color, floor), k = [...Array(101).keys()].find(i => luminance(mixColor(color, '#ffffff', i / 100)) >= luminance(floor));
     assert.ok(luminance(tint) >= luminance(floor) && tint === mixColor(color, '#ffffff', k / 100), `lightTint(${color}, ${floor})`);
   }
-  // profundidade no arraste: o desenho anda com a peça, a 12% do caminho dela, e fica parado no movimento reduzido
-  assert.equal(SCENERY_PARALLAX, .12);
+  // profundidade no arraste: o desenho anda com a peça a 12% do caminho dela e os cantos a 5%; tudo parado no movimento reduzido
+  assert.equal(SCENERY_PARALLAX, .12); assert.equal(SCENERY_EDGE, .05);
   assert.equal(sceneryShift(0, 600), 0);
   for (let d = -1.5; d <= 1.5; d += .1) {
     const shift = sceneryShift(d, 600), x = pose(d).x * 600;
     assert.ok(Math.abs(shift - x * .12) < 1e-9 && (shift === 0 || Math.sign(shift) === Math.sign(x)) && Math.abs(shift) <= 600 * .12 * 1.25 + 1e-9, 'parallax a favor da peça, a 12%');
+    assert.ok(Math.abs(sceneryShift(d, 600, {depth: SCENERY_EDGE}) - x * .05) < 1e-9, 'os cantos, mais longe, a 5%');
     assert.equal(sceneryShift(d, 600, {reduced: true}), 0, 'movimento reduzido: o desenho não anda');
   }
-  // regras do pedido no código: sem nome de produto, palco medido, parallax num translate próprio e camadas apagadas fora da pintura
-  const sceneryJs = read('hero-scenery.js');
+  // regras do pedido no código: sem nome de produto, palco medido, e o laço de quadros barato (movimento 1): translate direto no desenho e
+  // nos cantos, só nas camadas à vista; a camada apagada fora da pintura (content-visibility); estilos escritos só quando mudam; as cores
+  // do tema, no meio da troca, só no header e nas setas (o banner inteiro e o rodapé recebem a cor final ao assentar)
+  const sceneryJs = read('hero-scenery.js'), renderJs = js.slice(js.indexOf('function render()'), js.indexOf('function report('));
+  const reportJs = js.slice(js.indexOf('function report('), js.indexOf('// ── Movimento'));
   assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(js + sceneryJs), 'vitrine e desenhos sem nome de produto (o desenho vem de SHOWCASE)');
   assert.ok(js.includes("page.style.setProperty('--stage-x'") && js.includes("page.style.setProperty('--stage-top'") && js.includes("page.style.setProperty('--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
-  assert.ok(js.includes("bgLayers[i].style.visibility = opacity < .005 ? 'hidden' : 'visible';") && js.includes("bgLayers[i].style.setProperty('--scn-x', `${sceneryShift(wrapDistance(i, position, total), travel, motion)"), 'camadas apagadas fora da pintura; o desenho acompanha a peça');
-  assert.ok(/\.scenery-back \{[^}]*var\(--scn-ped[^}]*left:calc\(var\(--stage-x[^}]*top:calc\(var\(--stage-top[^}]*translate:var\(--scn-x, 0px\) 0;/.test(css), 'o desenho no palco, com o parallax num translate (o transform da raiz é da demonstração)');
-  assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > svg { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as brumas dos cantos não dimensionam o desenho');
-  assert.ok(/prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-back \{ translate:none; \}/.test(css) && !/scenery[^{]*\{[^}]*animation/.test(css), 'sem animação parada no fundo; movimento reduzido sem parallax');
+  assert.ok(!/--scn-x/.test(js + css), 'sem a variável herdada --scn-x (cada escrita recalculava as seis camadas inteiras)');
+  assert.ok(renderJs.includes("bgLayers[i].classList.toggle('is-off', !shown)") && renderJs.includes('if (!shown) continue;') && renderJs.includes("put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`)") && renderJs.includes("put(edges[i], 'translate',"), 'camadas apagadas fora da pintura; na à vista, o desenho e os cantos acompanham a peça');
+  assert.ok(/function put\(element, name, value\) \{[^]*?if \(seen\[name\] === value\) return;/.test(js) && !/\.style\.(setProperty|transform|opacity|visibility|zIndex)\b/.test(renderJs), 'no laço de quadros, nada é escrito sem mudar');
+  assert.ok(js.includes("const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);") && renderJs.includes('for (const element of live) for (const name in themeNow)') && !renderJs.includes('themed') && reportJs.includes('for (const element of themed) for (const name in themeNow)'), 'cores do tema: header e setas no meio da troca; banner e rodapé ao assentar');
+  assert.ok(js.includes("<div class=\"hero-layer${i === initial ? '' : ' is-off'}\""), 'só a camada da abertura nasce na pintura');
+  assert.ok(css.includes('.hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }'), 'a camada apagada sai da pintura (content-visibility)');
+  assert.ok(/\.scenery-back \{[^}]*var\(--scn-ped[^}]*left:calc\(var\(--stage-x[^}]*top:calc\(var\(--stage-top[^}]*will-change:translate;/.test(css) && /\.scenery-mist \{[^}]*will-change:translate;/.test(css), 'o desenho no palco; desenho e cantos na própria camada do compositor (o transform da raiz é da demonstração)');
+  assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > span { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as silhuetas dos cantos não dimensionam o desenho');
+  assert.ok(![...css.matchAll(/([^{}]+)\{[^}]*animation:scn-/g)].some(([, selector]) => /\bsvg\s*$/.test(selector.trim())), 'nenhuma animação do fundo num <svg> (só nos <span> em volta, que vão para o compositor)');
+  // a dinâmica: as nuvenzinhas deslizam e os cantos balançam (só translate, voltas longas) e duas estrelinhas por peça cintilam (só
+  // opacity e scale); param fora da tela, com a aba escondida, com a vitrine andando e na camada apagada; paradas no movimento reduzido
+  const keyframes = Object.fromEntries([...css.matchAll(/@keyframes (scn-[a-z]+) \{([^]*?)\}\s*\}/g)].map(m => [m[1], m[2]]));
+  assert.deepEqual(Object.keys(keyframes).sort(), ['scn-drift', 'scn-sway', 'scn-twinkle']);
+  assert.ok(['scn-drift', 'scn-sway'].every(name => (keyframes[name].match(/translate:/g) || []).length === 2 && !/transform|opacity|scale|left|top|width|height|margin/.test(keyframes[name].replace(/translate:/g, ''))), 'só translate no que desliza');
+  assert.ok(/opacity:/.test(keyframes['scn-twinkle']) && /scale:/.test(keyframes['scn-twinkle']) && !/transform|translate|left|top|width|height|margin|filter/.test(keyframes['scn-twinkle']), 'só opacity e scale no que cintila');
+  assert.ok([...css.matchAll(/animation:scn-(drift|sway) (?:var\(--d, )?(\d+)s/g)].every(m => Number(m[2]) >= 10) && /animation:scn-twinkle var\(--d, [4-9]s\)/.test(css), 'voltas longas (10 s ou mais; o brilho, alguns segundos)');
+  for (const {key, html} of layers) assert.equal((html.match(/<span class="scenery-spark"/g) || []).length, 2, key + ': duas estrelinhas que cintilam');
+  assert.ok(css.includes('.hero-bg:is(.is-still, .is-moving) :is(.scenery-drift, .scenery-spark, .scenery-mist > span), .hero-layer.is-off :is(.scenery-drift, .scenery-spark, .scenery-mist > span) { animation-play-state:paused; }'), 'fora da tela, aba escondida, vitrine andando ou camada apagada: param');
+  assert.ok(js.includes("const moving = on => bgHost.classList.toggle('is-moving', on);") && /stop\(\); target = next; moving\(true\);/.test(js) && /gesture\.horizontal = true; stop\(\); moving\(true\);/.test(js) && reportJs.includes('moving(false);'), 'param no arraste e no assentar, e voltam quando a peça assenta');
+  assert.ok(css.includes('.palette[inert] .palette-button::after { animation: none; }'), 'o brilho do botão só no da peça à vista');
+  assert.ok(js.includes("const rest = () => bgHost.classList.toggle('is-still', document.hidden || !onScreen);") && /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting; rest\(\); \}\)\.observe\(shell\)/.test(js) && /visibilitychange', \(\) => \{\s*rest\(\);/.test(js), 'a vitrine avisa quando sai da tela e quando a aba se esconde');
+  assert.ok(/@media \(prefers-reduced-motion: reduce\) \{\r?\n  \.scenery-drift, \.scenery-spark, \.scenery-mist > span \{ animation:none; \}/.test(css), 'movimento reduzido: o fundo parado');
   assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css) && /@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/.test(css), 'o tamanho do desenho acompanha a pilastra em cada tela');
+  // no celular, nada do desenho atrás das setas de vidro nem do preço: cada desenho tem a sua arrumação para essas telas
+  const phone = css.slice(css.search(/@media \(max-width: 600px\) \{\r?\n  \.scenery-back \{ --m-scale:/));
+  for (const motif of MOTIF_NAMES) assert.ok(phone.includes(`[data-motif="${motif}"]`), `${motif}: arrumado para o celular`);
+  // as nuvenzinhas vão para o lugar do celular em toda tela com o texto acima do palco (até 900 px): no tablet, no lugar do computador,
+  // passavam por trás do preço
+  assert.ok(/@media \(max-width: 900px\) \{\r?\n  \.scenery-back > :is\(\.scenery-drift, \.scenery-spark\) \{ left:calc\(\(var\(--cx, var\(--x\)\) \+ 180\) \* 100% \/ 360\);/.test(phone), 'as nuvenzinhas no lugar delas no celular e no tablet');
+  // dos 901 aos 1100 px os cúmulos baixos do céu saem de trás de "Ver encaixado" (a nuvenzinha alta fica no lugar)
+  assert.ok(/@media \(min-width: 901px\) and \(max-width: 1100px\) \{[^@]*\[data-motif="sky"\] \.scn-l \{ transform:translate\((\d+)px, (\d+)px\); \}\r?\n  \[data-motif="sky"\] \.scn-a \{ transform:translate\(-\1px, -\2px\); \}/.test(css), 'o céu longe dos botões no notebook pequeno');
+  // as pontinhas das bananas na sombra quente da peça (a do marrom clareado virava cinza)
+  assert.ok(css.includes('.scenery-back .m-nub { fill:var(--scn-s1); }'), 'pontinhas das bananas na cor quente');
 
   console.log('carousel: ok');
 })().catch(error => { console.error(error); process.exit(1); });

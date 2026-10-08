@@ -1,56 +1,33 @@
-// Fundo desenhado da vitrine, em sombreado de nuvens: SVG em linha, sem filtros, sem scripts e sem animação própria.
-// Cada camada de fundo recebe UM elemento raiz (a demonstração escurece e desloca esse elemento): as brumas brancas dos
-// cantos e, atrás da peça, o desenho do produto (`motif`, vindo de SHOWCASE em products.js — aqui não há nome de produto).
-// Cores: só as variáveis da camada (hero-motion.js › sceneryVars), todas opacas — --scn-tN (a cor da peça clareada até o
-// tom do meio do degradê), --scn-hN (o lado da luz) e --scn-sN (o lado da sombra, no máximo 8% da cor do texto). Nada aqui
-// fica mais escuro que um --scn-sN, então o desenho nunca tira contraste de um texto. As bordas se dissolvem por degradês
-// e pela máscara do CSS (carousel.css › .scenery-back).
+// Fundo da vitrine em silhuetas brancas de nuvem (08/10/2026, pedido do dono: "sombreamento com referências de luz, usando as nuvens
+// BRANCAS… só silhuetas de características que lembram [cada peça], limpas e otimizadas, integradas com a dinâmica da página").
+// SVG em linha, sem filtros e sem scripts. Cada camada de fundo recebe UM elemento raiz (a demonstração esmaece e recua esse elemento):
+//  · as silhuetas dos cantos (`side`: capim, palmeira, nuvens, margaridas, samambaias…), presas embaixo, nas bordas da vitrine;
+//  · em volta da peça, o desenho dela (`motif`, de SHOWCASE em products.js — aqui não há nome de produto), dentro de .scenery-back;
+//  · e as nuvenzinhas que flutuam e as estrelinhas que cintilam, cada uma num <svg> pequeno e próprio: o CSS só as desliza ou
+//    acende (transform e opacity), nada é redesenhado. O que se mexe é sempre um <span> em volta do <svg> (também nas silhuetas dos
+//    cantos): no Chrome, uma animação no próprio <svg> não vai para o compositor e recalculava o estilo a cada quadro, sem parar.
+// Cores: branco translúcido. Só o lado da sombra, bem de leve, no tom claro da peça (--scn-tN, nunca mais escuro que o meio do
+// degradê: hero-motion.js › sceneryVars), então o desenho só clareia o fundo e nunca tira contraste de um texto. As bordas se
+// dissolvem por degradês e pela máscara do CSS (carousel.css › .scenery-back).
 //
 // Quadro do desenho (viewBox): 1 unidade = 1/200 da largura da pilastra; a origem é o alto do palco, no centro da peça.
-// A peça ocupa y 0–172 (lâmpadas: corpo ±31, orelhas ±47; borboleta: asas ±65 com a abertura em x ±22, y 49–168;
-// dinossauro: cabeça ±43 com a abertura em x ±18, y 60–171); a pilastra, x ±100 a partir de y 152.
+// A peça ocupa y 0–172 (lâmpadas: corpo ±31, orelhas ±47; borboleta: asas ±65; dinossauro: cabeça ±43); a pilastra, x ±100 a partir
+// de y 152. No computador o texto fica à esquerda de x −205 (dos 901 aos 1100 px os botões chegam a x −143, de y 140 a 176) e o
+// header acima de y −30. No celular e no tablet estreito (até 760 px) o preço fica logo acima de y 0 e as setas em x ±114…170,
+// y 100…154: para essas telas os grupos (.scn-l, .scn-r…) de cada desenho mudam de lugar no CSS; as nuvenzinhas e estrelinhas têm
+// posição própria (--cx/--cy) em toda tela com o texto acima do palco (até 900 px), longe do preço.
 const VIEW = '-180 -60 360 340';
-
-// ── brumas dos cantos (quadro 360 × 440, ancoradas embaixo) ──
-const petals = `<path d="M-75 380C-110 308-40 235 33 257C-49 180 11 82 91 136C55 32 155 9 185 100C212 22 301 74 259 154C351 133 370 230 290 267C380 299 337 395 263 371Z"/>`;
-const fern = () => {
-  let leaves = '<path d="M93 432Q105 208 225 13Q168 218 116 432Z" opacity=".35"/>';
-  for (let i = 0; i < 9; i++) {
-    const t = i / 8, y = 369 - t * 308, x = 112 + t * t * 101;
-    const size = 111 * (1 - t * .73);
-    leaves += `<path d="M${x} ${y}C${x-size*.42} ${y+12},${x-size-12} ${y-size*.16},${x-size} ${y-size*.62}C${x-size*.45} ${y-size*.62},${x-4} ${y-24},${x} ${y}Z"/>`;
-    leaves += `<path d="M${x+4} ${y+8}C${x+size*.65} ${y+11},${x+size+16} ${y-size*.36},${x+size} ${y-size*.68}C${x+size*.36} ${y-size*.61},${x+9} ${y-20},${x+4} ${y+8}Z"/>`;
-  }
-  return leaves;
-};
-// capim da savana: folhas finas e curvas saindo do chão
-const grass = () => [[34, 250, -34], [66, 330, -14], [98, 280, 12], [128, 370, -6], [160, 300, 24], [190, 236, 38], [216, 318, 10], [246, 256, 44], [274, 196, 34], [300, 160, 52], [112, 196, -44]]
-  .map(([x, h, lean]) => `<path d="M${x - 10} 440C${x - 6} ${440 - h * .45} ${x + lean * .4} ${440 - h * .8} ${x + lean} ${440 - h}C${x + lean * .5 + 5} ${440 - h * .74} ${x + 9} ${440 - h * .44} ${x + 11} 440Z"/>`).join('');
-// nuvens fofas
-const puffs = '<path d="M0 440V362A70 70 0 0 1 104 300A95 95 0 0 1 270 292A66 66 0 0 1 350 370L360 440Z"/><path d="M200 250A40 40 0 0 1 262 222A50 50 0 0 1 340 236A34 34 0 0 1 336 290H206A26 26 0 0 1 200 250Z" opacity=".55"/>';
-const SIDES = {petals: () => petals, ferns: fern, grass, puffs: () => puffs};
-
-const mists = (side, uid) => `<div class="scenery-mist">${['left', 'right'].map(at => {
-  const id = `scn-${uid}-mist-${at}`;
-  return `<svg class="scenery-${at}" viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${(SIDES[side] || SIDES.petals)()}</g></svg>`;
-}).join('')}</div>`;
-
-// ── peças do desenho ──
 const n = value => +value.toFixed(1);
-// Degradês de cada cor (N = 1..4): `g` linear (luz no alto à esquerda, sombra embaixo à direita) e `r` radial (um ponto de luz);
-// `d`, do tom à sombra (o que é mais escuro: tronco, garras); `c`, nuvem branca com a base no tom N; `mist`, um halo branco.
-// As cores vêm das classes (carousel.css).
-const defs = uid => {
-  let out = `<radialGradient id="scn-${uid}-mist"><stop offset="0" stop-color="#fff" stop-opacity=".78"/><stop offset=".55" stop-color="#fff" stop-opacity=".34"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
-  for (let k = 1; k <= 4; k++) {
-    out += `<linearGradient id="scn-${uid}-c${k}" class="m-k${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".94"/><stop offset="1" class="m-gt"/></linearGradient>`;
-    out += `<linearGradient id="scn-${uid}-g${k}" class="m-k${k}" x1=".2" y1="0" x2=".8" y2="1"><stop offset="0" class="m-gh"/><stop offset=".48" class="m-gt"/><stop offset="1" class="m-gs"/></linearGradient>`;
-    out += `<radialGradient id="scn-${uid}-r${k}" class="m-k${k}" cx=".38" cy=".32" r=".78"><stop offset="0" class="m-gh"/><stop offset=".55" class="m-gt"/><stop offset="1" class="m-gs"/></radialGradient>`;
-    out += `<linearGradient id="scn-${uid}-d${k}" class="m-k${k}" x1=".1" y1="0" x2=".9" y2="1"><stop offset="0" class="m-gt"/><stop offset=".7" class="m-gs"/></linearGradient>`;
-  }
-  return `<defs>${out}</defs>`;
-};
-const fill = (uid, kind, k) => `fill="url(#scn-${uid}-${kind}${k})"`;
+const rad = deg => deg * Math.PI / 180;
+
+// ── formas ──
+// contorno de bolhas: de um ponto ao seguinte, cada corda vira um semicírculo para fora (no sentido horário); a base volta reta
+const scallop = pts => pts.slice(1).reduce((d, [x, y], i) => { const r = n(Math.hypot(x - pts[i][0], y - pts[i][1]) / 2); return `${d}A${r} ${r} 0 0 1 ${n(x)} ${n(y)}`; }, `M${n(pts[0][0])} ${n(pts[0][1])}`) + 'Z';
+// cúmulo: as bolhas pelo alto de uma meia-elipse (x, y = o meio da base; largura w, altura h), nos ângulos dados (180° → 360°)
+const PUFF = [180, 206, 242, 286, 324, 352, 360];
+const cumulus = (x, y, w, h, angles = PUFF) => scallop(angles.map(a => [x + Math.cos(rad(a)) * w / 2, y + Math.sin(rad(a)) * h]));
+// círculo como trecho de caminho, no sentido horário (vários num caminho só se somam, sem sobreposição mais clara)
+const dot = (x, y, r) => `M${n(x - r)} ${n(y)}A${n(r)} ${n(r)} 0 1 1 ${n(x + r)} ${n(y)}A${n(r)} ${n(r)} 0 1 1 ${n(x - r)} ${n(y)}Z`;
 // caminho suave (Catmull-Rom → Bézier) por uma lista de pontos [[x, y], …]
 const smooth = (pts, closed = true) => {
   const P = closed ? [pts.at(-1), ...pts, pts[0], pts[1]] : [pts[0], ...pts, pts.at(-1)];
@@ -61,175 +38,208 @@ const smooth = (pts, closed = true) => {
   }
   return d + (closed ? 'Z' : '');
 };
-const halo = (uid, cx, cy, rx, ry) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#scn-${uid}-mist)"/>`;
-// estrela de 5 pontas (r = raio externo), com o degradê `g` da cor k
-const star = (uid, x, y, r, k, turn = 0) => {
-  const pts = Array.from({length: 10}, (_, i) => { const a = (i * 36 - 90 + turn) * Math.PI / 180, d = i % 2 ? r * .46 : r; return `${n(x + d * Math.cos(a))} ${n(y + d * Math.sin(a))}`; });
-  return `<path ${fill(uid, 'g', k)} stroke="url(#scn-${uid}-g${k})" stroke-width="2.4" stroke-linejoin="round" d="M${pts.join('L')}Z"/>`;
-};
-const sparkle = (x, y, s) => `<path class="m-white" d="M${x} ${n(y - 9 * s)}C${n(x + s)} ${n(y - 2 * s)} ${n(x + 2 * s)} ${n(y - s)} ${n(x + 9 * s)} ${y}C${n(x + 2 * s)} ${n(y + s)} ${n(x + s)} ${n(y + 2 * s)} ${x} ${n(y + 9 * s)}C${n(x - s)} ${n(y + 2 * s)} ${n(x - 2 * s)} ${n(y + s)} ${n(x - 9 * s)} ${y}C${n(x - 2 * s)} ${n(y - s)} ${n(x - s)} ${n(y - 2 * s)} ${x} ${n(y - 9 * s)}Z"/>`;
-
-// ── bananas: um cacho grande pendurado à direita da peça e um menor à esquerda ──
-// uma banana deitada para a direita, a partir do cabinho (na origem), curvando para cima; ~100 unidades, com as quinas da casca
-const banana = uid => `<path ${fill(uid, 'g', 1)} d="M2 -8C26 0 58 0 84 -26C88 -30 92 -33 96 -34L97 -27C95 -24 93 -21 90 -18C66 14 30 24 2 9Z"/>`
-  + '<path class="m-k1 m-lh" d="M10 -2C34 6 60 4 80 -16"/>'
-  + '<path class="m-k1 m-ls" d="M16 13C42 17 66 6 86 -14"/>'
-  + '<path class="m-k3 m-fs" d="M88 -28C91 -31 93 -33 96 -34L97 -27C95 -25 94 -23 92 -21C91 -24 90 -26 88 -28Z"/>'
-  + `<path ${fill(uid, 'd', 2)} d="M4 -7L-10 -5C-13 -2 -13 2 -10 5L4 8Z"/>`;
-// o cacho: as bananas em leque a partir da coroa, cada uma por cima da anterior, e a coroa no tom bege da peça
-const bunch = (uid, x, y, scale, angles, mirror = false) => `<g transform="translate(${x} ${y}) scale(${mirror ? -scale : scale} ${scale})">`
-  + angles.map(a => `<g transform="rotate(${a})">${banana(uid)}</g>`).join('')
-  + `<path ${fill(uid, 'd', 2)} d="M-20 -4C-22 -12 -14 -17 -6 -14C2 -16 8 -10 6 -2C8 6 0 11 -8 9C-16 11 -22 5 -20 -4Z"/><path class="m-k2 m-lh" d="M-15 -9C-11 -12 -6 -12 -2 -10"/></g>`;
-// uma nuvenzinha de apoio (branca, com a base no tom k da peça)
-const cloud = (uid, x, y, s, k = 1) => `<g transform="translate(${x} ${y}) scale(${s})"><path ${fill(uid, 'c', k)} d="M-40 12C-50 12 -52 -2 -42 -6C-44 -19 -29 -25 -20 -18C-16 -33 6 -35 12 -22C21 -31 36 -24 33 -11C44 -11 48 5 38 12C24 15 -24 15 -40 12Z"/><path class="m-white m-lh" d="M-34 -8C-32 -15 -26 -17 -21 -15M-11 -24C-5 -29 3 -29 8 -24"/></g>`;
-const bananas = uid => halo(uid, 118, 60, 84, 80) + halo(uid, -118, 96, 66, 60)
-  + cloud(uid, 132, 104, 1.25, 2) + cloud(uid, -118, 116, .82, 2)
-  + bunch(uid, 84, 22, .9, [4, 22, 40, 58])
-  + bunch(uid, -80, 70, .64, [14, 36, 58], true)
-  + sparkle(160, 6, .9) + sparkle(-150, 38, .7) + sparkle(58, 132, .5) + sparkle(-58, 128, .45);
-
-// ── arco-íris: faixas arredondadas como as da peça (cada uma com luz por fora e sombra por dentro), nuvenzinhas nos pés ──
-const RAINBOW = {cy: 146, r: [150, 139, 128, 117, 106], order: [4, 1, 2, 3]};   // de fora para dentro: rosa, roxo, lavanda, dourado
-const rainbow = uid => {
-  const {cy, r, order} = RAINBOW, R = r[0];
-  // um degradê radial no centro do arco pinta as quatro faixas (cada uma com luz por fora e sombra por dentro)
-  const stops = order.map((k, i) => {
-    const outer = r[i] / R, inner = r[i + 1] / R, span = outer - inner;
-    return `<stop offset="${n(inner * 1000) / 1000}" style="stop-color:var(--scn-s${k})"/><stop offset="${n((inner + span * .45) * 1000) / 1000}" style="stop-color:var(--scn-t${k})"/><stop offset="${n((outer - .004) * 1000) / 1000}" style="stop-color:var(--scn-h${k})"/>`;
-  }).reverse().join('');
-  return halo(uid, 0, 118, 178, 150)
-    + `<defs><radialGradient id="scn-${uid}-bands" gradientUnits="userSpaceOnUse" cx="0" cy="${cy}" r="${R}">${stops}</radialGradient></defs>`
-    + `<path fill="url(#scn-${uid}-bands)" d="M${-R} ${cy}A${R} ${R} 0 0 1 ${R} ${cy}L${r[4]} ${cy}A${r[4]} ${r[4]} 0 0 0 ${-r[4]} ${cy}Z"/>`
-    + `<path class="m-white m-lh" d="M${-R + 6} ${cy - 30}A${R - 2} ${R - 2} 0 0 1 ${-60} ${n(cy - Math.sqrt((R - 2) ** 2 - 3600))}" opacity=".7"/>`
-    + cloud(uid, -128, cy + 2, 1.05) + cloud(uid, 132, cy - 2, .95) + cloud(uid, -96, cy + 14, .62) + cloud(uid, 160, cy + 14, .5)
-    + star(uid, -150, 40, 8, 1, 8) + star(uid, 150, 52, 6.5, 1, -10) + star(uid, -96, 4, 5, 3) + star(uid, 164, 110, 5, 2, 14) + star(uid, -162, 108, 4.5, 2)
-    + sparkle(124, 6, .7) + sparkle(-62, 96, .55) + sparkle(70, 102, .45);
-};
-
-// ── acácia: a árvore de copa achatada da savana à direita, a copa em camadas de nuvem por trás da cabeça, o sol e o capim ──
-const tuft = (uid, x, y, s, k, flip = 1) => `<g transform="translate(${x} ${y}) scale(${flip * s} ${s})">${[[-12, 34, -16], [-5, 48, -6], [2, 40, 8], [8, 52, 14], [15, 30, 22]]
-  .map(([bx, h, lean]) => `<path ${fill(uid, 'g', k)} d="M${bx - 3} 0C${bx - 2} ${-h * .5} ${bx + lean * .4} ${-h * .82} ${bx + lean} ${-h}C${bx + lean * .5 + 1.5} ${-h * .7} ${bx + 2.5} ${-h * .42} ${bx + 4} 0Z"/>`).join('')}</g>`;
-// um galho afinando de (x1, y1) a (x2, y2), com larguras w1 → w2 e uma curva (bend, para o lado)
-const limb = (x1, y1, x2, y2, w1, w2, bend = 0) => {
+// um galho afinando de (x1, y1) a (x2, y2), larguras w1 → w2, com uma curva (bend, para o lado); anti-horário (cw: horário)
+const limb = (x1, y1, x2, y2, w1, w2, bend = 0, cw = false) => {
   const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), cx = (x1 + x2) / 2 - dy / len * bend, cy = (y1 + y2) / 2 + dx / len * bend, left = [], right = [];
   for (const t of [0, .25, .5, .75, 1]) {
     const u = 1 - t, x = u * u * x1 + 2 * u * t * cx + t * t * x2, y = u * u * y1 + 2 * u * t * cy + t * t * y2;
     const tx = 2 * u * (cx - x1) + 2 * t * (x2 - cx), ty = 2 * u * (cy - y1) + 2 * t * (y2 - cy), tl = Math.hypot(tx, ty), w = (w1 + (w2 - w1) * t) / 2;
     left.push([x - ty / tl * w, y + tx / tl * w]); right.push([x + ty / tl * w, y - tx / tl * w]);
   }
-  return smooth([...left, ...right.reverse()]);
+  return smooth(cw ? [...right, ...left.reverse()] : [...left, ...right.reverse()]);
 };
-const bird = (x, y, s) => `<path class="m-k2 m-ls" d="M${n(x - 7 * s)} ${n(y - 2 * s)}C${n(x - 4 * s)} ${n(y - 5 * s)} ${n(x - 1 * s)} ${n(y - 3 * s)} ${x} ${y}C${n(x + 1 * s)} ${n(y - 3 * s)} ${n(x + 4 * s)} ${n(y - 5 * s)} ${n(x + 7 * s)} ${n(y - 2 * s)}"/>`;
-const acacia = uid => halo(uid, -112, 30, 58, 58) + '<circle class="m-white" cx="-112" cy="30" r="19" opacity=".72"/>'
-  + bird(-74, 14, 1) + bird(-58, 26, .7) + bird(-88, 30, .55)
-  // as nuvens da savana (07/10/2026: "cada objeto e suas respectivas nuvens"): uma passando pelo sol, outra no alto, à direita
-  + cloud(uid, -64, 50, .78, 1) + cloud(uid, 154, -8, .5, 1)
-  + halo(uid, 62, 44, 150, 76)
-  // a pequena, ao longe, à esquerda
-  + `<path class="m-k3 m-ls" d="M-138 132C-138 124 -139 116 -142 108M-138 120C-134 114 -130 110 -126 106"/>`
-  + `<path ${fill(uid, 'g', 1)} d="${smooth([[-166, 106], [-162, 100], [-152, 98], [-142, 96], [-130, 96], [-120, 98], [-112, 103], [-118, 108], [-140, 109], [-158, 109]])}"/>`
-  // tronco e galhos que abrem em leque até a copa
-  + `<g ${fill(uid, 'd', 3)}><path d="${limb(130, 272, 125, 174, 16, 11, -5)}"/><path d="${limb(124, 184, 40, 64, 10, 4, 16)}"/><path d="${limb(125, 182, 102, 60, 8.5, 4, -6)}"/><path d="${limb(127, 188, 164, 62, 9, 4, -12)}"/><path d="${limb(78, 116, 62, 62, 4.5, 2.5, 5)}"/><path d="${limb(146, 124, 136, 64, 4, 2.5, -4)}"/></g>`
-  + '<path class="m-k3 m-lh" d="M124 262C123 232 122 206 122 184M116 172C96 140 74 108 50 74"/>'
-  // a copa: camadas achatadas de nuvem, luz em cima e a sombra densa embaixo
-  + `<path class="m-k1 m-fs" d="${smooth([[-66, 62], [-30, 65], [20, 67], [80, 67], [140, 64], [174, 54], [168, 67], [130, 73], [80, 74], [20, 74], [-30, 72], [-62, 68]])}"/>`
-  + `<path ${fill(uid, 'g', 1)} d="${smooth([[-70, 62], [-75, 52], [-62, 44], [-42, 42], [-28, 34], [-4, 33], [18, 27], [46, 27], [70, 21], [98, 23], [122, 18], [148, 25], [168, 31], [181, 42], [176, 56], [158, 63], [128, 65], [96, 67], [56, 67], [16, 67], [-22, 66], [-50, 65]])}"/>`
-  + `<path ${fill(uid, 'g', 1)} d="${smooth([[34, 33], [40, 22], [60, 16], [82, 10], [106, 10], [128, 13], [148, 21], [152, 31], [130, 35], [92, 36], [58, 37]])}"/>`
-  + '<path class="m-k1 m-lh" d="M-66 46C-58 40 -48 40 -40 44M-24 36C-14 30 -2 30 6 34M40 24C48 18 60 16 68 20M86 13C96 9 110 9 118 14M130 18C140 18 150 24 154 30M150 30C160 30 170 36 174 44"/>'
-  + '<path class="m-k1 m-ls" d="M-40 58C-20 61 0 61 18 60M60 60C80 61 104 60 122 58M140 56C150 54 160 51 168 46"/>'
-  + tuft(uid, 112, 262, 1.1, 1) + tuft(uid, 154, 264, .9, 3, -1) + tuft(uid, 178, 258, .7, 1) + tuft(uid, -122, 262, 1, 1, -1) + tuft(uid, -156, 260, .8, 3) + tuft(uid, -150, 132, .36, 3) + tuft(uid, -128, 133, .3, 1, -1)
-  + sparkle(-150, -2, .6) + sparkle(162, 124, .5);
-
-// ── flores: um jardim dos dois lados da borboleta (a abertura do meio fica limpa) ──
-const petal = (len, wide) => `M0 0C${-wide} ${n(-len * .28)} ${n(-wide * .82)} ${-len} 0 ${-len}C${n(wide * .82)} ${-len} ${wide} ${n(-len * .28)} 0 0Z`;
-const flower = (uid, x, y, s, {petals = 5, len = 30, wide = 17, k = 1, center = 2, turn = 0} = {}) => {
-  let out = '';
-  for (let i = 0; i < petals; i++) out += `<g transform="rotate(${n(turn + i * 360 / petals)})"><path ${fill(uid, 'g', k)} d="${petal(len, wide)}"/><path class="m-k${k} m-lh" d="M0 -7C-1 ${n(-len * .45)} -1 ${n(-len * .7)} 0 ${n(-len * .86)}"/></g>`;
-  const c = len * .3;
-  out += `<circle ${fill(uid, 'r', center)} r="${n(c)}"/>`;
-  for (let i = 0; i < 7; i++) { const a = (i * 51 + 20) * Math.PI / 180; out += `<circle class="m-k${center} m-fs" cx="${n(Math.cos(a) * c * .56)}" cy="${n(Math.sin(a) * c * .56)}" r="${n(c * .11)}"/>`; }
-  out += `<circle class="m-white" cx="${n(-c * .32)}" cy="${n(-c * .36)}" r="${n(c * .22)}" opacity=".8"/>`;
-  return `<g transform="translate(${x} ${y}) scale(${s})">${out}</g>`;
+// folha estreita (lente) da base ao ponto (ex, ey), meia largura w, curvada para baixo (droop)
+const blade = (x, y, ex, ey, w, droop = 0) => {
+  const dx = ex - x, dy = ey - y, len = Math.hypot(dx, dy), nx = -dy / len * w, ny = dx / len * w, mx = (x + ex) / 2, my = (y + ey) / 2 + droop;
+  return `M${n(x)} ${n(y)}Q${n(mx + nx)} ${n(my + ny)} ${n(ex)} ${n(ey)}Q${n(mx - nx)} ${n(my - ny)} ${n(x)} ${n(y)}Z`;
 };
-const leaf = (uid, x, y, s, angle) => `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${s})"><path ${fill(uid, 'g', 4)} d="M0 0C10 -15 34 -19 54 -10C38 1 16 6 0 0Z"/><path class="m-k4 m-lh" d="M5 -2C20 -8 36 -11 50 -10"/></g>`;
-const bud = (uid, x, y, s, k, angle = 0) => `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${s})"><path ${fill(uid, 'g', k)} d="M0 0C-11 -8 -12 -28 0 -38C12 -28 11 -8 0 0Z"/><path ${fill(uid, 'g', 4)} d="M-9 -4C-6 6 6 6 9 -4C4 0 -4 0 -9 -4Z"/></g>`;
-// À esquerda o jardim fica no alto (embaixo, nas telas médias, ficam os botões): as hastes de lá se dissolvem antes deles.
-const flowers = uid => halo(uid, -118, 66, 70, 84) + halo(uid, 120, 84, 70, 112)
-  + `<defs><linearGradient id="scn-${uid}-stem" class="m-k4" gradientUnits="userSpaceOnUse" x1="0" y1="70" x2="0" y2="132"><stop offset="0" class="m-gs"/><stop offset="1" class="m-gs" stop-opacity="0"/></linearGradient></defs>`
-  // hastes (no verde-menta, do lado da sombra) e folhas
-  + `<path class="m-line m-stem" stroke="url(#scn-${uid}-stem)" d="M-112 44C-116 80 -120 106 -124 132M-148 104C-146 114 -146 122 -148 132M-74 92C-78 106 -80 118 -84 132"/>`
-  + '<path class="m-k4 m-ls m-stem" d="M120 30C126 100 132 170 128 262M150 128C154 180 152 220 158 262M122 206C120 226 118 244 116 262"/>'
-  + leaf(uid, -117, 96, .86, 200) + leaf(uid, -121, 112, .7, -26) + leaf(uid, 127, 104, .85, -18) + leaf(uid, 131, 176, .9, 196) + leaf(uid, 155, 214, .6, -40) + leaf(uid, 119, 236, .5, 200)
-  + flower(uid, -112, 40, 1, {k: 1, len: 32, wide: 18, turn: -8})
-  + flower(uid, 120, 26, .92, {petals: 10, len: 30, wide: 9, k: 3, turn: 6})
-  + flower(uid, 150, 124, .62, {k: 1, len: 30, wide: 18, turn: 20})
-  + flower(uid, -148, 100, .5, {petals: 8, len: 30, wide: 11, k: 3, turn: 12})
-  + flower(uid, 122, 204, .44, {petals: 8, len: 30, wide: 11, k: 3, turn: -8})
-  + bud(uid, -74, 92, .7, 3, -18) + bud(uid, 82, 82, .62, 1, 24)
-  // as flores nascem de nuvens (a base das hastes some nelas)
-  + cloud(uid, -116, 136, 1, 4) + cloud(uid, 138, 266, .9, 4)
-  + sparkle(-62, 14, .6) + sparkle(160, -8, .7) + sparkle(-160, 62, .5) + sparkle(84, 152, .45) + sparkle(166, 186, .4);
-
-// ── pata de T-rex: a mão de pele escamada saindo do canto à direita, três dedos curtos e fortes em leque e garras curvas ──
-// um dedo (base em y=0, ponta em y=-len, levemente curvo para a esquerda): grosso, com duas juntas salientes e placas de
-// escama atravessadas (como nos dedos das aves) e, na ponta, a garra — grossa na base, curva para a esquerda (para a peça), lustrosa
-const finger = (uid, len, w) => {
-  const bend = t => -len * .1 * t * t, at = [[0, 1.05], [.14, .94], [.3, 1.04], [.46, .84], [.62, .9], [.78, .7], [.92, .56]];
-  const right = at.map(([t, k]) => [bend(t) + w * k, -len * t]), left = at.map(([t, k]) => [bend(t) - w * k, -len * t]).reverse();
-  const tipX = bend(1);
-  let out = `<path ${fill(uid, 'g', 1)} d="${smooth([...right, [tipX + w * .48, -len - 2], [tipX - w * .48, -len - 2], ...left])}"/>`;
-  // placas de escama: arcos de lado a lado, cada vez mais juntos para a ponta
-  for (let y = -8, i = 0; y > -len * .88; i++, y -= 8.5 - i * .25) {
-    const t = -y / len, half = at.reduce((a, [tt, kk]) => tt <= t ? kk : a, 1) * w * .78, x0 = bend(t);
-    out += `<path class="m-k2 m-ls m-scale" d="M${n(x0 - half)} ${n(y + 1.5)}C${n(x0 - half * .5)} ${n(y - 3.4)} ${n(x0 + half * .5)} ${n(y - 3.4)} ${n(x0 + half)} ${n(y + 1.5)}"/>`;
-  }
-  // as juntas: dobras fundas da pele
-  for (const t of [.3, .62]) { const x0 = bend(t), y = -len * t; out += `<path class="m-k1 m-ls m-crease" d="M${n(x0 - w * .95)} ${n(y + 3)}C${n(x0 - w * .4)} ${n(y + 7)} ${n(x0 + w * .4)} ${n(y + 7)} ${n(x0 + w * .95)} ${n(y + 3)}"/>`; }
-  out += `<path class="m-k1 m-lh m-gloss" d="M${n(-w * .55)} -6C${n(-w * .66)} ${n(-len * .3)} ${n(bend(.6) - w * .62)} ${n(-len * .6)} ${n(bend(.84) - w * .38)} ${n(-len * .84)}" opacity=".8"/>`;
-  // a garra: grossa na base, curva e afiada, no tom mais escuro do desenho, com dois riscos de brilho
-  const g = w * .9, x = tipX, y = -len + 3, h = 1;
-  out += `<path class="m-k2 m-fs" d="M${n(x + g)} ${y}C${n(x + g * 1.45)} ${n(y - 20 * h)} ${n(x + g * 1.05)} ${n(y - 40 * h)} ${n(x - g * .3)} ${n(y - 51 * h)}C${n(x - g * .9)} ${n(y - 55 * h)} ${n(x - g * 1.7)} ${n(y - 56 * h)} ${n(x - g * 2.3)} ${n(y - 53 * h)}C${n(x - g * 1.5)} ${n(y - 47 * h)} ${n(x - g * .95)} ${n(y - 39 * h)} ${n(x - g * .72)} ${n(y - 28 * h)}C${n(x - g * .55)} ${n(y - 18 * h)} ${n(x - g * .8)} ${n(y - 8 * h)} ${n(x - g)} ${y}Z"/>`;
-  out += `<path class="m-white m-lh m-gloss" d="M${n(x + g * .55)} ${n(y - 8 * h)}C${n(x + g * .8)} ${n(y - 24 * h)} ${n(x + g * .4)} ${n(y - 40 * h)} ${n(x - g * .7)} ${n(y - 49 * h)}"/><path class="m-white m-lh" d="M${n(x - g * .25)} ${n(y - 30 * h)}C${n(x - g * .4)} ${n(y - 38 * h)} ${n(x - g * .9)} ${n(y - 45 * h)} ${n(x - g * 1.5)} ${n(y - 49 * h)}" opacity=".55"/>`;
-  out += `<path class="m-k1 m-ls" d="M${n(x - g * .95)} ${n(y - 1)}C${n(x - g * .3)} ${n(y + 2)} ${n(x + g * .4)} ${n(y + 2)} ${n(x + g)} ${n(y - 1)}"/>`;
-  return out;
+// ponto numa curva quadrática A → C → B e o ângulo dela ali
+const along = ([ax, ay], [cx, cy], [bx, by], t) => {
+  const u = 1 - t;
+  return [u * u * ax + 2 * u * t * cx + t * t * bx, u * u * ay + 2 * u * t * cy + t * t * by, Math.atan2(2 * u * (cy - ay) + 2 * t * (by - cy), 2 * u * (cx - ax) + 2 * t * (bx - cx))];
 };
-// uma folha de samambaia pré-histórica: a haste curva e os folíolos alternados, do tamanho que diminui até a ponta
-const frond = (uid, x, y, s, angle, k) => {
-  let out = `<path class="m-k${k} m-ls m-stem" d="M0 0C-2 -30 -8 -62 -22 -92"/>`;
-  for (let i = 0; i < 8; i++) {
-    const t = i / 8, py = -10 - t * 76, px = -t * t * 20, size = 22 * (1 - t * .7);
-    out += `<path ${fill(uid, 'g', k)} d="M${n(px)} ${n(py)}C${n(px - size * .5)} ${n(py - 2)} ${n(px - size)} ${n(py - size * .3)} ${n(px - size * 1.05)} ${n(py - size * .62)}C${n(px - size * .55)} ${n(py - size * .6)} ${n(px - 3)} ${n(py - size * .3)} ${n(px)} ${n(py)}Z"/>`;
-    out += `<path ${fill(uid, 'g', k)} d="M${n(px + 1)} ${n(py - 3)}C${n(px + size * .5)} ${n(py - 4)} ${n(px + size)} ${n(py - size * .4)} ${n(px + size * .95)} ${n(py - size * .72)}C${n(px + size * .45)} ${n(py - size * .66)} ${n(px + 3)} ${n(py - size * .34)} ${n(px + 1)} ${n(py - 3)}Z"/>`;
-  }
-  return `<g transform="translate(${x} ${y}) rotate(${angle}) scale(${s})">${out}</g>`;
-};
-// escamas redondas, miúdas, em fileiras desencontradas dentro de uma área (a mão e o braço)
-const scales = (x0, y0, cols, rows, step, r) => {
+// folíolos de uma folha de palmeira pendendo da nervura (A → C → B): longos e estreitos, do maior ao menor, para o lado `side`
+const leaflets = (A, C, B, {count = 11, len = 70, w = 7, side = 1, spread = 52, from = .08} = {}) => {
   let d = '';
-  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const x = x0 + i * step + (j % 2 ? step / 2 : 0), y = y0 + j * step * .82; d += `M${n(x - r)} ${n(y)}C${n(x - r * .6)} ${n(y - r * 1.1)} ${n(x + r * .6)} ${n(y - r * 1.1)} ${n(x + r)} ${n(y)}`; }
-  return `<path class="m-k2 m-ls m-scale" d="${d}"/>`;
+  for (let i = 0; i < count; i++) {
+    const t = from + (1 - from) * i / count, [x, y, a] = along(A, C, B, t), l = len * (1 - t * .6), dir = a + side * rad(spread + t * 24);
+    d += blade(x, y, x + Math.cos(dir) * l, y + Math.sin(dir) * l, w * (1 - t * .45), l * .16);
+  }
+  return d;
 };
-const claw = uid => halo(uid, 110, 128, 84, 150)
-  // o braço vindo de fora, embaixo à direita, e a mão (ao lado da pilastra); os três dedos em leque, as garras para a peça
-  + `<g transform="translate(-18 6)"><path ${fill(uid, 'g', 1)} d="${smooth([[150, 300], [146, 262], [124, 224], [110, 196], [116, 170], [140, 158], [166, 164], [184, 188], [196, 232], [210, 300]])}"/>`
-  + scales(126, 186, 4, 6, 13, 4.6)
-  + `<g transform="translate(124 172) rotate(-30)">${finger(uid, 80, 12)}</g>`
-  + `<g transform="translate(172 176) rotate(8)">${finger(uid, 82, 12)}</g>`
-  + `<g transform="translate(148 164) rotate(-12)">${finger(uid, 100, 13.5)}</g>`
-  + '<path class="m-k3 m-lh" d="M114 192C118 172 134 162 152 160M190 196C196 214 200 236 204 262"/></g>'
-  // do outro lado, samambaias pré-históricas no verde-musgo da peça
-  + halo(uid, -116, 76, 60, 72) + frond(uid, -98, 128, 1.05, -14, 2) + frond(uid, -134, 130, .82, -38, 2) + frond(uid, -74, 130, .6, 12, 2)
-  // e as nuvens dele: na base das samambaias e uma no alto
-  + cloud(uid, -104, 138, .95, 3) + cloud(uid, -150, 8, .55, 3)
-  + sparkle(62, 22, .7) + sparkle(176, 0, .55) + sparkle(-160, 70, .6);
+// samambaia: a haste curva e os folíolos alternados, que diminuem até a ponta (base na origem, apontando para cima); tudo no sentido
+// horário, para os folíolos se somarem à haste sem abrir buracos
+const fernPath = (len = 92, size = 22, count = 8) => {
+  let d = limb(0, 4, -len * .24, -len, 3.4, 1.2, 5, true);
+  for (let i = 0; i < count; i++) {
+    const t = i / count, py = -10 - t * (len - 16), px = -t * t * len * .22, s = size * (1 - t * .7);
+    d += `M${n(px)} ${n(py)}C${n(px - s * .5)} ${n(py - 2)} ${n(px - s)} ${n(py - s * .3)} ${n(px - s * 1.05)} ${n(py - s * .62)}C${n(px - s * .55)} ${n(py - s * .6)} ${n(px - 3)} ${n(py - s * .3)} ${n(px)} ${n(py)}Z`;
+    d += `M${n(px + 1)} ${n(py - 3)}C${n(px + 3)} ${n(py - s * .34)} ${n(px + s * .45)} ${n(py - s * .66)} ${n(px + s * .95)} ${n(py - s * .72)}C${n(px + s)} ${n(py - s * .4)} ${n(px + s * .5)} ${n(py - 4)} ${n(px + 1)} ${n(py - 3)}Z`;
+  }
+  return d;
+};
+// margarida: pétalas soltas em volta do miolo (sem encostar nele nem umas nas outras, então o miolo aparece pelo vão)
+const petals = (x, y, r, count, turn = 0, wide = .34) => {
+  let d = '';
+  for (let i = 0; i < count; i++) {
+    const a = rad(turn + i * 360 / count), c = Math.cos(a), s = Math.sin(a), r0 = r * .34, w = r * wide * Math.PI / count * 2.1;
+    d += blade(x + c * r0, y + s * r0, x + c * r, y + s * r, w);
+  }
+  return d;
+};
+// estrelinha de brilho (quatro pontas), branca
+const sparkle = (x, y, s, o = .9) => `<path fill="#fff" opacity="${o}" d="M${x} ${n(y - 9 * s)}C${n(x + s)} ${n(y - 2 * s)} ${n(x + 2 * s)} ${n(y - s)} ${n(x + 9 * s)} ${y}C${n(x + 2 * s)} ${n(y + s)} ${n(x + s)} ${n(y + 2 * s)} ${x} ${n(y + 9 * s)}C${n(x - s)} ${n(y + 2 * s)} ${n(x - 2 * s)} ${n(y + s)} ${n(x - 9 * s)} ${y}C${n(x - 2 * s)} ${n(y - s)} ${n(x - s)} ${n(y - 2 * s)} ${x} ${n(y - 9 * s)}Z"/>`;
 
-const MOTIFS = {bananas, rainbow, acacia, flowers, claw};
+// ── cores: degradês da camada (ids únicos por camada: `uid`) ──
+// c = nuvem (branca no alto; a base se dissolve com um toque do tom da peça) · f = haste, tronco e capim (branco que some para
+// baixo) · s = folha, pétala, pegada (luz no alto à esquerda, a sombra no tom da peça) · g = halo, uma luz macia
+const defs = uid => '<defs>'
+  + `<linearGradient id="scn-${uid}-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".94"/><stop offset=".55" stop-color="#fff" stop-opacity=".8"/><stop offset=".84" class="m-t1" stop-opacity=".5"/><stop offset="1" class="m-t1" stop-opacity="0"/></linearGradient>`
+  + `<linearGradient id="scn-${uid}-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".86"/><stop offset=".62" stop-color="#fff" stop-opacity=".46"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`
+  + `<radialGradient id="scn-${uid}-s" cx=".34" cy=".28" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".58" stop-color="#fff" stop-opacity=".74"/><stop offset="1" class="m-t1" stop-opacity=".5"/></radialGradient>`
+  + `<radialGradient id="scn-${uid}-g"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".5" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
+  + '</defs>';
+const F = (uid, kind) => `fill="url(#scn-${uid}-${kind})"`;
+const glow = (uid, x, y, rx, ry = rx) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" ${F(uid, 'g')}/>`;
+// nuvenzinha que flutua: um <svg> pequeno e próprio, no quadro do desenho (x, y = o meio da base; w × h; c = [x, y] no celular), que
+// o CSS desliza devagar (--d: a duração da ida; --dl: o atraso, para cada uma andar no seu tempo)
+const drift = (uid, x, y, w, h, {c, d = 18, dl = 0, o = 1, angles} = {}) => {
+  const box = ([bx, by]) => [n(bx - w * .6), n(by - h - w * .24)], [vx, vy] = box([x, y]), vw = n(w * 1.2), vh = n(h + w * .24 + 1);
+  const compact = c ? `;--cx:${box(c)[0]};--cy:${box(c)[1]}` : '';
+  return `<span class="scenery-drift" style="--x:${vx};--y:${vy};--w:${vw};--h:${vh}${compact};--d:${d}s;--dl:${-dl}s${o < 1 ? `;opacity:${o}` : ''}"><svg viewBox="${vx} ${vy} ${vw} ${vh}" focusable="false"><path ${F(uid, 'c')} d="${cumulus(x, y, w, h, angles)}"/></svg></span>`;
+};
+
+// brilho que cintila: a estrelinha num <svg> próprio (o CSS só muda opacity e scale, devagar); c = [x, y] no celular
+const spark = (x, y, s, {c, d = 5, dl = 0} = {}) => {
+  const r = n(9 * s + 1), at = ([px, py]) => [n(px - r), n(py - r)], [vx, vy] = at([x, y]), compact = c ? `;--cx:${at(c)[0]};--cy:${at(c)[1]}` : '';
+  return `<span class="scenery-spark" style="--x:${vx};--y:${vy};--w:${n(2 * r)};--h:${n(2 * r)}${compact};--d:${d}s;--dl:${-dl}s"><svg viewBox="${vx} ${vy} ${n(2 * r)} ${n(2 * r)}" focusable="false">${sparkle(x, y, s, 1)}</svg></span>`;
+};
+
+// ── silhuetas dos cantos (quadro 360 × 440, presas embaixo; a da direita é espelhada no CSS) ──
+// capim da savana: folhas finas e curvas saindo do chão (o dono gostou: "o capim alto naquela seção")
+const grass = () => `<path d="${[[34, 250, -34], [66, 330, -14], [98, 280, 12], [128, 370, -6], [160, 300, 24], [190, 236, 38], [216, 318, 10], [246, 256, 44], [274, 196, 34], [300, 160, 52], [112, 196, -44]]
+  .map(([x, h, lean]) => `M${x - 10} 440C${x - 6} ${440 - h * .45} ${x + lean * .4} ${440 - h * .8} ${x + lean} ${440 - h}C${x + lean * .5 + 5} ${440 - h * .74} ${x + 9} ${440 - h * .44} ${x + 11} 440Z`).join('')}"/>`;
+// samambaias pré-históricas
+const ferns = () => `<g transform="translate(116 452) rotate(14) scale(3.1)"><path d="${fernPath()}"/></g><g transform="translate(236 456) rotate(32) scale(2)"><path d="${fernPath()}" opacity=".7"/></g>`;
+// folhas de palmeira da selva: duas, arqueando do chão para dentro da vitrine
+const palms = () => `<path d="${leaflets([10, 460], [40, 150], [300, 96], {count: 12, len: 150, w: 13, spread: 50})}"/><path d="M10 460Q40 150 300 96" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/>`
+  + `<path d="${leaflets([150, 470], [210, 290], [350, 250], {count: 9, len: 96, w: 10, spread: 48})}" opacity=".62"/>`;
+// nuvens fofas, baixas
+const puffs = () => `<path d="${cumulus(150, 452, 330, 130, [180, 198, 222, 252, 282, 310, 336, 354, 360])}"/><path d="${cumulus(276, 330, 128, 34)}" opacity=".5"/>`;
+// cúmulos altos, em camadas
+const towers = () => `<path d="${cumulus(120, 452, 290, 190, [180, 200, 226, 258, 290, 318, 342, 360])}"/><path d="${cumulus(292, 456, 200, 120)}" opacity=".62"/><path d="${cumulus(88, 214, 104, 30)}" opacity=".5"/>`;
+// margaridas de pétalas brancas e as hastes
+const daisies = () => `<path d="M118 440C122 380 120 330 116 276M246 440C250 400 254 372 252 346M52 440C54 380 60 330 66 300" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".7"/>`
+  + `<path d="${petals(116, 226, 74, 11, 8)}${petals(252, 312, 46, 10, -6)}${petals(66, 270, 36, 9, 20)}"/><path d="${dot(116, 226, 19)}${dot(252, 312, 12)}${dot(66, 270, 9)}" opacity=".66"/>`;
+// pétalas (o padrão de quem não tem fundo próprio)
+const blossom = () => '<path d="M-75 380C-110 308-40 235 33 257C-49 180 11 82 91 136C55 32 155 9 185 100C212 22 301 74 259 154C351 133 370 230 290 267C380 299 337 395 263 371Z"/>';
+const SIDES = {petals: blossom, grass, ferns, palms, puffs, towers, daisies};
+
+const mists = (side, uid) => `<div class="scenery-mist">${['left', 'right'].map(at => {
+  const id = `scn-${uid}-mist-${at}`;
+  return `<span class="scenery-${at}"><svg viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${(SIDES[side] || SIDES.petals)()}</g></svg></span>`;
+}).join('')}</div>`;
+
+// ── desenhos em volta da peça: [o desenho, as nuvenzinhas] ──
+// Savana: o sol, a acácia de copa achatada à direita (a copa em camadas de nuvem), uma acácia pequena ao longe e o capim no pé da pilastra.
+const tuft = (x, y, s, flip = 1) => [[-12, 34, -16], [-5, 48, -6], [2, 40, 8], [8, 52, 14], [15, 30, 22]]
+  .map(([bx, h, lean]) => `M${n(x + flip * s * (bx - 3))} ${y}C${n(x + flip * s * (bx - 2))} ${n(y - s * h * .5)} ${n(x + flip * s * (bx + lean * .4))} ${n(y - s * h * .82)} ${n(x + flip * s * (bx + lean))} ${n(y - s * h)}C${n(x + flip * s * (bx + lean * .5 + 1.5))} ${n(y - s * h * .7)} ${n(x + flip * s * (bx + 2.5))} ${n(y - s * h * .42)} ${n(x + flip * s * (bx + 4))} ${y}Z`).join('');
+const acacia = uid => [glow(uid, -110, 28, 62) + '<circle cx="-110" cy="28" r="17" fill="#fff" opacity=".78"/>'
+  + `<g class="scn-l"><path ${F(uid, 'f')} d="${limb(-139, 134, -141, 103, 3.4, 2, 1)}${limb(-141, 108, -154, 101, 2, 1.2, -2)}${limb(-140, 110, -128, 101, 2, 1.2, 2)}"/><path ${F(uid, 'c')} d="${cumulus(-140, 104, 62, 8, [180, 212, 252, 296, 334, 360])}"/></g>`
+  + `<g class="scn-r"><defs><linearGradient id="scn-${uid}-trunk" gradientUnits="userSpaceOnUse" x1="0" y1="56" x2="0" y2="276"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity=".48"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`
+  + `<path fill="url(#scn-${uid}-trunk)" d="${limb(130, 276, 125, 176, 15, 10, -5)}${limb(124, 186, 38, 62, 9, 4, 16)}${limb(125, 184, 100, 58, 8, 4, -6)}${limb(127, 190, 166, 60, 8.5, 4, -12)}${limb(78, 118, 62, 62, 4.5, 2.5, 5)}${limb(146, 126, 138, 62, 4, 2.5, -4)}"/>`
+  + `<path ${F(uid, 'c')} d="${cumulus(54, 70, 256, 36, [180, 192, 207, 224, 244, 266, 290, 312, 332, 348, 360])}"/>`
+  + `<path ${F(uid, 'c')} d="${cumulus(100, 46, 140, 22, [180, 204, 236, 274, 312, 344, 360])}" opacity=".9"/></g>`
+  + `<path ${F(uid, 'f')} d="${tuft(112, 264, 1.1)}${tuft(152, 266, .9, -1)}${tuft(176, 260, .7)}${tuft(-122, 264, 1, -1)}${tuft(-156, 262, .8)}"/>`
+,
+  drift(uid, 142, -6, 52, 12, {c: [128, 0], d: 21, dl: 4}) + drift(uid, -66, 52, 64, 14, {c: [-90, 50], d: 26, dl: 11, o: .9})
+  + spark(-152, -4, .6, {d: 5.5}) + spark(166, 84, .5, {d: 7, dl: 2.5})];
+
+// Selva (as folhas de palmeira estão nos cantos): o cacho de bananas deitado numa nuvem, à direita, e uma banana noutra, à esquerda.
+// banana deitada para a direita a partir do cabinho (na origem), a ponta curvando para cima (~88 unidades): o corpo, o risco de sombra
+// embaixo e, no tom da peça, o cabinho e a pontinha
+const BANANA = 'M2 -6C28 0 58 -2 80 -24L86 -31L88 -26C76 -2 46 18 6 10C0 9 -1 -3 2 -6Z';
+const banana = (uid, y, a) => `<g transform="translate(0 ${y}) rotate(${a})"><path ${F(uid, 's')} d="${BANANA}"/><path class="m-shade" d="M9 10C44 13 70 0 85 -24"/><path class="m-nub" d="M80 -24L86 -31L88 -26L84 -21Z"/></g>`;
+// o cacho: bananas abertas em leque a partir do mesmo cabinho, como uma mão de bananas (paralelas, liam-se como penas de uma asa)
+const bunch = (uid, x, y, s, count = 3, flip = 1) => { const t = (count - 1) * 9 + 10; return `<g transform="translate(${x} ${y}) scale(${flip * s} ${s})">${Array.from({length: count}, (_, i) => banana(uid, -i * 9, 6 - i * 14)).reverse().join('')}<path ${F(uid, 's')} d="M-5 6C-8 -4 -7 -${t - 4} -2 -${t}L3 -${t - 2}C5 -${t - 8} 5 -4 3 6Z"/><path class="m-nub" d="M-3 -${t + 1}L-4 -${t + 7}L1 -${t + 7}L3 -${t - 1}Z"/></g>`; };
+const bananas = uid => [glow(uid, 108, 84, 80, 70)
+  + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(100, 128, 124, 28)}"/>${bunch(uid, 60, 104, .9)}</g>`
+  + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-112, 72, 84, 18)}"/>${bunch(uid, -80, 60, .52, 2, -1)}</g>`
+  + sparkle(-146, 30, .45, .7),
+  drift(uid, -128, 14, 52, 12, {c: [-104, 12], d: 22, dl: 6}) + drift(uid, 132, -10, 44, 10, {c: [70, 4], d: 19, dl: 13, o: .85})
+  + spark(140, 46, .7, {c: [146, 12], d: 6}) + spark(-66, 6, .55, {d: 5, dl: 2})];
+
+// Arco-íris: faixas de nuvem brancas com o tom de cada cor da peça bem de leve, nuvens fofas nos pés e brilhos.
+const RAINBOW = {cy: 150, r: [150, 139, 128, 117, 106], order: [4, 1, 2, 3]};   // de fora para dentro: rosa, roxo, lavanda, dourado
+const rainbow = uid => {
+  const {cy, r, order} = RAINBOW, R = r[0];
+  // um degradê radial no centro do arco pinta as quatro faixas: branco nas emendas, o tom claro da cor no meio de cada uma
+  const stops = order.map((k, i) => {
+    const outer = r[i] / R, inner = r[i + 1] / R, mid = (outer + inner) / 2;
+    return `<stop offset="${n(inner * 1000) / 1000}" stop-color="#fff" stop-opacity=".62"/><stop offset="${n(mid * 1000) / 1000}" class="m-t${k}" stop-opacity=".62"/><stop offset="${n((outer - .006) * 1000) / 1000}" stop-color="#fff" stop-opacity=".84"/>`;
+  }).join('');
+  return [glow(uid, 0, 120, 178, 150)
+    + `<defs><radialGradient id="scn-${uid}-bands" gradientUnits="userSpaceOnUse" cx="0" cy="${cy}" r="${R}">${stops}<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
+    + `<path fill="url(#scn-${uid}-bands)" d="M${-R} ${cy}A${R} ${R} 0 0 1 ${R} ${cy}L${r[4]} ${cy}A${r[4]} ${r[4]} 0 0 0 ${-r[4]} ${cy}Z"/>`
+    + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-128, 160, 96, 24)}"/><path ${F(uid, 'c')} d="${cumulus(-90, 168, 56, 13)}" opacity=".9"/></g>`
+    + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(130, 156, 90, 22)}"/><path ${F(uid, 'c')} d="${cumulus(166, 168, 44, 10)}" opacity=".85"/></g>`
+    + sparkle(-96, 4, .6) + sparkle(166, 108, .6, .8) + sparkle(-164, 106, .55, .8) + sparkle(76, 100, .45, .7),
+    drift(uid, -142, -6, 48, 11, {c: [-100, 2], d: 20, dl: 3}) + drift(uid, 150, -2, 40, 9, {c: [104, 4], d: 24, dl: 12, o: .9})
+    + spark(-150, 40, 1, {d: 6}) + spark(152, 50, .8, {d: 5, dl: 2.5})];
+};
+
+// Jardim: margaridas de pétalas brancas dos dois lados da borboleta, as hastes nascendo de nuvens.
+const daisy = (uid, x, y, r, count, turn = 0, wide) => `<path ${F(uid, 's')} d="${petals(x, y, r, count, turn, wide)}"/><circle cx="${x}" cy="${y}" r="${n(r * .26)}" fill="url(#scn-${uid}-eye)"/>`;
+const flowers = uid => [glow(uid, -118, 66, 70, 84) + glow(uid, 122, 84, 70, 112)
+  + `<defs><radialGradient id="scn-${uid}-eye" cx=".38" cy=".34" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" class="m-t2" stop-opacity=".9"/></radialGradient>`
+  + `<linearGradient id="scn-${uid}-stem" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="270"><stop offset="0" stop-color="#fff" stop-opacity=".82"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient></defs>`
+  + `<g class="scn-l"><path d="M-112 52C-116 84 -120 110 -122 140M-148 108C-147 118 -147 128 -149 140M-76 98C-79 112 -81 126 -84 140" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>`
+  + `<path ${F(uid, 's')} d="${blade(-118, 116, -146, 92, 7, -4)}${blade(-120, 124, -94, 104, 6, -3)}"/>`
+  + daisy(uid, -112, 40, 32, 10, -8) + daisy(uid, -148, 100, 16, 9, 12) + `<path ${F(uid, 's')} d="M-76 98C-87 90 -88 70 -76 60C-64 70 -65 90 -76 98Z"/>`
+  + `<path ${F(uid, 'c')} d="${cumulus(-116, 148, 92, 22)}"/></g>`
+  // à direita, três margaridas numa haste alta: a do meio e a haste comprida (.scn-rm) saem no celular, onde ficam as setas
+  + `<g class="scn-rm"><path d="M120 40C126 104 132 172 128 266M150 138C154 186 152 224 158 266" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>`
+  + `<path ${F(uid, 's')} d="${blade(131, 180, 100, 160, 8, -4)}${blade(153, 216, 176, 196, 6, -3)}"/>${daisy(uid, 150, 126, 19, 10, 20)}</g>`
+  + `<g class="scn-r"><path d="M120 40C121 56 122 70 123 86" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/><path ${F(uid, 's')} d="${blade(122, 74, 152, 58, 7, -4)}"/>${daisy(uid, 120, 28, 30, 13, 6, .26)}</g>`
+  + `<g class="scn-rb"><path d="M122 214C120 232 118 248 116 266" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>${daisy(uid, 122, 206, 14, 9, -8)}`
+  + `<path ${F(uid, 'c')} d="${cumulus(138, 272, 100, 26)}"/></g>`
+  + sparkle(-162, 60, .5, .8) + sparkle(84, 150, .45, .7),
+  drift(uid, -60, -16, 46, 10, {c: [-112, 2], d: 20, dl: 5}) + drift(uid, 62, 4, 38, 9, {c: [86, 6], d: 23, dl: 14, o: .85})
+  + spark(-60, 14, .6, {c: [-60, 26], d: 5.5}) + spark(162, -8, .7, {c: [150, 70], d: 6.5, dl: 3})];
+
+// Pré-história: a pegada de três dedos do T-rex, macia como nuvem (contorno arredondado, as almofadas dos dedos em bolhas mais claras e
+// as garras em ponta), outra menor mais adiante (o rastro), e samambaias à esquerda.
+// o contorno (calcanhar embaixo, na origem; dedos para cima, ~130 unidades de altura): calcanhar, dedo de fora, do meio e o outro
+const PRINT = [[0, 54], [-22, 49], [-33, 34], [-35, 17], [-38, 5], [-52, -12], [-63, -28], [-70, -42], [-74, -55], [-63, -49], [-50, -39], [-36, -28],
+  [-22, -20], [-15, -21], [-16, -38], [-14, -58], [-9, -74], [0, -90], [9, -74], [14, -58], [16, -38], [15, -21], [22, -20], [36, -28], [50, -39], [63, -49],
+  [74, -55], [70, -42], [63, -28], [52, -12], [38, 5], [35, 17], [33, 34], [22, 49]];
+const PADS = [[0, 24, 19], [0, -30, 10], [0, -54, 8], [-30, -14, 9.5], [-48, -31, 7.5], [30, -14, 9.5], [48, -31, 7.5]];
+const footprint = (uid, x, y, s, turn, kind) => `<g class="${kind}" transform="translate(${x} ${y}) rotate(${turn}) scale(${s})"><path ${F(uid, 's')} d="${smooth(PRINT)}"/><path fill="#fff" opacity=".42" d="${PADS.map(([px, py, r]) => dot(px, py, r)).join('')}"/></g>`;
+const tracks = uid => [glow(uid, 116, 100, 76, 100)
+  + `<g class="scn-r">${footprint(uid, 110, 126, .64, 16, 'scn-big')}${footprint(uid, 136, 18, .4, 8, 'scn-small')}</g>`
+  + `<g class="scn-l">${glow(uid, -116, 80, 60, 72)}<g ${F(uid, 'f')}><path transform="translate(-98 132) rotate(-14) scale(1.06)" d="${fernPath()}"/><path transform="translate(-134 134) rotate(-38) scale(.84)" d="${fernPath()}"/><path transform="translate(-74 134) rotate(12) scale(.62)" d="${fernPath()}"/></g>`
+  + `<path ${F(uid, 'c')} d="${cumulus(-104, 148, 98, 24)}"/></g>`
+  + sparkle(-160, 70, .6, .8),
+  drift(uid, -148, 6, 52, 12, {c: [-100, 4], d: 21, dl: 7}) + drift(uid, 78, -16, 40, 9, {c: [92, 2], d: 25, dl: 15, o: .85})
+  + spark(62, 20, .7, {d: 5.5}) + spark(166, -4, .55, {c: [150, 74], d: 7, dl: 2})];
+
+// Céu: cúmulos em camadas e o rastro pontilhado de um voo que dá uma volta no alto, à direita.
+const sky = uid => [glow(uid, 120, 40, 90, 70)
+  + `<defs><linearGradient id="scn-${uid}-trail" gradientUnits="userSpaceOnUse" x1="-170" y1="0" x2="176" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity=".95"/></linearGradient></defs>`
+  + `<path class="m-trail" stroke="url(#scn-${uid}-trail)" d="M-172 92C-120 40 -40 6 40 -4C96 -12 146 6 144 34C142 60 104 52 110 26C116 2 150 -8 182 -10"/>`
+  + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-120, 244, 150, 62, [180, 202, 232, 268, 302, 334, 356, 360])}"/><path ${F(uid, 'c')} d="${cumulus(-158, 252, 80, 30)}" opacity=".85"/><path class="scn-a" ${F(uid, 'c')} d="${cumulus(-128, 120, 62, 14)}" opacity=".8"/></g>`
+  + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(136, 170, 120, 40, [180, 204, 238, 276, 312, 342, 360])}"/><path ${F(uid, 'c')} d="${cumulus(168, 178, 64, 18)}" opacity=".85"/><path ${F(uid, 'c')} d="${cumulus(118, 262, 110, 34)}" opacity=".9"/></g>`
+,
+  drift(uid, -140, 14, 58, 13, {c: [-104, 8], d: 22, dl: 4}) + drift(uid, -40, -18, 40, 9, {c: [-80, 64], d: 27, dl: 13, o: .8}) + drift(uid, 150, 118, 44, 10, {c: [70, 96], d: 19, dl: 9, o: .9})
+  + spark(-62, 30, .6, {d: 5.5}) + spark(84, 70, .55, {d: 6.5, dl: 2.5})];
+
+const MOTIFS = {bananas, rainbow, acacia, flowers, tracks, sky};
 
 // O fundo de uma camada: `look` = {side, motif} (SHOWCASE › scenery); `uid` torna únicos os ids dos degradês da camada.
 export function scenery({side = 'petals', motif = null} = {}, uid = 0) {
-  if (side === 'clouds' && !motif) return `<div class="clouds" aria-hidden="true">${[1, 2, 3, 4, 5, 6].map(i => `<i class="cloud c${i}"></i>`).join('')}</div>`;
-  const draw = MOTIFS[motif];
-  const back = draw ? `<div class="scenery-back"><svg class="scenery-motif" viewBox="${VIEW}" focusable="false">${defs(uid)}${draw(uid)}</svg></div>` : '';
-  return `<div class="hero-scenery scenery-${side}" data-motif="${draw ? motif : ''}" aria-hidden="true">${mists(side, uid)}${back}</div>`;
+  const draw = MOTIFS[motif], [art, drifts] = draw ? draw(uid) : ['', ''];
+  const back = draw ? `<div class="scenery-back"><svg class="scenery-motif" viewBox="${VIEW}" focusable="false">${defs(uid)}${art}</svg>${drifts}</div>` : '';
+  return `<div class="hero-scenery scenery-${SIDES[side] ? side : 'petals'}" data-motif="${draw ? motif : ''}" aria-hidden="true">${mists(side, uid)}${back}</div>`;
 }
 export const MOTIF_NAMES = Object.freeze(Object.keys(MOTIFS));
+export const SIDE_NAMES = Object.freeze(Object.keys(SIDES));
