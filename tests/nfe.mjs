@@ -176,6 +176,27 @@ function order(over = {}) {
 
   // Switched off: nothing happens.
   assert.equal(await createInvoicing({store, env: {APP_ENV: 'preview'}}).issue(saved), null);
+
+  // Real notes (production + NFE_ENVIRONMENT=producao) only for orders paid for real: a test-mode order (source "test")
+  // never reaches the service, not even by "Tentar de novo" or the queue; a live one goes as usual.
+  const PROD = {APP_ENV: 'production', SITE_URL: 'https://site.test', NFE_PROVIDER: 'bling', NFE_ENVIRONMENT: 'producao', DATA_KEY: crypto.randomBytes(32).toString('base64'), INDEX_KEY: crypto.randomBytes(32).toString('base64')};
+  const realEmits = [], realProvider = {name: 'bling', emit: async inv => { realEmits.push(inv.reference); return {status: 'autorizada', number: '11', series: '1', accessKey: '3'.repeat(44), environment: 'producao'}; }};
+  const real = createInvoicing({store, env: PROD, fetchImpl, provider: realProvider, lookup: lookupFrom({'30140071': BH})});
+  assert.equal(real.settings.environment, 'producao');
+  const prodOrder = over => order({buyerDocEnc: encrypt(PROD, '52998224725'), phoneEnc: encrypt(PROD, '31999991234'), ...over});
+  const {order: leftover} = await store.orders.create(prodOrder({source: 'test'}));
+  const refusedTest = await real.issue(leftover, {actor: 'ju@site.test'});
+  assert.equal(refusedTest.status, 'erro'); assert.match(refusedTest.message, /Pedido de teste/); assert.equal(refusedTest.nextAttemptAt, null, 'out of the queue');
+  assert.equal((await real.issue(leftover, {actor: 'ju@site.test', force: true})).status, 'erro', '"Tentar de novo" refuses it too');
+  assert.deepEqual(realEmits, [], 'the tax authority never saw it');
+  assert((await store.orders.events(leftover.id)).some(e => e.kind === 'nfe:erro' && /pedido de teste/.test(e.detail)), 'the reason is in the order history');
+  const {order: sale} = await store.orders.create(prodOrder({source: 'live'}));
+  assert.notEqual((await real.issue(sale)).message || '', 'Pedido de teste (pago no modo de teste do Mercado Pago): não emitimos nota fiscal real para ele.');
+  assert.deepEqual(realEmits, [sale.reference], 'a live sale gets its real note');
+  const homolog = createInvoicing({store, env: {...PROD, NFE_ENVIRONMENT: ''}, fetchImpl, provider: realProvider, lookup: lookupFrom({'30140071': BH})});
+  const {order: testInHomolog} = await store.orders.create(prodOrder({source: 'test'}));
+  await homolog.issue(testInHomolog);
+  assert.deepEqual(realEmits, [sale.reference, testInHomolog.reference], 'test orders still go to homologação (no fiscal value)');
 }
 
 // ── panel and "Meus pedidos" ──────────────────────────────────────────
@@ -272,4 +293,4 @@ async function call(handler, {method = 'POST', body = {}, cookie = '', url = '/'
   }
 }
 
-console.log('PASS: NF-e — tax data one per product and still pending, never real notes by accident (homologação unless NFE_ENVIRONMENT=producao in production, simulator and example data never in production), invoice for a person or a company in the same or another state, CEP lookup, issued once on confirmation and e-mailed once, errors kept with the reason and retried, panel and "Meus pedidos".');
+console.log('PASS: NF-e — tax data one per product and still pending, never real notes by accident (homologação unless NFE_ENVIRONMENT=producao in production, simulator and example data never in production, never a real note for an order paid in test mode), invoice for a person or a company in the same or another state, CEP lookup, issued once on confirmation and e-mailed once, errors kept with the reason and retried, panel and "Meus pedidos".');

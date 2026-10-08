@@ -1,7 +1,10 @@
 'use strict';
 // POST /api/payments/create
 //   {attempt, items:[{productId, quantity, selection}], customer:{name,email,phone}, address:{cep,street,number,district,city,state,complement},
-//    notes, lang, acceptTerms: true, shipping:{service, priceCents}, payment:{selectedPaymentMethod, formData}}
+//    notes, lang, acceptTerms: true, shipping:{service, priceCents}, payment:{selectedPaymentMethod, formData}, deviceId?}
+// `deviceId`: Mercado Pago's device id from security.js on the checkout page, forwarded as X-meli-session-id (fraud
+// checks); without one the payment still goes. The browser keeps the same `attempt` until a definite answer, so a retry
+// after a timeout lands on the same order instead of charging again.
 // With the real shipping quote on (Correios contract), `shipping` is required: the server quotes the delivery itself and accepts only
 // the option the buyer saw (same service, same price); if the price moved it answers 409 shipping_changed with the new options.
 // Needs a signed-in buyer with a complete identification (invoice and shipping label). Validates the cart, recomputes
@@ -109,26 +112,35 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
     const identification = payment.identification || {type: 'CPF', number: fields.decrypt(env, buyer.cpfEnc)};
     const payer = {name: `${buyer.firstName} ${buyer.lastName}`, email: buyer.email, phone: form.customer.phone};
     const payload = mp.buildOrderPayload({priced, reference, customer: payer, address: form.address, notes: form.notes, lang, payment: {...payment, identification}});
+    const sessionId = mp.deviceId(body.deviceId);
     try {
       let answer;
-      try { answer = await mp.createOrder({settings, fetchImpl, payload, idempotencyKey: attempt}); }
+      try { answer = await mp.createOrder({settings, fetchImpl, payload, idempotencyKey: attempt, sessionId}); }
       catch (error) {
         // The test environment may accept only Mercado Pago's own test buyer address. The real e-mail stays in our order.
         if (settings.mode !== 'test' || !mp.isTestEmailRejection(error)) throw error;
-        answer = await mp.createOrder({settings, fetchImpl, payload: {...payload, payer: {...payload.payer, email: mp.TEST_PAYER_EMAIL}}, idempotencyKey: attempt + '-t'});
+        answer = await mp.createOrder({settings, fetchImpl, payload: {...payload, payer: {...payload.payer, email: mp.TEST_PAYER_EMAIL}}, idempotencyKey: attempt + '-t', sessionId});
       }
       const normalized = mp.normalizeOrder(answer);
       const {order: updated} = await orders.applyPayment(order, normalized, {actor: 'checkout'});
       if (orders.PAID.includes(updated.status)) waitUntil(orders.notifyPaidLater(updated, {fetchImpl, outbox, test: settings.mode === 'test'}));
+      if (normalized.state === 'refused') console.error(`payments/create: ${reference} (${normalized.id}) recusado — ${normalized.reason || normalized.paymentStatusDetail || normalized.statusDetail || 'sem motivo'}`);
       return json(res, 201, {ok: true, mode: settings.mode, ...normalized});
     } catch (error) {
-      console.error('payments/create: Mercado Pago answered', error.status || '', error.code || '', error.message);
-      const refused = [400, 402, 409, 422].includes(error.status);   // the order itself was turned down; everything else is on our side or theirs
-      await store.orders.addEvent(order.id, refused ? 'payment_rejected' : 'provider_error', String(error.code || error.status || ''), 'checkout').catch(() => {});
+      // The order itself was turned down; everything else is on our side or theirs. A key already used for another body
+      // (a retry of an attempt whose first try may have gone through, with a new card token) is not a refusal: the
+      // first charge may exist, so the order stays open for the webhook or a status check.
+      const reused = error.status === 409 && error.code === 'idempotency_key_already_used';
+      const refused = [400, 402, 409, 422].includes(error.status) && !reused;
+      // Our reference and Mercado Pago's x-request-id (what their support asks for); never the bodies, the token or the
+      // card. Their message can quote the buyer's data, so it is logged only in test mode. A 400 is usually our own
+      // payload, not the buyer's card: said loudly.
+      console.error(`payments/create: Mercado Pago answered ${error.status || 'sem resposta'} ${error.code || ''} · ${reference} · x-request-id ${error.requestId || '-'}${error.reason ? ` · ${error.reason}` : ''}${error.status === 400 ? ' · pedido montado errado? confira a integração' : ''}${settings.mode === 'test' ? ` · ${error.message}` : ''}`);
+      await store.orders.addEvent(order.id, refused ? 'payment_rejected' : 'provider_error', String(error.reason || error.code || error.status || '').slice(0, 120), 'checkout').catch(() => {});
       // A refused card ends this attempt (the next click is a new attempt and a new order). A provider error leaves it
       // open: the charge may still have gone through, and the webhook or a status check will settle it.
       if (refused) await store.orders.transition(order.id, ['aguardando_pagamento'], {status: 'cancelado', paymentState: 'refused'}).catch(() => {});
-      return json(res, refused ? 422 : 502, {error: refused ? 'payment_rejected' : 'provider_unavailable', code: error.code || null, ...(settings.mode === 'test' ? {detail: String(error.message).slice(0, 300)} : {})});
+      return json(res, refused ? 422 : 502, {error: refused ? 'payment_rejected' : 'provider_unavailable', code: error.code || null, ...(refused && error.reason ? {reason: error.reason} : {}), ...(settings.mode === 'test' ? {detail: String(error.message).slice(0, 300)} : {})});
     }
   };
 }

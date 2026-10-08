@@ -8,7 +8,7 @@
 // it) → concluido (delivered: by itself when the Correios register the delivery, api/_lib/tracking.js, or by Ju) |
 // recusado (before it is posted). Ju can step back (FROM below).
 // Declining also refunds the buyer through Mercado Pago (refund); a refunded order can no longer be reopened.
-// A refused card or an expired Pix ends as cancelado. The order keeps a snapshot of buyer and delivery, so it survives
+// A refused card, an expired Pix or a Pix the buyer left (cancelled at Mercado Pago, api/payments/cancel.js) ends as cancelado. The order keeps a snapshot of buyer and delivery, so it survives
 // the account being deleted (fiscal record).
 const crypto = require('node:crypto');
 const fields = require('./fields');
@@ -105,7 +105,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     let newlyPaid = false, moved = false;
     if (payment.state === 'approved') { if (!PAID.includes(order.status)) moved = newlyPaid = await store.orders.transition(order.id, ['aguardando_pagamento', 'cancelado'], {...base, status: 'pendente', paidAt: date()}); }
     else if (order.status !== 'aguardando_pagamento') { /* paid, cancelled or decided: a late pending/refused answer changes nothing */ }
-    else if (payment.state === 'refused' || payment.state === 'expired') moved = await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
+    else if (['refused', 'expired', 'canceled'].includes(payment.state)) moved = await store.orders.transition(order.id, ['aguardando_pagamento'], {...base, status: 'cancelado'});
     else if (!sameBase(order, base)) moved = await store.orders.transition(order.id, ['aguardando_pagamento'], base);
     if (newlyPaid || payment.state !== order.paymentState) await store.orders.addEvent(order.id, newlyPaid ? 'paid' : 'payment', payment.state, actor);
     return {order: moved ? await store.orders.findById(order.id) : order, newlyPaid};

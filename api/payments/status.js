@@ -30,10 +30,10 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
       const orders = createOrders({store, env, now});
       const {order} = await orders.applyPayment(ours, remote, {actor: 'status'});
       if (orders.PAID.includes(order.status)) waitUntil(orders.notifyPaidLater(order, {fetchImpl, outbox, test: settings.mode === 'test'}));
-      return json(res, 200, {reference: remote.reference, state: remote.state, statusDetail: remote.statusDetail, expiresAt: remote.pix?.expiresAt || null});
+      return json(res, 200, {reference: remote.reference, state: remote.state, statusDetail: remote.statusDetail, expiresAt: remote.pix?.expiresAt || null, ...(remote.reason ? {reason: remote.reason} : {})});
     } catch (error) {
       if (error.status === 404) return json(res, 404, {error: 'not_found'});
-      console.error('payments/status: Mercado Pago answered', error.status || '', error.code || '', error.message);
+      console.error(`payments/status: Mercado Pago answered ${error.status || 'sem resposta'} ${error.code || ''} · ${ours.reference} · x-request-id ${error.requestId || '-'}`);
       return json(res, 502, {error: 'provider_unavailable'});
     }
   };

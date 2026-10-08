@@ -58,7 +58,10 @@ for (const text of ['Enviamos um código de seis números para', 'Código enviad
   'Só mais um instante.', 'Escolha como prefere pagar. O Mercado Pago processa tudo com segurança.', 'Carregando as formas de pagamento…', 'Confira os dados do cartão e tente novamente.',
   'O pagamento não foi aceito. Confira os dados ou tente outra forma de pagamento.', 'Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.',
   'O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.', 'Pix gerado. Pague com o código ou o QR Code.', 'Pagamento de teste aprovado. Nenhum valor real foi cobrado e nenhuma peça será produzida.',
-  'Pagamento confirmado. A Ju já recebeu o seu pedido.', 'O Pix expirou. Gere um novo código para continuar.', 'Tentar novamente']) {
+  'Pagamento confirmado. A Ju já recebeu o seu pedido.', 'O Pix expirou. Gere um novo código para continuar.', 'Tentar novamente',
+  // why a card was refused, and leaving a Pix that waits (2026-10-07)
+  'O cartão não tem limite disponível para esta compra. Tente outro cartão ou pague com Pix.', 'O banco do cartão não aprovou o pagamento. Tente outro cartão ou pague com Pix.',
+  'Cancelando o código anterior…', 'Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.']) {
   assert.notEqual(t(text, 'en'), text, `missing EN: ${text}`);
   assert.notEqual(t(text, 'es'), text, `missing ES: ${text}`);
 }
