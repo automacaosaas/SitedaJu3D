@@ -16,14 +16,14 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
 const setup = raw('deploy/setup-servidor.sh'), deploy = raw('deploy/deploy.sh');
 const firewall = raw('deploy/firewall.sh');
-const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup]]) {
+const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh'), payments = raw('deploy/config-pagamentos.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -118,6 +118,16 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(cloudSetup.includes("read -r -s -p \"applicationKey") && cloudSetup.includes("printf '[b2]\\ntype = b2\\naccount = %s\\nkey = %s") && cloudSetup.includes('umask 077') && cloudSetup.includes('chmod 600 "$SHARED/rclone.conf"'), 'the B2 key: typed without echo, written by a shell builtin into a private file');
   const {REASONS} = require('../tools/deploy-alert.cjs');
   assert(REASONS.nuvem && raw('tools/deploy-alert.cjs').includes("read(dir, cloud ? '.backup-last.log' : '.deploy-last.log', 3000)"), 'the e-mail says it was the cloud copy, with its own log');
+}
+
+// config-pagamentos.sh (08/10/2026): the owner pastes the Mercado Pago and Resend keys into prompts (secret ones without
+// echo), only those lines of the .env change (first occurrence, by bash builtins: no value on a command line), a copy of
+// the old .env stays beside it, and a test key can never stay in live mode.
+{
+  assert(payments.includes('read -r -s -p "$label: " value') && payments.includes('ask MP_ACCESS_TOKEN') && payments.includes('ask RESEND_API_KEY') && /ask MP_ACCESS_TOKEN "[^"]*" 1 /.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 /.test(payments), 'secret keys are read without echo');
+  assert(payments.includes("1) mode=test; prefix='TEST-'") && payments.includes("2) mode=live; prefix='APP_USR-'") && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'each mode takes its own keys (Enter keeps a key only when it fits)');
+  assert(payments.includes("printf '%s=%s\\n' \"$key\" \"${NEW[$key]}\"") && payments.includes('cp -p "$ENV_FILE" "$backup"') && payments.includes('chmod 600 "$tmp"') && payments.includes('mv -f "$tmp" "$ENV_FILE"'), 'rewritten by builtins, old copy kept, private, swapped at once');
+  assert(payments.includes('NEW[APP_ENV]=production') && payments.includes('NEW[SITE_URL]=$DOMAIN') && payments.includes('systemctl restart juimprime.service'), 'production on the shop domain, then the restart');
 }
 
 // The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself
