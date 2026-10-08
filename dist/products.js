@@ -17,10 +17,14 @@ export const PRODUCTS = {
   // sem partes para escolher (`parts` vazio); `colors` são as cores delas (pontinhos, carrinho, pedido). Girafa e unicórnio (06/10/2026):
   // abas iguais à do macaco, com as cores de cada bicho no banner, no header e nos pontinhos; o 3D de cada um chegou em 06/10 (as cores
   // fixas abaixo são as do modelo).
-  macacoscopio:{number:'04',category:'oftalmologia',title:'MonkeyLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',parts:[],colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]},
-  girafoscopio:{number:'05',category:'oftalmologia',title:'GiraffeLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-girafoscopio-cutout.webp',catalogImage:'product-girafoscopio-cutout.webp',description:'Uma girafinha para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',parts:[],colors:[{id:'ochre',name:'Amarelo-ocre',hex:'#eeb012'},{id:'brown',name:'Marrom',hex:'#60341e'},{id:'cream',name:'Creme',hex:'#dec4a0'}]},
-  // eyebrowEffect: o "Novidade" no alto da janela da peça em arco-íris (07/10/2026, pedido da dona; product-page.css .is-rainbow)
-  unicornioscopio:{number:'06',category:'oftalmologia',title:'UnicornLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-unicornioscopio-cutout.webp',catalogImage:'product-unicornioscopio-cutout.webp',description:'Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',eyebrowEffect:'rainbow',parts:[],colors:[{id:'white',name:'Branco',hex:'#f0ece8'},{id:'purple',name:'Roxo',hex:'#a65cbe'},{id:'lavender',name:'Azul-lavanda',hex:'#7c8ad8'},{id:'gold',name:'Dourado',hex:'#d6a82c'}]}
+  // eyebrowEffect + badge: o selo "Novidade" (no alto da janela da peça e na página dela; product-page.css e product-landing.css .is-badge):
+  // uma pílula escura no tom da peça (pill: as duas pontas do degradê), com um fio branco em volta, um halo (glow) e as letras passando
+  // pelas cores de `ink` numa volta sem emenda. 'rainbow' (07/10/2026, pedido da dona: só o unicórnio) = o arco-íris vivo; 'shine'
+  // (08/10/2026: "um selo bordado nas outras, brilhando conforme a paleta delas") = as cores da própria peça. Cada cor de `ink` passa de
+  // 4,5:1 sobre as duas pontas de `pill` e não é mais escura que elas em nenhum canal (tests/product-page.mjs confere).
+  macacoscopio:{number:'04',category:'oftalmologia',title:'MonkeyLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-macacoscopio-cutout.webp',catalogImage:'product-macacoscopio-cutout.webp',description:'Um macaquinho para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',eyebrowEffect:'shine',badge:{ink:['#ffe27a','#f2bd6b','#d08e5c','#dca57a','#f4d8b4'],pill:['#2a1508','#43230f'],glow:'#d9964f'},parts:[],colors:[{id:'brown',name:'Marrom',hex:'#6a3a28'},{id:'tan',name:'Bege',hex:'#c9a07d'},{id:'yellow',name:'Amarelo',hex:'#efcf59'}]},
+  girafoscopio:{number:'05',category:'oftalmologia',title:'GiraffeLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-girafoscopio-cutout.webp',catalogImage:'product-girafoscopio-cutout.webp',description:'Uma girafinha para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',eyebrowEffect:'shine',badge:{ink:['#f7b733','#fff27a','#f8e7c6','#d9a066'],pill:['#2b1a04','#46300a'],glow:'#e9b44c'},parts:[],colors:[{id:'ochre',name:'Amarelo-ocre',hex:'#eeb012'},{id:'brown',name:'Marrom',hex:'#60341e'},{id:'cream',name:'Creme',hex:'#dec4a0'}]},
+  unicornioscopio:{number:'06',category:'oftalmologia',title:'UnicornLamp',subtitle:'Capa para lâmpada de fenda portátil',image:'product-unicornioscopio-cutout.webp',catalogImage:'product-unicornioscopio-cutout.webp',description:'Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.',eyebrowEffect:'rainbow',badge:{ink:['#ff8fc4','#ffb86b','#ffe36b','#8ff09a','#7fd2ff','#b9a4ff'],pill:['#2a1236','#3d1c50'],glow:'#a65cbe'},parts:[],colors:[{id:'white',name:'Branco',hex:'#f0ece8'},{id:'purple',name:'Roxo',hex:'#a65cbe'},{id:'lavender',name:'Azul-lavanda',hex:'#7c8ad8'},{id:'gold',name:'Dourado',hex:'#d6a82c'}]}
 };
 // Novidades só de vitrine: aparecem no banner com a demonstração, mas não têm catálogo, preço, carrinho nem personalização (`soon: true`).
 // Quando a modelagem ficar pronta, a entrada passa para PRODUCTS (com preço no servidor, cores e modelo 3D). `colors` são só os pontinhos do banner.
@@ -182,6 +186,10 @@ export function defaults(key){return Object.fromEntries(PRODUCTS[key].parts.map(
 export function color(id){return PALETTE.find(c=>c.id===id)||PALETTE[0];}
 // Peça de cores fixas (as lâmpadas): nada para escolher — sem partes; as cores são as dela (`colors`).
 export const fixedColors=key=>!!PRODUCTS[key]&&!PRODUCTS[key].parts.length;
+// O selo "Novidade" da peça (`badge`) em variáveis de CSS, para a janela da peça (controller.js) e a página dela
+// (tools/build-product-pages.cjs): --badge-ink (o degradê das letras, que termina na cor em que começa: a volta não tem emenda),
+// --badge-pill (a pílula) e --badge-glow (o halo). '' para a peça sem selo.
+export function badgeStyle(key){const b=PRODUCTS[key]?.badge;return b?`--badge-ink:linear-gradient(90deg, ${[...b.ink,b.ink[0]].join(', ')});--badge-pill:linear-gradient(135deg, ${b.pill.join(', ')});--badge-glow:${b.glow}`:'';}
 // As cores de um item, para o carrinho, o pedido e os cartões: as escolhidas, parte por parte; na peça de cores fixas, as dela.
 // [{part, name, hex}] (part vazio nas cores fixas)
 export function itemColors(key,selection={}){const p=PRODUCTS[key];if(!p)return [];if(!p.parts.length)return (p.colors||[]).map(c=>({part:'',name:c.name,hex:c.hex}));

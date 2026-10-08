@@ -42,8 +42,13 @@ const {translate} = await site('i18n-core.js');
   // a lamp (07/10/2026) pulls the other lamps first: mixed, 2 for R$ 160 and 3 for R$ 210; its colours are its own, no part names
   const lamp = normalizeCart([{productId: 'girafoscopio', selection: {}}]);
   const lampHtml = miniCartBody({cart: lamp, itemId: lamp[0].id, original: true, freeShipping: null});
-  assert.deepEqual([...lampHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]).slice(0, 2), ['macacoscopio', 'unicornioscopio'], 'the other lamps first');
-  assert.match(lampHtml, /<li><i style="--chip:#eeb012" aria-hidden="true"><\/i><strong>Amarelo-ocre<\/strong><\/li>/, 'the lamp\'s own colours');
+  // 08/10/2026 (visual 16): a lamp suggests only the other lamps (never a piece out of its kit); its colours are one row of dots (the
+  // names stay for screen readers), and each thumbnail sits on its own piece's wash
+  assert.deepEqual([...lampHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['macacoscopio', 'unicornioscopio'], 'only the other lamps');
+  assert.match(lampHtml, /<h3 id="mini-cart-kit-title">Complete o kit<\/h3>/);
+  assert.match(lampHtml, /<ul class="mini-cart-colors is-dots" aria-label="Cores de GiraffeLamp"><li><i style="--chip:#eeb012" aria-hidden="true"><\/i><span class="sr-only">Amarelo-ocre<\/span><\/li>/, 'the lamp\'s own colours, as dots');
+  assert.match(lampHtml, /<img src="[^"]+" alt="" width="96" height="96" style="--thumb-wash:#[0-9a-f]{6}">/, 'the thumbnail on the piece\'s wash');
+  assert.doesNotMatch(all, /is-dots/, 'a customizable piece keeps its colours part by part');
   assert.equal((all.match(/<\/span><\/span><b class="mini-cart-add-count" aria-hidden="true"><span>1<\/span><\/b><\/button>/g) || []).length, 2, 'the count on each kit button, outside the track that clips the running cart');
   assert.match(all, /Adicionado nas cores originais/); assert.match(all, /cores originais<\/span>/);
   assert.match(all, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?815,00<\/dd>/);
@@ -57,6 +62,8 @@ const {translate} = await site('i18n-core.js');
   assert.equal((kitHtml.match(/<p>1 × R\$\s?70,00/g) || []).length, 3, 'each one at the kit price');
   assert.match(kitHtml, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?210,00<\/dd>/); assert.match(kitHtml, /<dt>No Pix<\/dt><dd>R\$\s?199,50<\/dd>/);
   assert.deepEqual([...kitHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia'], 'the pieces just added are not suggested again');
+  assert.match(kitHtml, /<h3 id="mini-cart-kit-title">Você também pode gostar<\/h3>/, 'the whole kit just added: the other pieces are not "the kit"');
+  assert.match(kitHtml, /<span id="mini-cart-title">Kit adicionado ao carrinho<\/span>/); assert.match(kitHtml, /<dl class="mini-cart-total" id="mini-cart-total">/);
   const two = normalizeCart([{productId: 'girafoscopio', selection: {}}, {productId: 'unicornioscopio', selection: {}}]);
   assert.equal([...miniCartBody({cart: two, itemIds: two.map(i => i.id), original: true}).matchAll(/data-kit-add="([a-z]+)"/g)][0][1], 'macacoscopio', 'a 2-lamp kit suggests the third lamp first');
   assert.match(miniCartBody({cart: kit, itemIds: [kit[1].id], original: true}), /Adicionado nas cores originais/, 'one line: the usual header');
@@ -79,11 +86,16 @@ const {translate} = await site('i18n-core.js');
   assert.match(css, /\.mini-cart-add\.is-adding \.mini-cart-add-cart \{ animation: kit-cart-run \.9s/);
   assert.match(css, /\.mini-cart-add-track \{[^}]*overflow: hidden;/); assert.doesNotMatch(css, /\.mini-cart-add\.is-adding \{[^}]*overflow: hidden/, 'the badge is never clipped');
   assert.match(read('dist/mini-cart.js'), /badge\.classList\.add\(before \? 'is-bump' : 'is-new'\); \}, 560\);/, 'the number changes as the cart comes back');
+  // its name is the confirmation and its description the total (usabilidade 5); it closes when its own slide ends (movimento 16)
+  assert.match(read('dist/mini-cart.js'), /dialog\.setAttribute\('aria-labelledby', 'mini-cart-title'\); dialog\.setAttribute\('aria-describedby', 'mini-cart-total'\);/);
+  assert.match(read('dist/mini-cart.js'), /\/\^mini-cart-\(out\|down\)\$\/\.test\(event\.animationName\)/);
+  assert.match(css, /\.mini-cart\[open\]::backdrop \{ animation: mini-cart-backdrop-in \.25s ease both; \}/, 'the backdrop fades in too');
+  assert.match(read('dist/free-shipping.js'), /fill\.animate\(\[\{transform: `scaleX\(/, 'the free-shipping bar rises by transform only');
 }
 
 // ── texts ─────────────────────────────────────────────────────────────
 {
-  for (const text of ['Adicionado ao carrinho', 'Adicionado nas cores originais', 'Fechar o carrinho', 'Complete o kit', 'Ver carrinho', 'Continuar escolhendo', '2 peças no carrinho', 'Adicionar Aviãoscopia nas cores originais', 'Aviãoscopia adicionado nas cores originais.'])
+  for (const text of ['Adicionado ao carrinho', 'Adicionado nas cores originais', 'Fechar o carrinho', 'Complete o kit', 'Você também pode gostar', 'Ver carrinho', 'Continuar escolhendo', '2 peças no carrinho', 'Adicionar Aviãoscopia nas cores originais', 'Aviãoscopia adicionado nas cores originais.'])
     for (const locale of ['en', 'es']) assert.notEqual(translate(text, locale), text, `${locale}: ${text}`);
   assert.equal(translate('1 peça no carrinho', 'en'), '1 item in the cart');
 }

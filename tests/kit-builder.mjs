@@ -69,29 +69,40 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(tiers.length, 3); assert.equal(rows.length, 3);
   assert.deepEqual(tiers.map(t => t.textContent), [`1 por${money(9000)}`, `2 por${money(16000)}${money(8000)} cada`, `3 por${money(21000)}${money(7000)} cada`], 'the tiers: 1 por R$ 90,00 · 2 por R$ 160,00 (R$ 80,00 cada) · 3 por R$ 210,00 (R$ 70,00 cada)');
   assert.equal(qty(), '0,0,1', 'it opens with this lamp, one unit'); assert.equal(pressed(), 'true,false,false');
-  assert.equal(host.one('kit-total').textContent.replace(/\s/g, ' '), `Total do kit${money(9000)}${money(9000)}`.replace(/\s/g, ' '));
+  // one lamp is not a kit yet: "Total" and "Adicionar ao carrinho" (08/10/2026); from two on, "Total do kit" and "Adicionar o kit ao carrinho"
+  assert.equal(host.one('kit-total').textContent.replace(/\s/g, ' '), `Total${money(9000)}${money(9000)}`.replace(/\s/g, ' '));
+  assert.equal(addButton.textContent.trim(), 'Adicionar ao carrinho');
   assert.ok(host.one('kit-total').children[1].children[0].hidden, 'no struck price for a single lamp'); assert.ok(host.one('kit-saving').hidden);
   assert.equal(host.one('kit-pix').textContent, `${money(8550)} no Pix`);
-  assert.equal(host.one('kit-sum').getAttribute('aria-live'), 'polite', 'the total is announced');
+  // what changed is announced once, by a status line of its own (usabilidade 4): how many of each lamp, then the total
+  const said = host.one('sr-only');
+  assert.equal(said.getAttribute('role'), 'status'); assert.equal(host.one('kit-sum').getAttribute('aria-live'), null, 'the total is not announced twice');
+  assert.equal(said.textContent, '', 'nothing said before a tap');
   assert.ok(host.one('kit-cart-note').hidden, 'nothing in the cart: no cart line');
   assert.deepEqual(rows.map(r => r.all(el => el.tag === 'img')[0].src), ['assets/card-preview-macacoscopio.webp', 'assets/card-preview-girafoscopio.webp', 'assets/card-preview-unicornioscopio.webp']);
   assert.deepEqual(rows[0].each('kit-step').map(b => b.getAttribute('aria-label')), ['Diminuir quantidade de MonkeyLamp', 'Aumentar quantidade de MonkeyLamp']);
   assert.equal(rows[0].one('kit-stepper').getAttribute('aria-label'), 'Quantidade de MonkeyLamp');
   // one-tap presets
   click(tiers[1].children[1]); assert.equal(qty(), '1,0,1', '2 = the unicorn and the next lamp'); assert.equal(pressed(), 'false,true,false');
+  assert.equal(said.textContent, `MonkeyLamp: 1, UnicornLamp: 1. Total do kit ${money(16000)}`, 'the quantities and the total are announced');
+  assert.equal(host.one('kit-total-label').textContent, 'Total do kit'); assert.equal(addButton.textContent.trim(), 'Adicionar o kit ao carrinho');
   assert.equal(host.one('kit-total').children[1].textContent, `${money(18000)}${money(16000)}`); assert.equal(host.one('kit-saving').textContent, `economize ${money(2000)}`);
   assert.equal(host.one('kit-pix').textContent, `${money(15200)} no Pix`);
   click(tiers[2]); assert.equal(qty(), '1,1,1'); assert.equal(pressed(), 'false,false,true');
   // the steppers: 0 to 9, the tier follows the total units
   click(rows[1].one('is-plus')); assert.equal(qty(), '1,2,1'); assert.equal(pressed(), 'false,false,false', 'four lamps: no tier');
+  assert.equal(said.textContent, `MonkeyLamp: 1, GiraffeLamp: 2, UnicornLamp: 1. Total do kit ${money(30000)}`, 'a stepper tells how many of that lamp');
   for (let k = 0; k < 12; k++) click(rows[1].one('is-plus'));
   assert.equal(qty(), `1,${KIT_MAX},1`); assert.equal(rows[1].one('is-plus').getAttribute('aria-disabled'), 'true');
   kit.set({macacoscopio: 0, girafoscopio: 0, unicornioscopio: 1});
   click(rows[2].one('is-minus')); assert.equal(qty(), '0,0,0'); assert.equal(rows[2].one('is-minus').getAttribute('aria-disabled'), 'true');
   click(rows[2].one('is-minus')); assert.equal(qty(), '0,0,0', 'never below zero');
-  assert.ok(addButton.disabled, 'nothing chosen: the button waits'); assert.ok(host.one('kit-pix').hidden);
+  // nothing chosen (usabilidade 14): the button stays in the Tab order, says it is unavailable and, tapped, says why
+  assert.ok(!addButton.disabled); assert.equal(addButton.getAttribute('aria-disabled'), 'true'); assert.ok(host.one('kit-pix').hidden);
+  assert.equal(said.textContent, 'Escolha pelo menos uma peça.');
+  click(addButton); await tick(); assert.equal(status.textContent, 'Escolha pelo menos uma peça.'); assert.equal(added, null, 'nothing added');
   // adding: every lamp goes in one call; an error shows in the block
-  click(tiers[2]); assert.ok(!addButton.disabled);
+  click(tiers[2]); assert.equal(addButton.getAttribute('aria-disabled'), 'false'); assert.equal(status.textContent, '', 'the warning goes away');
   click(addButton); await tick();
   assert.deepEqual(added, [{productId: 'macacoscopio', selection: {}, quantity: 1}, {productId: 'girafoscopio', selection: {}, quantity: 1}, {productId: 'unicornioscopio', selection: {}, quantity: 1}]);
   assert.equal(status.textContent, '');
@@ -109,11 +120,26 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(windowListeners['ju:cart'].length, 0);
 }
 
+// ── the product dialog: the block only chooses (no total, no button); the purchase bar follows onChange (08/10/2026) ──
+{
+  const host = new Node('div'), quotes = [];
+  const kit = mountKit(host, {current: 'girafoscopio', cart: () => [], onChange: quote => quotes.push(quote)});
+  assert.equal(host.one('kit-add'), undefined, 'no add button: the bar buys'); assert.equal(host.one('kit-total'), undefined, 'no total: the bar shows it');
+  assert.ok(host.one('kit').className.includes('is-picker'));
+  assert.equal(quotes.length, 1, 'the bar learns the kit when it is mounted'); assert.deepEqual([quotes[0].units, quotes[0].total], [1, 9000]);
+  assert.ok(host.one('kit-sum').hidden, 'one lamp: nothing under the rows');
+  click(host.each('kit-tier')[2]);
+  assert.deepEqual([quotes.at(-1).units, quotes.at(-1).total, quotes.at(-1).full, quotes.at(-1).pix], [3, 21000, 27000, 19950], 'three lamps: the bar gets R$ 210 (R$ 270 struck, R$ 199,50 with Pix)');
+  assert.equal(quotes.at(-1).lines.length, 3);
+  assert.ok(!host.one('kit-sum').hidden); assert.equal(host.one('kit-deal').textContent, `3 peças${`economize ${money(6000)}`}`, 'how many pieces and how much is saved');
+  kit.set({}); assert.equal(quotes.at(-1).units, 0, 'an empty kit reaches the bar too');
+}
+
 // ── where it lives ────────────────────────────────────────────────────
 {
   const html = read('dist/index.html'), controller = read('dist/controller.js'), landing = read('dist/product-landing.js'), code = read('dist/kit-builder.js');
   assert.ok(html.includes('<p class="pdp-fixed-text" id="fixed-text"></p></section>\n      <section class="pdp-kit" id="pdp-kit" aria-labelledby="pdp-kit-title" hidden><div class="pdp-colors-head"><h3 id="pdp-kit-title">Monte seu kit</h3><span class="pdp-kit-mix">pode misturar</span></div><div class="pdp-kit-body"></div></section>'), 'the dialog: right after "Cores da peça", in the white area');
-  assert.ok(controller.includes("kitHost.hidden=soon||!fixed||!kitOf(key);mountKit(kitHost.querySelector('.pdp-kit-body'),{current:kitHost.hidden?null:key,onAdd:addKit});"), 'only lamps of a kit get the block');
+  assert.ok(controller.includes("kitHost.hidden=soon||!fixed||!kitOf(key);kitPick=null;") && controller.includes("mountKit(kitHost.querySelector('.pdp-kit-body'),{current:kitHost.hidden?null:key,onChange:paintKit});"), 'only lamps of a kit get the block; in the dialog it only chooses and the bar follows it');
   assert.ok(controller.includes('offer.hidden=!extra&&(!kit||!kitHost.hidden);'), 'the bar sentence hides while the block shows');
   assert.ok(/async function addKit\(lines\)\{[^}]*writeCart\(putItems\(readCart\(\),lines\)\)[^]*?openMiniCart\(\{itemIds:lines\.map\(line=>addedItemId\(cart,line\.productId,\{\}\)\)\.filter\(Boolean\),original:true,riseFrom:before\}\);/.test(controller), 'one write, then the mini-cart confirms every line');
   assert.ok(landing.includes("mountKit(kitHost.querySelector('[data-pl-kit-body]'), {current: key, onAdd: async lines => {") && landing.includes('writeCart(putItems(readCart(), lines))'), 'the lamp pages use the same block');

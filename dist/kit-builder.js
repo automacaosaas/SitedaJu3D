@@ -46,9 +46,13 @@ export function kitQuote(counts, cart = []) {
 const make = (tag, className, text) => { const el = document.createElement(tag); if (className) el.className = className; if (text != null) el.textContent = text; return el; };
 const mounted = new WeakMap();
 
-// Monta o kit dentro de host (um elemento vazio). onAdd(lines) põe as linhas no carrinho (pode ser assíncrono; um erro aparece na linha
-// de aviso). cart() lê o carrinho de agora (para a linha "Com o que já está no carrinho"). Devolve {set(counts), counts(), refresh()}.
-export function mountKit(host, {current, onAdd, cart = () => storedCart()}) {
+// Monta o kit dentro de host (um elemento vazio). Dois jeitos (08/10/2026, "uma compra só"):
+// - com onAdd(lines) (a página de cada lâmpada): o bloco é a compra — o total e "Adicionar ao carrinho", que põe as linhas no carrinho
+//   (pode ser assíncrono; um erro aparece na linha de aviso). Sem nenhuma peça, o botão continua no Tab (aria-disabled) e diz o porquê.
+// - sem onAdd (a janela da peça): o bloco só escolhe; quem compra é a barra da janela, que segue onChange(quote) (o preço do kit, o Pix…).
+// onChange(quote) vem a cada mudança (kitQuote). cart() lê o carrinho de agora (para a linha "Com o que já está no carrinho").
+// Quem usa leitor de tela ouve, a cada toque, quantas de cada peça ficaram e o total (usabilidade 4). Devolve {set(counts), counts(), refresh()}.
+export function mountKit(host, {current, onAdd = null, onChange = null, cart = () => storedCart()}) {
   mounted.get(host)?.abort();
   const items = kitItems(current), tiers = kitTiers(current);
   host.replaceChildren();
@@ -87,23 +91,27 @@ export function mountKit(host, {current, onAdd, cart = () => storedCart()}) {
     list.append(li);
     return {id, li, minus, plus, out};
   });
-  // o total, ao vivo
-  const sum = make('div', 'kit-sum'); sum.setAttribute('aria-live', 'polite'); sum.setAttribute('aria-atomic', 'true');
-  const totalRow = make('p', 'kit-total'), totalValue = make('strong'), fullValue = make('s'), totalPrices = make('span', 'kit-total-prices');
+  // o total (só quando o bloco é a compra: na janela, o total está na barra) e o desconto; o que se ouve vai pelo `said`
+  const buying = typeof onAdd === 'function';
+  const sum = make('div', 'kit-sum');
+  const totalRow = make('p', 'kit-total'), totalLabel = make('span', 'kit-total-label'), totalValue = make('strong'), fullValue = make('s'), totalPrices = make('span', 'kit-total-prices');
   // o preço cheio riscado é só para os olhos: quem ouve recebe o total e quanto economiza
   fullValue.setAttribute('aria-hidden', 'true');
-  totalPrices.append(fullValue, totalValue); totalRow.append(make('span', 'kit-total-label', 'Total do kit'), totalPrices);
-  const dealRow = make('p', 'kit-deal'), saving = make('span', 'kit-saving'), pix = make('span', 'kit-pix');
-  dealRow.append(saving, pix);
+  totalPrices.append(fullValue, totalValue); totalRow.append(totalLabel, totalPrices);
+  const dealRow = make('p', 'kit-deal'), count = make('span', 'kit-count'), saving = make('span', 'kit-saving'), pix = make('span', 'kit-pix');
+  if (buying) dealRow.append(saving, pix); else dealRow.append(count, saving);
   const cartRow = make('p', 'kit-cart-note'), cartValue = make('strong');
   cartRow.append(make('span', null, 'Com o que já está no carrinho:'), ' ', cartValue);
-  sum.append(totalRow, dealRow, cartRow);
-  // a compra
-  const add = make('button', 'kit-add'); add.type = 'button';
+  if (buying) sum.append(totalRow);
+  sum.append(dealRow, cartRow);
+  const said = make('p', 'sr-only'); said.setAttribute('role', 'status');
+  // a compra (só na página da lâmpada)
+  const add = make('button', 'kit-add'), addLabel = make('span'); add.type = 'button';
   add.insertAdjacentHTML('afterbegin', icon('cart'));   // o ícone é do próprio site (icons.js), não um dado
-  add.append(make('span', null, 'Adicionar o kit ao carrinho'));
+  add.append(addLabel);
   const status = make('p', 'kit-status'); status.setAttribute('role', 'status');
-  root.append(tierBar, list, sum, add, status);
+  root.classList.toggle('is-picker', !buying);
+  root.append(tierBar, list, sum, ...(buying ? [add, status] : []), said);
   host.append(root);
 
   function paint() {
@@ -116,28 +124,42 @@ export function mountKit(host, {current, onAdd, cart = () => storedCart()}) {
       row.minus.setAttribute('aria-disabled', String(n <= 0));
       row.plus.setAttribute('aria-disabled', String(n >= KIT_MAX));
     }
+    // uma peça só não é "kit": "Total" e "Adicionar ao carrinho"; de duas em diante, "Total do kit" e "Adicionar o kit ao carrinho"
+    totalLabel.textContent = quote.units > 1 ? 'Total do kit' : 'Total';
     totalValue.textContent = money(quote.total);
     fullValue.textContent = money(quote.full); fullValue.hidden = !quote.saving;
+    count.textContent = `${quote.units} ${quote.units === 1 ? 'peça' : 'peças'}`;
     saving.textContent = `economize ${money(quote.saving)}`; saving.hidden = !quote.saving;
     pix.textContent = `${money(quote.pix)} no Pix`; pix.hidden = !quote.units;
-    dealRow.hidden = !quote.units;
+    dealRow.hidden = buying ? !quote.units : !quote.saving;
     cartValue.textContent = `+ ${money(quote.added)}`; cartRow.hidden = !quote.units || quote.added === quote.total;
-    add.disabled = busy || !quote.units;
+    addLabel.textContent = quote.units > 1 ? 'Adicionar o kit ao carrinho' : 'Adicionar ao carrinho';
+    add.disabled = busy; add.setAttribute('aria-disabled', String(!quote.units));
     root.classList.toggle('is-empty', !quote.units);
+    sum.hidden = !buying && dealRow.hidden && cartRow.hidden;
+    onChange?.(quote);
+    return quote;
   }
   function safeCart() { try { return cart() || []; } catch { return []; } }
-  function set(next) { counts = Object.fromEntries(items.map(id => [id, Math.max(0, Math.min(KIT_MAX, Math.floor(next?.[id] || 0)))])); status.textContent = ''; paint(); }
+  function set(next) { counts = Object.fromEntries(items.map(id => [id, Math.max(0, Math.min(KIT_MAX, Math.floor(next?.[id] || 0)))])); status.textContent = ''; return paint(); }
+  // o que mudou, para quem ouve: quantas de cada peça e o total (os nomes e os números não se traduzem; "Total do kit" sim)
+  function tell(quote) {
+    if (!quote.units) { said.textContent = 'Escolha pelo menos uma peça.'; return; }
+    const names = rows.filter(row => counts[row.id]).map(row => `${PRODUCTS[row.id].title}: ${counts[row.id]}`).join(', ');
+    said.replaceChildren(`${names}. `, make('span', null, quote.units > 1 ? 'Total do kit' : 'Total'), ` ${money(quote.total)}`);
+  }
 
-  tierBar.addEventListener('click', event => { const b = event.target.closest('[data-units]'); if (b) set(kitPreset(current, Number(b.dataset.units))); }, {signal: off.signal});
+  tierBar.addEventListener('click', event => { const b = event.target.closest('[data-units]'); if (b) tell(set(kitPreset(current, Number(b.dataset.units)))); }, {signal: off.signal});
   list.addEventListener('click', event => {
     const b = event.target.closest('[data-step]');
     if (!b || b.getAttribute('aria-disabled') === 'true') return;
     const id = b.closest('[data-kit-item]').dataset.kitItem;
-    set({...counts, [id]: (counts[id] || 0) + Number(b.dataset.step)});
+    tell(set({...counts, [id]: (counts[id] || 0) + Number(b.dataset.step)}));
   }, {signal: off.signal});
   add.addEventListener('click', async () => {
     const lines = kitLines(counts).map(({productId, selection, quantity}) => ({productId, selection, quantity}));
-    if (busy || !lines.length) return;
+    if (busy) return;
+    if (!lines.length) { status.textContent = 'Escolha pelo menos uma peça.'; return; }
     busy = true; paint();
     try { await onAdd(lines); status.textContent = ''; }
     catch (error) { status.textContent = error?.message || 'Não foi possível adicionar o kit. Tente novamente.'; }

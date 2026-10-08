@@ -828,6 +828,7 @@ O envio é pelos Correios, para todo o Brasil. O frete e o prazo de entrega são
 Você pode desistir da compra em até 7 dias depois de receber a peça.|You can cancel the purchase up to 7 days after receiving the piece.|Puedes desistir de la compra hasta 7 días después de recibir la pieza.
 Suas escolhas ficam salvas neste navegador.|Your choices are saved in this browser.|Tus elecciones se guardan en este navegador.
 Arraste para girar · as cores mudam na hora.|Drag to rotate · colors change instantly.|Arrastra para girar · los colores cambian al instante.
+· as cores mudam na hora.|· colors change instantly.|· los colores cambian al instante.
 Política de Trocas e Devoluções|Exchanges and Returns Policy|Política de Cambios y Devoluciones
 FEITO PARA ENCAIXAR|MADE TO FIT|HECHO PARA ENCAJAR
 O 3D nas suas consultas|3D in your appointments|El 3D en tus consultas

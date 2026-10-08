@@ -52,6 +52,18 @@
 
 /* ── name, price, colors ── */
 .pl-badge { display: inline-flex; align-items: center; min-height: 26px; margin: 4px 0 0; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--pl-accent) 11%, #fff); font: 650 12px/1.2 'DM Sans', sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--pl-accent); }
+/* o selo "Novidade" das lâmpadas antes da categoria (08/10/2026, visual 10): o mesmo da janela da peça (product-page.css .is-badge,
+   cores do dado em products.js badge): pílula escura no tom da peça, fio branco, pesponto, halo, as letras passando pelas cores da peça
+   (o degradê em darken por cima das letras brancas, andando só por transform) e o brilho que atravessa */
+.pl-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 0; }
+.pl-badges .pl-badge { margin: 0; }
+.pl-badge.is-badge { position: relative; isolation: isolate; overflow: hidden; min-height: 28px; padding: 5px 13px 5px 16px; background: var(--badge-pill); font-size: 12.5px; letter-spacing: .22em; color: #fff; outline: 1px dashed rgba(255, 255, 255, .3); outline-offset: -3px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2), 0 0 0 2px rgba(255, 255, 255, .72), 0 6px 18px -5px color-mix(in srgb, var(--badge-glow) 75%, transparent); }
+.pl-badge.is-badge::before { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; left: 0; width: 400%; background: var(--badge-ink) 0 0 / 50% 100% repeat-x; mix-blend-mode: darken; animation: pl-badge-flow 4s linear infinite; pointer-events: none; }
+.pl-badge.is-badge::after { content: ''; position: absolute; z-index: 2; top: -4px; bottom: -4px; left: 0; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .5) 50%, transparent); transform: translateX(-140%); animation: pl-badge-shine 3.2s cubic-bezier(.45, 0, .3, 1) infinite; pointer-events: none; }
+@keyframes pl-badge-flow { to { transform: translateX(-50%); } }
+@keyframes pl-badge-shine { 0%, 35% { transform: translateX(-140%); } 75%, 100% { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .pl-badge.is-badge::before { animation: none; } .pl-badge.is-badge::after { display: none; } }
+@media (forced-colors: active) { .pl-badge.is-badge { background: none; box-shadow: none; outline: 0; border: 1px solid CanvasText; color: CanvasText; } .pl-badge.is-badge::before, .pl-badge.is-badge::after { display: none; } }
 .pl-info h1 { margin: 14px 0 8px; font: 500 clamp(36px, 4.2vw, 56px)/1.05 'Playfair Display', Georgia, serif; letter-spacing: -.02em; color: var(--pl-ink); }
 .pl-sub { margin: 0; font-size: 18px; color: var(--pl-muted); }
 .pl-price { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 22px 0 4px; }
@@ -207,3 +219,5 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
 /* "entre em contato" na descrição: abre o e-mail da Ju */
 .pl-desc .contact-mail { color: var(--pl-accent); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 @media (max-width: 360px) { .pl-thumbs { gap: 5px; } .pl-thumbs button { min-width: 40px; } }
+/* 320 px (usabilidade 8): os dois botões das peças de personalizar quebram a linha em vez de passar da tela */
+@media (max-width: 360px) { .pl-add, .pl-customize { flex-basis: 100%; min-width: 0; padding: 0 14px; white-space: normal; text-align: center; line-height: 1.25; } }

@@ -50,7 +50,9 @@ const {translate} = await site('i18n-core.js');
   assert.match(script, /<span class="product-rail-pix">\$\{money\(pixPrice\(COMMERCE\.prices\[id\]\)\)\} no Pix<\/span>/);
   for (const price of Object.values(COMMERCE.prices)) assert(page.includes(`<span class="product-grid-pix">${money(pixPrice(price))} no Pix</span>`), `produtos.html grid: ${money(pixPrice(price))} no Pix`);
   assert.match(read('dist/carousel.js'), /<span class="copy-pix">5% off no Pix<\/span>/, 'banner: price with the Pix badge');
-  assert.match(read('dist/controller.js'), /\$\('#product-pix'\)\.textContent=`\$\{money\(pixPrice\(price\)\)\} no Pix`/, 'product page: the Pix price');
+  // product page (controller.js paintPrice): the piece's price, or the lamp kit's total (08/10/2026), with the same Pix rule
+  assert.match(read('dist/controller.js'), /function paintPrice\(cents,full=cents,pix=pixPrice\(cents\)\)\{[^}]*\$\('#product-pix'\)\.textContent=`\$\{money\(pix\)\} no Pix`/, 'product page: the Pix price');
+  assert.match(read('dist/controller.js'), /if\(!soon\)\{paintPrice\(price\);/, 'the piece\'s own price first');
 }
 
 // ── checkout: the card option (decision of 01/10/2026: 3x sem juros) ──
@@ -62,7 +64,7 @@ const {translate} = await site('i18n-core.js');
   assert.match(bar, /text: '5% off no Pix ou 3x sem juros no cartão'/, 'the top bar says the same');
   assert.doesNotMatch(bar, /até 12x no cartão/);
   assert.match(read('dist/index.html'), /<small><span id="product-installments">ou 3x sem juros no cartão<\/span><\/small><small class="pdp-offer" id="product-offer" hidden><\/small>/, 'and the product window (prices confirmed on 05/10/2026: no "valores ilustrativos"; the second-airplane offer under it)');
-  assert.match(read('dist/controller.js'), /\$\('#product-installments'\)\.textContent=`ou \$\{installmentLabel\(price\)\} sem juros no cartão`/, 'with the value of each installment');
+  assert.match(read('dist/controller.js'), /\$\('#product-installments'\)\.textContent=cents\?`ou \$\{installmentLabel\(cents\)\} sem juros no cartão`/, 'with the value of each installment');
   assert.match(checkout, /paymentMethods: payMethod === 'pix' \? \{bankTransfer: 'all'\} : \{creditCard: 'all', debitCard: 'all', maxInstallments: COMMERCE\.maxInstallments\}/, 'the Brick offers only the method chosen');
   assert.equal(COMMERCE.maxInstallments, 12);
 }

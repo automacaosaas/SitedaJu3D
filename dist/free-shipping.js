@@ -26,7 +26,9 @@ export const barRatio = root => { const fill = root?.querySelector('.free-ship-t
 export function riseBar(root, from) {
   const fill = root?.querySelector('.free-ship-track i'), to = barRatio(root);
   if (!fill || from === null || from === undefined || !(to > from) || matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-  fill.animate([{width: `${(from * 100).toFixed(1)}%`}, {width: `${(to * 100).toFixed(1)}%`}], {duration: 950, delay: 220, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'});
+  // only transform (movimento 16): the fill keeps its final width and grows from the left, from where it was
+  fill.style.transformOrigin = 'left center';
+  fill.animate([{transform: `scaleX(${(from / to).toFixed(3)})`}, {transform: 'scaleX(1)'}], {duration: 950, delay: 220, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards'});
   const box = fill.closest('.free-ship'); box.classList.remove('is-rising'); void box.offsetWidth; box.classList.add('is-rising');
   return true;
 }

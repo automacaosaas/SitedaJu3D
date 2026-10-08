@@ -12,7 +12,7 @@ const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const {build} = require('../tools/build-product-pages.cjs');
 const {COMPANY} = require('../api/_lib/legal');
-const {PRODUCTS, defaults, color} = await site('products.js');
+const {PRODUCTS, defaults, color, badgeStyle} = await site('products.js');
 const {COMMERCE, money, pixPrice, kitOffer} = await site('commerce-config.js');
 const BASE = COMPANY.website.replace(/\/+$/, '');
 
@@ -47,7 +47,11 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert(page.includes(`Produção em ${COMMERCE.productionLabel}`), `${id}: production time`);
   // hierarchy asked for on 2026-10-04: the piece, the category once (a badge above the name), name, price, colors, add
   // first, then "Personalizar o meu" (palette), accordions, and the description at the end
-  const order = ['data-pl-stage', '<p class="pl-badge">Oftalmologia</p>', `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-add"', ...(fixed ? [] : ['data-pl-customize']), 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
+  // 08/10/2026 (visual 10): a piece with the "Novidade" badge (the lamps) shows it before the category, in the dialog's colours
+  const category = product.badge ? '<span class="pl-badge">Oftalmologia</span>' : '<p class="pl-badge">Oftalmologia</p>';
+  if (product.badge) assert(page.includes(`<p class="pl-badges"><span class="pl-badge is-badge" data-effect="${product.eyebrowEffect}" style="${badgeStyle(id)}">Novidade</span>${category}</p>`), `${id}: the Novidade badge`);
+  else assert(!page.includes('is-badge'), `${id}: no badge`);
+  const order = ['data-pl-stage', category, `<h1>${product.title}</h1>`, 'class="pl-price"', 'class="pl-add"', ...(fixed ? [] : ['data-pl-customize']), 'class="pl-facts"', 'class="pl-about"'].map(text => page.indexOf(text));
   assert(order.every((at, i) => at > 0 && (i === 0 || at > order[i - 1])), `${id}: order of the page ${order}`);
   assert.equal((page.match(/Oftalmologia|OFTALMOLOGIA/g) || []).length, (page.match(/"category":"Oftalmologia"/g) || []).length + 1, `${id}: the category shows once`);
   // 2026-10-05: the colors are dots on the top corner of the picture; the list and the note moved to "Sobre a peça"
@@ -100,7 +104,12 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(code, /writeCart\(putItem\(readCart\(\), key, chosen, thumbnail\)\)/);
   assert.match(code, /openMiniCart\(\{itemId: addedItemId\(cart, key, chosen\), original: plain\}\)/);
   // the lamps: "Monte seu kit" shows (and the kit sentence under the price steps aside), and the kit goes in with one write
-  assert.match(code, /kitHost\.hidden = false;\n      const offer = q\('\.pl-offer'\); if \(offer\) offer\.hidden = true;/);
+  assert.match(code, /kitHost\.hidden = false;\n      const offer = q\('\.pl-offer'\); if \(offer\) offer\.hidden = true;\n      add\.closest\('\.pl-actions'\)\.hidden = true;/, 'one purchase action: with the kit on screen, the one-unit button steps aside (visual 1)');
+  // the badge: the dialog's construction (the gradient over white letters in darken, moving by transform only), still with reduced motion
+  assert.match(css, /\.pl-badge\.is-badge::before \{[^}]*width: 400%; background: var\(--badge-ink\) 0 0 \/ 50% 100% repeat-x; mix-blend-mode: darken; animation: pl-badge-flow 4s linear infinite;/);
+  assert(css.includes('@keyframes pl-badge-flow { to { transform: translateX(-50%); } }') && css.includes('@media (prefers-reduced-motion: reduce) { .pl-badge.is-badge::before { animation: none; }'));
+  // 320 px (usabilidade 8): the two buttons of a customizable piece wrap instead of running off the screen
+  assert(css.includes('@media (max-width: 360px) { .pl-add, .pl-customize { flex-basis: 100%; min-width: 0; padding: 0 14px; white-space: normal;'));
   assert.match(code, /openMiniCart\(\{itemIds: lines\.map\(line => addedItemId\(cart, line\.productId, \{\}\)\)\.filter\(Boolean\), original: true, riseFrom: before\}\);/);
   assert.match(css, /\.pl \.kit \{ --kit-accent: var\(--pl-accent\);/, 'the kit wears the page colors');
   assert.match(code, /new IntersectionObserver\(\(\[entry\]\) => \{ onScreen = entry\.isIntersecting;/, 'the spin stops off screen');
