@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const {isProduction, indexableHosts, requestHost} = require('../api/_lib/runtime');
+const {minifyCss} = require('./minify-css.cjs');
 
 const PROJECT = path.join(__dirname, '..');
 
@@ -24,6 +25,14 @@ const DEFAULT_CACHE = 'public, max-age=0, must-revalidate';   // same as Vercel:
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 const VERSIONED = /[?&]v=[^&]/;
 const COMPRESSED_CACHE_LIMIT = 64 * 1024 * 1024;
+// Compression (2026-10-08, PageSpeed): every file is compressed once per version (mtime) and kept. The best compression
+// (Brotli 11, gzip 9) runs in the background on zlib's thread pool, never on the event loop: at start for the whole site
+// (precompress, one file at a time) and, for a file asked for before that, right after the first answer. Until then a small
+// file is compressed on the spot at the old quality (6, a few milliseconds); a big one (three.js, the 3D models) goes out
+// uncompressed that once instead of holding every other request.
+const SYNC_LIMIT = 256 * 1024;
+const QUICK = 6;
+const best = ext => ext === '.glb' ? 6 : 11;   // Meshopt models gain almost nothing above 6, at many times the time
 
 // vercel.json `headers` → [{pattern, headers}]. Sources are plain "/prefix/(.*)" patterns (checked by tests/headers.mjs),
 // which are also valid regular expressions.
@@ -69,15 +78,67 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     return stat.isFile() ? {file, stat} : null;
   }
 
-  function compress(file, stat, encoding) {
+  // What a file is served with: a stylesheet minified (server/minify-css.cjs, once per version), anything else as on disk.
+  const minified = new Map();
+  function contents(file, stat, ext) {
+    if (ext !== '.css') return fs.readFileSync(file);
+    const key = `${file}|${stat.mtimeMs}`;
+    if (!minified.has(key)) minified.set(key, Buffer.from(minifyCss(fs.readFileSync(file, 'utf8'))));
+    return minified.get(key);
+  }
+  const zipOptions = (encoding, raw, quality, ext) => encoding === 'br'
+    ? {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: quality, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length, [zlib.constants.BROTLI_PARAM_MODE]: ext === '.glb' ? zlib.constants.BROTLI_MODE_GENERIC : zlib.constants.BROTLI_MODE_TEXT}}
+    : {level: quality >= 9 ? 9 : quality};
+  const finest = new Set(), pending = new Map();
+  function remember(key, body, isBest) {
+    const old = compressed.get(key);
+    if (compressedBytes - (old?.length || 0) + body.length > COMPRESSED_CACHE_LIMIT) return;
+    compressed.set(key, body); compressedBytes += body.length - (old?.length || 0);
+    if (isBest) finest.add(key);
+  }
+  // The best compression of one file version, in the background; a promise that settles when it is cached (never rejects).
+  function compressLater(file, stat, ext, encoding) {
     const key = `${file}|${stat.mtimeMs}|${encoding}`;
-    if (compressed.has(key)) return compressed.get(key);
-    const raw = fs.readFileSync(file);
-    const body = encoding === 'br'
-      ? zlib.brotliCompressSync(raw, {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: 6, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length}})
-      : zlib.gzipSync(raw, {level: 6});
-    if (compressedBytes + body.length <= COMPRESSED_CACHE_LIMIT) { compressed.set(key, body); compressedBytes += body.length; }
+    if (finest.has(key)) return Promise.resolve();
+    if (pending.has(key)) return pending.get(key);
+    const job = new Promise(resolve => {
+      let raw;
+      try { raw = contents(file, stat, ext); } catch { pending.delete(key); return resolve(); }
+      const quality = encoding === 'br' ? best(ext) : 9;
+      (encoding === 'br' ? zlib.brotliCompress : zlib.gzip)(raw, zipOptions(encoding, raw, quality, ext), (error, body) => {
+        pending.delete(key);
+        if (!error) remember(key, body, true);
+        resolve();
+      });
+    });
+    pending.set(key, job);
+    return job;
+  }
+  // The compressed body to answer with now, or null (a big file whose compression is still running: it goes out as it is).
+  function encoded(file, stat, ext, encoding) {
+    const key = `${file}|${stat.mtimeMs}|${encoding}`;
+    let body = compressed.get(key) || null;
+    if (!body && stat.size <= SYNC_LIMIT) {
+      const raw = contents(file, stat, ext);
+      body = encoding === 'br' ? zlib.brotliCompressSync(raw, zipOptions('br', raw, QUICK, ext)) : zlib.gzipSync(raw, zipOptions('gzip', raw, QUICK, ext));
+      remember(key, body, false);
+    }
+    compressLater(file, stat, ext, encoding);
     return body;
+  }
+  // The whole site compressed with Brotli in the background, one file at a time (start() calls it once; the tests may too).
+  async function precompress() {
+    const files = [];
+    const walk = dir => { for (const entry of fs.readdirSync(dir, {withFileTypes: true})) { if (entry.name.startsWith('.')) continue; const full = path.join(dir, entry.name); if (entry.isDirectory()) walk(full); else if (COMPRESSIBLE.has(path.extname(entry.name).toLowerCase())) files.push(full); } };
+    walk(root);
+    // text first (what every page needs), the 3D models last
+    files.sort((a, b) => (a.endsWith('.glb') - b.endsWith('.glb')) || a.localeCompare(b));
+    for (const file of files) {
+      let stat;
+      try { stat = fs.statSync(file); } catch { continue; }
+      if (stat.size > 1024) await compressLater(file, stat, path.extname(file).toLowerCase(), 'br');
+    }
+    return files.length;
   }
 
   function serveStatic(req, res, pathname, search = '') {
@@ -97,7 +158,8 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
       return res.end(req.method === 'HEAD' ? undefined : 'Página não encontrada.');
     }
     const {file, stat} = found, ext = path.extname(file).toLowerCase();
-    const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+    // a stylesheet is served minified: its own validator, never confused with the file as it was served before
+    const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}${ext === '.css' ? '-m' : ''}"`;
     res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
     res.setHeader('ETag', etag);
     res.setHeader('Last-Modified', stat.mtime.toUTCString());
@@ -110,18 +172,23 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     const accepts = String(req.headers['accept-encoding'] || '');
     const encoding = COMPRESSIBLE.has(ext) && stat.size > 1024 ? (/\bbr\b/.test(accepts) ? 'br' : /\bgzip\b/.test(accepts) ? 'gzip' : null) : null;
     if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');
-    if (encoding) {
-      const body = compress(file, stat, encoding);
+    const body = encoding ? encoded(file, stat, ext, encoding) : null;
+    if (body) {
       res.setHeader('Content-Encoding', encoding);
       res.setHeader('Content-Length', body.length);
       return res.end(req.method === 'HEAD' ? undefined : body);
+    }
+    if (ext === '.css') {
+      const css = contents(file, stat, ext);
+      res.setHeader('Content-Length', css.length);
+      return res.end(req.method === 'HEAD' ? undefined : css);
     }
     res.setHeader('Content-Length', stat.size);
     if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
   }
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     let pathname, search;
     try { ({pathname, search} = new URL(req.url, 'http://localhost')); } catch { res.statusCode = 400; return res.end(); }
     for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
@@ -139,6 +206,8 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
       else res.destroy();
     }
   });
+  server.precompress = precompress;
+  return server;
 }
 
 // Starts listening once, however the file was loaded. Hosting runners load the entry file with require() (so
@@ -157,6 +226,8 @@ function start({env = process.env, log = console} = {}) {
   const ready = pool ? require('../api/_lib/migrate').migrate(pool, {log}).catch(error => log.error('db: migração falhou —', error.code || '', error.message)) : Promise.resolve();
   const host = typeof port === 'number' && env.HOST ? String(env.HOST) : undefined;
   ready.then(() => running.listen(...(host ? [port, host] : [port]), () => log.log(`Ju imprime pra mim no ar em ${port} · modo ${isProduction(env) ? 'produção' : 'teste'} · contas: ${pool ? 'MySQL' : isProduction(env) ? 'desligadas (sem banco)' : 'memória (teste)'} · ${env.SITE_URL || 'sem SITE_URL'}`)));
+  // Brotli 11 for the whole site, in the background once the server answers (requests never wait for it).
+  ready.then(() => running.precompress()).catch(error => log.error('compressão prévia: parou —', error.message));
   // The NF-e queue (api/_lib/invoice-queue.js): a round a minute in the background, once the tables exist. Off when
   // NF-e issuing is off; a failure to start never stops the site.
   let stopQueue = () => {};

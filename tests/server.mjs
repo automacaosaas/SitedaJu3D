@@ -48,15 +48,26 @@ try {
   assert.equal((await raw('/index.html?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
   assert.equal((await raw('/carousel.js?view=1')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'only a real v= parameter');
   assert.equal((await raw('/nao-existe.js?v=1')).headers['cache-control'], 'no-store', 'a missing file is never cached');
-  const model = await raw('/assets/models/dinossauroscopio.glb?v=meshopt1', {headers: {'accept-encoding': 'br, gzip'}});
-  assert.equal(model.status, 200);
-  assert.equal(model.headers['content-type'], 'model/gltf-binary');
-  assert.equal(model.headers['content-encoding'], 'br');
+  // A big file (a 3D model, three.js) is never compressed while a request waits (2026-10-08): the first answer goes out as it
+  // is, the compression runs in the background, and the next answers are compressed. A small file is compressed at once.
+  const settled = async (path, headers, encoding) => {
+    for (let i = 0; i < 200; i++) { const res = await raw(path, {headers}); if (res.headers['content-encoding'] === encoding) return res; await new Promise(r => setTimeout(r, 50)); }
+    throw new Error(`${path}: never ${encoding}`);
+  };
+  const modelPath = '/assets/models/dinossauroscopio.glb?v=meshopt1';
+  const first = await raw(modelPath, {headers: {'accept-encoding': 'br, gzip'}});
+  assert.equal(first.status, 200);
+  assert.equal(first.headers['content-type'], 'model/gltf-binary');
+  assert.ok(first.headers['content-encoding'] === undefined || first.headers['content-encoding'] === 'br');
+  assert.equal(Number(first.headers['content-length']), first.body.length);
+  const model = await settled(modelPath, {'accept-encoding': 'br, gzip'}, 'br');
   assert.equal(Number(model.headers['content-length']), model.body.length);
-  const three = await raw('/vendor/three.module.min.js', {headers: {'accept-encoding': 'gzip'}});
-  assert.equal(three.headers['content-encoding'], 'gzip');
+  assert.ok(model.body.length < first.body.length || first.headers['content-encoding'] === 'br');
+  const three = await settled('/vendor/three.module.min.js', {'accept-encoding': 'gzip'}, 'gzip');
   assert.match(three.headers['content-type'], /^text\/javascript/);
   assert.equal(three.headers.vary, 'Accept-Encoding');
+  const small = await raw('/carousel.js', {headers: {'accept-encoding': 'br'}});
+  assert.equal(small.headers['content-encoding'], 'br', 'a small file compressed on the first answer');
   const head = await raw('/assets/logo-ju.webp', {method: 'HEAD'});
   assert.equal(head.status, 200);
   assert.equal(head.body.length, 0);
@@ -143,6 +154,7 @@ try {
   await new Promise(resolve => live.listen(0, '127.0.0.1', resolve));
   const liveGet = (path, {headers = {}} = {}) => new Promise((resolve, reject) => http.get({host: '127.0.0.1', port: live.address().port, path, headers}, res => { res.resume(); resolve({headers: res.headers}); }).on('error', reject));
   assert.equal(await robots({host: 'juimprimepramim.com.br'}, liveGet), undefined, 'production pages on the domain can be indexed');
+  assert.equal(await robots({host: 'www.juimprimepramim.com.br'}, liveGet), undefined, 'and on www (nginx may 301 it to the apex)');
   assert.equal(await robots({host: 'wheat-llama-936569.hostingersite.com'}, liveGet), 'noindex, nofollow', 'the temporary domain stays out after launch too');
   assert.equal(await robots({}, liveGet), 'noindex, nofollow', 'and a bare IP');
   live.close();
