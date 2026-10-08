@@ -4,7 +4,7 @@ import {COMMERCE, money, installmentLabel} from './commerce-config.js';
 import {CONTACT} from './company.js';
 import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
-import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, newAttempt, createPayment, paymentState, paymentMessage, refusedMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
+import {SDK_OPTIONS, loadPaymentConfig, loadPaymentMethods, loadSdk, loadDeviceId, currentDeviceId, newAttempt, keepAttempt, createPayment, paymentState, cancelPayment, paymentMessage, refusalMessage, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
@@ -185,11 +185,12 @@ function showPaymentError(message, detail = '') {
   const box = main.querySelector('#card-error');
   if (!box) return announce(message);
   box.textContent = message;
-  if (detail) { const small = document.createElement('small'); small.setAttribute('translate', 'no'); small.textContent = ` (${detail})`; box.append(small); }
+  if (detail) { const small = document.createElement('small'); small.setAttribute('translate', 'no'); small.style.fontSize = '12px'; small.textContent = ` (${detail})`; box.append(small); }   // test mode only: Mercado Pago's own code
 }
 async function mountBrick() {
   const token = ++brickToken, box = main.querySelector('#payment-brick');
   if (!box) return;
+  loadDeviceId();   // Mercado Pago's device id, ready by the time the buyer pays (never waited for)
   try {
     const MercadoPago = await loadSdk();
     if (token !== brickToken) return;
@@ -235,29 +236,36 @@ async function showInstallments(mp, bin) {
   box.hidden = !box.innerHTML;
 }
 // Called by the Brick when the customer presses its pay button. The promise tells the Brick when to stop spinning.
+// The attempt id stays the same until a definite answer: a retry after a timeout or a 5xx lands on the same order (and
+// the same Mercado Pago idempotency key) instead of a second charge. Mercado Pago's own code shows only in test mode.
 function submitFromBrick(data) {
   return new Promise(async (resolve, reject) => {
     showPaymentError('');
+    if (!order.attempt) order = {...order, attempt: newAttempt()};
+    const attempt = order.attempt, test = live.mode === 'test';
+    const settle = status => { if (order?.attempt === attempt && !keepAttempt(status)) order = {...order, attempt: null}; };
     try {
       const {status, data: result} = await createPayment({
-        attempt: newAttempt(), lang: lang(), notes: draft.notes || '', acceptTerms: draft.terms === 'on',
+        attempt, deviceId: currentDeviceId() || undefined, lang: lang(), notes: draft.notes || '', acceptTerms: draft.terms === 'on',
         shipping: order.shipping ? {service: order.shipping.service, priceCents: order.shipping.priceCents} : undefined,
         items: order.items.map(({productId, quantity, selection}) => ({productId, quantity, selection})),
         customer: {name: draft.name, email: draft.email, phone: draft.phone},
         address: {cep: draft.cep, street: draft.street, number: draft.number, district: draft.district, city: draft.city, state: draft.state, complement: draft.complement || ''},
         payment: {selectedPaymentMethod: data.selectedPaymentMethod || data.paymentMethod, formData: data.formData}
       });
+      settle(status);
       // The session ended or the identification is missing (both checked again by the server): back to that step.
       if (status === 401) { reject(new Error('unauthorized')); location.assign(signInPage()); return; }
       if (result?.error === 'profile_incomplete') { reject(new Error('profile_incomplete')); setTimeout(() => toIdentification().then(() => announce(paymentMessage(status, result))), 0); return; }
       if (['shipping_changed', 'shipping_unavailable', 'no_service'].includes(result?.error) || (result?.error === 'invalid_request' && result?.field === 'shipping')) { reject(new Error('shipping')); setTimeout(() => backToDelivery(result), 0); return; }
-      if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), result?.detail); return reject(new Error('payment_failed')); }
-      if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusedMessage(), result.statusDetail); return reject(new Error('payment_refused')); }
+      if (status !== 201 || !result?.ok) { showPaymentError(paymentMessage(status, result), test ? result?.reason || result?.detail : ''); return reject(new Error('payment_failed')); }
+      if (result.state === 'refused' || result.state === 'expired') { showPaymentError(refusalMessage(result.reason), test ? result.paymentStatusDetail || result.statusDetail : ''); return reject(new Error('payment_refused')); }
       const pix = result.method?.type === 'bank_transfer' || result.method?.id === 'pix';
       order = {...order, id: result.reference, mpId: result.id, method: pix ? 'pix' : 'card', pix: result.pix, expiresAt: pix ? parseExpiry(result.pix?.expiresAt) : null, phase: result.state === 'pending_pix' ? 'pix' : result.state === 'approved' ? 'done' : 'review'};
       resolve();
       setTimeout(() => { if (result.state === 'approved') { order = {...order, status: 'approved'}; finishPaid(); } else { render(); announce(result.state === 'pending_pix' ? 'Pix gerado. Pague com o código ou o QR Code.' : 'Pagamento em análise.'); } }, 0);
     } catch (error) {
+      settle(0);   // no answer at all: the same attempt goes again on the next click
       showPaymentError(paymentMessage(0, null));
       reject(error);
     }
@@ -268,16 +276,32 @@ function finishPaid() {
   catch { announce('Pagamento aprovado, mas não foi possível atualizar o carrinho neste navegador.'); }
   stage = 'confirmation'; render(); announce(order.mode === 'test' ? 'Pagamento de teste aprovado. Nenhum valor real foi cobrado.' : 'Pagamento confirmado.');
 }
-function applyState(state) {
+function applyState(state, reason) {
   if (!order?.live || stage !== 'payment') return;
   if (state === 'approved') { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); }
   else if (state === 'expired' && order.phase !== 'expired') { order = {...order, phase: 'expired'}; render(false); announce('O Pix expirou. Gere um novo código para continuar.'); }
-  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null}; render(); announce(refusedMessage()); }
+  else if (state === 'refused') { order = {...order, phase: 'form', id: null, mpId: null, pix: null, attempt: null}; render(); announce(refusalMessage(reason)); }
+}
+// Leaving a Pix that may still be paid ("Gerar novo código Pix", "← Alterar dados ou pagamento"): its code is cancelled at
+// Mercado Pago first, so the old QR code cannot be paid next to a new one. 'paid' when it was paid meanwhile (the
+// confirmation shows), 'gone' when it can no longer be paid, 'kept' when Mercado Pago could not be reached (stay, try again).
+async function dropPix(button) {
+  if (!order?.live || !order.mpId || !['pix', 'expired'].includes(order.phase)) return 'gone';
+  const label = button?.innerHTML, expired = order.phase === 'expired';
+  if (button) { button.disabled = true; button.textContent = 'Cancelando o código anterior…'; }
+  let result = null;
+  try { result = await cancelPayment(order.mpId); } catch {}
+  if (button?.isConnected) { button.disabled = false; button.innerHTML = label; }
+  const state = result?.status === 200 ? result.data?.state : null;
+  if (state === 'approved') { if (stage === 'payment' && order?.live) { order = {...order, status: 'approved', phase: 'done'}; finishPaid(); } return 'paid'; }
+  if ((state && state !== 'pending_pix' && state !== 'in_review') || (!state && expired)) return 'gone';   // an expired code cannot be paid anyway
+  announce('Não foi possível cancelar o código Pix anterior agora. Tente de novo em instantes.');
+  return 'kept';
 }
 async function checkNow(button) {
   if (!order?.mpId) return;
   const label = button.textContent; button.disabled = true; button.textContent = 'Verificando…';
-  try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state); else announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
+  try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state, data.reason); else announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
   catch { announce('Não foi possível verificar agora. Tente de novo em instantes.'); }
   if (button.isConnected) { button.disabled = false; button.textContent = label; }
 }
@@ -292,7 +316,7 @@ function afterLiveRender() {
       };
       tick(); clockTimer = setInterval(tick, 1000);
     }
-    pollTimer = setInterval(async () => { try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state); } catch {} }, 5000);
+    pollTimer = setInterval(async () => { try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state, data.reason); } catch {} }, 5000);
   }
 }
 
@@ -388,10 +412,10 @@ main.addEventListener('click',async e=>{
     if(action==='checkout'&&purchaseItems().length){await toIdentification();}
     if(action==='cart'&&direct&&cart[0]){location.assign(`index.html#produto/${cart[0].productId}`);return;}
     if(action==='cart'){const form=document.querySelector('#delivery-form');if(form)draft=Object.fromEntries(new FormData(form));stage='cart';order=null;render();}
-    if(action==='delivery'){stage='delivery';order=null;render();}
+    if(action==='delivery'){if(order?.live&&['pix','expired'].includes(order.phase)&&await dropPix(button)!=='gone')return;if(stage!=='payment')return;stage='delivery';order=null;render();}
     if(action==='retry-brick'){render(false);}
-    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
-    if(action==='new-pix'){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending'};render();}
+    if(action==='pay-method'&&button.dataset.method!==payMethod&&order?.live&&order.phase==='form'){payMethod=button.dataset.method;order={...order,attempt:null};render(false);main.querySelector(`[data-method="${payMethod}"]`)?.focus();announce(payMethod==='pix'?'Pix escolhido: 5% de desconto nas peças.':'Cartão escolhido.');}
+    if(action==='new-pix'){if(await dropPix(button)==='gone'&&stage==='payment'&&order?.live){order={...order,phase:'form',id:null,mpId:null,pix:null,status:'pending',attempt:null};render();}}
     if(action==='copy-live-pix'){try{await navigator.clipboard.writeText(order.pix.qrCode);announce('Código Pix copiado.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código Pix.');}}
     if(action==='check-now'){await checkNow(button);}
     if(action==='copy-pix'){try{await navigator.clipboard.writeText(demoPixCode(order));announce('Código demonstrativo copiado. Ele não permite pagamentos.');}catch{document.querySelector('#pix-code').select();announce('Selecione e copie o código demonstrativo.');}}
@@ -413,7 +437,7 @@ main.addEventListener('click',async e=>{
     if(action==='copy-order'){const text=`Pedido ${order.id}${order.live ? '' : ' — demonstração'}\n`+order.items.map(i=>`${i.quantity}x ${i.title}\n`+colorLines(i)).join('\n\n');try{await navigator.clipboard.writeText(text);announce('Resumo copiado.');}catch{announce('Não foi possível copiar automaticamente. As escolhas estão no resumo ao lado.');}}
   } catch(error){busy=false;button.disabled=false;announce(error.message);}
 });
-window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=readCart();if(stage==='cart')render(false);else if(stage==='delivery'||stage==='payment'){order=null;stage='cart';render();announce('O carrinho foi alterado em outra aba. Confira os itens antes de continuar.');}});
+window.addEventListener('storage',e=>{if(e.key!==CART_KEY||direct)return;cart=readCart();if(stage==='cart')render(false);else if(stage==='delivery'||stage==='payment'){if(order?.live&&order.mpId&&order.phase==='pix')cancelPayment(order.mpId).catch(()=>{});order=null;stage='cart';render();announce('O carrinho foi alterado em outra aba. Confira os itens antes de continuar.');}});
 // Coming back from the account page (#identificacao) or starting a direct purchase: go straight to identification.
 if ((location.hash === '#identificacao' || stage === 'delivery') && purchaseItems().length) { history.replaceState(null, '', location.pathname + location.search); await toIdentification(); }
 else render(false);

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Configuração inicial do servidor próprio da loja (Debian 13). Rodar uma vez, como root:
 #   sudo bash setup-servidor.sh
-# Pode rodar de novo (por exemplo, para atualizar o serviço ou o nginx): o que já existe é mantido, e o .env, as chaves
-# e o banco nunca são sobrescritos. Não mexe em firewall, SSH nem em outros sites. Passo a passo em SERVIDOR-SETUP.md.
+# Pode rodar de novo, e deve, quando deploy/ mudar no Git (a publicação avisa): reinstala deploy.sh, as unidades do
+# systemd e o sudoers. O .env, o deploy.conf, as chaves, o banco e o nginx (com o domínio e o HTTPS) nunca são
+# sobrescritos. Não mexe em firewall, SSH nem em outros sites. Passo a passo em SERVIDOR-SETUP.md.
 set -euo pipefail
 
 APP_USER=juimprime
 APP_DIR=/srv/juimprime
 REPO_URL=git@github.com:automacaosaas/SitedaJu3D.git
-BRANCH_DEFAULT=teste/rastreio-vitrine
+BRANCH_DEFAULT=main   # produção: a main, protegida no GitHub (SERVIDOR-SETUP.md)
 NODE_MAJOR=24
 DB_NAME=juimprime
 DB_USER=juimprime
@@ -24,7 +25,7 @@ step() { printf '\n== %s\n' "$*"; }
 
 step "Pacotes do sistema"
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates git xz-utils openssl util-linux nginx certbot python3-certbot-nginx >/dev/null
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl ca-certificates git xz-utils openssl util-linux nginx certbot python3-certbot-nginx mariadb-client >/dev/null
 echo "ok"
 
 step "Node.js $NODE_MAJOR (versão LTS, do site oficial, com o arquivo conferido)"
@@ -46,7 +47,7 @@ echo "node $(/usr/local/bin/node -v) em /usr/local/bin (o Node 20 do Debian fica
 step "Usuário do site ($APP_USER) e pastas em $APP_DIR"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --user-group --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 install -d -o "$APP_USER" -g "$APP_USER" -m 750 "$APP_DIR" "$APP_DIR/releases" "$APP_DIR/shared"
-install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$APP_DIR/.ssh"
+install -d -o "$APP_USER" -g "$APP_USER" -m 700 "$APP_DIR/.ssh" "$APP_DIR/shared/backups"
 echo "ok"
 
 step "Chave de leitura do GitHub (Deploy Key)"
@@ -59,6 +60,12 @@ if ! grep -q '^github.com ' "$APP_DIR/.ssh/known_hosts" 2>/dev/null; then
   [ "$fp" = "$GITHUB_FP" ] || { echo "A chave do github.com não confere ($fp). Parando por segurança."; exit 1; }
   printf '%s\n' "$key" > "$APP_DIR/.ssh/known_hosts"
   chown "$APP_USER:$APP_USER" "$APP_DIR/.ssh/known_hosts"; chmod 644 "$APP_DIR/.ssh/known_hosts"
+fi
+# Reserva para uma rede que bloqueia a saída pela porta 22: o mesmo GitHub em ssh.github.com:443, com a mesma chave
+# (conferida pela mesma impressão digital). Só é usado se deploy.conf apontar REPO para lá (SERVIDOR-SETUP.md).
+if ! grep -q '^\[ssh.github.com\]:443 ' "$APP_DIR/.ssh/known_hosts" 2>/dev/null; then
+  key=$(ssh-keyscan -T 10 -p 443 -t ed25519 ssh.github.com 2>/dev/null || true)
+  if [ -n "$key" ] && [ "$(printf '%s\n' "$key" | ssh-keygen -lf - | awk '{print $2}')" = "$GITHUB_FP" ]; then printf '%s\n' "$key" >> "$APP_DIR/.ssh/known_hosts"; fi
 fi
 echo "ok"
 
@@ -143,15 +150,25 @@ else
   echo "já existe: mantido como está"
 fi
 if [ ! -f "$CONF_FILE" ]; then
-  printf '# Repositório e branch que o servidor publica (deploy/deploy.sh). Trocar a branch e rodar: sudo systemctl start juimprime-deploy.service\nREPO=%s\nBRANCH=%s\n' "$REPO_URL" "$BRANCH_DEFAULT" > "$CONF_FILE"
+  {
+    echo "# Repositório e branch que o servidor publica (deploy/deploy.sh). Trocar a branch e rodar: sudo systemctl start juimprime-deploy.service"
+    echo "REPO=$REPO_URL"
+    echo "BRANCH=$BRANCH_DEFAULT"
+    echo "# Opcionais. TESTS=off publica sem rodar os testes antes (não recomendado)."
+    echo "# TEST_SKIP: suítes de tests/ puladas no servidor (separadas por vírgula; o GitHub roda todas). Vazio = todas."
+    echo "# KEEP_BACKUPS: quantas cópias do banco guardar em shared/backups (uma antes de cada versão com migração nova)."
+    echo "#TESTS=off"
+    echo "#TEST_SKIP=model-details"
+    echo "#KEEP_BACKUPS=10"
+  } > "$CONF_FILE"
   chown "$APP_USER:$APP_USER" "$CONF_FILE"; chmod 640 "$CONF_FILE"
 fi
 echo "publica: $(grep '^BRANCH=' "$CONF_FILE" | cut -d= -f2-)"
 
-step "Serviço do site e publicação automática (systemd)"
+step "Serviço do site, publicação automática, volta de versão e aviso por e-mail (systemd)"
 install -d -m 755 /usr/local/lib/juimprime
 install -m 755 "$HERE/deploy.sh" /usr/local/lib/juimprime/deploy.sh
-install -m 644 "$HERE/juimprime.service" "$HERE/juimprime-deploy.service" "$HERE/juimprime-deploy.timer" /etc/systemd/system/
+install -m 644 "$HERE/juimprime.service" "$HERE/juimprime-deploy.service" "$HERE/juimprime-deploy.timer" "$HERE/juimprime-rollback.service" "$HERE/juimprime-deploy-alert.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable juimprime.service juimprime-deploy.timer >/dev/null 2>&1
 echo "ok (o site liga na primeira publicação; a publicação automática começa quando a Deploy Key estiver no GitHub)"
@@ -162,8 +179,8 @@ rules=$(mktemp)
   echo "# deploy/setup-servidor.sh: o site reinicia o próprio serviço ao publicar uma versão nova."
   echo "$APP_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart juimprime.service"
   if [ -n "$OPERATOR" ] && [ "$OPERATOR" != root ]; then
-    echo "# Operador: publicar agora, ligar a publicação automática e reiniciar o site."
-    echo "$OPERATOR ALL=(root) NOPASSWD: /usr/bin/systemctl start juimprime-deploy.service, /usr/bin/systemctl start juimprime-deploy.timer, /usr/bin/systemctl restart juimprime.service"
+    echo "# Operador: publicar agora, ligar a publicação automática, voltar a versão anterior e reiniciar o site."
+    echo "$OPERATOR ALL=(root) NOPASSWD: /usr/bin/systemctl start juimprime-deploy.service, /usr/bin/systemctl start juimprime-deploy.timer, /usr/bin/systemctl start juimprime-rollback.service, /usr/bin/systemctl restart juimprime.service"
   fi
 } > "$rules"
 visudo -cqf "$rules" || { echo "Regra de sudo inválida: nada foi alterado."; rm -f "$rules"; exit 1; }
@@ -173,11 +190,18 @@ if [ -n "$OPERATOR" ] && [ "$OPERATOR" != root ]; then usermod -aG systemd-journ
 echo "ok"
 
 step "nginx (porta 80 → site)"
-install -m 644 "$HERE/nginx-juimprime.conf" /etc/nginx/sites-available/juimprime
+# Só na primeira vez: depois, o arquivo tem o domínio e o HTTPS que o certbot acrescentou, e rodar o setup de novo (por
+# causa de uma mudança no kit) não pode apagar isso.
+if [ ! -f /etc/nginx/sites-available/juimprime ]; then
+  install -m 644 "$HERE/nginx-juimprime.conf" /etc/nginx/sites-available/juimprime
+  nginx_note="instalado (até a primeira publicação, a porta 80 responde 502)"
+else
+  nginx_note="já existe: mantido como está (domínio e HTTPS preservados)"
+fi
 ln -sfn /etc/nginx/sites-available/juimprime /etc/nginx/sites-enabled/juimprime
 rm -f /etc/nginx/sites-enabled/default
 nginx -t -q && systemctl reload nginx
-echo "ok (até a primeira publicação, a porta 80 responde 502)"
+echo "ok, $nginx_note"
 
 step "Pronto. Falta cadastrar a chave abaixo no GitHub:"
 echo "GitHub → repositório SitedaJu3D → Settings → Deploy keys → Add deploy key"

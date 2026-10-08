@@ -74,6 +74,19 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(account, /input\('password', 'Crie uma senha \(opcional\)', 'password', 'new-password', 'Pelo menos 8 caracteres', true\)/, 'sign-up password is optional');
   assert.match(account, /\$\{optional \? '' : 'required'\}/);
   assert.match(fake, /getInstallments/); assert.match(fake, /onBinChange/);
+  // Before going live (2026-10-07): one attempt until a definite answer, the device id, no raw Mercado Pago code on the
+  // real site, and a waiting Pix cancelled before a new one is made.
+  assert.match(checkout, /if \(!order\.attempt\) order = \{\.\.\.order, attempt: newAttempt\(\)\};/, 'the attempt is kept across retries');
+  assert.match(checkout, /if \(order\?\.attempt === attempt && !keepAttempt\(status\)\) order = \{\.\.\.order, attempt: null\};/, 'and dropped after a definite answer');
+  assert.match(checkout, /payMethod=button\.dataset\.method;order=\{\.\.\.order,attempt:null\};/, 'switching Pix/card starts a new attempt (another total)');
+  assert.match(checkout, /attempt, deviceId: currentDeviceId\(\) \|\| undefined,/, 'the device id goes with the payment');
+  assert.match(checkout, /loadDeviceId\(\);/);
+  assert.match(checkout, /showPaymentError\(refusalMessage\(result\.reason\), test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code in parentheses only in test mode');
+  assert.doesNotMatch(checkout, /refusedMessage\(\), result\.statusDetail/);
+  assert.match(checkout, /if\(action==='new-pix'\)\{if\(await dropPix\(button\)==='gone'/, '"Gerar novo código Pix" cancels the old one first');
+  assert.match(checkout, /if\(action==='delivery'\)\{if\(order\?\.live&&\['pix','expired'\]\.includes\(order\.phase\)&&await dropPix\(button\)!=='gone'\)return;/, 'and so does going back from a waiting Pix');
+  assert.match(checkout, /try \{ result = await cancelPayment\(order\.mpId\); \} catch \{\}/);
+  assert.match(fake, /window\.MP_DEVICE_SESSION_ID = /, 'the simulator stands in for security.js');
 }
 
-console.log('PASS: checkout extras — free-shipping bar and note, installments with interest per option, cart estimate by CEP, mobile total with the real delivery, optional sign-up password.');
+console.log('PASS: checkout extras — free-shipping bar and note, installments with interest per option, cart estimate by CEP, mobile total with the real delivery, optional sign-up password, one payment attempt until a definite answer, device id, a waiting Pix cancelled before a new one.');

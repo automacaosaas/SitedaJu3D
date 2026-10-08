@@ -1,0 +1,13 @@
+# Volta o site para a versão anterior (deploy/deploy.sh --rollback) e segura a publicação automática até chegar um
+# commit novo na branch. O operador roda: sudo systemctl start juimprime-rollback.service
+# Para uma versão específica: sudo -u juimprime /usr/local/lib/juimprime/deploy.sh --rollback <commit>
+[Unit]
+Description=Ju imprime pra mim: volta para a versão anterior do site
+OnFailure=juimprime-deploy-alert.service
+
+[Service]
+Type=oneshot
+User=juimprime
+Group=juimprime
+ExecStart=/usr/local/lib/juimprime/deploy.sh --rollback
+TimeoutStartSec=25min

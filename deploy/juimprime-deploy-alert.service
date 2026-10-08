@@ -1,0 +1,19 @@
+# E-mail de aviso quando a publicação ou a volta de versão falham (OnFailure= das duas unidades). Usa o código que está
+# no ar (tools/deploy-alert.cjs) e o Resend do .env; um e-mail por commit com problema (ou por dia, sem commit).
+[Unit]
+Description=Ju imprime pra mim: avisa por e-mail que a publicação falhou
+ConditionPathExists=/srv/juimprime/current/tools/deploy-alert.cjs
+
+[Service]
+Type=oneshot
+User=juimprime
+Group=juimprime
+WorkingDirectory=/srv/juimprime/current
+EnvironmentFile=/srv/juimprime/shared/.env
+ExecStart=/usr/local/bin/node tools/deploy-alert.cjs
+TimeoutStartSec=2min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/srv/juimprime
+ProtectHome=yes

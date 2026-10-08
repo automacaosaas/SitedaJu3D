@@ -9,12 +9,34 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 
 ## Estado atual
 
+- **Atualização de 07/10/2026: publicação automática endurecida e o Mercado Pago pronto para validar** (branch
+  `trabalho/deploy-mp`).
+  - **Produção = `main`**, publicada sozinha pelo servidor próprio (puxa do GitHub a cada minuto com a Deploy Key só de
+    leitura; nada de GitHub Actions por SSH nem webhook). **Tudo o que entra na `main` vai para o ar em 2 a 5 minutos.**
+    Proteger a `main` no GitHub: pull request, o check `test` obrigatório, sem *force push* (`SERVIDOR-SETUP.md`).
+  - **Cada publicação:** trava de segurança (site completo e `HOST`), `npm ci --ignore-scripts`, `REVISION`, os testes
+    dentro da versão nova antes de trocar (sem segredos; pula só `tests/model-details.mjs`), cópia do banco antes de
+    migração nova, `/api/health` com `ok`, `db:"ok"` e o `release` novo; falhou, volta sozinha e manda e-mail para
+    `ORDER_NOTIFY_EMAIL`.
+  - **Voltar uma versão:** `sudo systemctl start juimprime-rollback.service` (segura a publicação até o próximo commit).
+  - **Migrações só somam:** a volta de versão não desfaz o banco (detalhes em `SERVIDOR-SETUP.md`).
+  - **Ver o que está no ar:** `/api/health` → `"release"`; `cat /srv/juimprime/current/REVISION`.
+  - **Kit mudou (`deploy/`)?** Depois de publicado, rodar `sudo bash /srv/juimprime/current/deploy/setup-servidor.sh`
+    uma vez (o journal avisa).
+  - **Mercado Pago:** webhook só com o tópico Order (outros tópicos e ids desconhecidos respondem 200; sem banco, 503;
+    assinatura com mais de 15 minutos, recusada), o Pix deixado para trás é cancelado no Mercado Pago ("Gerar novo
+    código" e "Alterar dados"; `POST /api/payments/cancel`), a mesma tentativa até uma resposta definitiva (sem
+    cobrança dupla depois de um *timeout*), o *device id* (`security.js` + `X-meli-session-id`), motivos de recusa em
+    português (o código só no modo de teste), CNPJ como empresa, e nunca uma NF-e real para um pedido pago em modo de
+    teste. Guia do dono, do teste à primeira venda real: **`MERCADOPAGO-VALIDACAO.md`**.
 - **Atualização de 06/10/2026 (noite): servidor próprio da loja no ar** (`SERVIDOR-SETUP.md`). Debian 13 no endereço
   interno `10.0.100.80`, com Node 24, MariaDB e nginx. A Hostinger continua como site de teste até o lançamento.
   - **Publicação:** o servidor confere o GitHub a cada minuto. Subiu na branch configurada, ele baixa, instala,
     reinicia e confere o `/api/health`. Se a versão nova não responder, volta sozinho para a anterior.
   - **Branch publicada:** por enquanto a `servidor/proprio` (a `teste/rastreio-vitrine` mais o kit do servidor).
-    Depois do PR para a `main`, o servidor passa a publicar a `main`.
+    Depois do PR para a `main`, o servidor passa a publicar a `main` (desde 07/10, o padrão do setup; num servidor já
+    instalado, trocar `BRANCH=` em `/srv/juimprime/shared/deploy.conf`). A `teste/rastreio-vitrine` e a `main` de
+    antes do PR não têm o `HOST`: a trava de segurança da publicação as recusa.
   - **Chave do servidor no GitHub:** Deploy Key somente leitura; o servidor só baixa o código.
   - **No código:**
     - a pasta `deploy/` (instalação, publicação automática, serviço e nginx), `SERVIDOR-SETUP.md` e `tests/deploy.mjs`;
@@ -28,7 +50,7 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
     - a configuração secreta (`/srv/juimprime/shared/.env`), preenchida pelo dono direto no servidor;
     - o DNS do domínio e o HTTPS (certbot);
     - firewall antes de o IPv6 ser ligado (no IPv6 não há o filtro do encaminhamento de portas);
-    - cópia de segurança diária do banco;
+    - cópia de segurança diária do banco, fora do servidor (desde 07/10 há uma antes de cada migração nova);
     - no lançamento: Mercado Pago real (com o 3x sem juros configurado), Bling em produção, webhook e endereço de
       retorno do Bling no domínio, e domínio verificado no Resend.
   - **Acesso ao servidor:** só por chave SSH. Ninguém manda senha por chat.

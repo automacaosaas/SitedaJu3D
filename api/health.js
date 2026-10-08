@@ -14,6 +14,15 @@ const fiscal = require('./_lib/fiscal');
 const {createBling} = require('./_lib/bling');
 const shipping = require('./_lib/shipping');
 const {queueHeartbeat} = require('./_lib/invoice-queue');
+const fs = require('node:fs');
+const path = require('node:path');
+
+// The commit this copy of the site was published from: the own server's deploy writes it to REVISION
+// (deploy/deploy.sh) and only calls a release healthy once it answers with it. No file (a local checkout, the Hostinger
+// zip): no `release` field at all.
+function readRelease(file = path.join(__dirname, '..', 'REVISION')) {
+  try { const text = fs.readFileSync(file, 'utf8').trim(); return /^[0-9a-f]{7,40}$/.test(text) ? text.slice(0, 12) : null; } catch { return null; }
+}
 
 async function blingState(env, nfe) {
   if (nfe.provider !== 'bling') return 'off';
@@ -25,7 +34,7 @@ async function blingState(env, nfe) {
   } catch { return 'error'; }
 }
 
-function createHandler({env = process.env} = {}) {
+function createHandler({env = process.env, release = readRelease()} = {}) {
   return async function handler(req, res) {
     const settings = config(env), pay = mp.settings(env), nfe = fiscal.nfeSettings(env);
     let dataKeys = 'ok';
@@ -43,10 +52,12 @@ function createHandler({env = process.env} = {}) {
       // Seconds since this server process started (a host that stops the app when idle shows it starting over) and the
       // NF-e queue of this process: its timer on, and when its last round ended (BLING-RESILIENCIA.md).
       uptime: Math.round(process.uptime()),
-      ...(nfe.mode !== 'off' ? {queue: queueHeartbeat()} : {})
+      ...(nfe.mode !== 'off' ? {queue: queueHeartbeat()} : {}),
+      ...(release ? {release} : {})   // the published commit (12 characters), only where a REVISION file exists
     });
   };
 }
 
 module.exports = createHandler();
 module.exports.create = createHandler;
+module.exports.readRelease = readRelease;

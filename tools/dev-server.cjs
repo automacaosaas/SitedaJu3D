@@ -125,7 +125,13 @@ async function main() {
   // the example boxes, with the shop's own production time and free shipping, so the preview shows the same rule as the site
   const shopShipping = require('../api/_lib/shipping-config');
   const shippingConfig = fakeCorreiosApi ? {...EXAMPLE_CONFIG, production: shopShipping.production, freeShipping: shopShipping.freeShipping} : undefined;
-  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fake.fetchImpl(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
+  // The simulator's writes are logged too (create, cancel, refund), with whether the device id (X-meli-session-id) came along.
+  const fakeMpFetch = async (url, init = {}) => {
+    const response = await fake.fetchImpl(url, init), path = String(url).replace('https://api.mercadopago.com', '');
+    if (init.method === 'POST') console.log(`[mp simulado] POST ${path} → ${response.status}${path === '/v1/orders' ? ` · device id ${init.headers?.['X-meli-session-id'] ? 'enviado' : 'ausente'}` : ''}`);
+    return response;
+  };
+  const toMp = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? (fake ? fakeMpFetch(url, init) : mpFetch(url, init)) : String(url).startsWith('https://api.correios.com.br') && fakeCorreiosApi ? fakeCorreiosApi.fetchImpl(url, init) : loggedFetch(url, init);
   const routed = (url, init) => fakeBling && /^https:\/\/(api|www)\.bling\.com\.br\//.test(String(url)) ? fakeBling.fetchImpl(url, init) : toMp(url, init);
   const routes = {
     '/api/auth/start': require('../api/auth/start').create({env, outbox, fetchImpl: loggedFetch}),
@@ -139,6 +145,7 @@ async function main() {
     '/api/fila/rodar': require('../api/fila/rodar').create({env, outbox, fetchImpl: routed}),
     '/api/cep/lookup': require('../api/cep/lookup').create({fetchImpl: fakeCep ? require('./fake-cep.cjs').createFakeCep().fetchImpl : loggedFetch}),
     '/api/payments/status': require('../api/payments/status').create({env, fetchImpl: routed, outbox}),
+    '/api/payments/cancel': require('../api/payments/cancel').create({env, fetchImpl: routed, outbox}),
     '/api/payments/webhook': require('../api/payments/webhook').create({env, fetchImpl: routed, outbox}),
   };
   for (const name of ['login', 'verify', 'session', 'logout', 'orders', 'order-status', 'order-refund', 'order-document', 'order-invoice', 'messages', 'bling', 'cash', 'international-quote']) routes[`/api/admin/${name}`] = require(`../api/admin/${name}`).create({env, outbox, fetchImpl: routed});

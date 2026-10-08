@@ -134,6 +134,12 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
     // note then leaves the queue and waits for a new confirmation.
     const current = await store.orders.findById(order.id);
     if (current && !INVOICED.includes(current.status)) return store.invoices.update(invoice.id, {nextAttemptAt: null});
+    // A real NF-e only for a real sale: an order paid in Mercado Pago's test mode (source "test", e.g. one left over from
+    // before the launch and confirmed after NFE_ENVIRONMENT=producao) never reaches the tax authority. The note stays
+    // as an error with the reason, and "Tentar de novo" refuses it the same way.
+    if (settings.environment === 'producao' && (current || order).source !== 'live') {
+      return record(invoice, {status: 'erro', message: 'Pedido de teste (pago no modo de teste do Mercado Pago): não emitimos nota fiscal real para ele.', nextAttemptAt: null, retries: 0}, order, {kind: 'nfe:erro', detail: 'pedido de teste, sem nota real', actor});
+    }
     if (force) await provider()?.wake?.();
     invoice = await store.invoices.update(invoice.id, {attempts: (invoice.attempts || 0) + 1});
 

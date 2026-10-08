@@ -17,7 +17,7 @@ const {createAccounts} = require('../api/_lib/accounts');
 const {createOrders} = require('../api/_lib/orders');
 const {decrypt, maskCpf} = require('../api/_lib/fields');
 const {TERMS_VERSION} = require('../api/_lib/legal');
-const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), health = require('../api/health');
+const configHandler = require('../api/payments/config'), createHandler = require('../api/payments/create'), statusHandler = require('../api/payments/status'), webhookHandler = require('../api/payments/webhook'), cancelHandler = require('../api/payments/cancel'), health = require('../api/health');
 const site = f => import(pathToFileURL(path.join(root, 'dist', f)).href);
 const {PRODUCTS: SITE_PRODUCTS, PALETTE} = await site('products.js');
 const {COMMERCE} = await site('commerce-config.js');
@@ -250,6 +250,38 @@ const payloadFor = payment => mp.buildOrderPayload({priced, reference: 'JU-01234
   assert.deepEqual(mp.summarizeOrder({items: [{external_code: 'toString', unit_price: '1.00', quantity: 1}, {external_code: 'shipping', unit_price: '9.00', quantity: 1}]}).items, [], 'foreign or forged items are ignored');
 }
 
+// ── before going live (2026-10-07): refusal reasons, cancelled Pix, device id, company payer, signature time ──
+{
+  // Why a card was refused: only known reasons, from the payment's status_detail (or the older cc_rejected_ spelling).
+  const refused = (paymentDetail, detail = 'failed') => mp.normalizeOrder({status: 'failed', status_detail: detail, transactions: {payments: [{status: 'failed', status_detail: paymentDetail, payment_method: {id: 'master', type: 'credit_card'}}]}});
+  assert.equal(refused('insufficient_amount').reason, 'insufficient_amount'); assert.equal(refused('cc_rejected_call_for_authorize').reason, 'call_for_authorize');
+  assert.equal(refused('rejected_high_risk').reason, 'rejected_high_risk', 'the longer name wins over high_risk inside it');
+  assert(!('reason' in refused('<script>')), 'anything else is no reason at all'); assert(!('reason' in mp.normalizeOrder({status: 'processed', status_detail: 'accredited'})), 'only refusals have one');
+  assert.equal(mp.refusalReason('pay_01ABC: bad_filled_card_data'), 'bad_filled_card_data'); assert.equal(mp.refusalReason('not_a_reason_insufficient_amountx'), '');
+  // A cancelled order (a Pix the buyer left) is its own state, not a refused card.
+  assert.equal(mp.normalizeOrder({status: 'canceled', status_detail: 'canceled_transaction', transactions: {payments: [{status: 'canceled', payment_method: {id: 'pix', type: 'bank_transfer'}}]}}).state, 'canceled');
+  // A 402 from POST /v1/orders names the reason in the error details (or carries the order): kept on the error.
+  const error402 = await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', fetchImpl: async () => ({ok: false, status: 402, headers: {get: n => n === 'x-request-id' ? 'req-abc-123' : null}, json: async () => ({errors: [{code: 'failed', message: 'The following transactions failed', details: ['pay_01JX: insufficient_amount']}]})})}).catch(e => e);
+  assert.equal(error402.status, 402); assert.equal(error402.code, 'failed'); assert.equal(error402.reason, 'insufficient_amount'); assert.equal(error402.requestId, 'req-abc-123', "Mercado Pago's x-request-id rides on the error");
+  const withData = await mp.getOrder({settings: mp.settings(ENV), id: 'ORD1', fetchImpl: async () => ({ok: false, status: 402, json: async () => ({errors: [{code: 'failed'}], data: {transactions: {payments: [{status_detail: 'card_disabled'}]}}})})}).catch(e => e);
+  assert.equal(withData.reason, 'card_disabled'); assert.equal(withData.requestId, '', 'no header, no id');
+  // The device id goes as X-meli-session-id when it looks like one.
+  let headers = null; const capture = async (url, init) => { headers = init.headers; return {ok: true, status: 201, json: async () => ({})}; };
+  await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', sessionId: 'armor.7f3e2a.1a2b3c', fetchImpl: capture});
+  assert.equal(headers['X-meli-session-id'], 'armor.7f3e2a.1a2b3c');
+  await mp.createOrder({settings: mp.settings(ENV), payload: {}, idempotencyKey: 'k', fetchImpl: capture}); assert(!('X-meli-session-id' in headers), 'none without one');
+  assert.equal(mp.deviceId('armor.7f3e2a.1a2b3c'), 'armor.7f3e2a.1a2b3c'); for (const bad of ['', 'short', 'a b c d e f g h', '<script>alert(1)</script>', 'x'.repeat(300), null, 42]) assert.equal(mp.deviceId(bad), '', `not a device id: ${String(bad).slice(0, 20)}`);
+  // A CNPJ pays as a company.
+  const company = payloadFor({...mp.paymentFromBrick(brickCard()), identification: {type: 'CNPJ', number: '67771044000196'}});
+  assert.equal(company.payer.entity_type, 'association'); assert.deepEqual(company.payer.identification, {type: 'CNPJ', number: '67771044000196'});
+  assert.equal(payloadFor(mp.paymentFromBrick(brickCard())).payer.entity_type, 'individual');
+  // The Orders API's own name for "use a test buyer address".
+  assert.equal(mp.isTestEmailRejection({code: 'invalid_email_for_sandbox', message: 'x'}), true);
+  // When a notice was signed: milliseconds, or seconds in older examples.
+  assert.equal(mp.signatureTime('ts=1742505638683,v1=ab'), 1742505638683); assert.equal(mp.signatureTime('v1=ab, ts=1742505638'), 1742505638000);
+  for (const bad of ['', null, 'ts=abc,v1=1', 'v1=ab', 'ts=1']) assert.equal(mp.signatureTime(bad), null);
+}
+
 // ── webhook signature ─────────────────────────────────────────────────
 {
   const id = 'ORD01ABCDEF1234567890XYZ', S = ENV.MP_WEBHOOK_SECRET, ts = '1742505638683';
@@ -376,6 +408,14 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     const liveStore = createMemoryStore(), liveAna = await signedInBuyer(liveStore, {env: LIVE});
     const live = await call(createHandler.create({waitUntil, env: LIVE, fetchImpl: fakeNetwork({mpStatus: 422}).fetchImpl, store: liveStore}), {body: request(), ...as(liveAna)});
     assert.equal(live.statusCode, 422); assert(!('detail' in live.json()), 'live mode never leaks the provider message (it can quote the customer\'s data)');
+    assert(errors.lines.at(-1).startsWith('payments/create: Mercado Pago answered 422 invalid_payer · JU-') && !errors.lines.at(-1).includes('ana@example.com'), 'nor writes it to the log (reference and request id only)');
+    assert(errors.lines.some(l => l.includes('simulated failure with payer')), 'test mode logs it, to find problems');
+    // The same attempt sent again with a new card token after a timeout: Mercado Pago says the key was used. The first
+    // charge may exist, so this is not a refusal: the order stays open (webhook or status settle it) and the browser
+    // keeps the attempt (5xx), never a second charge.
+    const reusedBody = request(), reused = await call(createHandler.create({waitUntil, env: ENV, fetchImpl: async (url, init) => String(url).startsWith('https://api.mercadopago.com') ? {ok: false, status: 409, json: async () => ({errors: [{code: 'idempotency_key_already_used', message: 'key used'}]})} : net.fetchImpl(url, init), store}), {body: reusedBody, ...as(caio)});
+    assert.equal(reused.statusCode, 502); assert.equal(reused.json().error, 'provider_unavailable');
+    assert.equal((await store.orders.findByReference(mp.referenceFor(reusedBody.attempt))).status, 'aguardando_pagamento');
     for (const status of [401, 403, 404, 424, 429, 500, 503]) { const res = await call(createHandler.create({waitUntil, env: ENV, fetchImpl: fakeNetwork({mpStatus: status}).fetchImpl, store}), {body: request(), ...as(bia)}); assert.equal(res.statusCode, 502, `MP ${status} → 502`); assert.equal(res.json().error, 'provider_unavailable'); }
     assert.equal((await call(createHandler.create({waitUntil, env: ENV, fetchImpl: async () => { throw new Error('socket hang up'); }, store}), {body: request(), ...as(bia)})).statusCode, 502, 'a network failure is reported as 502');
 
@@ -474,6 +514,62 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   } finally { quiet.restore(); }
 }
 
+// ── against the simulator (tools/fake-mercadopago.cjs): refusal reasons, device id, POST /api/payments/cancel ──
+{
+  const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
+  const fake = createFakeMercadoPago(), net = fakeNetwork(), store = createMemoryStore();
+  const fetchImpl = (url, init) => String(url).startsWith('https://api.mercadopago.com') ? fake.fetchImpl(url, init) : net.fetchImpl(url, init);
+  const ana = await signedInBuyer(store), bia = await signedInBuyer(store, {email: 'bia@example.com'});
+  const create = createHandler.create({waitUntil, env: ENV, fetchImpl, store}), cancel = cancelHandler.create({waitUntil, env: ENV, fetchImpl, store});
+  const leave = (id, buyer = ana, opts = {}) => call(cancel, {body: {id}, ...(buyer ? as(buyer) : {}), ...opts});
+  const errors = spyErrors();
+  try {
+    // A refused card (402 "failed"): the buyer hears why, the order ends, the log has our reference and Mercado Pago's request id.
+    const fund = await call(create, {body: request({payment: brickCard('FUND' + 'f'.repeat(28))}), ...as(ana)});
+    assert.equal(fund.statusCode, 422); assert.equal(fund.json().error, 'payment_rejected'); assert.equal(fund.json().reason, 'insufficient_amount');
+    assert(errors.lines.some(l => /payments\/create: Mercado Pago answered 402 failed · JU-[0-9A-F]{10} · x-request-id fake-req-\d+ · insufficient_amount/.test(l)), 'reference, request id and reason in the log');
+    assert.equal((await call(create, {body: request({payment: brickCard('CALL' + 'c'.repeat(28))}), ...as(ana)})).json().reason, 'required_call_for_authorize');
+    assert.equal((await call(create, {body: request({payment: brickCard('OTHE' + 'o'.repeat(28))}), ...as(ana)})).json().reason, 'rejected_by_issuer');
+    // The device id from security.js reaches Mercado Pago; a malformed one is dropped, and the payment still goes.
+    const withDevice = await call(create, {body: request({payment: brickCard(), deviceId: 'armor.0a1b2c3d4e5f.66'}), ...as(ana)});
+    assert.equal(withDevice.json().state, 'approved'); assert.equal(fake.deviceIds.get(withDevice.json().id), 'armor.0a1b2c3d4e5f.66');
+    const badDevice = await call(create, {body: request({payment: brickCard(), deviceId: '<img src=x>'}), ...as(ana)});
+    assert.equal(badDevice.statusCode, 201); assert.equal(fake.deviceIds.get(badDevice.json().id), null);
+
+    // "Gerar novo código" / leaving a waiting Pix cancels the old code at Mercado Pago: it can no longer be paid.
+    const first = (await call(create, {body: request(), ...as(ana)})).json();
+    assert.equal(first.state, 'pending_pix');
+    assert.equal((await leave(first.id, null)).statusCode, 401, 'needs the session');
+    assert.equal((await leave(first.id, bia)).statusCode, 404, "nobody cancels someone else's Pix");
+    assert.equal((await leave(first.id, ana, {origin: 'https://evil.example'})).statusCode, 403, 'only from the site');
+    assert.equal((await leave('../x')).statusCode, 400); assert.equal((await call(cancel, {method: 'GET', ...as(ana)})).statusCode, 405);
+    const left = await leave(first.id);
+    assert.equal(left.statusCode, 200); assert.deepEqual(left.json(), {reference: first.reference, state: 'canceled'});
+    assert.equal(fake.orders.get(first.id).status, 'canceled', 'cancelled at Mercado Pago'); assert.equal(await fake.pay(first.id), false, 'so the old QR code cannot be paid');
+    assert.equal((await store.orders.findByMpId(first.id)).status, 'cancelado', 'and our order ends (hidden from "Meus pedidos")');
+    assert.equal((await leave(first.id)).json().state, 'canceled', 'leaving twice is harmless');
+    // Paid a moment before leaving: never cancelled, recorded as paid, and the checkout shows the confirmation.
+    const second = (await call(create, {body: request(), ...as(ana)})).json();
+    await fake.pay(second.id);
+    const late = await leave(second.id);
+    assert.equal(late.json().state, 'approved'); assert.equal(fake.orders.get(second.id).status, 'processed');
+    await settled(); assert.equal((await store.orders.findByMpId(second.id)).status, 'pendente');
+    assert(net.mails.some(m => m.to[0] === 'ju@site.test' && m.subject.includes(second.reference)), 'Ju hears about it');
+    // Mercado Pago down: the buyer is told to try again (the old code is still alive, so nothing new is made).
+    const third = (await call(create, {body: request(), ...as(ana)})).json();
+    const down = cancelHandler.create({env: ENV, fetchImpl: (url, init) => String(url).includes('/cancel') ? Promise.resolve({ok: false, status: 500, json: async () => ({})}) : fetchImpl(url, init), store});
+    assert.equal((await call(down, {body: {id: third.id}, ...as(ana)})).statusCode, 502);
+    assert.equal((await store.orders.findByMpId(third.id)).status, 'aguardando_pagamento');
+    assert.equal((await call(cancelHandler.create({env: {SITE_URL: SITE}, fetchImpl, store}), {body: {id: third.id}, ...as(ana)})).statusCode, 503, 'payments off');
+  } finally { errors.restore(); }
+  // The status check carries the reason of a card refused after review.
+  const caio = await signedInBuyer(store, {email: 'caio@example.com'});   // Ana used her 8 attempts of ten minutes above
+  const review = (await call(create, {body: request({payment: brickCard('CONT' + 'r'.repeat(28))}), ...as(caio)})).json();
+  Object.assign(fake.orders.get(review.id), {status: 'failed', status_detail: 'failed'}); Object.assign(fake.orders.get(review.id).transactions.payments[0], {status: 'failed', status_detail: 'high_risk'});
+  const checked = await call(statusHandler.create({waitUntil, env: ENV, fetchImpl, store}), {method: 'GET', origin: '', url: '/api/payments/status?id=' + review.id, ...as(caio)});
+  assert.equal(checked.json().state, 'refused'); assert.equal(checked.json().reason, 'high_risk');
+}
+
 // ── POST /api/payments/webhook ────────────────────────────────────────
 {
   const build = async (extra = {}, envOver = {}) => {
@@ -523,8 +619,22 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
     assert.equal(tampered.status, 'aguardando_pagamento', 'a different amount is not a payment of this order');
     assert((await store.orders.events(tampered.id)).some(e => e.kind === 'payment_mismatch'));
 
-    assert.equal((await notify(handler, 'ORD01DOESNOTEXIST999')).statusCode, 500, 'Mercado Pago cannot find it → 5xx so it retries later');
+    // What can never be one of our orders answers 200, so Mercado Pago stops retrying (2026-10-07).
+    const unknown = await notify(handler, 'ORD01DOESNOTEXIST999');
+    assert.equal(unknown.statusCode, 200, 'an order Mercado Pago does not know (the panel\'s "Simular notificação") is not retried forever'); assert.equal(unknown.json().ignored, 'not_found');
     assert.equal((await notify(handler, 'x/../y', {signature: sign({id: 'x/../y'})})).json().ignored, 'not_an_order');
+    const calls = net.mpCalls.length;
+    assert.equal((await notify(handler, '123456789012', {signature: sign({id: '123456789012'})})).json().ignored, 'not_an_order', 'a payment id (Payments API) is not an order');
+    const payment = await call(handler, {origin: '', url: '/api/payments/webhook?data.id=123456789012&type=payment', body: {type: 'payment', data: {id: '123456789012'}}, headers: {'x-signature': 'ts=1,v1=' + '0'.repeat(64)}});
+    assert.equal(payment.statusCode, 200); assert.equal(payment.json().ignored, 'topic', 'another topic ticked in the panel is acknowledged and ignored');
+    assert.equal((await call(handler, {origin: '', url: '/api/payments/webhook?id=9&topic=merchant_order', body: {}})).json().ignored, 'topic', 'the old IPN form too');
+    assert.equal(net.mpCalls.length, calls, 'none of them asked Mercado Pago anything');
+    // A notice signed long ago (a replay) is refused like a forged one; one signed a moment ago, or in seconds, passes.
+    const old = await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Date.now() - 16 * 60 * 1000)})});
+    assert.equal(old.statusCode, 401); assert.equal(old.json().error, 'stale_signature');
+    assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Date.now() + 10 * 60 * 1000)})})).statusCode, 401, 'nor one from the future');
+    assert.equal((await notify(handler, pix.id, {signature: sign({id: pix.id, ts: String(Math.floor(Date.now() / 1000) - 60)})})).statusCode, 200, 'ts in seconds, a minute ago');
+    assert(errors.lines.some(l => l.includes('older than 15 minutes')), 'the refusal says why');
     net.orders.get(card.id).external_reference = 'OUTRA-LOJA'; const before = net.mails.length;
     assert.equal((await notify(handler, card.id)).json().ignored, 'not_ours'); assert.equal(net.mails.length, before, 'orders from elsewhere are ignored');
     net.orders.get(card.id).external_reference = 'JU-NAOEXISTE'; assert.equal((await notify(handler, card.id)).json().ignored, 'unknown_order', 'ours by prefix but not in the database');
@@ -536,6 +646,13 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   try {
     const noSecret = await build({}, {MP_WEBHOOK_SECRET: ''}); assert.equal((await notify(noSecret.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 503, 'no webhook secret → refuses');
     assert.equal((await call(webhookHandler.create({env: {}, fetchImpl: noSecret.net.fetchImpl}), {origin: '', url: '/x?data.id=ORD01ABCDEFGHIJKLM', body: {}})).statusCode, 503, 'payments off');
+    // No database (production without one): 503, so Mercado Pago sends it again instead of the notice being lost.
+    const noDb = await notify(webhookHandler.create({env: LIVE, fetchImpl: noSecret.net.fetchImpl}), 'ORD01ABCDEFGHIJKLM');
+    assert.equal(noDb.statusCode, 503); assert.equal(noDb.json().error, 'accounts_unavailable'); assert.equal(noSecret.net.mpCalls.length, 0, 'before asking Mercado Pago');
+    // Mercado Pago itself not answering: 5xx, so it retries later; the log names its x-request-id, never a body.
+    const down = await build({mpStatus: 500});
+    assert.equal((await notify(down.handler, 'ORD01ABCDEFGHIJKLM')).statusCode, 500);
+    assert(quiet.lines.some(l => l.includes('could not read ORD01ABCDEFGHIJKLM') && l.includes('x-request-id')));
     const ownerDown = await build({resendFailFor: 'ju@site.test'}); const paid = (await call(ownerDown.create, {body: request({payment: brickCard()}), ...as(ownerDown.buyer)})).json();
     assert.equal((await ownerDown.store.orders.findByMpId(paid.id)).status, 'pendente', 'the paid order is saved even when the e-mail fails');
     assert.equal((await notify(ownerDown.handler, paid.id)).statusCode, 500, 'Ju\'s e-mail still failing → 500 so Mercado Pago calls again');
@@ -592,6 +709,32 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   const said = (status, data) => client.paymentMessage(status, data);
   assert(/entrega/.test(said(400, {error: 'invalid_request', field: 'cep'}))); assert(/cartão/.test(said(400, {error: 'invalid_card'}))); assert(/Muitas tentativas/.test(said(429, {error: 'too_many_requests'}))); assert(/não foi aceito/.test(said(422, {error: 'payment_rejected'})));
   assert(/Se tiver certeza de que não houve cobrança/.test(said(502, {error: 'provider_unavailable'})) && /Se tiver certeza/.test(said(0, null)), 'an unclear outcome never promises that nothing was charged');
+  // Every refusal reason the server passes on has its own sentence, translated; anything else gets the general one.
+  const {translate} = await site('i18n-core.js');
+  for (const reason of mp.REFUSAL_REASONS) {
+    const text = client.refusalMessage(reason);
+    assert.notEqual(text, client.refusedMessage(), `a sentence for ${reason}`); assert(!text.includes(reason), 'never the code itself');
+    for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${lang}: ${text}`);
+  }
+  for (const odd of ['', undefined, 'toString', '__proto__', 'whatever']) assert.equal(client.refusalMessage(odd), client.refusedMessage());
+  assert.equal(said(422, {error: 'payment_rejected', reason: 'insufficient_amount'}), client.refusalMessage('insufficient_amount'), 'a 402 refusal is explained too');
+  assert.equal(client.refusalMessage('cc_rejected_insufficient_amount'), client.refusedMessage(), 'the browser only knows what the server normalized');
+  // The attempt id survives only an unknown outcome (no answer, 5xx): then the retry cannot charge twice.
+  for (const status of [0, undefined, 500, 502, 503, 504]) assert.equal(client.keepAttempt(status), true, `keep after ${status}`);
+  for (const status of [201, 400, 401, 403, 409, 422, 429]) assert.equal(client.keepAttempt(status), false, `new attempt after ${status}`);
+  // security.js: an external script with view="checkout", never waited for; the id only when it looks like one.
+  {
+    const added = [], doc = {createElement: () => ({attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }}), head: {append: s => added.push(s)}};
+    const blocked = {}; const failing = client.loadDeviceId({doc, win: blocked, timeout: 50});
+    added[0].onerror(); assert.equal(await failing, '', 'blocked: the payment goes without it');
+    const win = {}; const loading = client.loadDeviceId({doc, win, timeout: 2000});
+    const script = added[1];
+    assert.equal(script.src, 'https://www.mercadopago.com/v2/security.js'); assert.equal(script.attrs.view, 'checkout'); assert.equal(script.async, true);
+    win.MP_DEVICE_SESSION_ID = 'armor.12ab34cd56ef.7890'; script.onload();
+    assert.equal(await loading, 'armor.12ab34cd56ef.7890');
+    assert.equal(await client.loadDeviceId({doc, win}), 'armor.12ab34cd56ef.7890'); assert.equal(added.length, 2, 'loaded once');
+    assert.equal(client.currentDeviceId({MP_DEVICE_SESSION_ID: '<img src=x onerror=1>'}), ''); assert.equal(client.currentDeviceId({}), '');
+  }
   assert.equal(client.safeBase64('iVBORw0KGgo='), 'iVBORw0KGgo='); for (const hostile of ['"><script>', 'a b', 'data:x', '', null, undefined, 'x'.repeat(30000)]) assert.equal(client.safeBase64(hostile), '', 'only clean base64 reaches the page');
   assert.equal(client.parseExpiry('2030-01-01T10:00:00.000-03:00', 0), Date.parse('2030-01-01T13:00:00.000Z')); assert.equal(client.parseExpiry('yesterday', 1000), 1000 + 3600000); assert.equal(client.parseExpiry('2000-01-01T00:00:00Z', 5e12), 5e12 + 3600000, 'a date in the past falls back to one hour'); assert.equal(client.parseExpiry(null, 0), 3600000);
 }
@@ -619,4 +762,4 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert.deepEqual(pictures, [{id: 'x', name: 'X', type: 'credit_card', thumbnail: ''}], 'only active methods; pictures only from Mercado Pago hosts');
 }
 
-console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped.');
+console.log('PASS: server catalog equals the storefront (products, prices, colors, translations); prices are recomputed on the server; Production needs an explicit MP_MODE (test or live); Brick data maps to Orders API payloads (Pix and card); order state vocabulary; webhook signature (valid, tampered, wrong secret, missing parts); create/status/webhook handlers with a fake Mercado Pago and Resend (signed-in buyer with identification, orders recorded in the database, paid once and e-mailed once, amount mismatch refused, status only for the owner, origin, validation, idempotency, rate limits, no secrets or card tokens leaked, error mapping, e-mail retries); owner and customer e-mails in three languages, escaped; before going live: refusal reasons in Portuguese, device id as X-meli-session-id, the webhook ignoring other topics and unknown orders, 503 without a database, stale signatures refused, a waiting Pix cancelled (POST /api/payments/cancel), one attempt until a definite answer, logs with the reference and x-request-id only.');

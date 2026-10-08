@@ -97,6 +97,13 @@ if (livePayment.includes('https://sdk.mercadopago.com')) {
   assert(allows('frame-src', "'self'"), 'frame-src keeps our own frames (e-mail preview)');
   assert(/advancedFraudPrevention: false/.test(livePayment), 'the SDK runs without the inline-script fraud module (the policy has no unsafe-inline)');
 }
+// The device id the documented way instead (2026-10-07): security.js from www.mercadopago.com, an external script, and
+// whatever it asks of the same host.
+if (livePayment.includes('https://www.mercadopago.com/v2/security.js')) {
+  assert(allows('script-src', 'https://www.mercadopago.com'), 'script-src allows security.js (device id)');
+  assert(allows('connect-src', 'https://www.mercadopago.com'), 'connect-src allows www.mercadopago.com (device id)');
+  assert(/script\.setAttribute\('view', 'checkout'\)/.test(livePayment), 'security.js is told it runs on the checkout');
+}
 
 // HTTPS only, for a year: a store with sign-in and payments never falls back to plain HTTP.
 assert(JSON.parse(await readFile(new URL('vercel.json', root), 'utf8')).headers.find(r => r.source === '/(.*)').headers.some(h => h.key === 'Strict-Transport-Security' && /max-age=31536000/.test(h.value)), 'HSTS header');
