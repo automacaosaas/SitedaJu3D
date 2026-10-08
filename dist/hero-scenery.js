@@ -122,6 +122,8 @@ const limb = (x1, y1, x2, y2, w1, w2, bend = 0) => {
 const bird = (x, y, s) => `<path class="m-k2 m-ls" d="M${n(x - 7 * s)} ${n(y - 2 * s)}C${n(x - 4 * s)} ${n(y - 5 * s)} ${n(x - 1 * s)} ${n(y - 3 * s)} ${x} ${y}C${n(x + 1 * s)} ${n(y - 3 * s)} ${n(x + 4 * s)} ${n(y - 5 * s)} ${n(x + 7 * s)} ${n(y - 2 * s)}"/>`;
 const acacia = uid => halo(uid, -112, 30, 58, 58) + '<circle class="m-white" cx="-112" cy="30" r="19" opacity=".72"/>'
   + bird(-74, 14, 1) + bird(-58, 26, .7) + bird(-88, 30, .55)
+  // as nuvens da savana (07/10/2026: "cada objeto e suas respectivas nuvens"): uma passando pelo sol, outra no alto, à direita
+  + cloud(uid, -64, 50, .78, 1) + cloud(uid, 154, -8, .5, 1)
   + halo(uid, 62, 44, 150, 76)
   // a pequena, ao longe, à esquerda
   + `<path class="m-k3 m-ls" d="M-138 132C-138 124 -139 116 -142 108M-138 120C-134 114 -130 110 -126 106"/>`
@@ -164,6 +166,8 @@ const flowers = uid => halo(uid, -118, 66, 70, 84) + halo(uid, 120, 84, 70, 112)
   + flower(uid, -148, 100, .5, {petals: 8, len: 30, wide: 11, k: 3, turn: 12})
   + flower(uid, 122, 204, .44, {petals: 8, len: 30, wide: 11, k: 3, turn: -8})
   + bud(uid, -74, 92, .7, 3, -18) + bud(uid, 82, 82, .62, 1, 24)
+  // as flores nascem de nuvens (a base das hastes some nelas)
+  + cloud(uid, -116, 136, 1, 4) + cloud(uid, 138, 266, .9, 4)
   + sparkle(-62, 14, .6) + sparkle(160, -8, .7) + sparkle(-160, 62, .5) + sparkle(84, 152, .45) + sparkle(166, 186, .4);
 
 // ── pata de T-rex: a mão de pele escamada saindo do canto à direita, três dedos curtos e fortes em leque e garras curvas ──
@@ -215,6 +219,8 @@ const claw = uid => halo(uid, 110, 128, 84, 150)
   + '<path class="m-k3 m-lh" d="M114 192C118 172 134 162 152 160M190 196C196 214 200 236 204 262"/></g>'
   // do outro lado, samambaias pré-históricas no verde-musgo da peça
   + halo(uid, -116, 76, 60, 72) + frond(uid, -98, 128, 1.05, -14, 2) + frond(uid, -134, 130, .82, -38, 2) + frond(uid, -74, 130, .6, 12, 2)
+  // e as nuvens dele: na base das samambaias e uma no alto
+  + cloud(uid, -104, 138, .95, 3) + cloud(uid, -150, 8, .55, 3)
   + sparkle(62, 22, .7) + sparkle(176, 0, .55) + sparkle(-160, 70, .6);
 
 const MOTIFS = {bananas, rainbow, acacia, flowers, claw};

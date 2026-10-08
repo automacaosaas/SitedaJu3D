@@ -68,16 +68,20 @@ assert(js.includes('.product-rail-card.is-active[data-product-id="${activeProduc
   assert.equal(PRODUCTS.unicornioscopio.eyebrowEffect, 'rainbow');
   assert(js.includes("eyebrow.classList.toggle('is-rainbow',p.eyebrowEffect==='rainbow');") && !/unicornioscopio|UnicornLamp/.test(js), 'a classe vem do dado');
   const rule = css.match(/#product-dialog \.pdp-heading \.eyebrow\.is-rainbow \{[^}]*\}/)[0];
-  assert(/background-size: 200% 100%;/.test(rule) && /-webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;/.test(rule) && /animation: pdp-rainbow 6s linear infinite;/.test(rule) && /width: fit-content;/.test(rule));
+  assert(/background-size: 200% 100%;/.test(rule) && /animation: pdp-rainbow 4s linear infinite;/.test(rule) && /width: fit-content;/.test(rule) && /border-radius: 999px;/.test(rule), 'um selo com o arco-íris correndo');
+  assert(/\.eyebrow\.is-rainbow::after \{[^}]*animation: pdp-rainbow-shine[^}]*\}/.test(css) && /@keyframes pdp-rainbow-shine \{[^}]*translateX[^}]*\}/.test(css), 'o brilho que passa: só transform');
   assert(css.includes('@keyframes pdp-rainbow { from { background-position: 0% 0; } to { background-position: 200% 0; } }'), 'anda exatamente um ladrilho: sem emenda');
-  assert(css.includes('@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; } }') && css.includes('@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; -webkit-text-fill-color: currentColor; } }'));
+  assert(css.includes('@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; }') && css.includes('@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none;'));
   const stops = rule.match(/linear-gradient\(90deg, ([^)]*)\)/)[1].split(', ');
   assert.equal(stops[0], stops.at(-1), 'o fim do degradê é o começo');
   const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
   const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
   const header = mixColor(journeyColors(showcase('unicornioscopio').theme)['--theme-wash'], '#ffffff', .28);   // --pd-tint (o topo da janela)
   let worst = Infinity;
-  for (let i = 0; i < stops.length - 1; i++) for (let t = 0; t <= 1; t += .05) worst = Math.min(worst, contrast(mixColor(stops[i], stops[i + 1], t), header));
-  assert(worst >= 4.5, `o arco-íris passa de 4,5:1 sobre o topo do unicórnio (${worst.toFixed(2)})`);
+  // o texto escuro do selo sobre cada ponto do degradê (e o selo se destaca do topo da janela)
+  const ink = rule.match(/; color: (#[0-9a-f]{6});/)[1];
+  for (let i = 0; i < stops.length - 1; i++) for (let t = 0; t <= 1; t += .05) worst = Math.min(worst, contrast(mixColor(stops[i], stops[i + 1], t), ink));
+  assert(worst >= 4.5, `o texto do selo passa de 4,5:1 sobre todo o arco-íris (${worst.toFixed(2)})`);
+  assert(header, 'o topo da janela do unicórnio');
 }
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');
