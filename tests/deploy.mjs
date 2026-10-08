@@ -16,7 +16,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-loja.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-loja.sh', 'config-nginx.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'manutencao.html', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
@@ -24,7 +24,8 @@ const setup = raw('deploy/setup-servidor.sh'), deploy = raw('deploy/deploy.sh');
 const firewall = raw('deploy/firewall.sh');
 const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh'), payments = raw('deploy/config-pagamentos.sh');
 const shop = raw('deploy/config-loja.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments], ['config-loja.sh', shop]]) {
+const nginxSetup = raw('deploy/config-nginx.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments], ['config-loja.sh', shop], ['config-nginx.sh', nginxSetup]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -240,6 +241,57 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       assert.equal(effective().ORDER_NOTIFY_EMAIL, 'ju@example.com'); assert.deepEqual(leftovers(), []);
     }
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
+// The "voltamos já" page (08/10/2026: "uma página de voltamos já bonita e profissional"): when Node is down or too slow,
+// nginx answers with deploy/manutencao.html and a 503 instead of its 502. Nothing of the site is up then, so the page asks
+// for nothing: no script, no stylesheet, font or image from anywhere (the logo is a small data URI); only the contact
+// links lead out, and they are the ones of api/_lib/legal.js.
+{
+  const page = raw('deploy/manutencao.html');
+  assert(Buffer.byteLength(page) < 40 * 1024, 'manutencao.html: under 40 KB');
+  assert.doesNotMatch(page, /<script\b/i, 'no JavaScript');
+  assert.doesNotMatch(page, /@import|@font-face|<link[^>]+rel="?stylesheet/i, 'no stylesheet or font to download');
+  const refs = [...page.matchAll(/\b(?:src|href|srcset|action|poster)\s*=\s*["']([^"']*)["']/gi)].map(m => m[1]);
+  const inside = /^(|#[\w-]+|data:[^"']*|mailto:[\w.+-]+@[\w.-]+|https:\/\/wa\.me\/\d+|https:\/\/www\.instagram\.com\/[\w.]+\/?)$/;
+  assert(refs.length >= 8); assert.deepEqual(refs.filter(ref => !inside.test(ref)), [], 'the page asks for nothing outside itself');
+  assert.doesNotMatch(page, /url\(\s*['"]?(?!data:|#)/i, 'and no url() leading out');
+  const logo = page.match(/<img class="logo" src="(data:image\/webp;base64,[A-Za-z0-9+/=]+)"/);
+  assert(logo && logo[1] === `data:image/webp;base64,${fs.readFileSync(path.join(root, 'dist/assets/logo-ju.webp')).toString('base64')}`, "the logo inside the page is the shop's own (336 px: sharp at 112 px on a 3x phone)");
+  for (const piece of ['<html lang="pt-BR">', '<meta name="viewport" content="width=device-width,initial-scale=1">', '<meta name="robots" content="noindex">', '<meta http-equiv="refresh" content="60">', '<title>Voltamos já', 'html{background:#fbf1f2}']) assert(page.includes(piece), `manutencao.html: ${piece}`);
+  assert(page.includes('tenta de novo sozinha a cada minuto') && page.includes('Nenhum pedido ou pagamento se perde'), 'it says it tries again by itself, and that nothing is lost');
+  const {COMPANY, WHATSAPP} = require('../api/_lib/legal.js');
+  assert(page.includes(`href="https://wa.me/${WHATSAPP}"`) && page.includes(COMPANY.phone) && page.includes('só mensagens') && page.includes(`href="mailto:${COMPANY.email}"`) && page.includes('href="https://www.instagram.com/juimprimepramim/"'), 'the contacts of api/_lib/legal.js');
+  assert([...page.matchAll(/font-size:(\d+(?:\.\d+)?)px/g)].every(m => +m[1] >= 12), 'no text under 12 px');
+  assert.match(page, /@media \(prefers-reduced-motion:reduce\)\{\*,\*::before,\*::after\{animation:none!important/, 'still for whoever asks for less motion');
+}
+
+// config-nginx.sh: the page and the snippet installed, the include once in each server block that leads to the site
+// (the one on 80 and the one certbot copied for 443), nginx -t before the reload with the copy back when it fails, and the
+// access logs kept 190 days (the privacy policy promises 6 months: Marco Civil, art. 15). HTTPS, http2, HSTS and the
+// server_name are other requests: untouched here.
+{
+  const pos = text => { const i = nginxSetup.indexOf(text); assert(i > 0, `config-nginx.sh has: ${text}`); return i; };
+  const heredoc = start => nginxSetup.slice(pos(start), nginxSetup.indexOf('\nEOF\n', pos(start)));
+  const snippet = heredoc(`cat > "$work/snippet" <<'EOF'`), code = nginxSetup.replace(/^\s*#.*$/gm, '');
+  assert.match(snippet, /^error_page 502 503 504 =503 \/manutencao\.html;$/m, 'what nginx itself fails on (Node down: 502; too slow: 504) becomes the page, with a 503');
+  assert(!/proxy_intercept_errors/.test(code) && !/proxy_intercept_errors/.test(nginx), "no proxy_intercept_errors: the site's own 503 (shipping_unavailable) pass as they are");
+  assert.match(snippet, /^location = \/manutencao\.html \{\n    root \/var\/www\/juimprime-manutencao;\n    internal;\n/m, 'the page only as nginx\'s own answer (internal)');
+  assert(snippet.includes('add_header Retry-After 120 always;') && snippet.includes('add_header Cache-Control "no-store" always;'), 'Retry-After and no-store, also on the 503 (always)');
+  assert.match(snippet, /^location = \/manutencao-previa \{\n    allow 127\.0\.0\.1;\n    allow ::1;\n    deny all;\n/m, 'a preview only from the server itself');
+  assert(nginxSetup.includes('install -m 644 "$HERE/manutencao.html" "$PAGE_DIR/manutencao.html"') && nginxSetup.includes('PAGE_DIR=/var/www/juimprime-manutencao') && nginxSetup.includes('install -m 644 "$work/snippet" "$SNIPPET"'), 'the page (root, readable by nginx) and the snippet installed');
+  assert(nginxSetup.includes(String.raw`if (c ~ /proxy_pass[ \t]+http:\/\/127\.0\.0\.1:3000[;\/]/) site = 1`) && nginxSetup.includes(String.raw`if (!at && lvl[i] == 1 && c ~ /^[ \t]*server_tokens[ \t]+off[ \t]*;/) at = i`), 'the include in every server block that leads to the site, after its server_tokens off;');
+  assert(nginxSetup.includes(String.raw`if (c ~ /^[ \t]*include[ \t]+snippets\/juimprime-manutencao\.conf[ \t]*;/) has = 1`) && nginxSetup.includes('add = site && !has'), 'and only where it is not yet (running again adds nothing)');
+  assert(nginxSetup.includes('if [ "$sites" -eq 0 ]; then'), 'no server block leading to the site: nothing changes');
+  assert(pos('cp -p "$SITE" "$site_copy"') < pos('cat "$work/site" > "$SITE"') && pos('cat "$work/site" > "$SITE"') < pos('if ! nginx -t 2> "$work/nginx-t"; then') && pos('if ! nginx -t 2> "$work/nginx-t"; then') < pos('systemctl reload nginx'), 'a copy first, nginx -t before the reload');
+  assert(nginxSetup.includes('if ! nginx -t 2> "$work/nginx-t"; then\n  cat "$work/nginx-t"\n  restore\n') && nginxSetup.includes('[ -z "$site_copy" ] || cat "$site_copy" > "$SITE"'), 'nginx -t fails: the copy goes back, nothing is reloaded');
+  const rotate = heredoc(`cat > "$work/logrotate" <<'EOF'`);
+  assert(rotate.includes('\n/var/log/nginx/*.log {\n') && /^\tdaily$/m.test(rotate) && /^\trotate 190$/m.test(rotate) && /^\tcompress$/m.test(rotate) && rotate.includes('invoke-rc.d nginx rotate'), 'access logs: 190 daily rotations, compressed, the nginx of the Debian package told to reopen them');
+  assert.match(raw('dist/privacidade.html'), /Registros de acesso:<\/strong> por 6 meses/, 'what the privacy policy promises');
+  assert(nginxSetup.includes(`grep -q '^[^#]*/var/log/nginx/' "$LOGROTATE_PKG"`) && nginxSetup.includes('cp -p "$LOGROTATE_PKG" "$pkg_copy"') && nginxSetup.includes('LOGROTATE_OWN=/etc/logrotate.d/juimprime-nginx'), "the package's /etc/logrotate.d/nginx set aside, its original kept (one log in two blocks is an error)");
+  assert(nginxSetup.includes('check=$(logrotate -d /etc/logrotate.conf 2>&1 || true)') && nginxSetup.includes("if grep -q 'duplicate log entry' <<<\"$check\"; then"), 'and checked with logrotate -d');
+  for (const other of [/http2/, /ssl_/, /Strict-Transport-Security/, /server_name/]) assert.doesNotMatch(code, other, `config-nginx.sh leaves ${other.source} alone`);
+  assert(pos('code http://127.0.0.1:3000/api/health') && pos('code -k "$web/manutencao-previa"'), 'at the end it checks the site is still there');
+  assert(nginxSetup.includes('web=https://127.0.0.1 k=k tunnel=8443:127.0.0.1:443'), 'with HTTPS, the checks and the hints go by 443 (after certbot the block on 80 may only redirect)');
+  assert(setup.includes('bash "$HERE/config-nginx.sh"') && setup.indexOf('bash "$HERE/config-nginx.sh"') > setup.indexOf('ln -sfn /etc/nginx/sites-available/juimprime'), 'a new server gets the same from the setup');
 }
 
 // The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself
@@ -299,4 +351,4 @@ assert(firewall.includes('nft -c -f "$new" ||'), 'the new rules are checked befo
     assert.equal((await run({env: {...env, ORDER_NOTIFY_EMAIL: ''}, dir, fetchImpl, log: quiet, now: () => day + 86400000})).reason, 'mail_off');
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
-console.log('PASS: servidor próprio — LF scripts that stop at the first error, every setting in the .env, the app on 127.0.0.1 behind nginx, X-Forwarded-For from nginx, main by default with a safety guard, tests and a database copy before the switch, a health check that proves the commit and the database, a rollback the timer respects, the failure e-mail, and only the sudo it needs.');
+console.log('PASS: servidor próprio — LF scripts that stop at the first error, every setting in the .env, the app on 127.0.0.1 behind nginx, X-Forwarded-For from nginx, main by default with a safety guard, tests and a database copy before the switch, a health check that proves the commit and the database, a rollback the timer respects, the failure e-mail, the "voltamos já" page with 190 days of access logs, and only the sudo it needs.');
