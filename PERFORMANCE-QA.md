@@ -64,6 +64,12 @@ com um pagamento de teste, antes de publicar.
 
 **Ao mudar para a Hostinger**, os mesmos cabeçalhos vão para o servidor Node.
 
+**No servidor Node (08/10/2026)**, a CSP, o `X-Frame-Options` e o `Permissions-Policy` vão só nos documentos (páginas, a
+página 404, o SVG, o XML e o `/api`): scripts, estilos, imagens, fontes e modelos levam só `nosniff`, HSTS,
+`Referrer-Policy` e o cache, cerca de 1,1 KB a menos em cada resposta. O `ETag` nasce do conteúdo servido, não da data:
+uma publicação que não muda um arquivo mantém o `ETag` dele, e quem volta recebe 304 em vez de baixar de novo.
+`tests/server.mjs` confere as duas coisas.
+
 **Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Sem `?v=`, um visitante pode ver a versão
 anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes), o servidor Node manda
 `max-age=31536000, immutable` (07/10/2026): o navegador guarda por um ano sem perguntar de novo, então trocar o arquivo
