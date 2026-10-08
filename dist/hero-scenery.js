@@ -1,22 +1,28 @@
-// Fundo da vitrine em silhuetas brancas de nuvem (08/10/2026, pedido do dono: "sombreamento com referências de luz, usando as nuvens
-// BRANCAS… só silhuetas de características que lembram [cada peça], limpas e otimizadas, integradas com a dinâmica da página").
+// Fundo da vitrine em silhuetas brancas de nuvem, nas BORDAS (08/10/2026, pedidos do dono: "sombreamento com referências de luz,
+// usando as nuvens BRANCAS… só silhuetas de características que lembram [cada peça]" e, depois, "deixar as coisas mais na borda,
+// para se conectar com a página… algo mais fluido, que conecte com o rolar da página… que não ocupe além [do espaço da vitrine]").
 // SVG em linha, sem filtros e sem scripts. Cada camada de fundo recebe UM elemento raiz (a demonstração esmaece e recua esse elemento):
-//  · as silhuetas dos cantos (`side`: capim, palmeira, nuvens, margaridas, samambaias…), presas embaixo, nas bordas da vitrine;
-//  · em volta da peça, o desenho dela (`motif`, de SHOWCASE em products.js — aqui não há nome de produto), dentro de .scenery-back;
-//  · e as nuvenzinhas que flutuam e as estrelinhas que cintilam, cada uma num <svg> pequeno e próprio: o CSS só as desliza ou
-//    acende (transform e opacity), nada é redesenhado. O que se mexe é sempre um <span> em volta do <svg> (também nas silhuetas dos
-//    cantos): no Chrome, uma animação no próprio <svg> não vai para o compositor e recalculava o estilo a cada quadro, sem parar.
+//  · as silhuetas dos cantos (`side`: capim, palmeiras, nuvens, margaridas, samambaias…), presas embaixo, nos cantos da vitrine;
+//  · nas bordas esquerda e direita, as silhuetas de cada peça (`motif`, de SHOWCASE em products.js — aqui não há nome de produto):
+//    a acácia, os cachos de banana em nuvem, o arco-íris saindo das nuvens, as margaridas, as pegadas, o rastro do voo;
+//  · e as nuvenzinhas que flutuam e as estrelinhas que cintilam.
+// Cada silhueta da borda é um <svg> pequeno e próprio dentro de um <span>, e o que se mexe é sempre o <span> (no Chrome, uma animação
+// no próprio <svg> não vai para o compositor): o CSS só desliza, acende ou gira (transform e opacity), nada é redesenhado. Com a
+// rolagem da página, cada uma anda na sua profundidade (carousel.css › scn-scroll; .scn-far, .scn-mid) e os cantos sobem e esmaecem.
 // Cores: branco translúcido. Só o lado da sombra, bem de leve, no tom claro da peça (--scn-tN, nunca mais escuro que o meio do
-// degradê: hero-motion.js › sceneryVars), então o desenho só clareia o fundo e nunca tira contraste de um texto. As bordas se
-// dissolvem por degradês e pela máscara do CSS (carousel.css › .scenery-back).
+// degradê: hero-motion.js › sceneryVars), então o desenho só clareia o fundo e nunca tira contraste de um texto.
 //
-// Quadro do desenho (viewBox): 1 unidade = 1/200 da largura da pilastra; a origem é o alto do palco, no centro da peça.
-// A peça ocupa y 0–172 (lâmpadas: corpo ±31, orelhas ±47; borboleta: asas ±65; dinossauro: cabeça ±43); a pilastra, x ±100 a partir
-// de y 152. No computador o texto fica à esquerda de x −205 (dos 901 aos 1100 px os botões chegam a x −143, de y 140 a 176) e o
-// header acima de y −30. No celular e no tablet estreito (até 760 px) o preço fica logo acima de y 0 e as setas em x ±114…170,
-// y 100…154: para essas telas os grupos (.scn-l, .scn-r…) de cada desenho mudam de lugar no CSS; as nuvenzinhas e estrelinhas têm
-// posição própria (--cx/--cy) em toda tela com o texto acima do palco (até 900 px), longe do preço.
-const VIEW = '-180 -60 360 340';
+// Onde cada coisa fica, em unidades da pilastra (1 = 1/200 da largura dela): x = a distância da borda da vitrine para dentro (nas
+// telas mais largas que 1560 px, a borda do contêiner), y = a partir do alto do palco, onde a peça começa. Medido de 360 a 2560 px:
+//  · computador (901 px ou mais): o header acima de y −34; à esquerda, o texto e os botões a partir de x 65 (y 37 a 176) e a seta em
+//    x 12…43, y 118…152; à direita, a seta em x 13…43, y 118…152, a pilastra a partir de x 130 (152 a partir de 1280 px) e a peça
+//    a partir de x 165. Livres: a faixa de cada borda (x até 60), o alto à esquerda acima do texto (y −30…30), o canto de baixo à
+//    esquerda (y 180 em diante, x até 330) e, à direita, x até 150;
+//  · celular e tablet (até 900 px): o preço em y −30…−12 (a partir de x 76), a peça em y 0…172 (a partir de x 102 na borboleta e
+//    120 nas orelhas das lâmpadas), as setas em x 19…57, y 105…143, a pilastra em y 152…260 a partir de x 67 e os botões, de borda
+//    a borda, a partir de y 280. Livres: um bolso no alto de cada borda (y −10…100, x até ~95), um embaixo (y 148…270, x até 62) e,
+//    na altura das setas, só o fio da borda (x até 15).
+// tests/carousel.cjs refaz essas contas com o contorno de cada desenho, nas duas arrumações.
 const n = value => +value.toFixed(1);
 const rad = deg => deg * Math.PI / 180;
 
@@ -87,32 +93,54 @@ const petals = (x, y, r, count, turn = 0, wide = .34) => {
   }
   return d;
 };
+// banana em nuvem (o pedido do dono: "nuvens em formato de banana"): o contorno de uma banana deitada, com o cabinho na origem, à
+// esquerda, e a ponta subindo à direita (160 × 70 unidades, vezes k), e a barriga em bolhas, como a base de uma nuvem; o resto, liso
+const BANANA_BELLY = [[10, 6], [36, 17], [64, 22], [94, 18], [122, 8], [144, -8], [157, -26]];
+// o cabinho e a pontinha, no tom quente da sombra da peça (carousel.css › .m-nub): é o que faz a nuvem ler como banana
+const BANANA_NUBS = 'M-7.6 -17.2L-5.6 -25.2L0.4 -23.2L-1.6 -15.6ZM159.6 -46.6L167.8 -46.8L165.4 -40.4L160.6 -41.6Z';
+const BANANA_REST = [[157, -26], [164, -38], [167, -46], [160, -46], [152, -38], [138, -27], [114, -13], [86, -6], [56, -5], [28, -9], [12, -13], [6, -16], [1, -22], [-5, -24], [-7, -17], [-1, -8], [4, 0], [10, 6]];
+const bananaPuff = (k = 1) => {
+  const P = ([x, y]) => [x * k, y * k], b = BANANA_BELLY.map(P);
+  const belly = b.slice(1).reduce((d, [x, y], i) => { const r = n(Math.hypot(x - b[i][0], y - b[i][1]) * .8); return `${d}A${r} ${r} 0 0 0 ${n(x)} ${n(y)}`; }, `M${n(b[0][0])} ${n(b[0][1])}`);
+  return belly + smooth(BANANA_REST.map(P), false).replace(/^M[^C]*/, '') + 'Z';
+};
 // estrelinha de brilho (quatro pontas), branca
 const sparkle = (x, y, s, o = .9) => `<path fill="#fff" opacity="${o}" d="M${x} ${n(y - 9 * s)}C${n(x + s)} ${n(y - 2 * s)} ${n(x + 2 * s)} ${n(y - s)} ${n(x + 9 * s)} ${y}C${n(x + 2 * s)} ${n(y + s)} ${n(x + s)} ${n(y + 2 * s)} ${x} ${n(y + 9 * s)}C${n(x - s)} ${n(y + 2 * s)} ${n(x - 2 * s)} ${n(y + s)} ${n(x - 9 * s)} ${y}C${n(x - 2 * s)} ${n(y - s)} ${n(x - s)} ${n(y - 2 * s)} ${x} ${n(y - 9 * s)}Z"/>`;
 
-// ── cores: degradês da camada (ids únicos por camada: `uid`) ──
+// ── cores: degradês da camada (ids únicos por camada: `uid`), num <svg> só de definições que todas as silhuetas da camada usam ──
 // c = nuvem (branca no alto; a base se dissolve com um toque do tom da peça) · f = haste, tronco e capim (branco que some para
-// baixo) · s = folha, pétala, pegada (luz no alto à esquerda, a sombra no tom da peça) · g = halo, uma luz macia
+// baixo) · s = folha, pétala (luz no alto, do lado de fora, a sombra no tom da peça) · g = halo, uma luz macia · e = miolo da
+// margarida (só branco: "não quero coisa colorida") · p = pegada (clara do lado de dentro, sombreada para a borda da página) ·
+// b = banana em nuvem (branca no alto, a barriga no tom da peça, sem sumir: o contorno da banana tem de ficar)
 const defs = uid => '<defs>'
   + `<linearGradient id="scn-${uid}-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".94"/><stop offset=".55" stop-color="#fff" stop-opacity=".8"/><stop offset=".84" class="m-t1" stop-opacity=".5"/><stop offset="1" class="m-t1" stop-opacity="0"/></linearGradient>`
   + `<linearGradient id="scn-${uid}-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".86"/><stop offset=".62" stop-color="#fff" stop-opacity=".46"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`
   + `<radialGradient id="scn-${uid}-s" cx=".34" cy=".28" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".58" stop-color="#fff" stop-opacity=".74"/><stop offset="1" class="m-t1" stop-opacity=".5"/></radialGradient>`
   + `<radialGradient id="scn-${uid}-g"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".5" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
+  + `<radialGradient id="scn-${uid}-e" cx=".4" cy=".36" r=".72"><stop offset="0" stop-color="#fff" stop-opacity=".98"/><stop offset="1" stop-color="#fff" stop-opacity=".6"/></radialGradient>`
+  + `<linearGradient id="scn-${uid}-p" x1="1" y1=".1" x2="0" y2=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".5" stop-color="#fff" stop-opacity=".74"/><stop offset="1" class="m-t1" stop-opacity=".34"/></linearGradient>`
+  + `<linearGradient id="scn-${uid}-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".5" stop-color="#fff" stop-opacity=".84"/><stop offset="1" class="m-t1" stop-opacity=".6"/></linearGradient>`
   + '</defs>';
 const F = (uid, kind) => `fill="url(#scn-${uid}-${kind})"`;
 const glow = (uid, x, y, rx, ry = rx) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" ${F(uid, 'g')}/>`;
-// nuvenzinha que flutua: um <svg> pequeno e próprio, no quadro do desenho (x, y = o meio da base; w × h; c = [x, y] no celular), que
-// o CSS desliza devagar (--d: a duração da ida; --dl: o atraso, para cada uma andar no seu tempo)
-const drift = (uid, x, y, w, h, {c, d = 18, dl = 0, o = 1, angles} = {}) => {
-  const box = ([bx, by]) => [n(bx - w * .6), n(by - h - w * .24)], [vx, vy] = box([x, y]), vw = n(w * 1.2), vh = n(h + w * .24 + 1);
-  const compact = c ? `;--cx:${box(c)[0]};--cy:${box(c)[1]}` : '';
-  return `<span class="scenery-drift" style="--x:${vx};--y:${vy};--w:${vw};--h:${vh}${compact};--d:${d}s;--dl:${-dl}s${o < 1 ? `;opacity:${o}` : ''}"><svg viewBox="${vx} ${vy} ${vw} ${vh}" focusable="false"><path ${F(uid, 'c')} d="${cumulus(x, y, w, h, angles)}"/></svg></span>`;
-};
 
-// brilho que cintila: a estrelinha num <svg> próprio (o CSS só muda opacity e scale, devagar); c = [x, y] no celular
-const spark = (x, y, s, {c, d = 5, dl = 0} = {}) => {
-  const r = n(9 * s + 1), at = ([px, py]) => [n(px - r), n(py - r)], [vx, vy] = at([x, y]), compact = c ? `;--cx:${at(c)[0]};--cy:${at(c)[1]}` : '';
-  return `<span class="scenery-spark" style="--x:${vx};--y:${vy};--w:${n(2 * r)};--h:${n(2 * r)}${compact};--d:${d}s;--dl:${-dl}s"><svg viewBox="${vx} ${vy} ${n(2 * r)} ${n(2 * r)}" focusable="false">${sparkle(x, y, s, 1)}</svg></span>`;
+// ── onde: cada <span> da borda leva o lado (scn-l, scn-r), a profundidade na rolagem (scn-far: fica mais para trás; scn-mid) e o lugar,
+// em unidades da pilastra (veja o alto do arquivo): at = [x, y, s] no computador — a distância do quadro à borda, o alto dele a
+// partir do alto do palco e a escala do desenho — e c = [x, y, s] no celular e no tablet (até 900 px) ──
+const place = ([x, y, s = 1], [cx, cy, cs = s]) => `--x:${x};--y:${y};--s:${s};--cx:${cx};--cy:${cy};--cs:${cs}`;
+// uma silhueta da borda: o desenho no quadro w × h, com x = 0 na borda da vitrine e crescendo para dentro (na direita, espelhado)
+const edge = (side, depth, at, c, w, h, art, more = '') => `<span class="scenery-edge scn-${side} scn-${depth}" style="${place(at, c)};--w:${w};--h:${h}"><svg viewBox="0 0 ${w} ${h}" focusable="false">${side === 'r' ? `<g transform="matrix(-1 0 0 1 ${w} 0)">${art}</g>` : art}</svg>${more}</span>`;
+// nuvenzinha que flutua (w × h a nuvem; o quadro tem folga para as bolhas): o CSS a desliza devagar (--d: a duração da ida; --dl: o
+// atraso, para cada uma andar no seu tempo). shape 'banana': uma bananinha em nuvem
+const drift = (uid, side, at, c, w, h, {d = 18, dl = 0, o = 1, shape = 'cloud'} = {}) => {
+  const bw = n(w * 1.2), bh = n(h + w * .24 + 1);
+  const art = shape === 'banana' ? `<path ${F(uid, 'b')} transform="translate(${n(w * .14)} ${n(bh * .78)}) rotate(-6)" d="${bananaPuff(+(w / 160).toFixed(3))}"/>` : `<path ${F(uid, 'c')} d="${cumulus(w * .6, bh - 1, w, h)}"/>`;
+  return `<span class="scenery-drift scn-${side} scn-far" style="${place(at, c)};--w:${bw};--h:${bh};--d:${d}s;--dl:${-dl}s"><svg viewBox="0 0 ${bw} ${bh}" focusable="false"><g${o < 1 ? ` opacity="${o}"` : ''}>${art}</g></svg></span>`;
+};
+// brilho que cintila: a estrelinha (s = o tamanho) num <svg> próprio; o CSS só muda opacity e scale, devagar
+const spark = (side, at, c, s, {d = 5, dl = 0} = {}) => {
+  const r = n(9 * s + 1);
+  return `<span class="scenery-spark scn-${side} scn-far" style="${place(at, c)};--w:${n(2 * r)};--h:${n(2 * r)};--d:${d}s;--dl:${-dl}s"><svg viewBox="0 0 ${n(2 * r)} ${n(2 * r)}" focusable="false">${sparkle(r, r, s, 1)}</svg></span>`;
 };
 
 // ── silhuetas dos cantos (quadro 360 × 440, presas embaixo; a da direita é espelhada no CSS) ──
@@ -140,75 +168,73 @@ const mists = (side, uid) => `<div class="scenery-mist">${['left', 'right'].map(
   return `<span class="scenery-${at}"><svg viewBox="0 0 360 440" focusable="false"><defs><radialGradient id="${id}" cx="32%" cy="25%" r="87%"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".4" stop-color="#fff" stop-opacity=".61"/><stop offset=".72" stop-color="#fff" stop-opacity=".24"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><g fill="url(#${id})">${(SIDES[side] || SIDES.petals)()}</g></svg></span>`;
 }).join('')}</div>`;
 
-// ── desenhos em volta da peça: [o desenho, as nuvenzinhas] ──
-// Savana: o sol, a acácia de copa achatada à direita (a copa em camadas de nuvem), uma acácia pequena ao longe e o capim no pé da pilastra.
-const tuft = (x, y, s, flip = 1) => [[-12, 34, -16], [-5, 48, -6], [2, 40, 8], [8, 52, 14], [15, 30, 22]]
-  .map(([bx, h, lean]) => `M${n(x + flip * s * (bx - 3))} ${y}C${n(x + flip * s * (bx - 2))} ${n(y - s * h * .5)} ${n(x + flip * s * (bx + lean * .4))} ${n(y - s * h * .82)} ${n(x + flip * s * (bx + lean))} ${n(y - s * h)}C${n(x + flip * s * (bx + lean * .5 + 1.5))} ${n(y - s * h * .7)} ${n(x + flip * s * (bx + 2.5))} ${n(y - s * h * .42)} ${n(x + flip * s * (bx + 4))} ${y}Z`).join('');
-const acacia = uid => [glow(uid, -110, 28, 62) + '<circle cx="-110" cy="28" r="17" fill="#fff" opacity=".78"/>'
-  + `<g class="scn-l"><path ${F(uid, 'f')} d="${limb(-139, 134, -141, 103, 3.4, 2, 1)}${limb(-141, 108, -154, 101, 2, 1.2, -2)}${limb(-140, 110, -128, 101, 2, 1.2, 2)}"/><path ${F(uid, 'c')} d="${cumulus(-140, 104, 62, 8, [180, 212, 252, 296, 334, 360])}"/></g>`
-  + `<g class="scn-r"><defs><linearGradient id="scn-${uid}-trunk" gradientUnits="userSpaceOnUse" x1="0" y1="56" x2="0" y2="276"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity=".48"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`
-  + `<path fill="url(#scn-${uid}-trunk)" d="${limb(130, 276, 125, 176, 15, 10, -5)}${limb(124, 186, 38, 62, 9, 4, 16)}${limb(125, 184, 100, 58, 8, 4, -6)}${limb(127, 190, 166, 60, 8.5, 4, -12)}${limb(78, 118, 62, 62, 4.5, 2.5, 5)}${limb(146, 126, 138, 62, 4, 2.5, -4)}"/>`
-  + `<path ${F(uid, 'c')} d="${cumulus(54, 70, 256, 36, [180, 192, 207, 224, 244, 266, 290, 312, 332, 348, 360])}"/>`
-  + `<path ${F(uid, 'c')} d="${cumulus(100, 46, 140, 22, [180, 204, 236, 274, 312, 344, 360])}" opacity=".9"/></g>`
-  + `<path ${F(uid, 'f')} d="${tuft(112, 264, 1.1)}${tuft(152, 266, .9, -1)}${tuft(176, 260, .7)}${tuft(-122, 264, 1, -1)}${tuft(-156, 262, .8)}"/>`
-,
-  drift(uid, 142, -6, 52, 12, {c: [128, 0], d: 21, dl: 4}) + drift(uid, -66, 52, 64, 14, {c: [-90, 50], d: 26, dl: 11, o: .9})
-  + spark(-152, -4, .6, {d: 5.5}) + spark(166, 84, .5, {d: 7, dl: 2.5})];
+// ── as silhuetas das bordas de cada peça ──
+// Savana: à direita, a acácia na beira da vitrine (o tronco no fio da borda, por fora da seta; a copa achatada, em camadas de nuvem,
+// no alto, longe da peça: "no celular a árvore está sendo ofuscada pela girafa"); à esquerda, o sol baixo no alto, acima do texto, e
+// uma acácia pequena ao longe, embaixo.
+const acacia = uid => edge('r', 'mid', [-9, -34], [-4, -6, .55], 196, 360,
+  `<defs><linearGradient id="scn-${uid}-trunk" gradientUnits="userSpaceOnUse" x1="0" y1="40" x2="0" y2="360"><stop offset="0" stop-color="#fff" stop-opacity=".82"/><stop offset=".5" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`
+  + `<path fill="url(#scn-${uid}-trunk)" d="${limb(13, 360, 11, 146, 15, 10, -2)}${limb(11, 152, 80, 60, 9, 4, 13)}${limb(12, 158, 38, 62, 7, 3, 6)}${limb(48, 104, 146, 54, 6, 3, -9)}${limb(76, 78, 174, 60, 4, 2.4, -5)}"/>`
+  + `<path ${F(uid, 'c')} d="${cumulus(96, 68, 168, 30, [180, 192, 207, 224, 244, 266, 290, 312, 332, 348, 360])}"/>`
+  + `<path ${F(uid, 'c')} d="${cumulus(106, 47, 110, 19, [180, 204, 236, 274, 312, 344, 360])}" opacity=".9"/>`)
+  + edge('l', 'far', [70, -44], [12, 0, .6], 100, 76, glow(uid, 50, 38, 50, 24) + '<circle cx="50" cy="38" r="13" fill="#fff" opacity=".8"/>')
+  + edge('l', 'far', [150, 182], [-4, 166, .58], 104, 88, `<path ${F(uid, 'f')} d="${limb(52, 88, 51, 52, 4.4, 2.6, 1)}${limb(51, 58, 34, 48, 2.6, 1.4, -2)}${limb(51, 60, 68, 48, 2.6, 1.4, 2)}"/><path ${F(uid, 'c')} d="${cumulus(51, 50, 84, 12, [180, 212, 252, 296, 334, 360])}"/>`)
+  + drift(uid, 'r', [22, 82], [6, 76, .8], 52, 12, {d: 21, dl: 4}) + drift(uid, 'l', [30, 200], [8, 64, .8], 64, 14, {d: 26, dl: 11, o: .9})
+  + spark('r', [140, 104], [56, 88], .55, {d: 5.5}) + spark('l', [36, 74], [44, 236], .5, {d: 7, dl: 2.5});
 
-// Selva (as folhas de palmeira estão nos cantos): o cacho de bananas deitado numa nuvem, à direita, e uma banana noutra, à esquerda.
-// banana deitada para a direita a partir do cabinho (na origem), a ponta curvando para cima (~88 unidades): o corpo, o risco de sombra
-// embaixo e, no tom da peça, o cabinho e a pontinha
-const BANANA = 'M2 -6C28 0 58 -2 80 -24L86 -31L88 -26C76 -2 46 18 6 10C0 9 -1 -3 2 -6Z';
-const banana = (uid, y, a) => `<g transform="translate(0 ${y}) rotate(${a})"><path ${F(uid, 's')} d="${BANANA}"/><path class="m-shade" d="M9 10C44 13 70 0 85 -24"/><path class="m-nub" d="M80 -24L86 -31L88 -26L84 -21Z"/></g>`;
-// o cacho: bananas abertas em leque a partir do mesmo cabinho, como uma mão de bananas (paralelas, liam-se como penas de uma asa)
-const bunch = (uid, x, y, s, count = 3, flip = 1) => { const t = (count - 1) * 9 + 10; return `<g transform="translate(${x} ${y}) scale(${flip * s} ${s})">${Array.from({length: count}, (_, i) => banana(uid, -i * 9, 6 - i * 14)).reverse().join('')}<path ${F(uid, 's')} d="M-5 6C-8 -4 -7 -${t - 4} -2 -${t}L3 -${t - 2}C5 -${t - 8} 5 -4 3 6Z"/><path class="m-nub" d="M-3 -${t + 1}L-4 -${t + 7}L1 -${t + 7}L3 -${t - 1}Z"/></g>`; };
-const bananas = uid => [glow(uid, 108, 84, 80, 70)
-  + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(100, 128, 124, 28)}"/>${bunch(uid, 60, 104, .9)}</g>`
-  + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-112, 72, 84, 18)}"/>${bunch(uid, -80, 60, .52, 2, -1)}</g>`
-  + sparkle(-146, 30, .45, .7),
-  drift(uid, -128, 14, 52, 12, {c: [-104, 12], d: 22, dl: 6}) + drift(uid, 132, -10, 44, 10, {c: [70, 4], d: 19, dl: 13, o: .85})
-  + spark(140, 46, .7, {c: [146, 12], d: 6}) + spark(-66, 6, .55, {d: 5, dl: 2})];
+// Selva: nuvens em forma de banana nas bordas, no lugar das nuvens comuns ("as bananas na lateral, na borda, como se fossem nuvens"):
+// à direita, uma grande saindo da borda com uma menor mais ao longe, embaixo dela; à esquerda, outra; e as nuvenzinhas que flutuam
+// também são bananinhas. Cada banana sozinha (em leque ou paralelas, liam-se como as penas de uma asa).
+const banana = (uid, o = 1, turn = -6) => `<g transform="translate(14 52) rotate(${turn} 80 -12)"${o < 1 ? ` opacity="${o}"` : ''}><path ${F(uid, 'b')} d="${bananaPuff()}"/><path class="m-nub" d="${BANANA_NUBS}"/></g>`;
+const bananas = uid => edge('r', 'mid', [6, -14, .9], [4, 6, .5], 184, 82, banana(uid))
+  + edge('r', 'far', [30, 64, .56], [2, 176, .32], 184, 82, banana(uid, .8, 4))
+  + edge('l', 'mid', [36, 192, .8], [4, 30, .44], 184, 82, banana(uid, 1, -10))
+  + drift(uid, 'r', [36, 178], [4, 176, .8], 60, 20, {d: 22, dl: 6, shape: 'banana'}) + drift(uid, 'l', [100, -26], [22, 74, .8], 52, 18, {d: 19, dl: 13, o: .9, shape: 'banana'})
+  + spark('r', [146, 96], [48, 84], .6, {d: 6}) + spark('l', [30, 90], [48, 236], .55, {d: 5, dl: 2});
 
-// Arco-íris: faixas de nuvem brancas com o tom de cada cor da peça bem de leve, nuvens fofas nos pés e brilhos.
-const RAINBOW = {cy: 150, r: [150, 139, 128, 117, 106], order: [4, 1, 2, 3]};   // de fora para dentro: rosa, roxo, lavanda, dourado
-const rainbow = uid => {
-  const {cy, r, order} = RAINBOW, R = r[0];
-  // um degradê radial no centro do arco pinta as quatro faixas: branco nas emendas, o tom claro da cor no meio de cada uma
-  const stops = order.map((k, i) => {
+// Arco-íris: nuvens fofas presas nas bordas e, de cada uma, o arco-íris subindo e saindo pela borda da vitrine (o centro do arco fica
+// do lado de fora): faixas de nuvem brancas com o tom de cada cor da peça bem de leve, e um brilho que corre devagar pelas faixas.
+// O arco à direita, maior, sai da nuvem acima da seta; o da esquerda, menor e mais ao longe, da nuvem do canto de baixo.
+const RAINBOW = {order: [4, 1, 2, 3]};   // de fora para dentro: rosa, roxo, lavanda, dourado
+const arc = (uid, k, cx, cy, R, band) => {
+  const r = [0, 1, 2, 3, 4].map(i => R - i * band);
+  // um degradê radial no centro do arco pinta as quatro faixas: branco nas emendas, o tom claro da cor no meio de cada uma. As paradas
+  // vão de dentro para fora (com a ordem trocada, o navegador as juntava todas na de fora e só a faixa rosa aparecia)
+  const stops = RAINBOW.order.map((t, i) => {
     const outer = r[i] / R, inner = r[i + 1] / R, mid = (outer + inner) / 2;
-    return `<stop offset="${n(inner * 1000) / 1000}" stop-color="#fff" stop-opacity=".62"/><stop offset="${n(mid * 1000) / 1000}" class="m-t${k}" stop-opacity=".62"/><stop offset="${n((outer - .006) * 1000) / 1000}" stop-color="#fff" stop-opacity=".84"/>`;
-  }).join('');
-  return [glow(uid, 0, 120, 178, 150)
-    + `<defs><radialGradient id="scn-${uid}-bands" gradientUnits="userSpaceOnUse" cx="0" cy="${cy}" r="${R}">${stops}<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
-    + `<path fill="url(#scn-${uid}-bands)" d="M${-R} ${cy}A${R} ${R} 0 0 1 ${R} ${cy}L${r[4]} ${cy}A${r[4]} ${r[4]} 0 0 0 ${-r[4]} ${cy}Z"/>`
-    + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-128, 160, 96, 24)}"/><path ${F(uid, 'c')} d="${cumulus(-90, 168, 56, 13)}" opacity=".9"/></g>`
-    + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(130, 156, 90, 22)}"/><path ${F(uid, 'c')} d="${cumulus(166, 168, 44, 10)}" opacity=".85"/></g>`
-    + sparkle(-96, 4, .6) + sparkle(166, 108, .6, .8) + sparkle(-164, 106, .55, .8) + sparkle(76, 100, .45, .7),
-    drift(uid, -142, -6, 48, 11, {c: [-100, 2], d: 20, dl: 3}) + drift(uid, 150, -2, 40, 9, {c: [104, 4], d: 24, dl: 12, o: .9})
-    + spark(-150, 40, 1, {d: 6}) + spark(152, 50, .8, {d: 5, dl: 2.5})];
+    return `<stop offset="${n(inner * 1000) / 1000}" stop-color="#fff" stop-opacity=".5"/><stop offset="${n(mid * 1000) / 1000}" class="m-t${t}" stop-opacity=".86"/><stop offset="${n((outer - .008) * 1000) / 1000}" stop-color="#fff" stop-opacity=".7"/>`;
+  }).reverse().join('');
+  // do pé (ângulo 0°, para dentro) até passar da borda (o alto, −100°)
+  const at = (rr, a) => [n(cx + Math.cos(rad(a)) * rr), n(cy + Math.sin(rad(a)) * rr)], [ox, oy] = at(R, -104), [ix, iy] = at(r[4], -104);
+  return `<defs><radialGradient id="scn-${uid}-bands${k}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${R}">${stops}<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>`
+    + `<path fill="url(#scn-${uid}-bands${k})" d="M${n(cx + R)} ${cy}A${R} ${R} 0 0 0 ${ox} ${oy}L${ix} ${iy}A${r[4]} ${r[4]} 0 0 1 ${n(cx + r[4])} ${cy}Z"/>`;
 };
+// o brilho que corre pelas faixas, do pé até a borda: um <span> do tamanho do círculo do meio das faixas, que o CSS gira (transform) em
+// volta do centro do arco; o brilho, uma estrelinha numa luz macia da largura das quatro faixas, começa no pé. Na direita o desenho é espelhado, então o centro e o giro também.
+const glint = (uid, side, w, h, cx, cy, R) => {
+  const x = side === 'r' ? w - cx : cx, size = 2 * R, foot = side === 'r' ? 0 : size;
+  return `<span class="scenery-glint" style="left:${n((x - R) / w * 100)}%;top:${n((cy - R) / h * 100)}%;width:${n(size / w * 100)}%;height:${n(size / h * 100)}%;--turn:${side === 'r' ? 1 : -1}"><svg viewBox="0 0 ${size} ${size}" focusable="false"><ellipse cx="${foot}" cy="${R}" rx="18" ry="14" ${F(uid, 'g')}/>${sparkle(foot, R, .8, 1)}</svg></span>`;
+};
+const rainbow = uid => edge('r', 'mid', [0, -30, 1.2], [0, -4, .6], 136, 152, arc(uid, 'r', -12, 120, 108, 7) + `<path ${F(uid, 'c')} d="${cumulus(76, 120, 120, 30)}"/><path ${F(uid, 'c')} d="${cumulus(120, 126, 48, 13)}" opacity=".85"/>`, glint(uid, 'r', 136, 152, -12, 120, 94))
+  + edge('l', 'far', [0, 142, 1.1], [0, 148, .56], 124, 136, arc(uid, 'l', -10, 112, 90, 6) + `<path ${F(uid, 'c')} d="${cumulus(60, 122, 104, 26)}"/>`, glint(uid, 'l', 124, 136, -10, 112, 78))
+  + edge('l', 'mid', [-22, -30], [-22, 30, .6], 140, 46, `<path ${F(uid, 'c')} d="${cumulus(62, 46, 116, 24)}"/><path ${F(uid, 'c')} d="${cumulus(110, 46, 46, 12)}" opacity=".8"/>`)
+  + drift(uid, 'r', [60, 178], [8, 172, .8], 46, 11, {d: 20, dl: 3}) + drift(uid, 'l', [132, -22], [40, 76, .8], 40, 9, {d: 24, dl: 12, o: .9})
+  + spark('r', [136, 34], [82, 92], .8, {d: 6}) + spark('l', [40, 96], [46, 250], .7, {d: 5, dl: 2.5});
 
-// Jardim: margaridas de pétalas brancas dos dois lados da borboleta, as hastes nascendo de nuvens.
-const daisy = (uid, x, y, r, count, turn = 0, wide) => `<path ${F(uid, 's')} d="${petals(x, y, r, count, turn, wide)}"/><circle cx="${x}" cy="${y}" r="${n(r * .26)}" fill="url(#scn-${uid}-eye)"/>`;
-const flowers = uid => [glow(uid, -118, 66, 70, 84) + glow(uid, 122, 84, 70, 112)
-  + `<defs><radialGradient id="scn-${uid}-eye" cx=".38" cy=".34" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" class="m-t2" stop-opacity=".9"/></radialGradient>`
-  + `<linearGradient id="scn-${uid}-stem" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="270"><stop offset="0" stop-color="#fff" stop-opacity=".82"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient></defs>`
-  + `<g class="scn-l"><path d="M-112 52C-116 84 -120 110 -122 140M-148 108C-147 118 -147 128 -149 140M-76 98C-79 112 -81 126 -84 140" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>`
-  + `<path ${F(uid, 's')} d="${blade(-118, 116, -146, 92, 7, -4)}${blade(-120, 124, -94, 104, 6, -3)}"/>`
-  + daisy(uid, -112, 40, 32, 10, -8) + daisy(uid, -148, 100, 16, 9, 12) + `<path ${F(uid, 's')} d="M-76 98C-87 90 -88 70 -76 60C-64 70 -65 90 -76 98Z"/>`
-  + `<path ${F(uid, 'c')} d="${cumulus(-116, 148, 92, 22)}"/></g>`
-  // à direita, três margaridas numa haste alta: a do meio e a haste comprida (.scn-rm) saem no celular, onde ficam as setas
-  + `<g class="scn-rm"><path d="M120 40C126 104 132 172 128 266M150 138C154 186 152 224 158 266" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>`
-  + `<path ${F(uid, 's')} d="${blade(131, 180, 100, 160, 8, -4)}${blade(153, 216, 176, 196, 6, -3)}"/>${daisy(uid, 150, 126, 19, 10, 20)}</g>`
-  + `<g class="scn-r"><path d="M120 40C121 56 122 70 123 86" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/><path ${F(uid, 's')} d="${blade(122, 74, 152, 58, 7, -4)}"/>${daisy(uid, 120, 28, 30, 13, 6, .26)}</g>`
-  + `<g class="scn-rb"><path d="M122 214C120 232 118 248 116 266" fill="none" stroke="url(#scn-${uid}-stem)" stroke-width="2.6" stroke-linecap="round"/>${daisy(uid, 122, 206, 14, 9, -8)}`
-  + `<path ${F(uid, 'c')} d="${cumulus(138, 272, 100, 26)}"/></g>`
-  + sparkle(-162, 60, .5, .8) + sparkle(84, 150, .45, .7),
-  drift(uid, -60, -16, 46, 10, {c: [-112, 2], d: 20, dl: 5}) + drift(uid, 62, 4, 38, 9, {c: [86, 6], d: 23, dl: 14, o: .85})
-  + spark(-60, 14, .6, {c: [-60, 26], d: 5.5}) + spark(162, -8, .7, {c: [150, 70], d: 6.5, dl: 3})];
+// Jardim: margaridas de pétalas e miolos brancos ("não quero coisa colorida"), as hastes no fio das bordas, por fora das setas.
+const daisy = (uid, x, y, r, count, turn = 0, wide) => `<path ${F(uid, 's')} d="${petals(x, y, r, count, turn, wide)}"/><circle cx="${x}" cy="${y}" r="${n(r * .27)}" ${F(uid, 'e')}/>`;
+const flowers = uid => edge('r', 'mid', [-6, -26], [-6, 14, .7], 150, 340,
+  `<path d="M10 340C8 268 6 196 9 150C12 112 34 86 58 68M9 296C14 268 44 248 78 236M9 168C16 140 30 118 40 106" fill="none" stroke="url(#scn-${uid}-f)" stroke-width="3" stroke-linecap="round"/>`
+  + `<path ${F(uid, 's')} d="${blade(10, 252, 44, 232, 9, -5)}M42 106C33 100 33 87 42 78C51 87 51 100 42 106Z"/>` + daisy(uid, 62, 58, 36, 12, 6, .3) + daisy(uid, 84, 230, 20, 10, -8))
+  + edge('l', 'mid', [-8, -22], [-8, 22, .62], 130, 308,
+    `<path d="M12 308C10 236 8 162 10 110C11 92 14 80 18 72M11 294C24 276 60 260 90 252" fill="none" stroke="url(#scn-${uid}-f)" stroke-width="3" stroke-linecap="round"/>`
+    + `<path ${F(uid, 's')} d="${blade(11, 270, 44, 284, 8, 4)}"/>` + daisy(uid, 20, 42, 32, 11, -8) + daisy(uid, 96, 246, 20, 10, 12))
+  + drift(uid, 'r', [40, -30], [10, 196, .8], 46, 10, {d: 20, dl: 5}) + drift(uid, 'l', [96, -24], [26, 76, .8], 40, 9, {d: 23, dl: 14, o: .85})
+  + spark('r', [118, 96], [64, 90], .6, {d: 5.5}) + spark('l', [40, 80], [8, 238], .55, {d: 6.5, dl: 3});
 
-// Pré-história: a pegada de três dedos do T-rex, macia como nuvem (contorno arredondado, as almofadas dos dedos em bolhas mais claras e
-// as garras em ponta), outra menor mais adiante (o rastro), e samambaias à esquerda.
+// Pré-história: as pegadas de três dedos do T-rex subindo pela borda direita, macias como nuvem e um pouco sombreadas para o lado da
+// borda da página (o dono gostou das garras: "talvez se ficasse um pouco sombreado nas bordas"), cada vez menores (o rastro some ao
+// longe); à esquerda, uma samambaia entrando pela borda.
 // o contorno (calcanhar embaixo, na origem; dedos para cima, ~130 unidades de altura): calcanhar, dedo de fora, do meio e o outro
 // (08/10/2026: a de antes, com os dedos finos e muito abertos, lia como pegada de pássaro): dedos grossos e mais juntos, que afinam
 // até a garra em ponta, e a sola larga do pé de um terópode
@@ -216,31 +242,30 @@ const PRINT = [[0, 53], [-18, 49], [-33, 38], [-40, 20], [-42, 4], [-50, -18], [
   [-28, -14], [-19, -14], [-16, -36], [-14, -60], [-9, -80], [0, -98], [9, -80], [14, -60], [16, -36], [19, -14], [28, -14], [36, -24], [44, -40], [52, -58],
   [63, -74], [61, -60], [56, -40], [50, -18], [42, 4], [40, 20], [33, 38], [18, 49]];
 const PADS = [[0, 20, 15], [0, -34, 9], [0, -62, 7], [-40, -14, 8], [-50, -40, 6.5], [40, -14, 8], [50, -40, 6.5]];
-const footprint = (uid, x, y, s, turn, kind) => `<g class="${kind}" transform="translate(${x} ${y}) rotate(${turn}) scale(${s})"><path ${F(uid, 's')} d="${smooth(PRINT)}"/><path fill="#fff" opacity=".42" d="${PADS.map(([px, py, r]) => dot(px, py, r)).join('')}"/></g>`;
-const tracks = uid => [glow(uid, 116, 100, 76, 100)
-  + `<g class="scn-r">${footprint(uid, 110, 126, .64, 16, 'scn-big')}${footprint(uid, 136, 18, .4, 8, 'scn-small')}</g>`
-  + `<g class="scn-l">${glow(uid, -116, 80, 60, 72)}<g ${F(uid, 'f')}><path transform="translate(-98 132) rotate(-14) scale(1.06)" d="${fernPath()}"/><path transform="translate(-134 134) rotate(-38) scale(.84)" d="${fernPath()}"/><path transform="translate(-74 134) rotate(12) scale(.62)" d="${fernPath()}"/></g>`
-  + `<path ${F(uid, 'c')} d="${cumulus(-104, 148, 98, 24)}"/></g>`
-  + sparkle(-160, 70, .6, .8),
-  drift(uid, -148, 6, 52, 12, {c: [-100, 4], d: 21, dl: 7}) + drift(uid, 78, -16, 40, 9, {c: [92, 2], d: 25, dl: 15, o: .85})
-  + spark(62, 20, .7, {d: 5.5}) + spark(166, -4, .55, {c: [150, 74], d: 7, dl: 2})];
+const print = (uid, turn) => `<g transform="translate(66 104) rotate(${turn})"><path ${F(uid, 'p')} d="${smooth(PRINT)}"/><path fill="#fff" opacity=".4" d="${PADS.map(([px, py, r]) => dot(px, py, r)).join('')}"/></g>`;
+const tracks = uid => edge('r', 'mid', [16, 166, .62], [-6, 150, .44], 132, 160, print(uid, 10))
+  + edge('r', 'mid', [30, 4, .44], [14, 18, .34], 132, 160, print(uid, 16))
+  + edge('r', 'far', [104, -26, .3], [60, -4, .24], 132, 160, print(uid, 20))
+  + edge('l', 'mid', [-16, -44], [-14, -30, .7], 104, 160, `<path ${F(uid, 'f')} transform="translate(6 156) rotate(20) scale(-1.7 1.7)" d="${fernPath()}"/>`)
+  + drift(uid, 'r', [58, 96], [40, 80, .8], 46, 10, {d: 21, dl: 7}) + drift(uid, 'l', [120, -22], [4, 200, .8], 40, 9, {d: 25, dl: 15, o: .85})
+  + spark('r', [124, 116], [70, -2], .55, {d: 5.5}) + spark('l', [36, 74], [44, 246], .6, {d: 7, dl: 2});
 
-// Céu: cúmulos em camadas e o rastro pontilhado de um voo que dá uma volta no alto, à direita.
-const sky = uid => [glow(uid, 120, 40, 90, 70)
-  + `<defs><linearGradient id="scn-${uid}-trail" gradientUnits="userSpaceOnUse" x1="-170" y1="0" x2="176" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity=".95"/></linearGradient></defs>`
-  + `<path class="m-trail" stroke="url(#scn-${uid}-trail)" d="M-172 92C-120 40 -40 6 40 -4C96 -12 146 6 144 34C142 60 104 52 110 26C116 2 150 -8 182 -10"/>`
-  + `<g class="scn-l"><path ${F(uid, 'c')} d="${cumulus(-120, 244, 150, 62, [180, 202, 232, 268, 302, 334, 356, 360])}"/><path ${F(uid, 'c')} d="${cumulus(-158, 252, 80, 30)}" opacity=".85"/><path class="scn-a" ${F(uid, 'c')} d="${cumulus(-128, 120, 62, 14)}" opacity=".8"/></g>`
-  + `<g class="scn-r"><path ${F(uid, 'c')} d="${cumulus(136, 170, 120, 40, [180, 204, 238, 276, 312, 342, 360])}"/><path ${F(uid, 'c')} d="${cumulus(168, 178, 64, 18)}" opacity=".85"/><path ${F(uid, 'c')} d="${cumulus(118, 262, 110, 34)}" opacity=".9"/></g>`
-,
-  drift(uid, -140, 14, 58, 13, {c: [-104, 8], d: 22, dl: 4}) + drift(uid, -40, -18, 40, 9, {c: [-80, 64], d: 27, dl: 13, o: .8}) + drift(uid, 150, 118, 44, 10, {c: [70, 96], d: 19, dl: 9, o: .9})
-  + spark(-62, 30, .6, {d: 5.5}) + spark(84, 70, .55, {d: 6.5, dl: 2.5})];
+// Céu: o rastro pontilhado de um voo que entra pela borda direita, dá uma volta no alto e sai de novo pela borda, cúmulos presos nas
+// duas bordas e as nuvenzinhas.
+const sky = uid => edge('r', 'mid', [0, -28], [0, -4, .6], 176, 128,
+  `<defs><linearGradient id="scn-${uid}-trail" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="176" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity=".95"/></linearGradient></defs>`
+  + `<path class="m-trail" stroke="url(#scn-${uid}-trail)" d="M0 112C46 108 104 96 134 66C158 42 150 10 124 10C98 10 94 44 120 52C146 60 158 28 140 10C120 -8 60 -2 0 10"/>`)
+  + edge('r', 'mid', [-26, 166], [-26, 158, .58], 156, 60, `<path ${F(uid, 'c')} d="${cumulus(76, 60, 140, 40, [180, 204, 238, 276, 312, 342, 360])}"/><path ${F(uid, 'c')} d="${cumulus(132, 60, 52, 16)}" opacity=".85"/>`)
+  + edge('l', 'mid', [-24, -33], [-24, 26, .58], 150, 50, `<path ${F(uid, 'c')} d="${cumulus(70, 50, 136, 34, [180, 202, 232, 268, 302, 334, 356, 360])}"/><path ${F(uid, 'c')} d="${cumulus(126, 50, 48, 13)}" opacity=".8"/>`)
+  + drift(uid, 'l', [150, -16], [30, 72, .8], 58, 13, {d: 22, dl: 4}) + drift(uid, 'r', [150, -26], [8, 196, .8], 40, 9, {d: 27, dl: 13, o: .8}) + drift(uid, 'r', [70, 236], [4, 216, .7], 44, 10, {d: 19, dl: 9, o: .9})
+  + spark('l', [40, 84], [44, 236], .6, {d: 5.5}) + spark('r', [140, 96], [86, 92], .55, {d: 6.5, dl: 2.5});
 
 const MOTIFS = {bananas, rainbow, acacia, flowers, tracks, sky};
 
 // O fundo de uma camada: `look` = {side, motif} (SHOWCASE › scenery); `uid` torna únicos os ids dos degradês da camada.
 export function scenery({side = 'petals', motif = null} = {}, uid = 0) {
-  const draw = MOTIFS[motif], [art, drifts] = draw ? draw(uid) : ['', ''];
-  const back = draw ? `<div class="scenery-back"><svg class="scenery-motif" viewBox="${VIEW}" focusable="false">${defs(uid)}${art}</svg>${drifts}</div>` : '';
+  const draw = MOTIFS[motif];
+  const back = draw ? `<div class="scenery-back"><svg class="scenery-defs" focusable="false">${defs(uid)}</svg>${draw(uid)}</div>` : '';
   return `<div class="hero-scenery scenery-${SIDES[side] ? side : 'petals'}" data-motif="${draw ? motif : ''}" aria-hidden="true">${mists(side, uid)}${back}</div>`;
 }
 export const MOTIF_NAMES = Object.freeze(Object.keys(MOTIFS));

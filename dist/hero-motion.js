@@ -83,6 +83,16 @@ export const SCENERY_PARALLAX = .12, SCENERY_EDGE = .05;
 export function sceneryShift(distance, travel, {reduced = false, depth = SCENERY_PARALLAX} = {}) {
   return reduced ? 0 : pose(distance).x * travel * depth + 0;   // + 0: nunca -0
 }
+// A rolagem da página (08/10/2026: "algo mais fluido, que conecte com o rolar da página"; carousel.css › scn-scroll, com os mesmos
+// números, e carousel.js onde o navegador não liga animação à rolagem): da página no topo (progress 0) até a vitrine inteira ter saído
+// da tela (1), cada parte do fundo anda, em linha reta, até y (fração da altura da vitrine; negativo sobe) e até x para fora, pelo
+// seu lado (side: −1 a esquerda, 1 a direita), e esmaece até fade. near = os cantos (sobem mais depressa e esmaecem); mid = as
+// silhuetas das bordas (ficam um pouco para trás e se abrem); far = o que está longe (mais para trás ainda). Parado no movimento reduzido.
+export const SCENERY_SCROLL = Object.freeze({near: Object.freeze({y: -.1, x: 0, fade: .3}), mid: Object.freeze({y: .06, x: .035, fade: .55}), far: Object.freeze({y: .14, x: .02, fade: .5})});
+export function sceneryScroll(progress, {depth = 'mid', side = 0} = {}, height = 0, {reduced = false} = {}) {
+  const p = reduced ? 0 : clamp(progress, 0, 1), d = SCENERY_SCROLL[depth] || SCENERY_SCROLL.mid;
+  return {x: side * d.x * height * p + 0, y: d.y * height * p + 0, opacity: 1 + (d.fade - 1) * p};   // + 0: nunca -0
+}
 // As cores do desenho de uma peça, como variáveis CSS da camada, todas opacas: --scn-tN (a cor N clareada), --scn-hN (o lado da
 // luz, mais branco) e --scn-sN (o lado da sombra e os detalhes). Com menos de quatro cores, a última se repete; sem cores, o tom do meio.
 export function sceneryVars(theme, {tints = []} = {}) {
