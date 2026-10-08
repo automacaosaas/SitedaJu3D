@@ -62,11 +62,12 @@ não substituem uma revisão jurídica. Pontos que pedem decisão:
   as compras, sem exceção para peças feitas sob encomenda. Criar uma exceção é uma decisão jurídica.
 - **Natureza das peças.** Os Termos não dizem se as peças são acessórios decorativos ou equipamentos; se houver
   exigência regulatória ou orientação de uso junto aos instrumentos, ela deve entrar em "Os produtos".
-- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; confirmar com a Hostinger o prazo dos
-  registros do servidor e, se preciso, guardar os registros no banco por esse prazo.
+- **Registros de acesso por 6 meses** (Marco Civil, art. 15): a política promete; os registros ficam no servidor próprio
+  da loja (o nginx e o journal do site), que precisa guardá-los por esse prazo. O padrão do Debian guarda bem menos.
 - **Prazos de reembolso** citados para cartão (até duas faturas) e a forma de devolução do Pix, conforme o Mercado Pago.
-- **Parceiros citados** (Mercado Pago, Correios/Melhor Envio, Resend, Hostinger, emissor de nota fiscal): manter a lista
-  igual aos serviços realmente usados.
+- **Parceiros citados** (Mercado Pago, Correios, ViaCEP/BrasilAPI, Resend, Bling, Backblaze, Google/Apple): manter a
+  lista igual aos serviços realmente usados. O site e o banco ficam no servidor próprio da loja, no Brasil; as cópias
+  diárias do banco vão criptografadas para o Backblaze B2 (EUA), por isso ele aparece também em "Dados fora do Brasil".
 - **Canal de privacidade:** como microempresa, a loja está dispensada de nomear encarregado (Resolução CD/ANPD nº 2/2022),
   mas o e-mail indicado precisa ser lido e respondido em até 15 dias.
 
