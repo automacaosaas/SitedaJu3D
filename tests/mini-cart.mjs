@@ -49,6 +49,17 @@ const {translate} = await site('i18n-core.js');
   assert.match(all, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?815,00<\/dd>/);
   assert.doesNotMatch(all, /free-ship/, 'no bar without free shipping');
   assert.doesNotMatch(miniCartBody({cart: normalizeCart(putItem([], 'aviaoscopia', {}, '<img src=x onerror=alert(1)>')), itemId: null}), /onerror=alert/, 'a thumbnail that is not an image never reaches the page');
+  // "Monte seu kit" (07/10/2026): several lines at once — each one confirmed, the header says the kit went in, the totals with the kit price
+  const kit = normalizeCart(['macacoscopio', 'girafoscopio', 'unicornioscopio'].map(productId => ({productId, selection: {}})));
+  const kitHtml = miniCartBody({cart: kit, itemIds: kit.map(i => i.id), original: true, freeShipping: null});
+  assert.match(kitHtml, /Kit adicionado ao carrinho/);
+  assert.deepEqual([...kitHtml.matchAll(/<article class="mini-cart-item">[^]*?<h3>([^<]+)<\/h3>/g)].map(m => m[1]), ['MonkeyLamp', 'GiraffeLamp', 'UnicornLamp'], 'every lamp of the kit is confirmed');
+  assert.equal((kitHtml.match(/<p>1 × R\$\s?70,00/g) || []).length, 3, 'each one at the kit price');
+  assert.match(kitHtml, /<dt>3 peças no carrinho<\/dt><dd>R\$\s?210,00<\/dd>/); assert.match(kitHtml, /<dt>No Pix<\/dt><dd>R\$\s?199,50<\/dd>/);
+  assert.deepEqual([...kitHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia'], 'the pieces just added are not suggested again');
+  const two = normalizeCart([{productId: 'girafoscopio', selection: {}}, {productId: 'unicornioscopio', selection: {}}]);
+  assert.equal([...miniCartBody({cart: two, itemIds: two.map(i => i.id), original: true}).matchAll(/data-kit-add="([a-z]+)"/g)][0][1], 'macacoscopio', 'a 2-lamp kit suggests the third lamp first');
+  assert.match(miniCartBody({cart: kit, itemIds: [kit[1].id], original: true}), /Adicionado nas cores originais/, 'one line: the usual header');
 }
 
 // ── wiring: both "add" buttons open it ────────────────────────────────
@@ -57,6 +68,7 @@ const {translate} = await site('i18n-core.js');
   assert.match(bridge, /openMiniCart\(\{itemId: addedItemId\(cart, product, selection\)\}\);/, 'product page: the drawer instead of the cart page');
   assert.match(bridge, /await goToCart\(\{replace:true, saved:true\}\);/, 'editing from the cart still goes back to the cart');
   assert.match(cards, /openMiniCart\(\{itemId: addedItemId\(cart, id, defaults\(id\)\), original: true\}\)/, 'card quick add');
+  assert.match(read('dist/mini-cart.js'), /export function openMiniCart\(\{itemId = null, itemIds = null, original = false, riseFrom: from = null\} = \{\}\) \{[^]*?riseFrom = from \?\? \(item \? totals\(cart, 0\)\.subtotal - item\.unitPrice : null\);/, 'a kit passes its lines and the subtotal before them (the free-shipping bar rises from there)');
   for (const page of ['dist/index.html', 'dist/produtos.html']) assert.match(read(page), /<link rel="stylesheet" href="mini-cart\.css">/, `${page}: drawer styles`);
   const css = read('dist/mini-cart.css');
   assert.match(css, /@media \(max-width: 600px\) \{\n  \.mini-cart \{ inset: auto 0 0 0;/, 'a sheet from the bottom on a phone');

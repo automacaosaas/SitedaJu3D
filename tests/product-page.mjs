@@ -46,4 +46,38 @@ assert(css.includes('#product-dialog[data-mode=preview] :is(.pdp-colors, .pdp-pr
 // área da peça menor: as cores ficam sempre à vista e a peça fica com o que sobra da tela.
 assert(css.includes('#product-dialog .viewer-tools { top: 50%; bottom: auto; right: 14px; left: auto;') && /@media \(max-width: 600px\) \{[\s\S]*#product-dialog \.viewer-tools \{ top: 12px; right: 12px; left: auto; transform: none; flex-direction: row;/.test(css), 'a barra do 3D à direita');
 assert(/@media \(max-width: 600px\) \{[\s\S]*#product-dialog\[open\] \{ grid-template-rows: auto minmax\(190px, 1fr\) minmax\(0, auto\) auto;/.test(css), 'no celular, as cores à vista e a peça com o resto da tela');
+
+// 07/10/2026: a barra de compra recolhida (celular) mostra o preço no Pix logo abaixo do preço, na mesma linha de 48 px; girar o aparelho
+// de volta à largura de celular abaixa a compra de novo.
+assert(css.includes('#product-dialog .modal-actions.is-compact .pdp-price p { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; gap: 1px; }'), 'recolhida: o Pix embaixo do preço');
+assert(css.includes('#product-dialog .modal-actions.is-compact :is(.pdp-price > small, .purchase-free-ship) { display: none; }') && !/is-compact :is\([^)]*\.pdp-pix/.test(css), 'o Pix não some mais na barra recolhida');
+assert(/#product-dialog \.modal-actions\.is-compact \.pdp-pix \{ padding: 1px 8px; font-size: 12px; line-height: 1\.35;/.test(css) && /#product-dialog \.modal-actions\.is-compact \.pdp-price strong \{ font-size: 22px; line-height: 1\.1;/.test(css), 'preço (24 px) + Pix (20 px) cabem nos 48 px');
+assert((await read('purchase-sheet.js')).includes("phone.addEventListener('change', start);"), 'girar para a largura de celular recolhe de novo');
+
+// As cores da janela são as da peça aberta (a vitrine não anda mais quando a peça abre por um card) e o foco volta a quem abriu.
+assert(js.includes("for(const [name,value] of Object.entries(journeyColors(showcase(key).theme)))dialog.style.setProperty(name,value);"), 'a janela veste a própria peça');
+assert(js.includes('opener=focused&&focused!==document.body?focused:trigger&&performance.now()-trigger.at<1500?trigger.link:null;') && js.includes('restoreFocus();') && !js.includes('document.querySelector(`[data-product="${activeProduct}"]`)?.focus'), 'ao fechar, o foco volta a quem abriu (não à vitrine)');
+assert(js.includes('.product-rail-card.is-active[data-product-id="${activeProduct}"] .product-customize, .slot[data-front="true"][data-product="${activeProduct}"]'), 'sem quem abriu: o botão do card ou a peça da frente da vitrine');
+
+// O "Novidade" do unicórnio em arco-íris: um dado na peça (nada de nome de peça no código), degradê nas letras, volta de 6 s sem emenda,
+// parado com movimento reduzido, a cor do sistema em alto contraste — e cada cor do degradê legível sobre o topo da janela.
+{
+  const {PRODUCTS, showcase} = await import(new URL('../dist/products.js', import.meta.url));
+  const {journeyColors, mixColor} = await import(new URL('../dist/hero-motion.js', import.meta.url));
+  assert.deepEqual(Object.keys(PRODUCTS).filter(key => PRODUCTS[key].eyebrowEffect), ['unicornioscopio'], 'só o unicórnio');
+  assert.equal(PRODUCTS.unicornioscopio.eyebrowEffect, 'rainbow');
+  assert(js.includes("eyebrow.classList.toggle('is-rainbow',p.eyebrowEffect==='rainbow');") && !/unicornioscopio|UnicornLamp/.test(js), 'a classe vem do dado');
+  const rule = css.match(/#product-dialog \.pdp-heading \.eyebrow\.is-rainbow \{[^}]*\}/)[0];
+  assert(/background-size: 200% 100%;/.test(rule) && /-webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;/.test(rule) && /animation: pdp-rainbow 6s linear infinite;/.test(rule) && /width: fit-content;/.test(rule));
+  assert(css.includes('@keyframes pdp-rainbow { from { background-position: 0% 0; } to { background-position: 200% 0; } }'), 'anda exatamente um ladrilho: sem emenda');
+  assert(css.includes('@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; } }') && css.includes('@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; -webkit-text-fill-color: currentColor; } }'));
+  const stops = rule.match(/linear-gradient\(90deg, ([^)]*)\)/)[1].split(', ');
+  assert.equal(stops[0], stops.at(-1), 'o fim do degradê é o começo');
+  const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); };
+  const header = mixColor(journeyColors(showcase('unicornioscopio').theme)['--theme-wash'], '#ffffff', .28);   // --pd-tint (o topo da janela)
+  let worst = Infinity;
+  for (let i = 0; i < stops.length - 1; i++) for (let t = 0; t <= 1; t += .05) worst = Math.min(worst, contrast(mixColor(stops[i], stops[i + 1], t), header));
+  assert(worst >= 4.5, `o arco-íris passa de 4,5:1 sobre o topo do unicórnio (${worst.toFixed(2)})`);
+}
 console.log('PASS: product page — one screen (no steps), price with Pix value, colors as an accessible radio group, presets, 3D on color change, info sheet with tabs and Esc order, no invented data, 44px targets, reduced motion, mobile bottom sheet.');

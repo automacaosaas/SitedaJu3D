@@ -181,6 +181,15 @@
 #product-dialog[data-fixed] :is(.pdp-colors, .pdp-preview) { display: none; }
 #product-dialog[data-fixed] .pdp-sheet .pdp-more { display: none; }
 #product-dialog[data-fixed] .pdp-fixed { display: grid; gap: 12px; }
+/* "Monte seu kit" (as lâmpadas, kit-builder.js; 07/10/2026): na área branca, logo depois de "Cores da peça", num cartão que nasce no
+   tom da peça e clareia até o branco. O kit usa as cores da janela (--pd-*); a base do kit fica em mini-cart.css. */
+.pdp-kit { display: none; }
+#product-dialog[data-fixed] .pdp-kit { display: grid; gap: 14px; padding: 18px 18px 16px; border: 1px solid var(--pd-line); border-radius: 22px; background: linear-gradient(180deg, var(--pd-tint) 0%, #fff 62%); box-shadow: 0 16px 34px -28px color-mix(in srgb, var(--pd-accent) 70%, transparent); }
+#product-dialog[data-cart-edit] .pdp-kit { display: none; }
+.pdp-kit .pdp-colors-head { flex-wrap: wrap; align-items: center; row-gap: 6px; }
+.pdp-kit .pdp-colors-head h3 { white-space: nowrap; }
+.pdp-kit-mix { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--pd-accent); white-space: nowrap; }
+#product-dialog .kit { --kit-accent: var(--pd-accent); --kit-strong: var(--pd-strong); --kit-ink: var(--pd-text); --kit-muted: var(--pd-muted); --kit-line: var(--pd-line); --kit-tint: color-mix(in srgb, var(--pd-wash) 62%, #fff); }
 .pdp-soon-bar strong { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pd-accent); }
 .pdp-soon-bar span { font-size: 13.5px; color: var(--pd-muted); }
 
@@ -253,6 +262,8 @@
   /* menos coisa na tela do celular: só as partes, as cores e a compra. As combinações prontas e o link das cores vão para a aba Cores
      do (i) do topo (controller.js) */
   #product-dialog .part-hint { display: none; }
+  /* o "Monte seu kit" com menos folga em volta: a largura fica para as linhas das peças */
+  #product-dialog[data-fixed] .pdp-kit { gap: 12px; padding: 14px 14px 12px; border-radius: 20px; }
   /* A compra, mais baixa (06/10/2026, "reduzir essa seção"): preço, Pix e "3x" numa linha só (o "3x" à direita, em duas linhas
      curtas), a oferta do 2.º avião logo embaixo e os botões com 44 px de altura (o mínimo para o dedo). */
   #product-dialog .modal-actions { gap: 8px; padding: 16px 16px max(10px, env(safe-area-inset-bottom)); }
@@ -304,13 +315,27 @@
 #product-dialog:not([data-mode=preview]) .modal-actions.is-compact :is(#purchase-panel, .purchase-actions) { display: contents; }
 #product-dialog .modal-actions.is-compact .purchase-status { grid-column: 1 / -1; grid-row: 1; margin: 0; }
 #product-dialog .modal-actions.is-compact .pdp-price { grid-column: 1; min-width: 0; }
-#product-dialog .modal-actions.is-compact .pdp-price p { flex-wrap: nowrap; }
-#product-dialog .modal-actions.is-compact .pdp-price strong { font-size: 22px; line-height: 1.15; white-space: nowrap; }
-#product-dialog .modal-actions.is-compact :is(.pdp-pix, .pdp-price > small, .purchase-free-ship) { display: none; }
+/* recolhida, o preço no Pix fica logo abaixo do preço (07/10/2026: "R$ 85,50 no Pix" também na barra abaixada), os dois na linha de
+   48 px; o "3x" e o frete grátis voltam quando a barra abre */
+#product-dialog .modal-actions.is-compact .pdp-price p { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; gap: 1px; }
+#product-dialog .modal-actions.is-compact .pdp-price strong { font-size: 22px; line-height: 1.1; white-space: nowrap; }
+#product-dialog .modal-actions.is-compact .pdp-pix { padding: 1px 8px; font-size: 12px; line-height: 1.35; white-space: nowrap; }
+#product-dialog .modal-actions.is-compact :is(.pdp-price > small, .purchase-free-ship) { display: none; }
 #product-dialog .modal-actions.is-compact .pdp-price .pdp-offer { display: none; }
 #product-dialog .modal-actions.is-compact .purchase-actions .primary { min-height: 48px; padding: 0 18px; border-radius: 14px; white-space: nowrap; }
 #product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart { width: 48px; padding: 0; }
 #product-dialog:not([data-cart-edit]) .modal-actions.is-compact #add-to-cart > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 #product-dialog[data-cart-edit] .modal-actions.is-compact #add-to-cart { grid-column: 2 / -1; }
 @media (max-width: 374px) { #product-dialog .modal-actions.is-compact #buy-now { padding: 0 10px; font-size: 13px; } }
+/* 320 px: com o preço do avião no Pix (e em espanhol ou inglês, mais longo), um pouco menos de folga para "Comprar agora" caber inteiro */
+@media (max-width: 374px) { #product-dialog .modal-actions.is-compact { column-gap: 6px; } #product-dialog .modal-actions.is-compact .pdp-pix { padding: 1px 6px; } }
 @media (prefers-reduced-motion: reduce) { #product-dialog .pdp-grip.is-calling i, #product-dialog .pdp-grip.is-calling::after { animation: none; } }
+
+/* O "Novidade" do unicórnio em arco-íris (07/10/2026, pedido da dona; products.js eyebrowEffect: 'rainbow', controller.js põe
+   .is-rainbow): o degradê preenche as letras e corre devagar, numa volta de 6 s sem emenda (o fim do degradê é o começo, e o desenho
+   anda exatamente um ladrilho). As cores são do arco-íris escurecidas: todas passam de 4,5:1 sobre o topo da janela (tests/product-page.mjs
+   confere). O texto só ocupa a própria largura, para o degradê caber nele. Movimento reduzido: parado. Alto contraste: a cor do sistema. */
+#product-dialog .pdp-heading .eyebrow.is-rainbow { width: fit-content; margin-inline: auto; color: #7e22ce; background-image: linear-gradient(90deg, #a51d14, #96400a, #7a5600, #196a32, #035d8f, #4338ca, #7e22ce, #a8144f, #a51d14); background-size: 200% 100%; background-repeat: repeat-x; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: pdp-rainbow 6s linear infinite; }
+@keyframes pdp-rainbow { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+@media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; } }
+@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; -webkit-text-fill-color: currentColor; } }

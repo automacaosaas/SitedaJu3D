@@ -83,3 +83,79 @@
 @keyframes free-ship-shine { to { transform: translateX(100%); } }
 @keyframes free-ship-pop { 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .free-ship.is-rising, .free-ship.is-rising .free-ship-track i::after, .free-ship.is-rising.is-reached strong { animation: none; } }
+
+/* ── "Monte seu kit" (kit-builder.js, 07/10/2026): os atalhos 1/2/3, uma linha por peça com − quantidade +, o total ao vivo e a compra.
+   Mora aqui porque este arquivo já vem nas duas páginas que o mostram (a home, na janela da peça, e a página de cada lâmpada), sem
+   mais um pedido. As cores vêm de quem o hospeda (--kit-accent, --kit-strong, --kit-ink, --kit-muted, --kit-line, --kit-tint:
+   product-page.css e product-landing.css); sem elas, as do site. ── */
+.kit { --kit-accent: var(--rose, #b64c68); --kit-strong: #9e3e59; --kit-ink: var(--ink, #282326); --kit-muted: var(--muted, #71656c); --kit-line: #ead9de; --kit-tint: #fdf3f5; --kit-ease: cubic-bezier(.22, 1, .36, 1); container-type: inline-size; display: grid; gap: 14px; min-width: 0; color: var(--kit-ink); }
+.kit-tiers { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.kit-tier { position: relative; display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 66px; padding: 8px 6px; border: 1px solid var(--kit-line); border-radius: 16px; background: #fff; color: var(--kit-ink); font: inherit; line-height: 1.2; text-align: center; cursor: pointer; transition: border-color .2s ease, background-color .2s ease, box-shadow .25s var(--kit-ease), transform .2s var(--kit-ease); }
+.kit-tier-n { font-size: 12px; font-weight: 600; color: var(--kit-muted); }
+.kit-tier-price { font-size: 15.5px; font-weight: 700; letter-spacing: -.2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kit-tier-each { font-size: 12px; color: var(--kit-muted); white-space: nowrap; }
+.kit-tier[aria-pressed=true] { border-color: var(--kit-accent); background: var(--kit-tint); box-shadow: inset 0 0 0 1px var(--kit-accent), 0 6px 16px -10px var(--kit-accent); }
+.kit-tier[aria-pressed=true] .kit-tier-price { color: var(--kit-accent); }
+.kit-rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.kit-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 0; }
+.kit-row + .kit-row { border-top: 1px solid var(--kit-line); }
+.kit-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: radial-gradient(circle at 50% 38%, #fff 0 45%, var(--kit-tint) 100%); box-shadow: inset 0 0 0 1px var(--kit-line); overflow: hidden; transition: opacity .25s ease; }
+.kit-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.kit-name { display: grid; gap: 5px; min-width: 0; }
+.kit-name strong { font-size: 14.5px; font-weight: 650; line-height: 1.2; overflow-wrap: break-word; }
+.kit-dots { display: flex; gap: 4px; }
+.kit-dots i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; }
+/* peça fora do kit (0): a miniatura e os pontinhos esmaecem; o nome fica no tom mais calmo, ainda legível (contraste AA) */
+.kit-row:not(.is-on) :is(.kit-art, .kit-dots) { opacity: .5; }
+.kit-row:not(.is-on) .kit-name strong { color: var(--kit-muted); font-weight: 600; }
+.kit-dots, .kit-name strong { transition: opacity .25s ease, color .25s ease; }
+.kit-stepper { display: inline-flex; align-items: center; gap: 2px; }
+.kit-step { position: relative; display: block; width: 44px; height: 44px; padding: 0; border: 1px solid var(--kit-line); border-radius: 50%; background: #fff; color: var(--kit-ink); cursor: pointer; transition: border-color .2s ease, background-color .2s ease, transform .15s ease-out; }
+.kit-step-mark, .kit-step-mark::after { position: absolute; left: 50%; top: 50%; width: 13px; height: 2px; margin: -1px 0 0 -6.5px; border-radius: 2px; background: currentColor; }
+.kit-step-mark::after { content: ''; left: 0; top: 0; margin: 0; transform: rotate(90deg); }
+.kit-step.is-minus .kit-step-mark::after { display: none; }
+.kit-step:active:not([aria-disabled=true]) { transform: scale(.92); }
+.kit-step[aria-disabled=true] { color: color-mix(in srgb, var(--kit-ink) 30%, #fff); border-color: color-mix(in srgb, var(--kit-line) 60%, #fff); cursor: default; }
+.kit-qty { min-width: 28px; font-size: 16px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.kit-sum { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--kit-line); }
+.kit-total, .kit-deal, .kit-cart-note { margin: 0; }
+.kit-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.kit-total-label { font-size: 13px; font-weight: 650; color: var(--kit-muted); }
+.kit-total-prices { display: inline-flex; align-items: baseline; gap: 8px; margin-left: auto; }
+.kit-total s { font-size: 13px; color: var(--kit-muted); font-variant-numeric: tabular-nums; }
+.kit-total strong { font-size: 22px; font-weight: 700; letter-spacing: -.4px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.kit-deal { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.kit-saving { font-size: 13px; font-weight: 700; color: var(--kit-accent); }
+.kit-pix { margin-left: auto; padding: 3px 10px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.kit-cart-note { font-size: 12.5px; color: var(--kit-muted); }
+.kit-cart-note strong { color: var(--kit-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kit-add { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 50px; padding: 0 18px; border: 1.5px solid var(--kit-accent); border-radius: 14px; background: var(--kit-accent); color: #fff; font: inherit; font-size: 14.5px; font-weight: 650; box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--kit-accent) 45%, transparent); cursor: pointer; transition: background-color .2s ease, border-color .2s ease, transform .2s var(--kit-ease), box-shadow .2s ease, opacity .2s ease; }
+.kit-add .icon { width: 19px; height: 19px; }
+.kit-add:active:not(:disabled) { transform: scale(.985); }
+.kit-add:disabled { opacity: .45; box-shadow: none; cursor: not-allowed; }
+.kit-status { margin: -4px 0 0; font-size: 13px; color: #a12f3c; }
+.kit-status:empty { display: none; }
+.kit :is(button):focus-visible { outline: 2px solid var(--kit-ink); outline-offset: 2px; }
+@media (hover: hover) {
+  .kit-tier:hover { border-color: color-mix(in srgb, var(--kit-accent) 55%, #fff); transform: translateY(-1px); }
+  .kit-step:hover:not([aria-disabled=true]) { border-color: var(--kit-accent); background: var(--kit-tint); }
+  .kit-add:hover:not(:disabled) { border-color: var(--kit-strong); background: var(--kit-strong); transform: translateY(-1px); }
+}
+/* celulares (o kit com até ~320 px de largura): miniatura, nome e passos mais juntos (os botões continuam com 44 px); nos mais
+   estreitos (até ~290 px, telas de 320 a 350 px) o "R$ 70,00 cada" sai das faixas, que ficam sem texto apertado (o total diz quanto se
+   economiza) */
+@container (max-width: 320px) {
+  .kit-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
+  .kit-art { width: 40px; height: 40px; border-radius: 12px; }
+  .kit-name strong { font-size: 13.5px; }
+  .kit-stepper { gap: 0; }
+  .kit-qty { min-width: 24px; }
+  .kit-tiers { gap: 6px; }
+  .kit-tier { min-height: 60px; padding: 7px 3px; border-radius: 14px; }
+  .kit-tier-price { font-size: 14.5px; }
+}
+@container (max-width: 290px) {
+  .kit-tier-each { display: none; }
+  .kit-tier { min-height: 52px; }
+}
+@media (prefers-reduced-motion: reduce) { .kit :is(.kit-tier, .kit-art, .kit-dots, .kit-name strong, .kit-step, .kit-add) { transition: none; } .kit-step:active:not([aria-disabled=true]), .kit-add:active:not(:disabled) { transform: none; } }

@@ -10,7 +10,9 @@ import {icon} from './icons.js';
 
 const region = document.querySelector('.showcase');
 const shell = region?.closest('.hero-shell');
-// A peça em foco na home é uma só: a vitrine e a coleção logo abaixo (catalog.js) se avisam por este evento e andam juntas.
+// A vitrine avisa a coleção logo abaixo (catalog.js) por este evento quando muda de peça, e os cards vêm junto. O contrário não vale
+// (07/10/2026, pedido da dona: "ao mudar essa sessão dos produtos, não mudar a vitrine"): mexer nos cards ou abrir uma peça por eles não
+// move a vitrine; só a demonstração (#produto/<peça>/encaixe) a traz até a peça.
 const FOCUS = 'ju:product-focus';
 if (region && shell) init();
 
@@ -19,9 +21,8 @@ function init() {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const easeOut = cubicBezier(...EASE);
   const status = region.querySelector('#gallery-status');
-  // Abaixo do banner só seguem o tema: título/apoio da seção, botões Personalize/carrinho dos cards,
-  // link do catálogo e rodapé. O restante dos cards não é tocado.
-  const themed = [shell, document.querySelector('.catalog-home'), document.querySelector('.home footer')].filter(Boolean);
+  // Abaixo do banner só o rodapé segue o tema da vitrine. A seção dos produtos tem o tema do card do centro (catalog.js).
+  const themed = [shell, document.querySelector('.home footer')].filter(Boolean);
   // O fundo de tema cobre a página inteira; --hero-h (altura do banner) fica na .page, ancestral comum.
   const page = shell.closest('.page'), bgHost = document.querySelector('[data-hero-bg]');
   const prevButton = region.querySelector('.hero-prev'), nextButton = region.querySelector('.hero-next');
@@ -261,9 +262,11 @@ function init() {
   }, {passive: false});
 
   // ── Rota, ciclo de vida ──────────────────────────────────────────────────────
+  // Um #produto/<peça> que chega depois (o "Ver e comprar" dos cards, um link) só abre a janela da peça por cima: a vitrine fica onde
+  // está. Só a demonstração (/encaixe) traz a vitrine até a peça. O endereço da chegada continua valendo (initial, fromHash).
   function fromRoute() {
-    const index = fromHash();
-    if (index >= 0 && index !== mod(Math.round(target), total)) { demo.close({immediate: true}); stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
+    const index = fromHash(), step = location.hash.replace('#produto/', '').split('/')[1];
+    if (step === 'encaixe' && index >= 0 && index !== mod(Math.round(target), total)) { demo.close({immediate: true}); stop(); position = target = index; setActive(index); preloadAround(index); render(); report(); }
     demoFromRoute();
   }
   // #produto/<peça>/encaixe ("Ver encaixado" nos cards da coleção e da página Produtos): a vitrine já está na peça; a página sobe
@@ -279,17 +282,6 @@ function init() {
     requestAnimationFrame(open);
   }
   addEventListener('hashchange', fromRoute);
-  // Escolher uma peça na coleção traz a vitrine (e as cores da página) até ela. Assim a peça guardada para a volta à home
-  // (logo, Início, carrinho) é a escolhida lá embaixo, e não a última vista aqui no alto.
-  addEventListener(FOCUS, e => {
-    const index = keys.indexOf(e.detail?.product);
-    if (e.detail?.source === 'showcase' || index < 0 || gesture || index === mod(Math.round(target), total)) return;
-    if (locked) demo.close({immediate: true});
-    // Sem anunciar (quem anuncia é a coleção) e guardando já: a vitrine pode estar fora da tela, ou a pessoa ir ao carrinho
-    // antes do fim do movimento.
-    settle(target + wrapDistance(index, target, total), {announce: false});
-    report({announce: false});
-  });
   addEventListener('resize', measure);
   if ('ResizeObserver' in window) new ResizeObserver(() => measure()).observe(shell);
   reduced.addEventListener('change', () => { stop(); position = target; render(); report(); });

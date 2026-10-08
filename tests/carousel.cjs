@@ -269,6 +269,21 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     assert.deepEqual(JSON.parse(tag[2].replace(/&quot;/g, '"')), motion.journeyColors(showcase(key).theme), key + '.html: as mesmas cores da vitrine');
   }
   assert.ok(js.includes("const FOCUS = 'ju:product-focus'") && read('catalog.js').includes("const FOCUS = 'ju:product-focus'"), 'vitrine e coleção falam pelo mesmo evento');
+  // 07/10/2026 (a dona: "ao mudar essa sessão dos produtos, não mudar a vitrine"): os cards não movem a vitrine, abrir uma peça por eles
+  // também não (só a demonstração, /encaixe), e a vitrine não pinta mais a seção dos produtos — ela veste o card do centro.
+  assert.ok(!/addEventListener\(FOCUS/.test(js), 'a vitrine não escuta mais a coleção');
+  assert.ok(js.includes("const themed = [shell, document.querySelector('.home footer')].filter(Boolean);") && !/themed = \[[^\]]*catalog-home/.test(js), 'a vitrine pinta o banner e o rodapé, não a seção dos produtos');
+  assert.ok(/function fromRoute\(\) \{\s*const index = fromHash\(\), step = location\.hash\.replace\('#produto\/', ''\)\.split\('\/'\)\[1\];\s*if \(step === 'encaixe' && index >= 0/.test(js), 'um #produto/<peça> depois da chegada só abre a janela; só /encaixe move a vitrine');
+  assert.ok(js.includes('const initial = Math.max(0, fromHash() >= 0 ? fromHash() : keys.indexOf(window.juTheme?.product()));'), 'o endereço da chegada continua escolhendo a peça da vitrine');
+  for (const name of ['text', 'muted', 'accent', 'accent-strong', 'soft', 'wash', 'glow']) assert.ok(css.includes(`@property --cat-${name} { syntax: '<color>'; inherits: true;`), `--cat-${name} registrada (desliza)`);
+  assert.ok(/\.home \.catalog-home\[data-themed\] \{ --theme-text: var\(--cat-text\); --theme-muted: var\(--cat-muted\); --theme-accent: var\(--cat-accent\);[^}]*--rose: var\(--cat-accent\);/.test(css), 'a seção lê as cores do card do centro (também as do site, para os cards dos lados)');
+  assert.ok(/\.home \.catalog-home\[data-themed="live"\] \{ transition: --cat-text \.6s ease,/.test(css) && css.includes('@media (prefers-reduced-motion: reduce) { .home .catalog-home[data-themed] { transition: none; } }'), 'troca suave de .6s; parada com movimento reduzido');
+  assert.ok(/paintTheme\(\) \{[^]*?journeyColors\(showcase\(this\.items\[this\.active\]\.id\)\.theme\)/.test(read('catalog.js')) && /this\.paintTheme\(\);\r?\n  \}/.test(read('catalog.js')), 'a cada movimento dos cards, as cores do card do centro');
+  // o título e o apoio da seção (cores do card do centro) continuam legíveis sobre o fundo da vitrine, qualquer que seja a peça de cada um
+  for (const shown of Object.keys(PRODUCTS)) for (const card of Object.keys(PRODUCTS)) {
+    const [, , edge] = stops(showcase(shown).theme.bannerStops), under = mixColor(edge, '#' + bg, Math.max(...veilAlpha)), theme = showcase(card).theme;
+    assert.ok(contrast(theme.accentColor, under) >= 4.5 && contrast(theme.mutedColor, under) >= 4.5 && contrast(theme.textColor, under) >= 7, `${card} sobre a vitrine ${shown}`);
+  }
   assert.ok(js.includes('window.juTheme?.save(key, colors)') && js.includes('if (key !== shared) { shared = key;'), 'a vitrine guarda a peça e só avisa a coleção quando ela muda');
   assert.ok(js.includes("addEventListener('pageshow', e => { if (e.persisted) report(); });"), 'voltar à home restaurada guarda de novo a peça à vista');
   assert.ok(/function settle\(next[^]*?if \(routed >= 0 && routed !== mod\(Math\.round\(target\), total\)\) history\.replaceState\(history\.state, '', location\.pathname \+ location\.search\);[^]*?setActive\(/.test(js), 'trocada a peça, o #produto/<peça> antigo sai do endereço já no início do movimento (Continuar escolhendo volta à peça certa)');

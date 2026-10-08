@@ -22,6 +22,15 @@ Um unicórnio para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da
 Novidade|New|Novedad
 Comprar|Buy|Comprar
 Ver e comprar|See and buy|Ver y comprar
+Monte seu kit|Build your kit|Arma tu kit
+pode misturar|mix and match|puedes combinar
+Kits prontos|Ready-made kits|Kits listos
+Total do kit|Kit total|Total del kit
+Com o que já está no carrinho:|With what is already in your cart:|Con lo que ya está en el carrito:
+Adicionar o kit ao carrinho|Add the kit to the cart|Añadir el kit al carrito
+Kit adicionado ao carrinho|Kit added to the cart|Kit añadido al carrito
+Escolha pelo menos uma peça.|Choose at least one piece.|Elige al menos una pieza.
+Não foi possível adicionar o kit. Tente novamente.|We could not add the kit. Please try again.|No se pudo añadir el kit. Inténtalo de nuevo.
 Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.|Turn the little head to the side: the horn moves out of the lamp's way.|Gira la cabecita hacia un lado: el cuerno sale de delante de la lámpara.
 Cada peça é impressa depois do pedido, nas cores dela. A produção começa depois da confirmação do pagamento.|Each piece is printed after the order, in its own colors. Production starts once payment is confirmed.|Cada pieza se imprime después del pedido, en sus propios colores. La producción empieza cuando se confirma el pago.
 GiraffeLamp encaixado na lâmpada de fenda.|GiraffeLamp fitted on the slit lamp.|GiraffeLamp encajado en la lámpara de hendidura.

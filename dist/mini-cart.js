@@ -3,6 +3,7 @@
 // same category (in their original colors; they stay after being added, with how many are in the cart on the button), and
 // two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a computer, sheet from the bottom on a
 // phone; it slides away when closed. A <dialog>, so it sits above everything, traps focus and closes with Esc.
+// "Monte seu kit" (kit-builder.js) opens it for several pieces added at once: each one is confirmed (itemIds).
 import {PRODUCTS, color, defaults, artSmall, itemColors} from './products.js';
 import {COMMERCE, money, kitOf} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, pixDiscount, priceSegments, signature} from './cart-store.js';
@@ -16,25 +17,29 @@ const picture = item => item.thumbnail || `assets/${artSmall(PRODUCTS[item.produ
 
 // The drawer's content for a cart, without touching the page (tests render it in Node).
 // itemId: the piece just added; original: it went in with the original colors; freeShipping: {fromCents, label} or null.
-export function miniCartBody({cart, itemId, original = false, freeShipping = null}) {
-  const item = cart.find(i => i.id === itemId) || cart.at(-1);
+// itemIds: several lines added at once ("Monte seu kit", kit-builder.js): each one is confirmed, and the header says the kit went in.
+export function miniCartBody({cart, itemId, itemIds = null, original = false, freeShipping = null}) {
+  const several = itemIds?.length ? cart.filter(i => itemIds.includes(i.id)) : [];
+  const item = several[0] || cart.find(i => i.id === itemId) || cart.at(-1), shown = several.length ? several : item ? [item] : [];
   const units = cart.reduce((sum, i) => sum + i.quantity, 0), amount = totals(cart, 0);
   const pix = amount.subtotal - pixDiscount(cart);
   // the kit: other pieces of the same category as the one just added (oftalmologia today; sensoriais and others later)
   const category = item ? PRODUCTS[item.productId].category : null;
   // a lâmpada puxa as outras lâmpadas primeiro (o kit tem preço fechado: 2 por R$ 160, 3 por R$ 210)
-  const peers = item && kitOf(item.productId) ? COMMERCE.kits[kitOf(item.productId)].items.filter(id => id !== item.productId) : [];
-  const kit = [...peers, ...Object.keys(PRODUCTS).filter(id => id !== item?.productId && !peers.includes(id) && (!category || PRODUCTS[id].category === category))].slice(0, 3);
+  // (the pieces just added are not suggested again: a kit of the three lamps suggests the other pieces of the category)
+  const just = new Set(shown.map(i => i.productId));
+  const peers = item && kitOf(item.productId) ? COMMERCE.kits[kitOf(item.productId)].items.filter(id => !just.has(id)) : [];
+  const kit = [...peers, ...Object.keys(PRODUCTS).filter(id => !just.has(id) && !peers.includes(id) && (!category || PRODUCTS[id].category === category))].slice(0, 3);
   const inCart = id => cart.filter(i => signature(i.productId, i.selection) === signature(id, defaults(id))).reduce((sum, i) => sum + i.quantity, 0);
-  const added = item ? `<article class="mini-cart-item"><img src="${esc(picture(item))}" alt="" width="96" height="96"><div><h3>${esc(item.title)}</h3>`
-    + `<ul class="mini-cart-colors" aria-label="Cores de ${esc(item.title)}">${itemColors(item.productId, item.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`
-    + `<p>${priceSegments(cart).filter(s => s.item === item).map(s => `${s.quantity} × ${money(s.unitCents)}`).join(' + ')}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>` : '';
+  const added = shown.map(line => `<article class="mini-cart-item"><img src="${esc(picture(line))}" alt="" width="96" height="96"><div><h3>${esc(line.title)}</h3>`
+    + `<ul class="mini-cart-colors" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId, line.selection).map(c => `<li><i style="--chip:${c.hex}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`
+    + `<p>${priceSegments(cart).filter(s => s.item === line).map(s => `${s.quantity} × ${money(s.unitCents)}`).join(' + ')}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>`).join('');
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">Complete o kit</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];
     const count = inCart(id);
     return `<li><img src="assets/${esc(artSmall(product.catalogImage || product.image))}" alt="" width="56" height="56"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
   }).join('')}</ul></section>` : '';
-  return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span>${original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
+  return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span>${several.length > 1 ? 'Kit adicionado ao carrinho' : original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
     + `<button type="button" class="mini-cart-close" data-mini-close aria-label="Fechar o carrinho">×</button></header>`
     + `<div class="mini-cart-scroll">${added}`
     + `<dl class="mini-cart-total"><div><dt>${pieces(units)} no carrinho</dt><dd>${money(amount.subtotal)}</dd></div><div class="mini-cart-pix"><dt>No Pix</dt><dd>${money(pix)}</dd></div></dl>`
@@ -43,10 +48,10 @@ export function miniCartBody({cart, itemId, original = false, freeShipping = nul
 }
 // riseFrom: the subtotal before the piece just added, so the free-shipping bar rises from there (kept until the bar shows,
 // which can be a moment later, when the shipping rule arrives from the server).
-let dialog = null, freeShipping = null, configAsked = null, shownId = null, shownOriginal = false, riseFrom = null;
+let dialog = null, freeShipping = null, configAsked = null, shownId = null, shownIds = null, shownOriginal = false, riseFrom = null;
 function paint() {
   const body = dialog.querySelector('.mini-cart-body'), cart = readCart();
-  body.innerHTML = miniCartBody({cart, itemId: shownId, original: shownOriginal, freeShipping});
+  body.innerHTML = miniCartBody({cart, itemId: shownId, itemIds: shownIds, original: shownOriginal, freeShipping});
   if (riseFrom !== null && freeShipping?.fromCents && body.querySelector('.free-ship')) { riseBar(body, Math.min(1, Math.max(0, riseFrom) / freeShipping.fromCents)); riseFrom = null; }
 }
 function ensureDialog() {
@@ -95,11 +100,13 @@ function leave() {
 }
 
 // Opens the drawer for the piece just added. Safe to call again while open (it repaints).
-export function openMiniCart({itemId = null, original = false} = {}) {
+// itemIds: several lines just added (a kit); riseFrom: the subtotal before them, so the free-shipping bar rises from there (with
+// one piece it is worked out from that piece's price).
+export function openMiniCart({itemId = null, itemIds = null, original = false, riseFrom: from = null} = {}) {
   ensureDialog();
-  shownId = itemId; shownOriginal = original;
+  shownId = itemId; shownIds = itemIds?.length ? [...itemIds] : null; shownOriginal = original;
   const cart = readCart(), item = cart.find(i => i.id === itemId);
-  riseFrom = item ? totals(cart, 0).subtotal - item.unitPrice : null;
+  riseFrom = from ?? (item ? totals(cart, 0).subtotal - item.unitPrice : null);
   paint();
   dialog.classList.remove('is-closing');
   if (!dialog.open) dialog.showModal();

@@ -80,5 +80,7 @@ export function setupPurchaseSheet(dialog) {
     grip.classList.toggle('is-calling', compact && !reduce.matches);
   };
   new MutationObserver(start).observe(dialog, {attributes: true, attributeFilter: ['open']});
+  // girar o aparelho com a janela aberta: voltando à largura de celular, a compra abaixa de novo (e, mais larga, abre)
+  phone.addEventListener('change', start);
   paint(); start();          // a janela pode já estar aberta (o endereço da página abre a peça)
 }

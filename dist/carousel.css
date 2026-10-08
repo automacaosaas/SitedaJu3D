@@ -42,6 +42,24 @@
 .home .product-rail-card.is-active .product-rail-art { background: linear-gradient(to bottom, var(--theme-wash, #fff) 0%, #fff 82%); }
 .home .catalog-home .product-customize, .home .catalog-home .product-cart { background: var(--theme-accent, var(--rose)); box-shadow: 0 6px 15px var(--theme-glow, #b64c6824); }
 .home .catalog-home .product-customize:hover, .home .catalog-home .product-cart:hover { background: var(--theme-accent-strong, #9e3e59); box-shadow: 0 10px 18px var(--theme-glow, #b64c6833); }
+/* A seção dos produtos veste a peça do card do centro (07/10/2026, pedido da dona: mexer nos cards muda só os cards; catalog.js
+   paintTheme). As cores dela chegam em --cat-*, propriedades registradas que deslizam em .6s quando o card do centro muda, e tudo o que
+   lê --theme-* aqui dentro vai junto: título, apoio, pontinhos, botões dos cards e o tom dos cards dos lados. A vitrine não pinta mais
+   esta seção (só o rodapé). Na primeira pintura, sem deslizar (data-themed="still"); sem JavaScript, as cores da página. */
+@property --cat-text { syntax: '<color>'; inherits: true; initial-value: #282326; }
+@property --cat-muted { syntax: '<color>'; inherits: true; initial-value: #7b7076; }
+@property --cat-accent { syntax: '<color>'; inherits: true; initial-value: #b64c68; }
+@property --cat-accent-strong { syntax: '<color>'; inherits: true; initial-value: #9e3e59; }
+@property --cat-soft { syntax: '<color>'; inherits: true; initial-value: #eadde1; }
+@property --cat-wash { syntax: '<color>'; inherits: true; initial-value: #f4e4e7; }
+@property --cat-glow { syntax: '<color>'; inherits: true; initial-value: #b64c6824; }
+.home .catalog-home[data-themed] { --theme-text: var(--cat-text); --theme-muted: var(--cat-muted); --theme-accent: var(--cat-accent); --theme-accent-strong: var(--cat-accent-strong); --theme-soft: var(--cat-soft); --theme-wash: var(--cat-wash); --theme-glow: var(--cat-glow);
+  /* as cores do site que o journey.css amarra ao tema da página (a vitrine) também passam a ser as da seção: os cards dos lados e as setas */
+  --ink: var(--cat-text); --muted: var(--cat-muted); --rose: var(--cat-accent); --pink: var(--cat-soft); --line: color-mix(in srgb, var(--cat-accent) 18%, transparent); }
+/* atrás do card do centro, um halo bem leve no tom da peça dele: a seção acompanha o card sem mexer no fundo da vitrine */
+.home .catalog-home[data-themed] .product-carousel-stage::before { content: ''; position: absolute; left: 50%; top: 46%; z-index: 0; width: min(920px, 120%); height: 118%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--cat-wash) 92%, transparent) 0%, color-mix(in srgb, var(--cat-wash) 45%, transparent) 55%, transparent 100%); transform: translate(-50%, -50%); pointer-events: none; }
+.home .catalog-home[data-themed="live"] { transition: --cat-text .6s ease, --cat-muted .6s ease, --cat-accent .6s ease, --cat-accent-strong .6s ease, --cat-soft .6s ease, --cat-wash .6s ease, --cat-glow .6s ease; }
+@media (prefers-reduced-motion: reduce) { .home .catalog-home[data-themed] { transition: none; } }
 /* Desktop: cards um pouco menores para o carrossel caber inteiro na tela. */
 @media (min-width: 901px) {
   .home .product-carousel-stage { height: 526px; }

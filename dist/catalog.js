@@ -5,6 +5,7 @@ import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
 import {imageReady} from './loading-ui.js';
+import {journeyColors, withAlpha} from './hero-motion.js';
 
 // As novidades (SOON, products.js) entram no fim da coleção: foto, nome, selo "Em breve" e "Ver encaixado", sem preço nem carrinho.
 const entries = [...Object.entries(PRODUCTS), ...Object.entries(SOON)].map(([id, product]) => ({id, product}));
@@ -48,7 +49,9 @@ function productCard({id, product}) {
 }
 function emptyState(key) { const meta = category(key); return `<div class="catalog-empty"><p class="eyebrow">EM BREVE</p><h3>${meta.emptyMessage || 'Esta coleção está sendo preparada.'}</h3><p>Ela vai ganhar forma com o mesmo cuidado e imaginação da coleção atual.</p></div>`; }
 
-// A peça em foco na home é uma só: a coleção e a vitrine do topo (carousel.js) se avisam por este evento e andam juntas.
+// A vitrine do topo (carousel.js) avisa por este evento quando muda de peça, e a coleção vai junto. O contrário não (07/10/2026, pedido
+// da dona: "ao mudar essa sessão dos produtos, não mudar a vitrine; mudar apenas o visual dos cards, conforme cada produto vai
+// passando"): mexer aqui muda só a seção, que veste as cores do card do centro (paintTheme, carousel.css .catalog-home[data-themed]).
 // A coleção começa onde a vitrine começa: na peça do endereço (#produto/<peça>) ou na última vista (journey.js), não na primeira.
 const FOCUS = 'ju:product-focus';
 function startAt(items) {
@@ -125,19 +128,32 @@ class ProductCarousel {
     this.stage.addEventListener('pointerleave', event => { if (!this.gesture?.moved) end(event); });
   }
   move(direction) { this.goTo((this.active + direction + this.items.length) % this.items.length); }
-  goTo(index) { if (index === this.active) return; this.active = index; this.render(true); dispatchEvent(new CustomEvent(FOCUS, {detail: {product: this.items[index].id, source: 'collection'}})); }
-  // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine) e sem avisar de volta.
+  // Só a coleção anda (a vitrine fica onde está).
+  goTo(index) { if (index === this.active) return; this.active = index; this.render(true); }
+  // A vitrine mudou de peça: a coleção vai junto, sem anunciar (quem anuncia é a vitrine).
   follow(id) { const index = this.items.findIndex(item => item.id === id); if (index < 0 || index === this.active) return; this.active = index; this.render(false); }
   render(announce) {
     this.cards.forEach((card, index) => { const position = offsetFrom(index, this.active, this.items.length); card.style.setProperty('--slot', position); card.classList.toggle('is-active', position === 0); card.classList.toggle('is-side', Math.abs(position) === 1); card.classList.toggle('is-far', Math.abs(position) > 1); card.tabIndex = position === 0 ? 0 : -1; card.querySelector('.product-rail-active-details').setAttribute('aria-hidden', String(position !== 0)); });
     [...this.dots.children].forEach((dot, index) => dot.setAttribute('aria-selected', String(index === this.active)));
     if (announce) this.live.textContent = `${this.items[this.active].product.title}, ${this.active + 1} de ${this.items.length}.`;
+    this.paintTheme();
+  }
+  // A seção da home (.catalog-home) veste as cores da peça do card do centro: título, apoio, pontinhos, botões e o tom dos cards dos
+  // lados. As cores (--cat-*) são propriedades registradas em carousel.css: deslizam em .6s quando o card do centro muda.
+  paintTheme() {
+    const section = this.host.closest?.('.catalog-home');
+    if (!section) return;
+    const colors = journeyColors(showcase(this.items[this.active].id).theme), accent = colors['--theme-accent'];
+    const vars = {'--cat-text': colors['--theme-text'], '--cat-muted': colors['--theme-muted'], '--cat-accent': accent, '--cat-accent-strong': colors['--theme-accent-strong'], '--cat-soft': colors['--theme-soft'], '--cat-wash': colors['--theme-wash'], '--cat-glow': withAlpha(accent, .32)};
+    for (const name in vars) section.style.setProperty(name, vars[name]);
+    // a primeira pintura entra parada; dali em diante, as cores deslizam
+    if (!section.dataset.themed) { section.dataset.themed = 'still'; requestAnimationFrame(() => requestAnimationFrame(() => { section.dataset.themed = 'live'; })); }
   }
 }
 const rails = new Map();   // uma coleção por host; trocar de categoria troca a do host
 function mountCarousel(host, key = host.dataset.category) { const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); rails.delete(host); return; } rails.set(host, new ProductCarousel(host, list)); }
 for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
-window.addEventListener(FOCUS, event => { if (event.detail?.source !== 'collection') for (const rail of rails.values()) rail.follow(event.detail?.product); });
+window.addEventListener(FOCUS, event => { if (event.detail?.source === 'showcase') for (const rail of rails.values()) rail.follow(event.detail?.product); });
 // Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
 // Aberta por um banner da página Escolha o seu (produtos.html?encaixe=<família>): só as peças daquele encaixe, com um selo
 // para voltar a ver todas e o caminho para os outros encaixes. Trocar de categoria volta à página inteira.

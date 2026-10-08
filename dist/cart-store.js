@@ -47,6 +47,14 @@ export function putItem(items, productId, selection, thumbnail = null, editId = 
     unitPrice: COMMERCE.prices[productId], createdAt: old?.createdAt || new Date().toISOString()});
   return normalizeCart(remaining);
 }
+// Várias peças de uma vez ("Monte seu kit", kit-builder.js): [{productId, selection, quantity}] entra no carrinho numa escrita só; a
+// mesma peça nas mesmas cores soma na linha que já existe (normalizeCart junta e limita a 99).
+export function putItems(items, list) {
+  const extra = (Array.isArray(list) ? list : []).filter(x => x && Object.hasOwn(PRODUCTS, x.productId) && Number(x.quantity) >= 1)
+    .map(x => ({productId: x.productId, selection: validSelection(x.productId, x.selection || {}), quantity: Math.min(99, Math.floor(Number(x.quantity)))}));
+  if (!extra.length) throw new Error('Escolha pelo menos uma peça.');
+  return normalizeCart([...normalizeCart(items), ...extra]);
+}
 // shippingCents: the delivery to add (the fixed example fee unless the checkout passes the real one, from the Correios quote).
 // What paying with Pix saves: the discount is taken per unit, exactly as the server does it.
 // The same amounts paid with Pix (the demonstration uses it): the pieces with the Pix discount, the delivery unchanged.
