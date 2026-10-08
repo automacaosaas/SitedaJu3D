@@ -75,8 +75,8 @@
    (WCAG 2.4.11: "Adicionar nas cores originais" e o carrinho dos cards de Produtos sumiam inteiros atrás dele). 98 px + folga. */
 html { scroll-padding-top:108px; }
 /* "Pular para o conteúdo" (site-shell.js): acima da tela até receber o foco; o alvo (vitrine ou <main>) não ganha contorno */
-.skip-link { position:fixed; top:8px; left:8px; z-index:1000; display:inline-flex; align-items:center; min-height:44px; padding:10px 18px; border-radius:999px; background:var(--ink); color:#fff; font-size:14px; font-weight:600; box-shadow:0 8px 22px #2823263d; translate:0 calc(-100% - 16px); }
-.skip-link:focus { translate:0 0; outline:2px solid #fff; outline-offset:-5px; }
+.skip-link { position:fixed; top:8px; left:8px; z-index:1000; display:inline-flex; align-items:center; min-height:44px; padding:10px 18px; border-radius:999px; background:var(--ink); color:#fff; font-size:14px; font-weight:600; translate:0 calc(-100% - 16px); }
+.skip-link:focus { translate:0 0; outline:2px solid #fff; outline-offset:-5px; box-shadow:0 8px 22px #2823263d; }
 [data-skip-target]:focus { outline:none; }
 .header.site-header.is-floating .brand { min-height:0; }
 .header.site-header.is-floating .brand img { width:58px; height:58px; }
