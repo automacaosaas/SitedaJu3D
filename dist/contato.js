@@ -3,6 +3,10 @@
 // /api/contact/send, which saves it for Mensagens in Ju's panel and e-mails her a notice) and a link straight to one question.
 import {CONTACT} from './company.js';
 import {translate, getLanguage} from './i18n.js';
+import {icon} from './icons.js';
+
+// the line icons of the help topics and of the "sent" message (the same set as the rest of the shop, not emojis)
+for (const el of document.querySelectorAll('[data-icon]')) el.innerHTML = icon(el.dataset.icon);
 
 // ── WhatsApp: a ready greeting in the visitor's language; without a number the card says it is coming ──
 const number = /^\d{12,13}$/.test(CONTACT.whatsapp) ? CONTACT.whatsapp : '';
@@ -41,29 +45,43 @@ function phoneOk(value) {
 }
 const firstProblem = data => data.name.trim().length < 2 ? 'name' : !EMAIL.test(data.email.trim()) ? 'email' : !phoneOk(data.phone) ? 'phone' : !data.subject ? 'subject' : data.message.trim().length < 10 ? 'message' : null;
 
+// A problem with one field shows right under that field and is tied to it (aria-describedby: read again on returning to it);
+// one that is not about a field (the sending failed) stays above the button.
+const submit = form.querySelector('.contact-submit');
+function clearError() {
+  error.hidden = true;
+  for (const el of form.querySelectorAll('[aria-invalid]')) {
+    el.removeAttribute('aria-invalid');
+    const own = el.dataset.describedby;
+    if (own) el.setAttribute('aria-describedby', own); else el.removeAttribute('aria-describedby');
+  }
+}
 function showError(text, field) {
+  clearError();
+  const input = field && form.elements[field];
+  if (input) {
+    input.closest('.contact-field').after(error);
+    input.dataset.describedby ??= input.getAttribute('aria-describedby') || '';
+    input.setAttribute('aria-describedby', [input.dataset.describedby, error.id].filter(Boolean).join(' '));
+    input.setAttribute('aria-invalid', 'true');
+  } else submit.before(error);
   error.textContent = translate(text);
   error.hidden = false;
-  form.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
-  if (field) { form.elements[field].setAttribute('aria-invalid', 'true'); form.elements[field].focus(); }
+  input?.focus();
 }
-form.addEventListener('input', event => {
-  if (!event.target.hasAttribute('aria-invalid')) return;
-  event.target.removeAttribute('aria-invalid');
-  error.hidden = true;
-});
+form.addEventListener('input', event => { if (event.target.hasAttribute('aria-invalid')) clearError(); });
 form.addEventListener('submit', async event => {
   event.preventDefault();
   const values = Object.fromEntries(new FormData(form));
   const data = {name: values.name || '', email: values.email || '', phone: values.phone || '', subject: values.subject || '', message: values.message || '', website: values.website || '', lang: getLanguage()};
   const problem = firstProblem(data);
   if (problem) return showError(MESSAGES[problem], problem);
-  const button = form.querySelector('.contact-submit'), label = button.firstElementChild, idle = label.textContent;
+  const button = submit, label = button.firstElementChild, idle = label.textContent;
   button.disabled = true; label.textContent = translate('Enviando…');
   try {
     const response = await fetch('/api/contact/send', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
     const answer = await response.json().catch(() => ({}));
-    if (response.ok) { form.reset(); error.hidden = true; form.hidden = true; sent.hidden = false; sent.focus(); return; }
+    if (response.ok) { form.reset(); clearError(); form.hidden = true; sent.hidden = false; sent.focus(); return; }
     if (answer.error === 'invalid_request' && MESSAGES[answer.field]) return showError(MESSAGES[answer.field], answer.field);
     showError(answer.error === 'too_many_requests' ? 'Muitas mensagens seguidas. Tente de novo daqui a pouco.' : CONTACT.email ? `${translate('Não foi possível enviar agora. Tente de novo em alguns minutos ou escreva para')} ${CONTACT.email}.` : 'Não foi possível enviar agora. Tente de novo em alguns minutos.');
   } catch {

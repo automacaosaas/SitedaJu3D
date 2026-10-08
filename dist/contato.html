@@ -75,10 +75,10 @@
           <h2>Precisa de ajuda?</h2>
           <p class="contact-help-intro">Os assuntos que mais aparecem por aqui:</p>
           <ul class="contact-topics">
-            <li><span aria-hidden="true">📦</span><span>Dúvida sobre produto</span></li>
-            <li><span aria-hidden="true">🚚</span><span>Meu pedido / Rastreio</span></li>
-            <li><span aria-hidden="true">🎨</span><span>Personalização de peças</span></li>
-            <li><span aria-hidden="true">⏰</span><span>Prazos de produção e entrega</span></li>
+            <li><span class="contact-topic-icon" data-icon="cube" aria-hidden="true"></span><span>Dúvida sobre produto</span></li>
+            <li><span class="contact-topic-icon" data-icon="truck" aria-hidden="true"></span><span>Meu pedido / Rastreio</span></li>
+            <li><span class="contact-topic-icon" data-icon="palette" aria-hidden="true"></span><span>Personalização de peças</span></li>
+            <li><span class="contact-topic-icon" data-icon="clock" aria-hidden="true"></span><span>Prazos de produção e entrega</span></li>
           </ul>
           <div class="contact-hours">
             <strong>Horário de atendimento</strong>
@@ -101,12 +101,12 @@
             </select></label>
             <label class="contact-field"><span>Mensagem</span><textarea name="message" rows="5" minlength="10" maxlength="2000" required placeholder="Conte como podemos ajudar. Se for sobre um pedido, informe o número (JU-…)."></textarea></label>
             <div class="contact-trap" aria-hidden="true"><label>Não preencha este campo<input name="website" tabindex="-1" autocomplete="off"></label></div>
-            <p class="contact-error" role="alert" hidden></p>
+            <p class="contact-error" id="contact-error" role="alert" hidden></p>
             <button type="submit" class="primary contact-submit"><span>Enviar mensagem</span><span aria-hidden="true">→</span></button>
             <p class="contact-privacy"><span>Usamos seus dados só para responder à sua mensagem.</span> <a href="privacidade.html">Política de Privacidade</a></p>
           </form>
           <div class="contact-sent" role="status" tabindex="-1" hidden>
-            <span class="contact-sent-icon" aria-hidden="true">💌</span>
+            <span class="contact-sent-icon" data-icon="check" aria-hidden="true"></span>
             <h2>Mensagem enviada com sucesso!</h2>
             <p>Responderemos em breve.</p>
             <button type="button" class="contact-again" data-contact-again>Enviar outra mensagem</button>

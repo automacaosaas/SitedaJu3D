@@ -127,7 +127,7 @@ function itemView(m) {
       <div class="inbox-text">${esc(m.message)}</div>
       <div class="inbox-actions">
         <a class="inbox-reply" href="${esc(mailto(m))}" data-inbox-reply="${id}">${icon('mail')}<span>Responder por e-mail</span></a>
-        ${m.whatsapp ? `<a class="inbox-reply is-whatsapp" href="${esc(whatsappLink(m))}" target="_blank" rel="noopener" data-inbox-reply="${id}">${icon('chat')}<span>Responder no WhatsApp</span></a>` : ''}
+        ${m.whatsapp ? `<a class="inbox-reply is-whatsapp" href="${esc(whatsappLink(m))}" target="_blank" rel="noopener" data-inbox-reply="${id}">${icon('chat')}<span>Responder no WhatsApp</span><span class="sr-only"> (abre em uma nova aba)</span></a>` : ''}
         ${m.orderRef ? `<button type="button" class="btn-reopen" data-inbox-order="${esc(m.orderRef)}">Ver pedido ${esc(m.orderRef)}</button>` : ''}
       </div>
       <div class="admin-secondary inbox-secondary">
@@ -176,12 +176,21 @@ async function quietly(action, id) {
   }
 }
 
+// The keyboard keeps its place: admin.js draws the part again after each action and sends the focus to the title, so once it
+// is done the focus goes on — to the same message if it stays in this list, to the next one (or the one before) if it left,
+// back to the button that was used (Atualizar, a filter) or to the first of the messages just brought in (Ver mais).
+const toggleOf = id => id && document.querySelector(`[data-inbox-toggle="${CSS.escape(id)}"]`);
+function after(done, target) { Promise.resolve(done).then(() => { const el = target(); if (el && !deps.busy()) el.focus(); }); }
+
 const DONE = {unread: 'Mensagem marcada como não lida.', archive: 'Mensagem arquivada.', unarchive: 'Mensagem de volta à caixa de entrada.', spam: 'Mensagem marcada como spam.', notspam: 'Mensagem de volta às Novas.', delete: 'Mensagem excluída.'};
 function change(action, id) {
   if (action === 'delete' && !confirm('Excluir esta mensagem de vez? Ela sai do painel e não pode ser recuperada. Use quando a pessoa pedir que os dados dela sejam apagados.')) return;
-  deps.run(action === 'delete' ? 'Excluindo a mensagem…' : 'Salvando…', async () => {
+  const ids = list.map(m => m.id), at = ids.indexOf(id), neighbour = ids[at + 1] ?? ids[at - 1];
+  let focusId = null;
+  after(deps.run(action === 'delete' ? 'Excluindo a mensagem…' : 'Salvando…', async () => {
     try {
       const answer = await messageAction(action, id);
+      focusId = answer.message && stays(answer.message) ? id : neighbour;
       if (!answer.message || !stays(answer.message)) { list = list.filter(m => m.id !== id); if (openId === id) openId = null; }
       else replace(answer.message);
       listedUnread = action === 'unread' || action === 'notspam' || action === 'unarchive' ? answer.unread : Math.min(listedUnread, answer.unread);
@@ -192,7 +201,7 @@ function change(action, id) {
       if (failure.code === 'not_found') { await loadInbox().catch(() => {}); throw new Error('Essa mensagem já não existia. A lista foi atualizada.'); }
       throw new Error('Não foi possível salvar agora. Tente novamente.');
     }
-  });
+  }), () => toggleOf(focusId));
 }
 
 // ── clicks handed over by admin.js ─────────────────────────────────────
@@ -202,15 +211,17 @@ export function handleInboxClick(event) {
   if ((el = find('[data-inbox-view]'))) {
     if (el.dataset.inboxView === view) return true;
     view = el.dataset.inboxView; openId = null; nextCursor = null; list = null;
-    deps.run('Abrindo as mensagens…', async () => { try { await loadInbox(); } catch (failure) { if (failure.code === 'unauthorized') { deps.signedOut(); return; } throw failure; } });
+    after(deps.run('Abrindo as mensagens…', async () => { try { await loadInbox(); } catch (failure) { if (failure.code === 'unauthorized') { deps.signedOut(); return; } throw failure; } }),
+      () => document.querySelector(`[data-inbox-view="${view}"]`));
     return true;
   }
   if ((el = find('[data-inbox]'))) {
-    const more = el.dataset.inbox === 'more';
-    deps.run(more ? 'Carregando mais mensagens…' : 'Atualizando as mensagens…', async () => {
+    const more = el.dataset.inbox === 'more', head = Boolean(el.closest('.admin-dash-head')), before = list?.length || 0;
+    after(deps.run(more ? 'Carregando mais mensagens…' : 'Atualizando as mensagens…', async () => {
       try { if (more) await loadMore(); else { await loadInbox(); deps.announce('Mensagens atualizadas.'); } }
       catch (failure) { if (failure.code === 'unauthorized') { deps.signedOut(); return; } throw new Error('Não foi possível carregar as mensagens agora.'); }
-    });
+    }), () => more ? toggleOf(list?.[before]?.id) || document.querySelector('[data-inbox="more"]')
+      : head ? document.querySelector('.admin-dash-head [data-inbox="refresh"]') : toggleOf(list?.[0]?.id));
     return true;
   }
   if ((el = find('[data-inbox-toggle]'))) {

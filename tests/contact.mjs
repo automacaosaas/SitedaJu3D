@@ -127,6 +127,18 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert.match(page, /<a href="privacidade\.html">Política de Privacidade<\/a>/);
   assert.match(script, /fetch\('\/api\/contact\/send'/);
   assert.match(page, /<h2>Mensagem enviada com sucesso!<\/h2>\n\s*<p>Responderemos em breve\.<\/p>/);
+  // 08/10/2026 (usabilidade 9): a problem with a field shows right under it and is tied to it; the field's own hint stays
+  assert.match(page, /<p class="contact-error" id="contact-error" role="alert" hidden><\/p>/);
+  assert.match(script, /input\.closest\('\.contact-field'\)\.after\(error\);/); assert.match(script, /else submit\.before\(error\);/, 'a sending failure stays above the button');
+  assert.match(script, /input\.setAttribute\('aria-describedby', \[input\.dataset\.describedby, error\.id\]\.filter\(Boolean\)\.join\(' '\)\);/);
+  assert.match(script, /if \(own\) el\.setAttribute\('aria-describedby', own\); else el\.removeAttribute\('aria-describedby'\);/, 'fixed: back to the hint alone');
+  // (visual 15) line icons from icons.js instead of emojis, tints from the page's theme, and one grid for both rows
+  assert.doesNotMatch(page, /[\u{1F300}-\u{1FAFF}\u{23F0}]/u, 'no emoji on the page');
+  assert.deepEqual([...page.matchAll(/data-icon="([a-z]+)"/g)].map(m => m[1]), ['cube', 'truck', 'palette', 'clock', 'check']);
+  assert.match(script, /import \{icon\} from '\.\/icons\.js';/);
+  const look = read('dist/contact.css');
+  assert.doesNotMatch(look, /#fbeaf0|#fdeef2|#b64c68/i, 'no fixed pink that fights the theme');
+  assert.match(look, /\.contact-grid \{ display: grid; grid-template-columns: 1\.15fr 1fr 1fr; gap: 16px;/); assert.match(look, /\.contact-channels \{ display: grid; grid-template-columns: 1\.15fr 1fr 1fr; gap: 16px;/);
   // The questions: opening one by one, with the shop's real numbers.
   assert.equal((page.match(/<details class="faq-item"/g) || []).length, 7);
   const faq = page.slice(page.indexOf('class="contact-faq"'));
