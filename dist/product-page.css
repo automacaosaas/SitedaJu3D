@@ -331,14 +331,15 @@
 @media (max-width: 374px) { #product-dialog .modal-actions.is-compact { column-gap: 6px; } #product-dialog .modal-actions.is-compact .pdp-pix { padding: 1px 6px; } }
 @media (prefers-reduced-motion: reduce) { #product-dialog .pdp-grip.is-calling i, #product-dialog .pdp-grip.is-calling::after { animation: none; } }
 
-/* O "Novidade" do unicórnio, brilhando em arco-íris e em destaque (07/10/2026: "eu quero ela brilhando em arco-íris, com destaque nela";
-   products.js eyebrowEffect: 'rainbow', controller.js põe .is-rainbow): um selo com o arco-íris vivo que corre devagar (volta de 4 s sem
-   emenda: o fim do degradê é o começo e o desenho anda exatamente um ladrilho), um brilho branco que passa por ele (só transform) e um
-   halo lilás. O texto é escuro: legível sobre cada cor do degradê (tests/product-page.mjs confere 4,5:1 no pior ponto). Movimento
-   reduzido: o selo parado. Alto contraste: só o contorno e a cor do sistema. */
-#product-dialog .pdp-heading .eyebrow.is-rainbow { position: relative; isolation: isolate; overflow: hidden; width: fit-content; margin: 0 auto 6px; padding: 4px 11px 4px 13px; border-radius: 999px; color: #2a1236; background-image: linear-gradient(90deg, #ff9fcb, #ffc078, #ffe568, #9fe8a4, #8fd3ff, #b8a6ff, #ff9fcb); background-size: 200% 100%; background-repeat: repeat-x; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), 0 6px 18px -6px rgba(166, 92, 190, .65), 0 0 0 3px rgba(255, 255, 255, .45); animation: pdp-rainbow 4s linear infinite; }
-#product-dialog .pdp-heading .eyebrow.is-rainbow::after { content: ''; position: absolute; z-index: -1; top: -4px; bottom: -4px; left: 0; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .9) 50%, transparent); transform: translateX(-140%); animation: pdp-rainbow-shine 3.2s cubic-bezier(.45, 0, .3, 1) infinite; pointer-events: none; }
-@keyframes pdp-rainbow { from { background-position: 0% 0; } to { background-position: 200% 0; } }
+/* O "Novidade" do unicórnio, brilhando em arco-íris e em destaque (07/10/2026: "eu quero ela brilhando em arco-íris, com destaque nela…
+   com efeito das letras se passando de várias cores"; products.js eyebrowEffect: 'rainbow', controller.js põe .is-rainbow): um selo
+   escuro (berinjela) em que as próprias letras passam pelas cores do arco-íris vivo (o degradê, recortado nas letras, corre numa volta
+   de 4 s sem emenda: o fim é o começo e o desenho anda exatamente um ladrilho), um brilho branco que atravessa o selo (só transform) e
+   um halo lilás. Sobre o fundo escuro cada cor viva passa de 4,5:1 (tests/product-page.mjs confere). Movimento reduzido: parado.
+   Alto contraste: o texto e o contorno na cor do sistema. */
+#product-dialog .pdp-heading .eyebrow.is-rainbow { position: relative; isolation: isolate; overflow: hidden; width: fit-content; margin: 0 auto 6px; padding: 4px 11px 4px 13px; border-radius: 999px; background-color: #2a1236; background-image: linear-gradient(90deg, #ff8fc4, #ffb86b, #ffe36b, #8ff09a, #7fd2ff, #b9a4ff, #ff8fc4), linear-gradient(135deg, #2a1236, #3d1c50); background-size: 200% 100%, 100% 100%; background-repeat: repeat-x, no-repeat; -webkit-background-clip: text, padding-box; background-clip: text, padding-box; color: #ffe36b; -webkit-text-fill-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 0 0 2px rgba(255, 255, 255, .7), 0 6px 18px -5px rgba(166, 92, 190, .75); animation: pdp-rainbow 4s linear infinite; }
+#product-dialog .pdp-heading .eyebrow.is-rainbow::after { content: ''; position: absolute; z-index: -1; top: -4px; bottom: -4px; left: 0; width: 45%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .55) 50%, transparent); transform: translateX(-140%); animation: pdp-rainbow-shine 3.2s cubic-bezier(.45, 0, .3, 1) infinite; pointer-events: none; }
+@keyframes pdp-rainbow { from { background-position: 0% 0, 0 0; } to { background-position: 200% 0, 0 0; } }
 @keyframes pdp-rainbow-shine { 0%, 35% { transform: translateX(-140%); } 75%, 100% { transform: translateX(300%); } }
 @media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-rainbow { animation: none; } #product-dialog .pdp-heading .eyebrow.is-rainbow::after { animation: none; display: none; } }
-@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; box-shadow: none; border: 1px solid CanvasText; color: CanvasText; } }
+@media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-rainbow { background: none; box-shadow: none; border: 1px solid CanvasText; color: CanvasText; -webkit-text-fill-color: CanvasText; } }
