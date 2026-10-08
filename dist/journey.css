@@ -8,7 +8,7 @@ body:not(.home) .header:not(.site-header) .edition { display:none; }
 body:not(.home) .header:not(.site-header) .shop-nav { grid-column:3; justify-self:end; }
 .journey-pending body:not(.home) > .page,.journey-pending .auth-composition { opacity:0; }
 .journey-pending body:not(.home)::before { content:''; position:fixed; z-index:1000; left:50%; top:calc(50% - 65px); width:104px; height:104px; transform:translateX(-50%); border-radius:50%; background:url('assets/logo-ju.webp') center/contain no-repeat; mix-blend-mode:multiply; }
-.journey-pending body:not(.home)::after { content:'Preparando tudo com carinho…'; position:fixed; z-index:1000; top:calc(50% + 53px); left:0; right:0; text-align:center; font:13px/1.6 'DM Sans',sans-serif; color:var(--theme-muted); }
+.journey-pending body:not(.home)::after { content:'Preparando tudo com carinho…'; position:fixed; z-index:1000; top:calc(50% + 53px); left:0; right:0; text-align:center; font:13px/1.6 'DM Sans','DM Sans Fallback',sans-serif; color:var(--theme-muted); }
 .journey-ready body:not(.home) > .page > main,.journey-ready .auth-composition { animation:journey-arrive 220ms ease-out both; }
 @keyframes journey-arrive { from {opacity:0} to {opacity:1} }
 .primary,.account-page .account-submit { background:var(--theme-accent); border-color:var(--theme-accent); }
@@ -65,7 +65,7 @@ html { scrollbar-gutter:stable; }
   backdrop-filter:blur(8px) saturate(1.2);
   box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 6px 18px -10px color-mix(in srgb,var(--theme-accent) 40%,transparent);
   color:var(--theme-text);
-  font:650 12px/1 'DM Sans',sans-serif;
+  font:650 12px/1 'DM Sans','DM Sans Fallback',sans-serif;
   letter-spacing:.14em;
   text-transform:uppercase;
   text-decoration:none;

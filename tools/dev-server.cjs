@@ -212,7 +212,8 @@ async function main() {
         return res.end('Not found');
       }
       res.setHeader('Content-Type', TYPES[path.extname(file)] || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'no-store');
+      // The fonts never change under the same ?v= (dist/theme.css): cached like in production; everything else no-store.
+      res.setHeader('Cache-Control', file.endsWith('.woff2') ? 'public, max-age=31536000, immutable' : 'no-store');
       // With --fake-mp the checkout pages load the simulated Payment Brick instead of the real SDK.
       if (fake && /^(checkout|comprar-agora)/.test(path.basename(file)) && file.endsWith('.html')) return res.end(fs.readFileSync(file, 'utf8').replace('</head>', "<script src='/__fake-mp/sdk.js'></script></head>"));
       fs.createReadStream(file).pipe(res);

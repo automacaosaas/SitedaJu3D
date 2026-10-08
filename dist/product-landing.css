@@ -51,8 +51,8 @@
 .pl-views button[aria-pressed="true"] { background: var(--pl-accent); color: #fff; box-shadow: 0 4px 12px color-mix(in srgb, var(--pl-accent) 30%, transparent); }
 
 /* ── name, price, colors ── */
-.pl-badge { display: inline-flex; align-items: center; min-height: 26px; margin: 4px 0 0; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--pl-accent) 11%, #fff); font: 650 12px/1.2 'DM Sans', sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--pl-accent); }
-.pl-info h1 { margin: 14px 0 8px; font: 500 clamp(36px, 4.2vw, 56px)/1.05 'Playfair Display', Georgia, serif; letter-spacing: -.02em; color: var(--pl-ink); }
+.pl-badge { display: inline-flex; align-items: center; min-height: 26px; margin: 4px 0 0; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--pl-accent) 11%, #fff); font: 650 12px/1.2 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--pl-accent); }
+.pl-info h1 { margin: 14px 0 8px; font: 500 clamp(36px, 4.2vw, 56px)/1.05 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--pl-ink); }
 .pl-sub { margin: 0; font-size: 18px; color: var(--pl-muted); }
 .pl-price { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 22px 0 4px; }
 .pl-price strong { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--pl-ink); }
@@ -159,7 +159,7 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-acc[open]::details-content { block-size: auto; }
 }
 .pl-about { margin-top: 30px; }
-.pl-about h2 { margin: 0 0 10px; font: 500 24px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.01em; color: var(--pl-ink); }
+.pl-about h2 { margin: 0 0 10px; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.01em; color: var(--pl-ink); }
 .pl-desc { margin: 0; font-size: 16px; line-height: 1.65; }
 
 @media (hover: hover) {
@@ -178,7 +178,7 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
 .pl-kit { display: grid; gap: 14px; margin-top: 22px; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--pl-accent) 14%, #ece7e9); border-radius: 24px; background: linear-gradient(180deg, color-mix(in srgb, var(--pl-accent) 6%, #fff) 0%, #fff 62%); box-shadow: 0 18px 38px -30px color-mix(in srgb, var(--pl-accent) 70%, transparent); }
 .pl-kit[hidden] { display: none; }
 .pl-kit-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.pl-kit-head h2 { margin: 0; font: 500 24px/1.2 'Playfair Display', Georgia, serif; letter-spacing: -.01em; color: var(--pl-ink); }
+.pl-kit-head h2 { margin: 0; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.01em; color: var(--pl-ink); }
 .pl-kit-mix { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--pl-accent) 16%, #ece7e9); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--pl-accent); white-space: nowrap; }
 .pl .kit { --kit-accent: var(--pl-accent); --kit-strong: color-mix(in srgb, var(--pl-accent) 80%, #000); --kit-ink: var(--pl-ink); --kit-muted: var(--pl-muted); --kit-line: color-mix(in srgb, var(--pl-accent) 14%, #ece7e9); --kit-tint: color-mix(in srgb, var(--pl-accent) 7%, #fff); }
 @media (max-width: 860px) { .pl-kit { padding: 16px 14px 14px; border-radius: 22px; } .pl-kit-head h2 { font-size: 22px; } }

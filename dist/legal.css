@@ -4,7 +4,7 @@
 .legal-doc h1 { font-size: clamp(30px, 4vw, 44px); margin: 0; }
 .legal-updated { margin: 10px 0 24px; color: var(--muted); font-size: 13px; }
 .legal-intro { margin: 0 0 24px; }
-.legal-doc h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -.3px; margin: 36px 0 10px; scroll-margin-top: 24px; }
+.legal-doc h2 { font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -.3px; margin: 36px 0 10px; scroll-margin-top: 24px; }
 .legal-doc p { margin: 0 0 12px; }
 .legal-doc ul { margin: 0 0 12px; padding-left: 20px; }
 .legal-doc li { margin: 0 0 8px; }
@@ -30,6 +30,6 @@ html[lang="pt-BR"] .legal-language { display: none; }
 }
 /* Trocas: the right of withdrawal (7 days) highlighted at the top, before the details. */
 .legal-highlight { margin: 0 0 24px; padding: 20px 22px; border-radius: 18px; background: color-mix(in srgb, var(--rose) 11%, #fff); border: 1px solid color-mix(in srgb, var(--rose) 30%, transparent); }
-.legal-doc .legal-highlight-title { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: var(--rose); }
-.legal-highlight-title span { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--rose); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 700; }
+.legal-doc .legal-highlight-title { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-size: 20px; color: var(--rose); }
+.legal-highlight-title span { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--rose); color: #fff; font-family: 'DM Sans', 'DM Sans Fallback', sans-serif; font-size: 17px; font-weight: 700; }
 .legal-highlight a { font-weight: 650; font-size: 14px; }

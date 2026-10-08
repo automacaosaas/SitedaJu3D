@@ -65,7 +65,7 @@
 .demo-callout-halo { fill: rgba(255, 255, 255, .85); }
 .demo-callout-dot { fill: var(--theme-accent, #25664c); }
 .demo-callout-label { position: absolute; left: calc(50% + (var(--x) - .5) * var(--size)); top: calc(var(--cy) + (var(--y) - .5) * var(--size)); white-space: nowrap;
-  font: 600 clamp(10.5px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
+  font: 600 clamp(10.5px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
 .demo-callout[data-align="left"] .demo-callout-label { transform: translate(calc(-100% - 12px), -50%); }
 .demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
 .demo-callout[data-align="right"] .demo-callout-label { transform: translate(12px, -50%); }
@@ -80,7 +80,7 @@
 /* A dica do giro (o unicórnio) fica do lado oposto ao chifre e ao convite de compra: à esquerda da cabeça, o ícone virado para ela */
 .demo-hint { position: absolute; left: auto; right: calc(50% + var(--size) * .3); top: calc(var(--cy) - var(--size) * .3); z-index: 3; display: flex; flex-direction: row-reverse; align-items: center; gap: .6em; max-width: min(300px, 34cqw); margin: 0; text-align: right;
   padding: .75em .85em .75em 1.1em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, #10281e); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', sans-serif;
+  box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, #10281e); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', 'DM Sans Fallback', sans-serif;
   opacity: 0; transform: translateY(6px); transition: opacity .45s cubic-bezier(.22, 1, .36, 1), transform .45s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
 .demo-hint.is-shown { opacity: 1; transform: none; }
 .demo-hint[hidden] { display: none; }

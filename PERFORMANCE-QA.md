@@ -45,7 +45,7 @@ Primeira visita à home no computador: as imagens caem de cerca de 3,2 MB para c
 A CSP libera só o que o site usa:
 
 - scripts do próprio site, o import map pelo hash exato e `wasm-unsafe-eval` (o decodificador Meshopt usa WebAssembly);
-- estilos do site e do Google Fonts, com arquivos de fonte do `fonts.gstatic.com`;
+- estilos e fontes do próprio site (desde 07/10/2026 as fontes saem de `dist/assets/fonts/`, não do Google Fonts);
 - imagens do site, `data:` e `blob:` (miniaturas do carrinho e texturas 3D) e do site público, de onde vem o logo dos e-mails;
 - `frame-ancestors 'self'`: nenhum outro site pode exibir a loja dentro de uma moldura.
 
@@ -64,8 +64,10 @@ com um pagamento de teste, antes de publicar.
 
 **Ao mudar para a Hostinger**, os mesmos cabeçalhos vão para o servidor Node.
 
-**Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Com o cache novo, um visitante pode ver a versão
-anterior por até um dia.
+**Ao trocar uma imagem ou um modelo**, use um nome novo ou mude o `?v=`. Sem `?v=`, um visitante pode ver a versão
+anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes), o servidor Node manda
+`max-age=31536000, immutable` (07/10/2026): o navegador guarda por um ano sem perguntar de novo, então trocar o arquivo
+sem mudar o `?v=` deixa quem já visitou com o antigo.
 
 ## Testes
 

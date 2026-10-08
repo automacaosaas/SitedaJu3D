@@ -42,6 +42,12 @@ try {
   assert.equal(logo.headers['content-type'], 'image/webp');
   assert.match(logo.headers['cache-control'], /max-age=86400, stale-while-revalidate=604800/);
   assert.equal(logo.headers['content-encoding'], undefined, 'images are already compressed');
+  // With ?v= the address changes with the file: a year, never revalidated (2026-10-07). Pages never.
+  for (const path of ['/assets/logo-ju.webp?v=2', '/carousel.js?v=abc123', '/theme.css?x=1&v=9'])
+    assert.equal((await raw(path)).headers['cache-control'], 'public, max-age=31536000, immutable', `versioned: ${path}`);
+  assert.equal((await raw('/index.html?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
+  assert.equal((await raw('/carousel.js?view=1')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'only a real v= parameter');
+  assert.equal((await raw('/nao-existe.js?v=1')).headers['cache-control'], 'no-store', 'a missing file is never cached');
   const model = await raw('/assets/models/dinossauroscopio.glb?v=meshopt1', {headers: {'accept-encoding': 'br, gzip'}});
   assert.equal(model.status, 200);
   assert.equal(model.headers['content-type'], 'model/gltf-binary');

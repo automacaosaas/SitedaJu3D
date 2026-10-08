@@ -1,8 +1,8 @@
 /* The cookie notice (consent.js): a card at the bottom of the screen, in the colors of the site. It never covers the
    whole page, and "Recusar" weighs the same as "Aceitar todos". */
 .consent-notice { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: 16px; display: flex; justify-content: center; pointer-events: none; animation: consent-in .35s cubic-bezier(.22, 1, .36, 1) both; }
-.consent-card { pointer-events: auto; width: 100%; max-width: 560px; padding: 20px 22px 18px; background: var(--panel, #fffcfb); color: var(--ink, #282326); border: 1px solid var(--line, #65364924); border-radius: 20px; box-shadow: 0 22px 60px #4f22362b; font-family: 'DM Sans', sans-serif; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
-.consent-title { margin: 0 0 6px; font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 500; }
+.consent-card { pointer-events: auto; width: 100%; max-width: 560px; padding: 20px 22px 18px; background: var(--panel, #fffcfb); color: var(--ink, #282326); border: 1px solid var(--line, #65364924); border-radius: 20px; box-shadow: 0 22px 60px #4f22362b; font-family: 'DM Sans', 'DM Sans Fallback', sans-serif; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.consent-title { margin: 0 0 6px; font-family: 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; font-size: 20px; font-weight: 500; }
 .consent-text { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted, #7b7076); }
 .consent-text a { color: var(--rose, #b64c68); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .consent-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }

@@ -21,6 +21,8 @@ const TYPES = {
 // Text compresses well; Meshopt-compressed models still shrink by about a fifth.
 const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', '.glb']);
 const DEFAULT_CACHE = 'public, max-age=0, must-revalidate';   // same as Vercel: always revalidate, cheap 304 with the ETag
+const IMMUTABLE = 'public, max-age=31536000, immutable';
+const VERSIONED = /[?&]v=[^&]/;
 const COMPRESSED_CACHE_LIMIT = 64 * 1024 * 1024;
 
 // vercel.json `headers` → [{pattern, headers}]. Sources are plain "/prefix/(.*)" patterns (checked by tests/headers.mjs),
@@ -78,7 +80,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     return body;
   }
 
-  function serveStatic(req, res, pathname) {
+  function serveStatic(req, res, pathname, search = '') {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
     const found = resolveFile(pathname);
     if (!found) {
@@ -99,6 +101,9 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
     res.setHeader('ETag', etag);
     res.setHeader('Last-Modified', stat.mtime.toUTCString());
+    // A file asked for with ?v= (the fonts, the 3D models, the gallery views…) changes address whenever it changes: a year
+    // in the cache, never revalidated. Pages and the same files without ?v= keep the rules above.
+    if (ext !== '.html' && VERSIONED.test(search)) res.setHeader('Cache-Control', IMMUTABLE);
     if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', DEFAULT_CACHE);
     if (String(req.headers['if-none-match'] || '').split(/\s*,\s*/).includes(etag)) { res.statusCode = 304; return res.end(); }
 
@@ -117,8 +122,8 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   }
 
   return http.createServer(async (req, res) => {
-    let pathname;
-    try { pathname = new URL(req.url, 'http://localhost').pathname; } catch { res.statusCode = 400; return res.end(); }
+    let pathname, search;
+    try { ({pathname, search} = new URL(req.url, 'http://localhost')); } catch { res.statusCode = 400; return res.end(); }
     for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
     if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     try {
@@ -127,7 +132,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
         if (!handler) { res.statusCode = 404; res.setHeader('Content-Type', 'application/json; charset=utf-8'); return res.end('{"error":"not_found"}'); }
         return await handler(req, res);
       }
-      return serveStatic(req, res, pathname);
+      return serveStatic(req, res, pathname, search);
     } catch (error) {
       log.error(`${req.method} ${pathname}:`, error);
       if (!res.headersSent) { res.statusCode = 500; res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.end('{"error":"internal_error"}'); }
