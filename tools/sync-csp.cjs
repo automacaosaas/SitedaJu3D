@@ -19,10 +19,10 @@ for (const file of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWit
   let next;
   if (/<meta http-equiv="Content-Security-Policy" content="[^"]*">/.test(html)) next = html.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">/, tag);
   else {
-    // First thing inside <head>, before any script or stylesheet.
-    const head = html.match(/<head>\r?\n([ \t]*)/);
+    // First thing inside <head> after the <meta charset> (2026-10-07: the charset opens every page), before any script or stylesheet.
+    const head = html.match(/<head>\r?\n([ \t]*)(?:<meta charset="utf-8">\r?\n\1)?/);
     if (!head) throw new Error(`${file}: <head> não encontrado`);
-    next = html.replace(head[0], `<head>${eol}${head[1]}${tag}${eol}${head[1]}`);
+    next = html.replace(head[0], `${head[0]}${tag}${eol}${head[1]}`);
   }
   if (next !== html) { fs.writeFileSync(p, next); changed++; console.log(`atualizado: ${file}`); }
 }

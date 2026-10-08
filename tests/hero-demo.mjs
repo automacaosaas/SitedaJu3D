@@ -62,7 +62,9 @@ assert.equal(translate('Retinoscópio', 'en'), 'Retinoscope');
 const demo = read('hero-demo.js'), timeline = read('motion-timeline.js'), carousel = read('carousel.js'), css = read('hero-demo.css');
 const html = read('index.html'), controller = read('controller.js');
 assert.ok(!/borboletosc|dinossaurosc|aviaosc|retinosc/i.test(demo + timeline), 'a experiência vem dos dados: nada específico de produto no código');
-assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css">'));
+// a folha da demonstração chega depois da primeira pintura (late-css.js; tests/pagespeed.mjs) e a abertura espera por ela
+assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>'));
+assert.ok(demo.includes("import {lateCss} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, lateCss]);'), 'a demonstração só aparece com o estilo dela');
 assert.ok(carousel.includes("import {createHeroDemo} from './hero-demo.js';"));
 assert.ok(/if \(locked \|\| !e\.isPrimary/.test(carousel) && /if \(locked \|\| gesture/.test(carousel) && /if \(!locked && \(e\.key === 'ArrowLeft'/.test(carousel), 'arraste, setas e teclado travados durante a demonstração');
 assert.ok(/performance\.now\(\) < suppressUntil[\s\S]{0,420}demo\.open\(index\)/.test(carousel), 'um arraste nunca abre a demonstração (o filtro de clique vem antes)');

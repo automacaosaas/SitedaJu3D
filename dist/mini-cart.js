@@ -10,6 +10,7 @@ import {readCart, writeCart, putItem, totals, pixDiscount, priceSegments, signat
 import {loadShippingConfig} from './shipping-client.js';
 import {freeShippingBar, riseBar} from './free-shipping.js';
 import {icon} from './icons.js';
+import {lateCssReady, whenStyled} from './late-css.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const pieces = n => `${n} ${n === 1 ? 'peça' : 'peças'}`;
@@ -103,6 +104,8 @@ function leave() {
 // itemIds: several lines just added (a kit); riseFrom: the subtotal before them, so the free-shipping bar rises from there (with
 // one piece it is worked out from that piece's price).
 export function openMiniCart({itemId = null, itemIds = null, original = false, riseFrom: from = null} = {}) {
+  // On the home its stylesheet arrives after the first paint (late-css.js): never open unstyled.
+  if (!lateCssReady()) return void whenStyled(() => openMiniCart({itemId, itemIds, original, riseFrom: from}));
   ensureDialog();
   shownId = itemId; shownIds = itemIds?.length ? [...itemIds] : null; shownOriginal = original;
   const cart = readCart(), item = cart.find(i => i.id === itemId);

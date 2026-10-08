@@ -69,7 +69,10 @@ const {translate} = await site('i18n-core.js');
   assert.match(bridge, /await goToCart\(\{replace:true, saved:true\}\);/, 'editing from the cart still goes back to the cart');
   assert.match(cards, /openMiniCart\(\{itemId: addedItemId\(cart, id, defaults\(id\)\), original: true\}\)/, 'card quick add');
   assert.match(read('dist/mini-cart.js'), /export function openMiniCart\(\{itemId = null, itemIds = null, original = false, riseFrom: from = null\} = \{\}\) \{[^]*?riseFrom = from \?\? \(item \? totals\(cart, 0\)\.subtotal - item\.unitPrice : null\);/, 'a kit passes its lines and the subtotal before them (the free-shipping bar rises from there)');
-  for (const page of ['dist/index.html', 'dist/produtos.html']) assert.match(read(page), /<link rel="stylesheet" href="mini-cart\.css">/, `${page}: drawer styles`);
+  assert.match(read('dist/produtos.html'), /<link rel="stylesheet" href="mini-cart\.css">/, 'produtos.html: drawer styles');
+  // the home loads them after its first paint (late-css.js) and the drawer waits for them
+  assert.match(read('dist/index.html'), /<link rel="stylesheet" href="mini-cart\.css" media="print" data-late-css><noscript><link rel="stylesheet" href="mini-cart\.css"><\/noscript>/, 'index.html: drawer styles, late');
+  assert.match(read('dist/mini-cart.js'), /if \(!lateCssReady\(\)\) return void whenStyled\(\(\) => openMiniCart\(\{itemId, itemIds, original, riseFrom: from\}\)\);\n  ensureDialog\(\);/, 'never opens unstyled');
   const css = read('dist/mini-cart.css');
   assert.match(css, /@media \(max-width: 600px\) \{\n  \.mini-cart \{ inset: auto 0 0 0;/, 'a sheet from the bottom on a phone');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.mini-cart\[open\], \.mini-cart\.is-closing,/);
