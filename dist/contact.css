@@ -4,7 +4,7 @@
 .contact-main { flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: clamp(34px, 6vw, 76px) 0 clamp(48px, 7vw, 96px); }
 .contact-hero { max-width: 680px; margin: 0 auto; text-align: center; }
 .contact-hero h1 { font-size: clamp(34px, 4.4vw, 54px); }
-.contact-lead { max-width: 56ch; margin: 18px auto 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
+.contact-lead { max-width: 56ch; margin: 18px auto 0; color: var(--muted); font-size: 16px; line-height: 1.7; text-wrap: pretty; }
 /* The service hours under the title (from api/_lib/legal.js, like the rest of the contact channels). */
 .contact-when { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin: 18px auto 0; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); color: var(--muted); font-size: 14px; }
 .contact-when svg { flex: none; width: 18px; height: 18px; color: var(--rose); }
@@ -23,7 +23,9 @@
 .contact-cta:active { transform: scale(.98); }
 .contact-channel .contact-cta, .contact-channel .contact-link, .contact-channel .contact-soon { margin-top: auto; }
 .contact-channel > p:not(.contact-soon) { margin-bottom: 12px; }
-.contact-link { padding-top: 14px; color: var(--rose); font-size: 15px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
+.contact-link { position: relative; padding-top: 14px; color: var(--rose); font-size: 15px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; overflow-wrap: anywhere; }
+/* o e-mail e o @ do Instagram ficam onde estão (alinhados ao número do WhatsApp), mas o toque ganha 10 px por baixo: 44 px */
+.contact-link::after { content: ''; position: absolute; inset: 0 -6px -10px; }
 .contact-channel .contact-soon { padding-top: 12px; color: var(--muted); font-size: 13px; }
 .contact-channel.is-whatsapp .contact-soon { color: #1d6b40; }
 /* The number under the button, for whoever prefers to save it (from api/_lib/legal.js). */
