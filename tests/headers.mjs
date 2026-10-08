@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile, readdir} from 'node:fs/promises';
+import {createRequire} from 'node:module';
 
 const root = new URL('../', import.meta.url);
 const config = JSON.parse(await readFile(new URL('vercel.json', root), 'utf8'));
@@ -71,9 +72,9 @@ const assetModels = await readFile(new URL('dist/asset-models.js', root), 'utf8'
 if (assetModels.includes('meshopt_decoder')) assert(directives['script-src'].includes("'wasm-unsafe-eval'"), "script-src has 'wasm-unsafe-eval' for the Meshopt decoder");
 
 // E-mail logos load from the public site (api/_lib/mail.js DEFAULT_SITE); the dev e-mail preview shows them in a frame.
-const mail = await readFile(new URL('api/_lib/mail.js', root), 'utf8');
-const site = mail.match(/DEFAULT_SITE = '([^']+)'/)[1];
-assert(allows('img-src', new URL(site).origin), `img-src allows the public site ${site}`);
+// Since 2026-10-08 that is the shop's own domain (COMPANY.website), the site itself ('self') once live; any other must be listed.
+const load = createRequire(import.meta.url), {DEFAULT_SITE: site} = load('../api/_lib/mail.js'), {COMPANY} = load('../api/_lib/legal.js');
+assert(site === COMPANY.website || allows('img-src', new URL(site).origin), `img-src allows the public site ${site}`);
 assert(allows('img-src', 'data:') && allows('img-src', 'blob:'), 'cart thumbnails (data:) and 3D textures (blob:)');
 
 // Heavy files: images and models are cached, then refreshed in the background.

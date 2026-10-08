@@ -140,9 +140,10 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     const mail = config(env), ownerEmail = String(env.ORDER_NOTIFY_EMAIL || '').trim().toLowerCase();
     if (!mailReady(mail)) return {owner: false, customer: false};
     const data = summary(order), sent = {owner: Boolean(order.ownerNotifiedAt), customer: Boolean(order.customerNotifiedAt)};
-    const deliver = (to, message, key) => sendMail({settings: mail, to, subject: message.subject, html: message.html, text: message.text, idempotencyKey: key, fetchImpl, outbox: outbox && (m => outbox({...m, kind: key.split('-')[1], reference: order.reference}))});
+    const deliver = (to, message, key, replyTo) => sendMail({settings: mail, to, replyTo, subject: message.subject, html: message.html, text: message.text, idempotencyKey: key, fetchImpl, outbox: outbox && (m => outbox({...m, kind: key.split('-')[1], reference: order.reference}))});
     if (!sent.owner && ownerEmail) {
-      try { await deliver(ownerEmail, renderOwnerEmail({summary: data, test, assetUrl: mail.assetUrl}), `order-owner-${order.id}`); await store.orders.update(order.id, {ownerNotifiedAt: date()}); sent.owner = true; }
+      // "Responder" on Ju's notice writes to the buyer, as on a contact message (api/_lib/contact.js).
+      try { await deliver(ownerEmail, renderOwnerEmail({summary: data, test, assetUrl: mail.assetUrl}), `order-owner-${order.id}`, data.customer.email); await store.orders.update(order.id, {ownerNotifiedAt: date()}); sent.owner = true; }
       catch (error) { console.error(`orders: e-mail to Ju failed for ${order.reference} —`, error.status || '', error.message); }
     }
     if (!sent.customer && data.customer.email) {

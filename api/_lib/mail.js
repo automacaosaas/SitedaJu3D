@@ -2,7 +2,9 @@
 // Server-side settings and the Resend call. The API key only ever lives in server environment variables.
 const crypto = require('node:crypto');
 const {isProduction} = require('./runtime');
-const DEFAULT_SITE = 'https://wheat-llama-936569.hostingersite.com';
+const {COMPANY, contact} = require('./legal');
+// Without SITE_URL the links and the logo point at the shop's own domain (2026-10-08), never at the temporary Hostinger one.
+const DEFAULT_SITE = COMPANY.website;
 const DEFAULT_FROM = 'Ju imprime pra mim <onboarding@resend.dev>';
 const SEND_TIMEOUT_MS = 10000;
 const MIN_SECRET = 32;
@@ -26,7 +28,10 @@ function config(env = process.env) {
     secretFrom: explicit ? 'AUTH_SECRET' : apiKey ? 'RESEND_API_KEY' : null,
     apiKey,
     from: env.MAIL_FROM || DEFAULT_FROM,
-    replyTo: env.MAIL_REPLY_TO || '',
+    // The domain has no inbox (no MX), so "Responder" on a shop e-mail would bounce: without MAIL_REPLY_TO, answers go to the
+    // shop's public e-mail (COMPANY.email, api/_lib/legal.js; none while it is still "[PREENCHER: ...]"). Sender and recipients
+    // stay as they are.
+    replyTo: String(env.MAIL_REPLY_TO || '').trim() || contact().email,
     // "console" prints instead of sending; it can never be switched on in production.
     transport: env.MAIL_TRANSPORT === 'console' && !production ? 'console' : 'resend'
   };
@@ -34,7 +39,7 @@ function config(env = process.env) {
 
 const mailReady = settings => Boolean(settings.secret && (settings.transport === 'console' || settings.apiKey));
 
-// `replyTo` (a contact message: the sender's address) wins over MAIL_REPLY_TO.
+// `replyTo` (a contact message: the sender's address; a paid order's notice to Ju: the buyer's) wins over settings.replyTo.
 async function sendMail({settings, to, subject, html, text, idempotencyKey, replyTo, fetchImpl = globalThis.fetch, outbox = () => {}}) {
   const reply = replyTo || settings.replyTo;
   if (settings.transport === 'console') { outbox({to, subject, html, text, replyTo: reply}); return {id: 'console'}; }

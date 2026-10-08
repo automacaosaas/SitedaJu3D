@@ -165,7 +165,9 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
      gratuito, liga o HTTPS e renova sozinho.
 5. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
 6. **Recomendado: `www` → domínio sem `www` (301).** O endereço oficial das páginas (o `<link rel="canonical">`, o
-   `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Depois do
+   `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Desde
+   08/10/2026 o próprio site (Node, `server/create-server.cjs`) já responde `301` (GET/HEAD) ou `308` (os outros métodos)
+   para o mesmo caminho sem `www`; o bloco do nginx abaixo continua bom (economiza a ida até o Node). Depois do
    certbot, acrescentar em `/etc/nginx/sites-available/juimprime` um bloco só para o `www`, que manda tudo (sem exceção)
    para o mesmo caminho no domínio sem `www`, e tirar o `www` do `server_name` do bloco principal:
 
