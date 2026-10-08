@@ -171,6 +171,13 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
 - **Empresa e Termos:** `api/_lib/legal.js` → `node tools/sync-legal.cjs`; mude `TERMS_VERSION` quando o texto legal mudar.
 - **Páginas geradas:** `borboletoscopio.html`, `dinossauroscopio.html`, `aviaoscopia.html`, a grade de `produtos.html`,
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
+- **Vitrine de novidade das lâmpadas de fenda (08/10/2026):** `fenda.html` (endereço curto `/fenda`, que o servidor abre como
+  `fenda.html`) e o banner "Novidade · Lâmpada de fenda" da home (entre a vitrine e "Nossa coleção", entre `<!-- novidade -->` e
+  `<!-- /novidade -->` no `index.html`). Marcação em `dist/fenda-stage.js`, gravada por `node tools/build-product-pages.cjs`; movimento em
+  `dist/fenda.js`; estilos em `dist/fenda.css` e, os do banner, em `dist/catalog.css` (a home não ganhou folha nova). Reaproveita a peça
+  encaixada da página Escolha o seu, o fundo da vitrine da home, o selo "Novidade" e o "Monte seu kit" da página da peça. Peça nova da
+  família `lampada` (FAMILIES em `products.js`) entra sozinha. Flyer (conversa, Status) e a prévia do link (`assets/og-fenda.jpg`):
+  `node tools/flyer-fenda/render.cjs` (rode de novo quando mudar uma peça, o preço ou o kit). `tests/fenda.mjs` confere tudo.
 - **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
   continua na aba ao lado, e escolher uma cor leva a ele. **Só FOTOS REAIS** (06/10/2026: nem render do 3D nem imagem gerada): as fotos do
   Luiz em três vistas (`design/vistas/*-3-vistas.webp`), **4 por peça** — frente, três quartos, costas e um detalhe de perto —, todas 4:5

@@ -15,6 +15,16 @@ Novidade · em breve|New · coming soon|Novedad · próximamente
 Em breve|Coming soon|Próximamente
 Capa para lâmpada de fenda portátil|Cover for a handheld slit lamp|Funda para lámpara de hendidura portátil
 Lâmpada de fenda|Slit lamp|Lámpara de hendidura
+Novidades: encaixe para lâmpada de fenda|What's new: fits the slit lamp|Novedades: encaje para lámpara de hendidura
+Peça anterior|Previous piece|Pieza anterior
+Próxima peça|Next piece|Siguiente pieza
+Preço, cores e kit|Price, colors and kit|Precio, colores y kit
+Como funciona|How it works|Cómo funciona
+5% de desconto no Pix|5% off with Pix|5% de descuento con Pix
+Enviar a um colega|Send to a colleague|Enviar a un colega
+Falar com a Ju|Talk to Ju|Hablar con Ju
+Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça:|Look how cute: 3D-printed covers for the handheld slit lamp, by Ju, imprime pra mim? Take a look:|Mira qué lindo: fundas impresas en 3D para la lámpara de hendidura portátil, de Ju, imprime pra mim? Conócelas:
+Olá, Ju! Vi as novidades para a lâmpada de fenda e tenho uma dúvida.|Hi, Ju! I saw the new slit lamp pieces and I have a question.|¡Hola, Ju! Vi las novedades para la lámpara de hendidura y tengo una duda.
 MonkeyLamp encaixado na lâmpada de fenda.|MonkeyLamp fitted on the slit lamp.|MonkeyLamp encajado en la lámpara de hendidura.
 MonkeyLamp, capa de macaco marrom com uma banana, sobre uma pilastra branca|MonkeyLamp, a brown monkey cover holding a banana, on a white pedestal|MonkeyLamp, funda de mono marrón con una banana, sobre un pedestal blanco
 Um macaquinho para acompanhar o olhar dos pequenos. Impressa em 3D, nas cores da peça.|A little monkey to keep the little ones company. 3D printed, in the piece's own colors.|Un monito para acompañar la mirada de los pequeños. Impreso en 3D, en los colores de la pieza.

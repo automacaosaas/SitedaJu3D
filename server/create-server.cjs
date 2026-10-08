@@ -70,7 +70,13 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     let file = path.resolve(root, '.' + decoded);
     if (file !== root && !file.startsWith(root + path.sep)) return null;
     let stat;
-    try { stat = fs.statSync(file); } catch { return null; }
+    // Short links without ".html" (the flyer prints juimprimepramim.com.br/fenda): a name with no extension that is not a file
+    // or folder is looked up as the page of that name. The page's relative links still work: /fenda sits at the site root.
+    try { stat = fs.statSync(file); } catch {
+      if (path.extname(file) || decoded.endsWith('/') || path.basename(file) === '404') return null;
+      file += '.html';
+      try { stat = fs.statSync(file); } catch { return null; }
+    }
     if (stat.isDirectory()) {
       file = path.join(file, 'index.html');
       try { stat = fs.statSync(file); } catch { return null; }

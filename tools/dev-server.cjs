@@ -205,6 +205,7 @@ async function main() {
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+      if (!fs.existsSync(file) && !path.extname(file) && fs.existsSync(file + '.html')) file += '.html';   // short links (/fenda), as server/create-server.cjs
       if (!fs.existsSync(file)) {
         // Like the real server: a missing page gets the site's 404 page, a missing file a short answer.
         res.statusCode = 404; res.setHeader('Cache-Control', 'no-store');

@@ -30,6 +30,12 @@ try {
   assert.equal(home.headers['x-powered-by'], undefined);
   assert.equal(home.headers['x-robots-tag'], 'noindex, nofollow', 'test deployments stay out of search results');
   assert.equal((await raw('/produtos.html')).status, 200);
+  // Short links: /fenda (printed on the flyer) is fenda.html; only names without an extension, never a folder path nor the 404 page.
+  const short = await raw('/fenda', {headers: {'accept-encoding': 'identity'}});
+  assert.equal(short.status, 200);
+  assert.match(short.headers['content-type'], /^text\/html/);
+  assert.match(short.body.toString(), /<section class="nv-stage"/);
+  for (const path of ['/fenda/', '/fenda.htm', '/404']) assert.equal((await raw(path)).status, 404, path);
 
   // Revalidation is cheap: same ETag → 304 with no body.
   const again = await raw('/', {headers: {'if-none-match': home.headers.etag}});
