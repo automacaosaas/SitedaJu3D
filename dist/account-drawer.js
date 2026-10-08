@@ -16,7 +16,7 @@ window.openJuAccount = raw => {
   if (!wide.matches) { location.assign(url); return; }
   if (!drawer) {
     drawer = document.createElement('dialog'); drawer.className = 'ju-account-drawer'; drawer.setAttribute('aria-label', 'Seu cantinho');
-    drawer.innerHTML = '<div class="ju-account-placeholder" role="status"><img src="assets/logo-ju.webp" alt="" width="90" height="90"><p>Preparando seu acesso…</p><a href="conta.html" target="_self" data-account-fallback>Abrir página de acesso</a></div><button class="ju-account-close" aria-label="Fechar acesso" type="button">×</button><iframe title="Entrar ou cadastrar" referrerpolicy="same-origin"></iframe>';
+    drawer.innerHTML = '<div class="ju-account-placeholder" role="status"><img src="assets/logo-ju-224.webp" srcset="assets/logo-ju-224.webp 2x, assets/logo-ju.webp 3x" alt="" width="90" height="90"><p>Preparando seu acesso…</p><a href="conta.html" target="_self" data-account-fallback>Abrir página de acesso</a></div><button class="ju-account-close" aria-label="Fechar acesso" type="button">×</button><iframe title="Entrar ou cadastrar" referrerpolicy="same-origin"></iframe>';
     document.body.append(drawer); frame = drawer.querySelector('iframe');
     drawer.querySelector('button').addEventListener('click', close);
     drawer.querySelector('[data-account-fallback]').addEventListener('click', event => {event.preventDefault();location.assign('conta.html');});

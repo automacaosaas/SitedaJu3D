@@ -28,6 +28,8 @@ const real = shipCfg.mode === 'correios';
 const banner = document.querySelector('.demo-banner');
 if (live.mode === 'test' && banner) banner.innerHTML = 'AMBIENTE DE TESTE <span>Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado</span>';
 else if (live.mode === 'live' && banner) banner.remove();
+else if (banner) banner.innerHTML = 'PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças</span>';
+banner?.classList.remove('is-pending');   // born invisible (as tall as always, the demonstration notice): shown only now, with the right text
 let brick = null, brickToken = 0, pollTimer = null, clockTimer = null;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let profile = null;

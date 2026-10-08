@@ -26,7 +26,7 @@ for (const name of referenced) assert(!/\.png$/.test(name) || name === 'logo-ju-
 // Budgets for what visitors download. Raise them only on purpose, after measuring.
 // The butterfly on the home's banner is the first picture every new visitor downloads (index.html preloads it).
 // The unicorn's head turn (36 frames, 07/10/2026) loads only when its 'Ver encaixado' opens, never with the page.
-const budget = {'logo-ju.webp': 40, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150, 'unicornioscopio-giro.webp': 450};
+const budget = {'logo-ju.webp': 40, 'logo-ju-224.webp': 10, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150, 'unicornioscopio-giro.webp': 450};
 for (const name of referenced) {
   const kb = (await stat(new URL(`assets/${name}`, dist))).size / 1024;
   const limit = budget[name] ?? (name.endsWith('.glb') ? 2500 : 300);
@@ -38,6 +38,17 @@ for (const [big, small] of Object.entries(ART_768)) {
   assert(referenced.has(big) && referenced.has(small), `${small} is the light version of a showcase photo in use`);
   const kb = (await stat(new URL(`assets/${small}`, dist))).size / 1024;
   assert(kb <= 80, `assets/${small} is ${Math.round(kb)} KB (budget 80 KB)`);
+}
+
+// The logo (shown at 112 px at most) in 224 px for screens up to 2x and in 336 px from 3x on, the same choice everywhere: one
+// srcset in every <img> of the shop and the same pair in journey.css's image-set(), so no page downloads both files.
+{
+  const LOGO = 'src="assets/logo-ju-224.webp" srcset="assets/logo-ju-224.webp 2x, assets/logo-ju.webp 3x"';
+  for (const file of (await readdir(dist)).filter(f => /\.(html|js)$/.test(f) && f !== 'admin.html')) {
+    for (const [tag] of (await readFile(new URL(file, dist), 'utf8')).matchAll(/<img\b[^>]*assets\/logo-ju[\w-]*\.webp[^>]*>/g)) assert(tag.includes(LOGO), `${file}: the logo with the shared srcset (${tag.slice(0, 80)}…)`);
+  }
+  const journey = await readFile(new URL('journey.css', dist), 'utf8');
+  assert(journey.includes("background-image:image-set(url('assets/logo-ju-224.webp') 2x,url('assets/logo-ju.webp') 3x)"), 'journey.css: the waiting logo picks like the srcset');
 }
 
 // 3D models are Meshopt-compressed; an uncompressed export is several times larger.
