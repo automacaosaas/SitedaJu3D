@@ -84,7 +84,7 @@ export function noveltyStage(family) {
 // As ofertas, depois do palco: um cartão por faixa do kit (o preço, o de cada peça, quanto economiza e as peças), cada um nas cores de
 // uma peça, e o "Monte seu kit" — escolher um cartão monta o kit com aquele tanto de peças (fenda.js). O cartão do kit de agora fica
 // marcado ("No seu kit"); a faixa mais vantajosa (a última) é a que vem escolhida. No celular os cartões viram uma fileira com setas.
-export function noveltyOffers(family) {
+export function noveltyOffers(family, {foot = ''} = {}) {
   const items = noveltyItems(family), first = items[0], tiers = kitTiers(first), full = COMMERCE.prices[first];
   if (tiers.length < 2) return '';
   const cards = tiers.map((tier, i) => { const key = items[i % items.length], {theme} = showcase(key), saving = full * tier.units - tier.cents, best = i === tiers.length - 1;
@@ -109,29 +109,31 @@ export function noveltyOffers(family) {
           <div class="pl-kit-head"><h3>Monte seu kit</h3><span class="pl-kit-mix">escolha os seus</span></div>
           <div data-nv-kit></div>
           <button type="button" class="nv-kit-buy" data-nv-kit-buy hidden>${icon('bag')}<span>Comprar agora</span></button>
-          <p class="nv-kit-fallback" data-nv-kit-fallback>${items.map(key => `<a href="${key}.html">${esc(PRODUCTS[key].title)}</a>`).join('')}</p>
+          <p class="nv-kit-fallback" data-nv-kit-fallback>${items.map(key => `<a href="${key}.html">${esc(PRODUCTS[key].title)}</a>`).join('')}</p>${foot}
         </div>
       </section>`;
 }
 
 // O banner da home, entre a vitrine e "Nossa coleção" (catalog.css): uma faixa no degradê das três peças que nasce da vitrine de cima e
-// se desfaz na coleção de baixo, sem borda. O título da seção como o de "Nossa coleção" (o selo "Novidade" no lugar do sobrescrito); as
-// peças lado a lado, cada uma abrindo a vitrine nela (fenda.html#<peça>); e as faixas do kit com a mais vantajosa já marcada, a nota e
-// o convite, que leva direto às ofertas (fenda.html#ofertas). O endereço index.html#novidade traz de volta até aqui (o "Voltar" da vitrine).
+// se desfaz na coleção de baixo, sem borda. Tudo centrado: o selo "Novidade", o título e o texto; as peças lado a lado, cada uma abrindo
+// a vitrine nela (fenda.html#<peça>); e as faixas do kit com a mais vantajosa já marcada, a nota e o convite, que leva direto às ofertas
+// (fenda.html#ofertas). Ao rolar até ela, os textos sobem um depois do outro e então chegam as peças e as faixas (catalog.js,
+// data-nvb-reveal; --i é a vez de cada um). O endereço index.html#novidade traz de volta até aqui (o "Voltar" da vitrine).
 export function noveltyBanner(family) {
   const items = noveltyItems(family), tool = FAMILIES[family].tool;
   if (!items.length) return '';
-  // a primeira peça da família no meio (o macaco, a primeira a chegar), as duas seguintes dos lados
+  // a primeira peça da família no meio (o macaco, a primeira a chegar), as duas seguintes dos lados; o do meio sobe primeiro
   const middle = items[0], order = [items[1], middle, items[2]].filter(Boolean), tiers = kitTiers(middle), stops = order.map(mid);
-  const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" style="--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda.html#${key}">`
+  const turn = key => key === middle ? 3 : 4;
+  const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" data-nvb-reveal style="--i:${turn(key)};--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda.html#${key}">`
     + `<img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span>${esc(PRODUCTS[key].title)}</span></a></li>`).join('');
   const ladder = tiers.map((t, i) => `<li${i === tiers.length - 1 ? ' class="is-best"' : ''}><b>${t.units}</b><span>por ${nbsp(short(t.cents))}</span></li>`).join('');
   return `<section class="nvb" id="novidade" aria-labelledby="nvb-title" style="--nvb-a:${stops[0]};--nvb-b:${stops[1]};--nvb-c:${stops[2] || stops[1]};${css(tone(middle))}">`
-    + `<div class="nvb-head"><div><p class="nvb-eyebrow"><span class="nvb-badge is-badge" data-effect="${esc(PRODUCTS[middle].eyebrowEffect || 'shine')}" style="${esc(badgeStyle(middle))}">Novidade</span></p>`
-    + `<h2 id="nvb-title">Novas peças.<br><em>Para a ${esc(tool.toLowerCase())}.</em></h2></div>`
-    + `<p>Capas impressas em 3D que encaixam na ${esc(tool.toLowerCase())} portátil, para acompanhar o olhar dos pequenos.</p></div>`
-    + `<div class="nvb-body"><ul class="nvb-art">${art}</ul>`
-    + `<div class="nvb-offer"><p class="nvb-offer-k">Leve mais, pague menos</p><ul class="nvb-tiers">${ladder}</ul>`
+    + `<div class="nvb-head"><p class="nvb-eyebrow" data-nvb-reveal style="--i:0"><span class="nvb-badge is-badge" data-effect="${esc(PRODUCTS[middle].eyebrowEffect || 'shine')}" style="${esc(badgeStyle(middle))}">Novidade</span></p>`
+    + `<h2 id="nvb-title" data-nvb-reveal style="--i:1">Novas peças.<br><em>Para a ${esc(tool.toLowerCase())}.</em></h2>`
+    + `<p data-nvb-reveal style="--i:2">Capas impressas em 3D que encaixam na ${esc(tool.toLowerCase())} portátil, para acompanhar o olhar dos pequenos.</p></div>`
+    + `<ul class="nvb-art">${art}</ul>`
+    + `<div class="nvb-offer" data-nvb-reveal style="--i:1"><ul class="nvb-tiers">${ladder}</ul>`
     + `<p class="nvb-note">Escolha os seus · ${pixPercent}% off no Pix</p>`
-    + `<a class="nvb-cta" href="fenda.html#ofertas"><span>Escolher os meus</span>${icon('arrow')}</a></div></div></section>`;
+    + `<a class="nvb-cta" href="fenda.html#ofertas"><span>Escolher os meus</span>${icon('arrow')}</a></div></section>`;
 }

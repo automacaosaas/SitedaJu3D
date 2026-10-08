@@ -181,12 +181,15 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   altura (`history.back`) ou, sem ela, abre `index.html#novidade`. O palco se desfaz embaixo na página (máscara no fundo). A página leva
   à compra: "Comprar" (direto para `comprar-agora.html`) e "Adicionar ao carrinho" sob o nome; "Ver detalhes" abre preço, cores e
   descrição; ao rolar entram as ofertas (um cartão por faixa do kit, nas cores das peças; no celular, fileira com setas e pontos). O kit
-  chega com a faixa mais vantajosa (3 por R$ 210) e o cartão dela marcado "No seu kit"; escolher outro cartão troca o kit. Sem "Falar com
-  a Ju": o convite a um colega no WhatsApp fica discreto no rodapé. Na home, a novidade é uma faixa sem bordas no degradê das três peças
-  (nasce da vitrine e se desfaz em "Nossa coleção"), com título no padrão da coleção ("Novas peças. Para a lâmpada de fenda."), as
-  peças (cada uma abre a vitrine nela), as faixas do kit com a de 3 marcada, "Escolha os seus" e "Escolher os meus" (vai a
-  `fenda.html#ofertas`); as peças entram dos lados ao rolar (`animation-timeline: view()`, onde o navegador tem; nos outros, ficam
-  paradas). Peça nova da família `lampada` (FAMILIES em `products.js`) entra sozinha. Flyer (conversa, Status) e a prévia do link (`assets/og-fenda.jpg`):
+  chega com a faixa mais vantajosa (3 por R$ 210) e o cartão dela marcado "No seu kit"; escolher outro cartão troca o kit e desce até ele
+  inteiro à vista, com "Comprar agora" e, ao lado, o botão menor do carrinho (o "Adicionar ao carrinho" do kit-builder.js, só o ícone;
+  fenda.js põe os dois em `.nv-kit-actions`) e, embaixo, o convite discreto a um colega no WhatsApp. Sem "Falar com a Ju". Na home, a
+  novidade é uma faixa sem bordas no degradê das três peças (nasce da vitrine e se desfaz em "Nossa coleção"), toda centrada: o selo,
+  "Novas peças. Para a lâmpada de fenda." e o texto; as peças (cada uma abre a vitrine nela); e a barra das faixas do kit com a de 3
+  marcada, "Escolha os seus" e "Escolher os meus" (vai a `fenda.html#ofertas`). Ao rolar até ela, os textos sobem um depois do outro e
+  então chegam as peças (as dos lados pelas bordas) e a barra (`catalog.js`, `data-nvb-reveal`). Nas ofertas do kit, em todo o site,
+  "pode misturar" virou "escolha os seus" (`kitOffer` em `commerce-config.js`, o selo do "Monte seu kit"; flyer e prévia refeitos).
+  Peça nova da família `lampada` (FAMILIES em `products.js`) entra sozinha. Flyer (conversa, Status) e a prévia do link (`assets/og-fenda.jpg`):
   `node tools/flyer-fenda/render.cjs` (rode de novo quando mudar uma peça, o preço ou o kit). `tests/fenda.mjs` confere tudo.
 - **Página do produto, aba Foto:** galeria de fotos da peça: miniaturas à esquerda no computador, arrastar de lado no celular; o 3D
   continua na aba ao lado, e escolher uma cor leva a ele. **Só FOTOS REAIS** (06/10/2026: nem render do 3D nem imagem gerada): as fotos do

@@ -5,8 +5,9 @@
 //  · a compra: "Comprar" leva a peça direto para a compra (comprar-agora.html, como o "Comprar agora" da janela da peça) e "Adicionar ao
 //    carrinho" é o do site (catalog.js › data-add-product, que abre o mini-carrinho);
 //  · as ofertas, que entram ao rolar: escolher um cartão monta o kit com aquele tanto de peças (kit-builder.js), que vai para o carrinho
-//    ("Adicionar ao carrinho") ou direto para a compra ("Comprar agora"). O kit chega com a faixa mais vantajosa e o cartão dela marcado;
-//    no celular, os cartões são uma fileira com setas e pontos;
+//    ou direto para a compra: "Comprar agora" e, ao lado, o botão menor do carrinho, na mesma linha, logo abaixo do total (escolher um
+//    cartão desce até o kit inteiro à vista). O kit chega com a faixa mais vantajosa e o cartão dela marcado; no celular, os cartões
+//    são uma fileira com setas e pontos;
 //  · o "Voltar" do alto, que volta para onde a pessoa estava (o banner da home, rolado até ele) ou, sem página anterior do site, abre
 //    a home no banner (index.html#novidade);
 //  · o convite discreto para um colega no WhatsApp, com o endereço desta página.
@@ -65,7 +66,13 @@ function mountOffers(key) {
   });
   if (kit) {
     document.querySelector('[data-nv-kit-fallback]')?.setAttribute('hidden', '');
-    if (kitBuy) kitBuy.hidden = false;
+    // "Comprar agora" e o carrinho na mesma linha, no lugar do "Adicionar ao carrinho" do kit (que vira o botão menor, só com o
+    // ícone; o nome dele continua para quem usa leitor de tela)
+    const add = kitHost.querySelector('.kit-add');
+    if (kitBuy && add) {
+      const actions = document.createElement('div'); actions.className = 'nv-kit-actions';
+      add.before(actions); actions.append(kitBuy, add); kitBuy.hidden = false;
+    }
     kitHost.addEventListener('click', () => { kitTouched = true; });
     kit.set(kitPreset(key, units));
   }
@@ -80,7 +87,9 @@ for (const button of tierButtons) button.addEventListener('click', () => {
   const key = stageKey(); units = Number(button.dataset.nvTier);
   if (!kit) return void (location.href = `${key}.html`);
   kit.set(kitPreset(key, units)); kitTouched = true;
-  document.getElementById('nv-kit')?.scrollIntoView({behavior: smooth(), block: 'center'});
+  // o kit inteiro à vista, com "Comprar agora": no meio da tela se couber, senão com a compra no pé dela
+  const panel = document.getElementById('nv-kit');
+  if (panel) panel.scrollIntoView({behavior: smooth(), block: panel.offsetHeight <= innerHeight - 120 ? 'center' : 'end'});
 });
 // no celular os cartões são uma fileira que corre de lado: as setas andam um cartão e os pontos dizem em qual se está
 const row = document.querySelector('[data-nv-tiers]');

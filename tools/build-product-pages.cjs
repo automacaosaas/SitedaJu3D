@@ -84,7 +84,7 @@ ${hasGallery(id) ? `
           <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : kitOffer(id) ? `
           <p class="pl-offer">${esc(kitOffer(id))}</p>` : ''}
           ${fixed ? `<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar ao carrinho</span></button></div>${kitOffer(id) ? `
-          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">pode misturar</span></div><div data-pl-kit-body></div></section>` : ''}` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
+          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">escolha os seus</span></div><div data-pl-kit-body></div></section>` : ''}` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
           <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>`}
           <div class="pl-facts">
             ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, `Cada peça é impressa depois do pedido, ${fixed ? 'nas cores dela' : 'nas cores escolhidas'}. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>`)}
@@ -145,14 +145,13 @@ function fendaPage(data, base) {
   const main = `<main class="nv-main" id="conteudo">
       <a class="nv-return" href="index.html#novidade" data-nv-return>${icon('arrow')}<span>Voltar</span></a>
       ${data.noveltyStage(FENDA)}
-      ${data.noveltyOffers(FENDA)}
+      ${data.noveltyOffers(FENDA, {foot: `<a class="nv-share" href="${esc(share)}" target="_blank" rel="noopener" data-nv-share>${icon('whatsapp')}<span>Enviar para um colega pelo WhatsApp</span></a>`})}
       <section class="nv-foot" aria-label="Como funciona">
         <ul class="nv-facts">
           <li>${icon('clock')}<span><strong>Feito sob encomenda</strong>Produção em ${esc(COMMERCE.productionLabel)}</span></li>
           <li>${icon('truck')}<span><strong>Envio para todo o Brasil</strong>Frete calculado pelo CEP</span></li>
           <li>${icon('pix')}<span><strong>${pixPercent}% de desconto no Pix</strong>Ou ${esc(installmentLabel(COMMERCE.prices[first]))} sem juros no cartão</span></li>
         </ul>
-        <a class="nv-share" href="${esc(share)}" target="_blank" rel="noopener" data-nv-share>${icon('whatsapp')}<span>Enviar para um colega pelo WhatsApp</span></a>
       </section>
     </main>`;
   return `<!doctype html>\n<html lang="pt-BR">\n<head>\n${head}${preview}</head>\n<body class="fenda-page">\n  <div class="page">\n    ${header}\n    ${main}\n    ${footer}\n  </div>\n</body>\n</html>\n`;

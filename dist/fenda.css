@@ -111,12 +111,15 @@
 .nv-offers-head .nv-kicker { color: var(--theme-accent, var(--rose)); }
 .nv-offers-head > p:last-child { margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
 .nv-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.nv-tier { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; padding: 18px 20px 20px; border-radius: 26px; background: radial-gradient(120% 92% at 50% 0%, var(--tier-stops)); color: var(--tier-ink); text-align: center; box-shadow: 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); transition: transform .3s var(--nv-ease), box-shadow .3s ease; }
+.nv-tier { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: 6px; padding: 18px 20px 20px; border-radius: 26px; background: radial-gradient(120% 92% at 50% 0%, var(--tier-stops)); color: var(--tier-ink); text-align: center; box-shadow: 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); transition: transform .3s var(--nv-ease), box-shadow .3s ease; }
 .nv-tier:hover { transform: translateY(-4px); box-shadow: 0 26px 48px -30px color-mix(in srgb, var(--tier-ink) 80%, transparent); }
 .nv-tier.is-best { box-shadow: inset 0 0 0 2px var(--tier-accent), 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); }
-.nv-tier-flag { position: absolute; top: 14px; right: 14px; padding: 5px 11px; border-radius: 999px; background: var(--tier-accent); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; }
-.nv-tier-art { display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 4px; }
-.nv-tier-art img { width: auto; height: 140px; margin-left: -34px; filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--tier-ink) 22%, transparent)); }
+/* o selo do mais vantajoso fica no meio da borda de cima, longe das peças */
+.nv-tier-flag { position: absolute; z-index: 1; top: 0; left: 50%; translate: -50% -50%; padding: 5px 13px; border-radius: 999px; background: var(--tier-accent); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; box-shadow: 0 6px 14px -8px var(--tier-accent); }
+/* as peças do cartão, centradas e sempre dentro dele: cada uma tem --w de largura (no máximo 140 px, ou o que couber de três), e
+   cada uma entra um pouco atrás da anterior (a foto é quadrada, com sobra dos lados) */
+.nv-tier-art { --w: min(140px, 41%); display: flex; justify-content: center; align-items: flex-end; width: 100%; height: 150px; margin-bottom: 4px; }
+.nv-tier-art img { flex: none; width: var(--w); height: auto; aspect-ratio: 1; margin-left: calc(var(--w) * -.3); filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--tier-ink) 22%, transparent)); }
 .nv-tier-art img:first-child { margin-left: 0; }
 .nv-tier-n { margin: 0; font: 500 24px/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
 .nv-tier-price { display: flex; align-items: baseline; gap: 8px; margin: 0; }
@@ -147,8 +150,14 @@
 .nv-kit-panel { display: grid; gap: 12px; max-width: 580px; margin: 26px auto 0; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent, var(--rose)) 16%, #ece7e9); border-radius: 26px; background: var(--panel, #fffcfb); box-shadow: 0 20px 44px -34px rgba(40, 30, 20, .5); scroll-margin-top: 90px; }
 .nv-kit-panel .pl-kit-head h3 { margin: 0; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--ink); }
 .nv-kit-panel .kit { --kit-accent: var(--theme-accent, var(--rose)); --kit-strong: var(--theme-accent-strong, #9e3e59); --kit-tint: color-mix(in srgb, var(--theme-accent, var(--rose)) 7%, #fff); }
-/* no kit, "Comprar agora" é o botão cheio e "Adicionar ao carrinho" vira o contorno */
-.nv-kit-panel .kit-add { background: #fff; color: var(--kit-accent); box-shadow: inset 0 0 0 1.5px var(--kit-accent); }
+/* "Comprar agora" e, ao lado, o botão menor do carrinho, na mesma linha logo abaixo do total (fenda.js põe os dois em .nv-kit-actions);
+   o do carrinho mostra só o ícone, e o nome dele ("Adicionar o kit ao carrinho") fica para quem usa leitor de tela */
+.nv-kit-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 10px; }
+.nv-kit-panel .nv-kit-actions .kit-add { width: 58px; min-height: 52px; padding: 0; border: 1.5px solid var(--kit-accent); border-radius: 999px; background: #fff; color: var(--kit-accent); box-shadow: none; }
+.nv-kit-panel .nv-kit-actions .kit-add:hover:not(:disabled):not([aria-disabled=true]) { border-color: var(--kit-strong); background: var(--kit-tint); color: var(--kit-strong); }
+.nv-kit-actions .kit-add .icon { width: 22px; height: 22px; }
+.nv-kit-actions .kit-add > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.nv-kit-panel > .nv-share { justify-self: center; margin-top: -4px; }
 .nv-kit-buy { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; border: 0; border-radius: 999px; background: var(--theme-accent, var(--rose)); color: #fff; font: 650 15px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; box-shadow: 0 12px 26px -14px var(--theme-accent, var(--rose)); }
 .nv-kit-buy:hover { background: var(--theme-accent-strong, #9e3e59); }
 .nv-kit-buy[aria-disabled=true] { opacity: .6; cursor: not-allowed; }
@@ -200,12 +209,13 @@
   .nv-stage.is-detail .nv-name { font-size: clamp(32px, 9vw, 42px); }
   .nv-detail { position: static; width: auto; margin: 18px 16px 0; scroll-margin: 120px 0 24px; animation-name: nv-in-up; }
   .nv-offers { margin-top: 4px; }
-  .nv-tiers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(80%, 300px); gap: 12px; margin: 0 -22px; padding: 4px 22px 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; }
+  .nv-tiers { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(84%, 300px); gap: 12px; margin: 0 -22px; padding: 16px 22px 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; }
   .nv-tiers::-webkit-scrollbar { display: none; }
   .nv-tier { scroll-snap-align: start; }
   .nv-tier:hover { transform: none; }
-  .nv-tier-art { height: 120px; }
-  .nv-tier-art img { height: 112px; margin-left: -28px; }
+  .nv-tier { padding: 22px 16px 18px; }
+  .nv-tier-art { height: 118px; }
+  .nv-tiers-wrap > .nv-tiers-arrow { top: 98px; }
   .nv-kit-panel { margin-top: 18px; padding: 16px 14px 14px; border-radius: 22px; }
 }
 @keyframes nv-in-up { from { opacity: 0; transform: translateY(16px); } }

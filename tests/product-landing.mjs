@@ -37,7 +37,7 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
     assert(page.includes('<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="' + id + '">') && page.includes('<span>Adicionar ao carrinho</span>'), `${id}: only "Adicionar ao carrinho"`);
     assert(page.includes(`<p class="pl-offer">${kitOffer(id)}</p>`), `${id}: the kit offer`);
     // 07/10/2026: right after the button, the place of "Monte seu kit" (hidden; product-landing.js mounts it with kit-builder.js)
-    assert(page.includes(`<span>Adicionar ao carrinho</span></button></div>\n          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">pode misturar</span></div><div data-pl-kit-body></div></section>`), `${id}: the kit block after the button`);
+    assert(page.includes(`<span>Adicionar ao carrinho</span></button></div>\n          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">escolha os seus</span></div><div data-pl-kit-body></div></section>`), `${id}: the kit block after the button`);
   } else assert(!page.includes('data-pl-kit'), `${id}: no kit block for a piece without a kit`);
   if (fixed) {
     for (const c of product.colors) assert(page.includes(`<li><span class="pl-dot is-fixed" role="img" title="${c.name}" aria-label="${c.name}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`), `${id}: the dot of ${c.name}`);

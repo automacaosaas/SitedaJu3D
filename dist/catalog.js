@@ -232,6 +232,19 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
     tabs.innerHTML = categories.map(([key, meta], index) => `<button type="button" role="tab" aria-selected="${index === 0}" data-catalog-filter="${key}">${meta.label}${!entries.some(({product}) => product.category === key) ? ' <span>em breve</span>' : ''}</button>`).join('');
   tabs.addEventListener('click', event => { const button = event.target.closest('[data-catalog-filter]'); if (!button) return; tabs.querySelectorAll('[data-catalog-filter]').forEach(tab => tab.setAttribute('aria-selected', String(tab === button))); const host = tabs.parentElement.querySelector('[data-product-carousel], [data-product-grid]'); host.dataset.category = button.dataset.catalogFilter; if (host.matches('[data-product-grid]')) { host.innerHTML = productGrid(button.dataset.catalogFilter); familyBar(host, null); if (location.search) history.replaceState(history.state, '', location.pathname + location.hash); } else mountCarousel(host, button.dataset.catalogFilter); });
 }
+// A novidade da home (fenda-stage.js › noveltyBanner, catalog.css): ao rolar até ela, o selo, o título e o texto sobem um depois do
+// outro e então chegam as peças e as faixas do kit (--i é a vez de cada um). Só espera quem ainda está abaixo da tela; sem
+// IntersectionObserver ou com movimento reduzido, tudo já está à vista.
+{
+  const parts = [...document.querySelectorAll('[data-nvb-reveal]')];
+  if (parts.length && 'IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const seen = new IntersectionObserver(list => list.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.replace('is-pending', 'is-in'); seen.unobserve(entry.target);
+    }), {rootMargin: '0px 0px -10% 0px', threshold: .05});
+    for (const part of parts) if (part.getBoundingClientRect().top > innerHeight) { part.classList.add('is-pending'); seen.observe(part); }
+  }
+}
 document.addEventListener('click', async event => { const button = event.target.closest('[data-add-product]'); if (!button || button.disabled) return; const id = button.dataset.addProduct; try { button.disabled = true; button.classList.add('is-loading'); const cart = writeCart(putItem(readCart(), id, defaults(id))); window.dispatchEvent(new Event('ju:cart')); await new Promise(done => setTimeout(done, reduceMotion() ? 0 : 600)); openMiniCart({itemId: addedItemId(cart, id, defaults(id)), original: true}); button.disabled = false; button.classList.remove('is-loading'); } catch (error) { button.disabled = false; button.classList.remove('is-loading'); const notice = button.closest('[data-product-id]')?.querySelector('.product-rail-price-note, .product-grid-note'); if (notice) notice.textContent = error.message; } });
 
 window.addEventListener('pageshow', () => document.querySelectorAll('[data-add-product]').forEach(button => {button.disabled = false; button.classList.remove('is-loading');}));

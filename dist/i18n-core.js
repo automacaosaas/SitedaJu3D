@@ -70,7 +70,7 @@ const dynamic = [
   [/^Modelo 3D de (.+)$/, '3D model of $1', 'Modelo 3D de $1'],
   [/^Levando 2, o segundo sai por (.+)$/, 'Buy 2 and the second one is $1', 'Llevando 2, el segundo sale por $1'],
   // o kit das lâmpadas (commerce-config.js kitOffer)
-  [/^Leve (\d+) por (.+) ou (\d+) por (.+) \(pode misturar\)(\.?)$/, 'Get $1 for $2 or $3 for $4 (mix and match)$5', 'Lleva $1 por $2 o $3 por $4 (puedes combinar)$5'],
+  [/^Leve (\d+) por (.+) ou (\d+) por (.+) \(escolha os seus\)(\.?)$/, 'Get $1 for $2 or $3 for $4 (pick yours)$5', 'Lleva $1 por $2 o $3 por $4 (elige los tuyos)$5'],
   // as ofertas da vitrine das lâmpadas (fenda-stage.js) e o banner dela na home
   [/^Vale para (.+) e ([^,]+)\.$/, 'Valid for $1 and $2.', 'Vale para $1 y $2.'],
   [/^Escolher (\d+) peças?$/, (t, n) => n === '1' ? 'Choose 1 piece' : `Choose ${n} pieces`, (t, n) => n === '1' ? 'Elegir 1 pieza' : `Elegir ${n} piezas`],

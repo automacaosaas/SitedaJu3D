@@ -138,7 +138,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 // ── where it lives ────────────────────────────────────────────────────
 {
   const html = read('dist/index.html'), controller = read('dist/controller.js'), landing = read('dist/product-landing.js'), code = read('dist/kit-builder.js');
-  assert.ok(html.includes('<p class="pdp-fixed-text" id="fixed-text"></p></section>\n      <section class="pdp-kit" id="pdp-kit" aria-labelledby="pdp-kit-title" hidden><div class="pdp-colors-head"><h3 id="pdp-kit-title">Monte seu kit</h3><span class="pdp-kit-mix">pode misturar</span></div><div class="pdp-kit-body"></div></section>'), 'the dialog: right after "Cores da peça", in the white area');
+  assert.ok(html.includes('<p class="pdp-fixed-text" id="fixed-text"></p></section>\n      <section class="pdp-kit" id="pdp-kit" aria-labelledby="pdp-kit-title" hidden><div class="pdp-colors-head"><h3 id="pdp-kit-title">Monte seu kit</h3><span class="pdp-kit-mix">escolha os seus</span></div><div class="pdp-kit-body"></div></section>'), 'the dialog: right after "Cores da peça", in the white area');
   assert.ok(controller.includes("kitHost.hidden=soon||!fixed||!kitOf(key);kitPick=null;") && controller.includes("mountKit(kitHost.querySelector('.pdp-kit-body'),{current:kitHost.hidden?null:key,onChange:paintKit});"), 'only lamps of a kit get the block; in the dialog it only chooses and the bar follows it');
   assert.ok(controller.includes('offer.hidden=!extra&&(!kit||!kitHost.hidden);'), 'the bar sentence hides while the block shows');
   assert.ok(/async function addKit\(lines\)\{[^}]*writeCart\(putItems\(readCart\(\),lines\)\)[^]*?openMiniCart\(\{itemIds:lines\.map\(line=>addedItemId\(cart,line\.productId,\{\}\)\)\.filter\(Boolean\),original:true,riseFrom:before\}\);/.test(controller), 'one write, then the mini-cart confirms every line');
@@ -150,7 +150,7 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 0));
   assert.match(css, /\.kit-add \{[^}]*min-height: 50px;/);
   assert.ok([...css.slice(css.indexOf('Monte seu kit')).matchAll(/font-size: ([\d.]+)px/g)].every(m => Number(m[1]) >= 12), 'no kit text under 12 px');
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.kit :is\(/);
-  for (const text of ['Monte seu kit', 'pode misturar', 'Kits prontos', 'Total do kit', 'Com o que já está no carrinho:', 'Adicionar o kit ao carrinho', 'Kit adicionado ao carrinho', 'Escolha pelo menos uma peça.', 'Não foi possível adicionar o kit. Tente novamente.', `${money(8000)} cada`, `economize ${money(2000)}`, `${money(15200)} no Pix`])
+  for (const text of ['Monte seu kit', 'escolha os seus', 'Kits prontos', 'Total do kit', 'Com o que já está no carrinho:', 'Adicionar o kit ao carrinho', 'Kit adicionado ao carrinho', 'Escolha pelo menos uma peça.', 'Não foi possível adicionar o kit. Tente novamente.', `${money(8000)} cada`, `economize ${money(2000)}`, `${money(15200)} no Pix`])
     for (const locale of ['en', 'es']) assert.notEqual(translate(text, locale), text, `${locale}: ${text}`);
   assert.equal(translate('3 por', 'en'), '3 for'); assert.equal(translate('3 por', 'es'), '3 por', '"por" is Spanish too');
   assert.equal(translate(`${money(7000)} cada`, 'en'), 'R$ 70,00 each'); assert.equal(translate(`${money(7000)} cada`, 'es'), 'R$ 70,00 cada una');

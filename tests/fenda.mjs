@@ -43,7 +43,8 @@ assert(/--fig-h:[\d.]+/.test(page), 'the figure keeps the whole lamp in proporti
 assert(page.includes(`style="${badgeStyle(items[0]).replace(/"/g, '&quot;')}"`) && page.includes('data-nv-badge'), 'the "Novidade" badge of the piece in front');
 // As ofertas, que entram ao rolar: um cartão por faixa nas cores das peças, o kit e a compra dele.
 const tiers = kitTiers(items[0]);
-assert(page.includes(noveltyOffers('lampada')) && page.indexOf('id="ofertas"') > page.indexOf('<section class="nv-stage"'), 'offers below the stage (fenda-stage.js › noveltyOffers)');
+const shareLink = page.match(/<a class="nv-share"[^]*?<\/a>/)[0];
+assert(page.includes(noveltyOffers('lampada', {foot: shareLink})) && page.indexOf('id="ofertas"') > page.indexOf('<section class="nv-stage"'), 'offers below the stage (fenda-stage.js › noveltyOffers)');
 assert(tiers.length >= 3 && (page.match(/<article class="nv-tier\b/g) || []).length === tiers.length, 'one card per tier');
 for (const {units} of tiers) assert(page.includes(`data-nv-tier="${units}" aria-pressed="false"`), `card for ${units}`);
 assert(page.includes('data-nv-tiers-step="-1"') && page.includes('data-nv-tiers-step="1"') && /class="nv-tiers-dots"/.test(page), 'arrows and dots for the row of cards on phones');
@@ -63,7 +64,8 @@ assert(page.includes(`<link rel="canonical" href="${BASE}/fenda.html">`) && page
 assert(page.includes(`<meta property="og:image" content="${BASE}/assets/og-fenda.jpg">`) && fs.existsSync(path.join(root, 'dist/assets/og-fenda.jpg')), 'link preview image');
 assert(read('dist/sitemap.xml').includes(`<loc>${BASE}/fenda.html</loc>`), 'listed for search engines');
 assert(page.includes(kitOffer(items[0])), 'the kit offer below the stage');
-assert(page.indexOf('class="nv-share"') > page.indexOf('id="ofertas"'), 'the WhatsApp invite, discreet, at the bottom');
+assert(page.indexOf('class="nv-share"') > page.indexOf('data-nv-kit-buy') && page.indexOf('class="nv-share"') < page.indexOf('class="nv-foot"'), 'the WhatsApp invite, discreet, under the kit\'s buy row');
+assert(js.includes("actions.className = 'nv-kit-actions'") && js.includes('actions.append(kitBuy, add)'), '"Comprar agora" and the smaller cart button on one row');
 assert(page.includes('<a class="nv-return" href="index.html#novidade" data-nv-return>') && page.indexOf('data-nv-return') < page.indexOf('<section class="nv-stage"'), '"Voltar" above the stage: back to the home banner');
 assert(js.includes('history.back()') && js.includes("import {localDestination} from './shopping-navigation.js';"), '"Voltar" returns to the page the person came from, at the same height');
 const share = new URL(page.match(/<a class="nv-share" href="([^"]+)"/)[1].replace(/&amp;/g, '&'));
@@ -87,7 +89,8 @@ for (const key of items.slice(0, 3)) assert(home.includes(`<a href="fenda.html#$
 assert(home.includes('<a class="nvb-cta" href="fenda.html#ofertas">') && /<li class="is-best"><b>3<\/b>/.test(home), 'the best tier marked and the invite straight to the offers');
 assert(/--nvb-a:#[0-9a-f]{6};--nvb-b:#[0-9a-f]{6};--nvb-c:#[0-9a-f]{6}/.test(home), 'the band blends the three pieces\' palettes');
 assert(/\.nvb::before\{[^}]*mask-image:linear-gradient\(to bottom,transparent/.test(read('dist/catalog.css')), 'the band fades into the showcase above and the collection below');
-assert(/animation-timeline: *view\(\)/.test(read('dist/catalog.css')), 'the pieces come in from the sides on scroll (where the browser supports it)');
+assert.equal((home.match(/data-nvb-reveal/g) || []).length, 3 + Math.min(3, items.length) + 1, 'badge, title, text, the pieces and the tiers come in on scroll');
+assert(read('dist/catalog.js').includes("document.querySelectorAll('[data-nvb-reveal]')") && /\.nvb \.nvb-pick:first-child\.is-pending\{transform:translateX\(-/.test(read('dist/catalog.css')), 'catalog.js reveals them; the side pieces come in from the edges');
 assert(/loading="lazy"/.test(noveltyBanner('lampada')), 'below the first screen: lazy pictures');
 assert(read('dist/catalog.css').includes('.nvb-badge::before'), 'its styles ride on catalog.css (no new stylesheet on the home)');
 
