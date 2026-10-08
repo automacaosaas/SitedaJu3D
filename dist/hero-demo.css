@@ -77,8 +77,9 @@
 .demo-cover.is-turning { -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0); mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
   -webkit-mask-position: 0 0, var(--turn-mask-pos); mask-position: 0 0, var(--turn-mask-pos); -webkit-mask-size: 100% 100%, var(--turn-mask-size); mask-size: 100% 100%, var(--turn-mask-size);
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-composite: xor; mask-composite: exclude; }
-.demo-hint { position: absolute; left: calc(50% + var(--size) * .3); top: calc(var(--cy) - var(--size) * .3); z-index: 3; display: flex; align-items: center; gap: .6em; max-width: min(300px, 34cqw); margin: 0;
-  padding: .75em 1.1em .75em .85em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+/* A dica do giro (o unicórnio) fica do lado oposto ao chifre e ao convite de compra: à esquerda da cabeça, o ícone virado para ela */
+.demo-hint { position: absolute; left: auto; right: calc(50% + var(--size) * .3); top: calc(var(--cy) - var(--size) * .3); z-index: 3; display: flex; flex-direction: row-reverse; align-items: center; gap: .6em; max-width: min(300px, 34cqw); margin: 0; text-align: right;
+  padding: .75em .85em .75em 1.1em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, #10281e); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', sans-serif;
   opacity: 0; transform: translateY(6px); transition: opacity .45s cubic-bezier(.22, 1, .36, 1), transform .45s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
 .demo-hint.is-shown { opacity: 1; transform: none; }
@@ -104,8 +105,9 @@
   .demo-callout-label { letter-spacing: .16em; }
   .demo-cta { left: 0; right: 0; top: calc(var(--cy) + var(--size) * var(--cta-y-compact, .78));   /* abaixo da peça; num equipamento alto (ctaY), abaixo dele */ width: fit-content; margin: 0 auto; }
   .demo-close { top: 8px; right: 14px; width: 44px; height: 44px; }
-  .demo-hint { left: 50%; top: calc(var(--cy) - var(--size) * .69 - 6px); max-width: min(320px, 88cqw); transform: translate(-50%, calc(-100% + 6px)); }
-  .demo-hint.is-shown { transform: translate(-50%, -100%); }
+  /* no celular, na faixa entre o cabeçalho e a lâmpada de fenda, em duas linhas, longe do botão de fechar (à direita) e do logo */
+  .demo-hint { left: 12px; right: 66px; top: calc(var(--cy) - var(--size) * .69 - 8px); max-width: none; flex-direction: row; text-align: left; gap: .5em; padding: .55em .8em; border-radius: 14px; font-size: 13px; line-height: 1.3; transform: translateY(calc(-100% + 6px)); }
+  .demo-hint.is-shown { transform: translateY(-100%); }
 }
 @media (prefers-reduced-motion: reduce) {
   .demo-cta svg { animation: none; }

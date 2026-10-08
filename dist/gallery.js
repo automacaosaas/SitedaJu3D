@@ -13,12 +13,13 @@ export const GALLERY={
   borboletoscopio:{detalhe:'Rostinho de perto'},
   dinossauroscopio:{detalhe:'Rosto de perto'},
   aviaoscopia:{detalhe:'Cabine de perto'},
-  girafoscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']}
+  girafoscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']},
+  unicornioscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']}
 };
 export const viewsOf=key=>GALLERY[key]?(GALLERY[key].vistas||STANDARD.map(([id])=>id)).map(id=>({id,name:id==='detalhe'?GALLERY[key].detalhe:NAMES[id],zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const hasGallery=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='18';
+export const VIEWS_VERSION='19';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){

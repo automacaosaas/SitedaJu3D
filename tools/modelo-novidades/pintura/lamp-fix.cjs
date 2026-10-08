@@ -16,7 +16,10 @@ const {cut} = require('./snap.cjs');
 const exact = require('./exact.cjs');
 
 async function run(file, out, opt) {
-  const t0 = Date.now(), m = await lib.load(file), topo = lib.topology(m), ring = lib.vertexRing(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
+  const t0 = Date.now(), m = await lib.load(file);
+  // 0. reshaped reliefs before anything else reads the geometry: the nostrils rebuilt as two equal, aligned domes (exact.cjs domes)
+  let rebuilt = null; if (opt.domes) { rebuilt = exact.domes(m, Uint8Array.from(m.label), m.names, opt.domes); console.log('0 domes:', rebuilt.info, '· vertices moved', rebuilt.moved.size); }
+  const topo = lib.topology(m), ring = lib.vertexRing(m), {adj, A, C} = topo, nf = m.nf, names = m.names, K = names.length;
   const idOf = n => names.indexOf(n), label = Uint8Array.from(m.label);
   const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
   const count = () => names.map((n, k) => `${n} ${label.filter(l => l === k).length}`).join(' · ');
@@ -100,6 +103,7 @@ async function run(file, out, opt) {
   //    nostrils, smile), each a signed function of the position cut exactly across the triangles
   for (const t of opt.tube || []) { const r = exact.tube(m, fl, K, names, ring, t); log('5 tube', t.name, 'vertices', r.n, 'inside', r.inside, process.env.HIST ? '\n' + r.hist : ''); }
   const overrides = [], claimed = names.map(() => new Uint8Array(m.nv)), vn = crisp.vertexNormals(m);
+  if (rebuilt) log('0 domes: normals rebuilt for', exact.rebuildNormals(m, vn, rebuilt.moved, ring), 'vertices');
   const dets = (opt.exact || []).map(t => t.mode === 'line' ? exact.line(m, label, names, t) : exact.contour(m, label, names, t));
   // mirrored pairs ('mirror': same group name): the same axes (the mean), the angle mirrored across the vertical — the two nostrils alike
   for (const g of new Set((opt.exact || []).map(t => t.mirror).filter(Boolean))) {
@@ -111,6 +115,8 @@ async function run(file, out, opt) {
     const angL = Math.atan2(sy, sx) / 2; pair[0].setEllipse(a, b, angL); pair[1].setEllipse(a, b, Math.PI - angL);
     log('5 mirror', g, `axes ${(a * frame(m).s).toFixed(3)}×${(b * frame(m).s).toFixed(3)} at ${(angL * 180 / Math.PI).toFixed(0)}°`);
   }
+  // the rebuilt nostrils are painted with their domes' own ellipses (grown a hair to cover the foot)
+  (opt.exact || []).forEach((t, i) => { if (rebuilt && t.dome != null) { const e = rebuilt.ellipses[t.dome], g = t.domeGrow ?? 1.02; dets[i].setEllipseAt(e.cx, e.cy, e.a * g, e.b * g, e.ang); dets[i].extent = Math.max(e.a, e.b) * g + Math.hypot(e.cx - dets[i].centre[0], e.cy - dets[i].centre[1]); } });
   for (const [i, t] of (opt.exact || []).entries()) {
     const k = idOf(t.name), det = dets[i];
     const ov = exact.override(m, k, det, {...t, surround: t.surround ? idOf(t.surround) : -1}), n = exact.applyVertices(m, fl, K, ov, claimed[k], vn); overrides.push(ov);

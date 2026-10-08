@@ -5,7 +5,10 @@
   "_ampliadas_como": "Fontes ampliadas 4x pelo Real-ESRGAN (realesrgan-ncnn-vulkan, modelo realesrgan-x4plus, rodado no PC; tools/galeria-vistas/AMPLIAR.md): o gerador usa a ampliada no lugar da original, com as mesmas medidas (em pixels da original). encolher: quanto o recorte entra na peça (pixels da original), para tirar o fio escuro do fundo na beirada (07/10/2026).",
   "_ampliadas": {
     "borboletoscopio-3-vistas.webp": {"arquivo": "ampliadas/borboletoscopio-3-vistas-x4.webp", "fator": 4, "encolher": 0.6},
-    "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4}
+    "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4},
+    "unicornioscopio-lado.webp": {"arquivo": "ampliadas/unicornioscopio-lado-x4.webp", "fator": 4, "encolher": 0.5},
+    "unicornioscopio-costas.webp": {"arquivo": "ampliadas/unicornioscopio-costas-x4.webp", "fator": 4, "encolher": 0.5},
+    "unicornioscopio-rosto.webp": {"arquivo": "ampliadas/unicornioscopio-rosto-x4.webp", "fator": 4, "encolher": 0.5}
   },
   "borboletoscopio": {
     "cores": [
@@ -142,5 +145,16 @@
       "fundo": "transparente",
       "detalhe": true
     }
+  },
+  "unicornioscopio": {
+    "_fontes": "Fotos do unicórnio que o dono mandou em 07/10/2026 (render em fundo preto, 1024x1536): lado, costas e o rosto de perto, ampliadas 4x pelo Real-ESRGAN (tools/galeria-vistas/AMPLIAR.md). A frente é a foto da vitrine (o quadro 0 do giro em 3D). O roxo das fotos vinha mais saturado que o da peça (croma 0,20 contra 0,16, medido em OKLab): ajustado pela média; a lavanda quase igual, o dourado já batia.",
+    "cores": [
+      {"de": "#ab5bd8", "faixa": 40, "para": "#af63c7"},
+      {"de": "#8d9ded", "faixa": 28, "para": "#8794e3"}
+    ],
+    "frente": {"fonte": "dist/assets/product-unicornioscopio-cutout.webp", "fundo": "transparente"},
+    "lado": {"fonte": "unicornioscopio-lado.webp", "recorte": [212, 100, 612, 1260], "fundo": "recortar", "chao": 1321, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
+    "costas": {"fonte": "unicornioscopio-costas.webp", "recorte": [150, 60, 724, 1374], "fundo": "recortar", "chao": 1393, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
+    "detalhe": {"fonte": "unicornioscopio-rosto.webp", "recorte": [0, 0, 1024, 1280], "fundo": "recortar", "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4, "detalhe": true}
   }
 }

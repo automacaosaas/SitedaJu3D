@@ -50,7 +50,7 @@ function contour(m, label, names, t) {
   // scaled so that it holds the whole relief ('cover': that share of the rays inside it, up to 'maxScale'); else the first
   // 'harmonics' of R(θ) (a smooth outline that is the relief's own)
   const Rs = new Float64Array(360), grow = (t.grow ?? 0) / fr.s / res;
-  let info = '', ell = null, setEllipse = null;
+  let info = '', ell = null, setEllipse = null, ellC = null;
   if (t.shape === 'ellipse') {
     const pts = Array.from(R, (r, j) => [r * Math.cos(j * Math.PI / 180), r * Math.sin(j * Math.PI / 180)]);
     let A2 = 0, Cx = 0, Cy = 0; for (let j = 0; j < 360; j++) { const [x0, y0] = pts[j], [x1, y1] = pts[(j + 1) % 360], c2 = x0 * y1 - x1 * y0; A2 += c2; Cx += (x0 + x1) * c2; Cy += (y0 + y1) * c2; } const area = A2 / 2; Cx /= 3 * A2; Cy /= 3 * A2;
@@ -64,7 +64,7 @@ function contour(m, label, names, t) {
     const ratio = Array.from(R, (r, j) => r / along(j, ea, eb)).sort((x, y) => x - y), k = Math.min(t.maxScale ?? 1.06, Math.max(t.minScale ?? 1, ratio[Math.min(359, Math.floor(360 * (t.cover ?? .97)))]));
     for (let j = 0; j < 360; j++) Rs[j] = along(j, ea * k, eb * k) + grow;
     // a pair drawn the same (the nostrils, mirrored): lamp-fix.cjs gives both the same axes, the angle mirrored
-    ell = {a: ea * k * res, b: eb * k * res, ang};
+    ell = {a: ea * k * res, b: eb * k * res, ang}; ellC = [box[0] + (mx + Cx) * res, box[1] + (my + Cy) * res];
     setEllipse = (a2, b2, ang2) => { const c2 = Math.cos(ang2), s2 = Math.sin(ang2), A = a2 / res, B = b2 / res;
       for (let j = 0; j < 360; j++) { const dx = Math.cos(j * Math.PI / 180), dy = Math.sin(j * Math.PI / 180), ux = dx * c2 + dy * s2, uy = -dx * s2 + dy * c2, ox = -Cx * c2 - Cy * s2, oy = Cx * s2 - Cy * c2;
         const qa = ux * ux / (A * A) + uy * uy / (B * B), qb = 2 * (ux * ox / (A * A) + uy * oy / (B * B)), qc = ox * ox / (A * A) + oy * oy / (B * B) - 1; Rs[j] = (-qb + Math.sqrt(Math.max(0, qb * qb - 4 * qa * qc))) / (2 * qa) + grow; } };
@@ -85,7 +85,12 @@ function contour(m, label, names, t) {
   const dz = (t.depth ?? .03) / fr.s, zOK = radial || t.zMode === 'front'
     ? (x, y, z) => { const px = (x - box[0]) / res, py = (y - box[1]) / res; if (px < 1 || py < 1 || px > W - 2 || py > H - 2) return false; const i = Math.floor(py) * W + Math.floor(px); let zf = -Infinity; for (const j of [i - W - 1, i - W, i - W + 1, i - 1, i, i + 1, i + W - 1, i + W, i + W + 1]) if (Number.isFinite(Z[j])) zf = Math.max(zf, Z[j]); return z >= zf - dz; }
     : (x, y, z) => z >= base((x - box[0]) / res, (y - box[1]) / res) - dz;
-  return {s, zOK, info, ell, setEllipse, top, res, centre: [cx, cy], R, Rs, rough: rough * res * fr.s, topRender: top * fr.s, extent: Math.max(...Rs) * res};
+  // an ellipse with its own centre (local units): the rebuilt nostrils
+  const setEllipseAt = (ecx, ecy, a2, b2, ang2) => { const c2 = Math.cos(ang2), s2 = Math.sin(ang2), A = a2 / res, B = b2 / res, ox0 = (cx - ecx) / res, oy0 = (cy - ecy) / res;
+    for (let j = 0; j < 360; j++) { const dx = Math.cos(j * Math.PI / 180), dy = Math.sin(j * Math.PI / 180), ux = dx * c2 + dy * s2, uy = -dx * s2 + dy * c2, ox = ox0 * c2 + oy0 * s2, oy = -ox0 * s2 + oy0 * c2;
+      const qa = ux * ux / (A * A) + uy * uy / (B * B), qb = 2 * (ux * ox / (A * A) + uy * oy / (B * B)), qc = ox * ox / (A * A) + oy * oy / (B * B) - 1; Rs[j] = (-qb + Math.sqrt(Math.max(0, qb * qb - 4 * qa * qc))) / (2 * qa) + grow; } };
+  const baseAt = (x, y) => base((x - box[0]) / res, (y - box[1]) / res);
+  return {s, zOK, info, ell, ellC, setEllipse, setEllipseAt, baseAt, top, res, centre: [cx, cy], R, Rs, rough: rough * res * fr.s, topRender: top * fr.s, extent: Math.max(...Rs) * res};
 }
 
 // ── line: the smile ──
@@ -169,4 +174,63 @@ function tube(m, fl, K, names, ring, t) {
   return {n: sel.length, inside, hist: [...hist].sort((a, b) => a[0] - b[0]).filter(([b]) => b > -.02 && b < .05).map(([b, c2]) => `${b.toFixed(4)}:${c2}`).join(' '), sel, E};
 }
 
-module.exports = {contour, line, override, applyVertices, onlyClaimed, tube};
+// ── domes: a pair of bumps (the nostrils) rebuilt equal and aligned ──
+// d: {targets: [the two contour options], depth (render), flatten: [from, to] (× the raw foot radius), profile, height (render, or the
+// mean measured top), scale (× the measured ellipse)}. The old bumps sink into the surface around them (the quadric of each contour,
+// blended out between flatten[0] and flatten[1] of the foot); then two domes with the mean axes, the mean height, the angle mirrored,
+// at the mean height (y) and symmetric about the pair's centre: z += h·(1 − ρ²)^profile. Returns the ellipses (local units) and the
+// moved vertices (their normals must be rebuilt).
+function domes(m, label, names, d) {
+  const fr = P2.frame(m), dets = d.targets.map(t => contour(m, label, names, {...t, shape: 'ellipse'})), P = m.P, moved = new Set(), dz = (d.depth ?? .02) / fr.s;
+  const [f0, f1] = d.flatten ?? [1.06, 1.5], sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (const det of dets) {
+    const [cx, cy] = det.centre, res = det.res;
+    for (let v = 0; v < m.nv; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2], dx = (x - cx) / res, dy = (y - cy) / res, rho = Math.hypot(dx, dy);
+      let a = Math.atan2(dy, dx) * 180 / Math.PI; if (a < 0) a += 360; const R0 = det.R[Math.floor(a) % 360];
+      if (rho > R0 * f1) continue;
+      const zb = det.baseAt(x, y); if (z < zb - dz) continue;   // the front shell only
+      const w = 1 - sm(R0 * f0, R0 * f1, rho); if (w <= 0) continue;
+      P[v * 3 + 2] = zb + (z - zb) * (1 - w); moved.add(v);
+    }
+  }
+  // the inner part (fully sunk) is re-netted: x/y relaxed toward the mean of the neighbours (the edge of the region stays put)
+  const inner = new Set();
+  for (const det of dets) { const [cx, cy] = det.centre, res = det.res;
+    for (const v of moved) { const dx = (P[v * 3] - cx) / res, dy = (P[v * 3 + 1] - cy) / res; let a = Math.atan2(dy, dx) * 180 / Math.PI; if (a < 0) a += 360; if (Math.hypot(dx, dy) < det.R[Math.floor(a) % 360] * (d.relax ?? 1.25)) inner.add(v); } }
+  const nb = new Map(); for (const v of inner) nb.set(v, new Set());
+  for (let f = 0; f < m.nf; f++) { const t = [m.F[f * 3], m.F[f * 3 + 1], m.F[f * 3 + 2]]; for (let i = 0; i < 3; i++) if (nb.has(t[i])) { nb.get(t[i]).add(t[(i + 1) % 3]); nb.get(t[i]).add(t[(i + 2) % 3]); } }
+  // only neighbours on the front shell count (a back face sharing an edge would drag the net)
+  for (const [v, set] of nb) for (const u of [...set]) if (!moved.has(u) && Math.abs(P[u * 3 + 2] - P[v * 3 + 2]) > dz * 3) set.delete(u);
+  const X = new Float64Array(m.nv), Y = new Float64Array(m.nv); for (const v of inner) { X[v] = P[v * 3]; Y[v] = P[v * 3 + 1]; }
+  for (let it = 0; it < (d.relaxIterations ?? 60); it++) { const nx = new Map(); for (const [v, set] of nb) { if (!set.size) continue; let sx = 0, sy = 0; for (const u of set) { sx += inner.has(u) ? X[u] : P[u * 3]; sy += inner.has(u) ? Y[u] : P[u * 3 + 1]; } nx.set(v, [sx / set.size, sy / set.size]); } for (const [v, [x, y]] of nx) { X[v] = x; Y[v] = y; } }
+  const baseOf = (x, y) => { let best = dets[0], bd = Infinity; for (const det of dets) { const dd = Math.hypot(x - det.centre[0], y - det.centre[1]); if (dd < bd) { bd = dd; best = det; } } return best.baseAt(x, y); };
+  for (const v of inner) { P[v * 3] = X[v]; P[v * 3 + 1] = Y[v]; P[v * 3 + 2] = baseOf(X[v], Y[v]); }
+  const [L, Rr] = [...dets].sort((p, q) => p.ellC[0] - q.ellC[0]), k = d.scale ?? 1;
+  const a = (L.ell.a + Rr.ell.a) / 2 * k, b = (L.ell.b + Rr.ell.b) / 2 * k, ym = (L.ellC[1] + Rr.ellC[1]) / 2, xm = (L.ellC[0] + Rr.ellC[0]) / 2, half = (Rr.ellC[0] - L.ellC[0]) / 2;
+  let sx = 0, sy = 0; [L, Rr].forEach((det, i) => { const e = (det.ell.a - det.ell.b) / (det.ell.a + det.ell.b), th = i ? Math.PI - det.ell.ang : det.ell.ang; sx += e * Math.cos(2 * th); sy += e * Math.sin(2 * th); });
+  const angL = Math.atan2(sy, sx) / 2, h = d.height != null ? d.height / fr.s : (L.top + Rr.top) / 2, p = d.profile ?? .6;
+  const ells = [{cx: xm - half, cy: ym, a, b, ang: angL, det: L}, {cx: xm + half, cy: ym, a, b, ang: Math.PI - angL, det: Rr}];
+  for (const e of ells) {
+    const c = Math.cos(e.ang), s = Math.sin(e.ang);
+    for (let v = 0; v < m.nv; v++) {
+      const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2], u = ((x - e.cx) * c + (y - e.cy) * s) / e.a, w = (-(x - e.cx) * s + (y - e.cy) * c) / e.b, r2 = u * u + w * w;
+      if (r2 >= 1) continue;
+      const zb = e.det.baseAt(x, y); if (Math.abs(z - zb) > dz) continue;
+      P[v * 3 + 2] = z + h * Math.pow(1 - r2, p); moved.add(v);
+    }
+  }
+  return {ellipses: ells.map(({det, ...e}) => e), moved, info: `domes ${(a * fr.s).toFixed(3)}×${(b * fr.s).toFixed(3)} at ${(angL * 180 / Math.PI).toFixed(0)}°, y ${((ym - fr.lo[1]) * fr.s - 1.9).toFixed(3)}, x ±${(half * fr.s).toFixed(3)} about ${((xm - fr.ctr[0]) * fr.s).toFixed(3)}, height ${(h * fr.s).toFixed(4)} (they were at y ${((L.ellC[1] - fr.lo[1]) * fr.s - 1.9).toFixed(3)} and ${((Rr.ellC[1] - fr.lo[1]) * fr.s - 1.9).toFixed(3)})`};
+}
+// normals of the moved vertices (and a ring around them, blended) from the new faces
+function rebuildNormals(m, vn, moved, ring) {
+  const acc = new Float64Array(m.nv * 3), near = new Set(moved); for (const v of moved) for (const u of ring[v]) near.add(u);
+  for (let f = 0; f < m.nf; f++) { const a = m.F[f * 3], b = m.F[f * 3 + 1], c = m.F[f * 3 + 2]; if (!near.has(a) && !near.has(b) && !near.has(c)) continue;
+    const P = m.P, ux = P[b * 3] - P[a * 3], uy = P[b * 3 + 1] - P[a * 3 + 1], uz = P[b * 3 + 2] - P[a * 3 + 2], vx = P[c * 3] - P[a * 3], vy = P[c * 3 + 1] - P[a * 3 + 1], vz = P[c * 3 + 2] - P[a * 3 + 2], nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const v of [a, b, c]) { acc[v * 3] += nx; acc[v * 3 + 1] += ny; acc[v * 3 + 2] += nz; } }
+  for (const v of near) { const l = Math.hypot(acc[v * 3], acc[v * 3 + 1], acc[v * 3 + 2]) || 1, w = moved.has(v) ? 1 : .5;
+    let x = w * acc[v * 3] / l + (1 - w) * vn[v * 3], y = w * acc[v * 3 + 1] / l + (1 - w) * vn[v * 3 + 1], z = w * acc[v * 3 + 2] / l + (1 - w) * vn[v * 3 + 2]; const k = Math.hypot(x, y, z) || 1; vn[v * 3] = x / k; vn[v * 3 + 1] = y / k; vn[v * 3 + 2] = z / k; }
+  return near.size;
+}
+
+module.exports = {contour, line, override, applyVertices, onlyClaimed, tube, domes, rebuildNormals};

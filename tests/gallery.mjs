@@ -26,18 +26,22 @@ assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, tr
 // A girafa (07/10/2026): ainda sem peça impressa, as imagens do render que o dono mandou — de frente, de lado (no lugar da de três
 // quartos) e de costas, e o rosto de perto saindo da de frente.
 const photoPieces = ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'];
-assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio'], 'as três peças com fotos reais e a girafa');
+assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio', 'unicornioscopio'], 'as três peças com fotos reais, a girafa e o unicórnio');
 assert.deepEqual(viewsOf('girafoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'a girafa: frente, lado, costas e o rosto de perto');
+// O unicórnio (07/10/2026: "te mandei as fotos do unicórnio, as restantes que estão faltando"): a frente é a foto da vitrine (o quadro 0
+// do giro em 3D); lado, costas e o rosto de perto são as fotos do dono, recortadas do fundo preto, com o roxo levado ao da peça.
+assert.deepEqual(viewsOf('unicornioscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'o unicórnio: frente, lado, costas e o rosto de perto');
 for (const key of Object.keys(GALLERY)) {
   const ids = viewsOf(key).map(v => v.id), specs = ids.map(id => fotos[key][id]);
   // recortadas do fundo delas (preto ou claro); a fonte é a foto do Luiz (a girafa: as imagens que o dono mandou). O avião de frente
   // e a cabine de perto (07/10/2026: "a imagem de frente, você pode usar simplesmente a que está na vitrine"): a foto da vitrine,
   // ampliada, já sem fundo.
   // A girafa (07/10/2026): renders do modelo 3D com a pintura corrigida (as imagens que o dono mandou tinham as manchas vazadas).
-  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : [];
-  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
+  const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : key === 'unicornioscopio' ? ['frente'] : [];
+  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'dist/assets/product-unicornioscopio-cutout.webp' : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
+  const photo = id => key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : key === 'unicornioscopio' ? `unicornioscopio-${id === 'detalhe' ? 'rosto' : id}.webp` : `${key}-3-vistas.webp`;
   assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === source(id)
-    : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === (key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : `${key}-3-vistas.webp`)), `${key}: as fotos, recortadas`);
+    : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === photo(id)), `${key}: as fotos, recortadas`);
   assert(!/render/.test(JSON.stringify(specs)), `${key}: nada do render do visualizador do site`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), ids.filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
   // no branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), como nas lojas grandes: sem transparência
@@ -49,7 +53,7 @@ for (const key of Object.keys(GALLERY)) {
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(fotos[key][id].fundo === 'transparente' ? `../${fotos[key][id].fonte}` : `../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
-for (const key of ['macacoscopio', 'unicornioscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
+for (const key of ['macacoscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
 // Nas cores da vitrine (07/10/2026: "preciso que as imagens estejam todas nas cores que ela é originalmente"): as fotos reais foram
 // feitas com peças de outras cores; cada regra de "cores" leva uma cor da foto para a da paleta (a borboleta, para o verde do render da

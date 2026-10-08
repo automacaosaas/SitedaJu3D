@@ -37,6 +37,9 @@ da geometria, em passos:
      frente (`facing`): nos flancos íngremes a vista da frente não decide a borda;
    - `mode: line` (o sorriso): o fundo do sulco com largura constante e pontas redondas;
    - `onlyExact`: o preto só existe onde um detalhe o desenhou (os pingos soltos somem);
+   - `domes` (as narinas, terceira rodada: "um está mais caído que o outro… tire esse relevo, alinhe"): antes de tudo, os dois relevos
+     afundam na superfície em volta, a malha de dentro é redistribuída e dois domos iguais sobem na mesma altura, simétricos; cada
+     narina é pintada com a elipse do próprio domo (`dome`); o sorriso ficou mais grosso (`width` 46, como a referência);
    - o `crisp.cjs` subdivide só os triângulos que a borda cruza (`refineTarget`; `refine` por detalhe), para a elipse não sair
      facetada.
 
