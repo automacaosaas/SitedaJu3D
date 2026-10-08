@@ -73,6 +73,13 @@ assert.ok(/finePointer\.matches/.test(demo), 'inclinação e flutuação só com
 assert.ok(/timeline\.cancel\(\)/.test(demo) && /float\.cancel\(\)/.test(demo) && /removeEventListener\('pointermove'/.test(demo), 'limpeza de animações e ouvintes');
 assert.ok(!/setInterval/.test(demo + timeline));
 assert.ok(demo.includes("dataset.back = !layers.back ? 'none' : layers.depth ? 'recessed' : 'rendered'") && css.includes('.hero-demo[data-back="recessed"] .demo-back {') && !/^\.demo-back \{[^}]*(filter|mask|scale)/m.test(css), 'camadas renderizadas juntas (depth 0) entram sem nenhuma compensação');
+// o fundo: a raiz da camada escurece e recua (o desenho atrás da peça vai junto, por estar dentro dela); com movimento, o desenho
+// ainda desliza com a câmera até ficar atrás da peça montada — num translate/scale próprio, sem disputar o transform da raiz
+const calmBlock = demo.slice(demo.indexOf('if (g.reduced) {'), demo.indexOf('const depth = PERSPECTIVE'));
+assert.ok(demo.includes('scenery: bgLayers[index]?.firstElementChild') && demo.includes("motif: bgLayers[index]?.querySelector('.scenery-back')"), 'a demonstração usa a raiz do fundo e o desenho dentro dela');
+assert.ok(calmBlock.includes('fade(g.scenery, 80, 260, 1, .3)') && !calmBlock.includes('g.motif'), 'movimento reduzido: o fundo só esmaece, o desenho não desliza');
+assert.ok(/\{el: g\.motif, delay: 40, duration: 560, easing: EASE\.camera, keyframes: \[\{translate: '0px 0px', scale: '1'\}, \{translate: `\$\{\(-g\.dx\)\.toFixed\(1\)\}px \$\{\(-g\.dy\)\.toFixed\(1\)\}px`, scale: Math\.min\(1\.2, 1 \/ g\.s\)/.test(demo), 'o desenho acompanha a câmera, sem crescer demais');
+assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(demo + timeline), 'nenhuma peça citada pelo nome na demonstração');
 const ends = [...demo.matchAll(/delay: (\d+)[^}]*?duration: (\d+)/g)].map(m => Number(m[1]) + Number(m[2]));
 assert.ok(ends.length > 8 && Math.max(...ends) <= 2700, `nenhuma trilha passa de 2,7 s (${Math.max(...ends)} ms)`);
 const timing = demo.match(/const T = asm \? \{([^}]*)\} : config\.head \? \{([^}]*)\} : \{([^}]*)\};/), field = (text, name) => Number(text.match(new RegExp(name + ': (\\d+)'))[1]);

@@ -184,7 +184,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     const piece = (source.hidden ? slot.querySelector('.piece') : source).getBoundingClientRect();
     const box = dom.stage.getBoundingClientRect(), size = dom.rig.offsetWidth || 1;
     const left = box.left + dom.rig.offsetLeft, top = box.top + dom.rig.offsetTop;
-    return {slot, source, scenery: bgLayers[index]?.firstElementChild, compact: compact.matches, reduced: calm,
+    // scenery: a raiz do fundo da peça (escurece e recua); motif: o desenho atrás da peça (hero-scenery.js), que acompanha a câmera
+    return {slot, source, scenery: bgLayers[index]?.firstElementChild, motif: bgLayers[index]?.querySelector('.scenery-back'), compact: compact.matches, reduced: calm,
       s: piece.width / size || 1,
       dx: piece.left + piece.width / 2 - (left + size / 2),
       dy: piece.top + piece.height / 2 - (top + size / 2),
@@ -267,6 +268,8 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
         {offset: 1, opacity: .16, transform: DROP_REST}]},
       // 3 · o fundo acompanha: luz macia atrás do encaixe, cenário recua, vinheta discreta
       {el: g.scenery, delay: 60, duration: 460, easing: EASE.soft, keyframes: [{opacity: 1, transform: 'translate3d(0, 0, 0)'}, {opacity: .3, transform: 'translate3d(0, 12px, 0)'}]},
+      // o desenho atrás da peça desliza com a câmera e fica atrás da peça montada (translate/scale: o transform é da raiz, acima)
+      {el: g.motif, delay: 40, duration: 560, easing: EASE.camera, keyframes: [{translate: '0px 0px', scale: '1'}, {translate: `${(-g.dx).toFixed(1)}px ${(-g.dy).toFixed(1)}px`, scale: Math.min(1.2, 1 / g.s).toFixed(3)}]},
       {el: d.vignette, delay: 80, duration: 460, easing: EASE.soft, keyframes: [{opacity: 0}, {opacity: 1}]},
       {el: d.glow, delay: 80, duration: T.glow, keyframes: [
         {offset: 0, opacity: 0, transform: 'scale(.85)', easing: EASE.soft},

@@ -176,3 +176,36 @@ sem rolagem lateral: rótulo numa linha, demonstração abrindo, configurador ab
 Aviãoscopia sem “Ver encaixado”. Não houve teste em aparelho físico. As menções acima a
 “Escolha sua cor” descrevem a versão anterior.
 
+
+## Fundos temáticos em sombreado de nuvens (07/10/2026)
+
+Pedido do dono: "Na vitrine, detalhar individualmente para cada objeto, em sombreado de nuvens". Atrás de cada peça há agora
+um desenho próprio, claro e macio, nas cores da própria peça:
+
+| Peça | Desenho (`SHOWCASE.<peça>.scenery`) | Brumas dos cantos |
+| --- | --- | --- |
+| MonkeyLamp | `bananas`: um cacho grande à direita e um menor à esquerda, sobre nuvenzinhas | samambaias |
+| UnicornLamp | `rainbow`: arco-íris de faixas arredondadas (como o da peça), nuvenzinhas nos pés e estrelas | nuvens fofas |
+| GiraffeLamp | `acacia`: a acácia de copa achatada à direita, o sol, passarinhos, uma acácia pequena ao longe e capim | capim |
+| Borboletoscópio | `flowers`: um jardim dos dois lados (flor rosa, margaridas lilás, botões e folhas) | pétalas |
+| Dinossauroscópio | `claw`: a pata de T-rex (referência: as luvas de garra) — três dedos escamados com garras curvas — e samambaias pré-históricas | samambaias |
+| Aviãoscopia | sem desenho: continua com as nuvens | nuvens |
+
+- **Dados, não código:** o desenho de cada peça vem de `scenery: {side, motif, tints}` em `products.js`; `hero-scenery.js`
+  é uma biblioteca de desenhos sem nome de produto, e `carousel.js`/`hero-demo.js` continuam sem nome de produto.
+- **Cores e contraste:** `hero-motion.js › sceneryVars` clareia cada cor da peça (`tints`) com branco só até a luminância
+  do tom do meio do degradê (`lightTint`). Cada forma tem o lado da luz (mais branco) e o lado da sombra, que é a cor
+  misturada a no máximo 8% da cor do texto (`SCENERY_SHADE`). Todas as cores são opacas e nada é mais escuro que esse lado da
+  sombra; `tests/carousel.cjs` confere o contraste do texto, do subtítulo e da categoria sobre ele, em todas as peças.
+- **SVG em linha**, sem filtros, sem scripts, sem animação própria e sem arquivos novos (sem mudança de CSP). Bordas
+  dissolvidas por degradês e pela máscara de `.scenery-back`. Ids dos degradês únicos por camada (`scn-<camada>-…`).
+- **Posição:** o desenho se prende ao palco medido no JS (`--stage-x`, `--stage-top`, `--scn-ped`); 1 unidade do desenho =
+  1/200 da largura da pilastra. Fica abaixo da faixa do header, fora da abertura da borboleta e do dinossauro, longe do texto
+  no computador e do preço no celular. Dos 901 aos ~1365 px os botões chegam perto da pilastra: à esquerda, nada desce até
+  eles (o arco-íris sobe um pouco nessa faixa). Ajustes por tela: `--m-scale` (.9 de 901 a 1100 px, .92 até 600 px) e `--m-dy`.
+- **Movimento:** no arraste o desenho acompanha a peça a 12% do caminho dela (`sceneryShift`, num `translate` próprio). Camadas
+  apagadas ficam com `visibility: hidden`. Parado, nada se mexe; com movimento reduzido, nem o parallax.
+- **"Ver encaixado":** o desenho está dentro da raiz da camada, então escurece com ela; com movimento, ainda desliza com a
+  câmera até ficar atrás da peça montada.
+- Conferido no Chrome headless em 390 (celular, 2x), 360, 800, 901, 1024, 1101, 1280, 1366 e 1920 px, no meio de um arraste,
+  com movimento reduzido e na demonstração do unicórnio e do dinossauro. Não testado em aparelho físico.

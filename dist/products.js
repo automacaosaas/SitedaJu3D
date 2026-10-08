@@ -57,9 +57,14 @@ export const PHOTO_SIZES = '(max-width: 899px) 72vw, (max-width: 1400px) 35vw, 4
 // cada peça na pilastra sem tratar produto por produto. `theme` colore o banner, o header e a seção
 // logo abaixo (título e linha de apoio; os cards não). `bannerStops` são as três paradas do degradê
 // (claro no centro → borda); a geometria fica no CSS. Produto novo sem entrada usa DEFAULT_SHOWCASE.
+// `scenery` é o fundo desenhado atrás da peça, em sombreado de nuvens (hero-scenery.js): side = as brumas dos cantos ('petals',
+// 'ferns', 'grass', 'puffs' ou 'clouds'); motif = o desenho atrás da peça ('bananas', 'rainbow', 'acacia', 'flowers', 'claw' ou
+// null); tints = as cores da própria peça (#rrggbb), que a vitrine clareia até o tom do meio do degradê (hero-motion.js › sceneryVars),
+// para o desenho nunca escurecer o fundo atrás de um texto.
 export const DEFAULT_SHOWCASE = Object.freeze({
   art:Object.freeze({h:.92, bottom:.03, foot:.55}),
-  theme:Object.freeze({bannerStops:'#fbf1f2 0%,#f6dfe3 52%,#eecfd6 100%', headerBackground:'#f8e6e9', textColor:'#2a1c22', mutedColor:'#6c4b57', accentColor:'#9b3f5a'})
+  theme:Object.freeze({bannerStops:'#fbf1f2 0%,#f6dfe3 52%,#eecfd6 100%', headerBackground:'#f8e6e9', textColor:'#2a1c22', mutedColor:'#6c4b57', accentColor:'#9b3f5a'}),
+  scenery:Object.freeze({side:'petals', motif:null, tints:Object.freeze([])})
 });
 // `demo` (opcional) liga a demonstração na vitrine: clicar na peça aproxima o produto e faz o equipamento
 // subir até encaixar nele (hero-demo.js). Medidas em fração do lado do quadrado do recorte, tiradas do alfa
@@ -75,6 +80,8 @@ export const SHOWCASE = {
   borboletoscopio:{
     art:{h:.949, bottom:.0136, foot:.6085, alt:'Borboletoscópio verde-menta com detalhes amarelos sobre uma pilastra branca'},
     theme:{bannerStops:'#f0faf4 0%,#d9f0e4 52%,#c6e8d7 100%', headerBackground:'#e5f5ec', textColor:'#10281e', mutedColor:'#356650', accentColor:'#25664c'},
+    // flores: pétalas no rosa e no lilás da paleta, miolos no amarelo da peça e folhas no verde-menta dela
+    scenery:{side:'petals', motif:'flowers', tints:['#ee8eaa', '#efcf59', '#ab91d1', '#89cdbc']},
     demo:{
       tool:{src:'retinoscopio.webp', width:.2343, top:.2871, ratio:.1933, fade:[.63, .72]},
       // front = a mesma imagem da vitrine (catalogImage), identidade oficial da peça. back = parede traseira já pronta:
@@ -91,6 +98,9 @@ export const SHOWCASE = {
   dinossauroscopio:{
     art:{h:.893, bottom:.0526, foot:.3995, alt:'Dinossauroscópio verde-musgo com espinhos amarelo-claros sobre uma pilastra branca'},
     theme:{bannerStops:'#f4f6ee 0%,#e2e8d4 52%,#d0d9bf 100%', headerBackground:'#e9eedf', textColor:'#1b2414', mutedColor:'#46553a', accentColor:'#4a5f34'},
+    // pata de T-rex (a referência do dono: luvas de garra, pele marrom-alaranjada com escamas e garras escuras): a pele, as escamas no
+    // verde-musgo da peça e o brilho no amarelo-claro dela
+    scenery:{side:'ferns', motif:'claw', tints:['#d4913a', '#616c52', '#f0dd7c']},
     demo:{
       tool:{src:'retinoscopio.webp', width:.2291, top:.3285, ratio:.1933, fade:[.57, .66]},
       layers:{front:'product-dinossauroscopio-cutout.webp', back:'dinossauroscopio-back.webp'},
@@ -105,6 +115,7 @@ export const SHOWCASE = {
   aviaoscopia:{
     art:{h:.8939, bottom:.0758, foot:.4896, alt:'Aviãoscopia azul com 16 aberturas numeradas sobre uma pilastra branca'},
     theme:{bannerStops:'#f0f9fe 0%,#d3ebf8 52%,#bcdff2 100%', headerBackground:'#deeffa', textColor:'#0e1c3d', mutedColor:'#3a6280', accentColor:'#22638f'},
+    scenery:{side:'clouds', motif:null, tints:[]},   // o avião continua só com as nuvens
     demo:{
       // Montagem em vez de encaixe: a régua de esquiascopia sobe por entre as duas metades e elas se fecham em volta dela. Metades, régua e
       // vitrine são renders do mesmo modelo com a mesma câmera (tools/render-aviao-macaco/plane.html), então as camadas coincidem pixel a pixel.
@@ -126,6 +137,7 @@ export const SHOWCASE = {
   macacoscopio:{
     art:{h:.8708, bottom:.0542, foot:.311, alt:'MonkeyLamp, capa de macaco marrom com uma banana, sobre uma pilastra branca'},
     theme:{bannerStops:'#fcf5e5 0%,#f5e8c8 52%,#eddcb5 100%', headerBackground:'#f6ebd0', textColor:'#33200f', mutedColor:'#634526', accentColor:'#86441a'},
+    scenery:{side:'ferns', motif:'bananas', tints:['#efcf59', '#c9a07d', '#6a3a28']},   // cachos de banana: amarelo, bege e marrom da peça
     demo:{
       // A lâmpada de fenda portátil em duas partes, renderizadas com a câmera da foto da vitrine (tools/render-aviao-macaco/monkeylamp.html):
       // tool = base, carcaça e coluna preta, que sobe por dentro do macaco; head = prisma e cabeça binocular, que descem por cima (top negativo:
@@ -149,21 +161,23 @@ const fitLamp = (demo, fit, foot) => {
   const t = demo.tool, h = demo.head, bottom = h.top + h.width / h.ratio;
   return {...demo, tool:{...t, width:t.width * fit, top:foot - (foot - t.top) * fit}, head:{...h, width:h.width * fit, top:bottom - h.width * fit / h.ratio}};
 };
-for (const [key, art, fit, theme, demo] of [
+for (const [key, art, fit, theme, demo, scenery] of [
   ['girafoscopio', {h:.874, bottom:.053, foot:.286, alt:'GiraffeLamp, capa de girafa amarela com manchas marrons, sobre uma pilastra branca'}, .92,
     {bannerStops:'#fff6df 0%,#fbe4b0 52%,#f4d08a 100%', headerBackground:'#fbe9c0', textColor:'#2e1c07', mutedColor:'#5c3a10', accentColor:'#87430c'},
-    {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'GiraffeLamp encaixado na lâmpada de fenda.'}],
+    {glow:'#fffaf0', halo:'#e9b44c', accent:'#e3a83a', shade:'#2e1c07', message:'GiraffeLamp encaixado na lâmpada de fenda.'},
+    {side:'grass', motif:'acacia', tints:['#eeb012', '#60341e', '#dec4a0']}],   // acácia da savana: copa e capim no ocre, passarinhos no marrom, tronco no creme
   ['unicornioscopio', {h:.876, bottom:.052, foot:.257, alt:'UnicornLamp, capa de unicórnio branca com crina, arco-íris e estrelas, sobre uma pilastra branca'}, .817,
     {bannerStops:'#fcf6fe 0%,#f1e3f8 52%,#e5d1f1 100%', headerBackground:'#f4e9fa', textColor:'#291532', mutedColor:'#5a3d6a', accentColor:'#87397a'},
     {glow:'#fdf8ff', halo:'#d6a8e6', accent:'#ee8eaa', shade:'#291532', message:'UnicornLamp encaixado na lâmpada de fenda.',
       // 07/10/2026: depois do encaixe, a cabeça gira para a direita — o chifre sai da frente da lâmpada, para a criança olhar pelos olhinhos
       // (36 quadros do 3D numa grade de 6 colunas, por cima da foto: tools/render-aviao-macaco/lamp-assets.cjs --giro; box = a parte que muda, em frações da foto)
-      turn:{src:'unicornioscopio-giro.webp', frames:36, cols:6, box:[0.2616, 0.0662, 0.5239, 0.3884], angle:70, hint:'Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.'}}]
+      turn:{src:'unicornioscopio-giro.webp', frames:36, cols:6, box:[0.2616, 0.0662, 0.5239, 0.3884], angle:70, hint:'Gire a cabecinha para o lado: o chifre sai da frente da lâmpada.'}},
+    {side:'puffs', motif:'rainbow', tints:['#a65cbe', '#7c8ad8', '#d6a82c', '#ee8eaa']}]   // arco-íris nas cores da peça, com nuvenzinhas nos pés
 ]) {
   const monkey = SHOWCASE.macacoscopio, title = PRODUCTS[key].title;
-  SHOWCASE[key] = {art, theme, demo:{...fitLamp(monkey.demo, fit, 1 - art.bottom), ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
+  SHOWCASE[key] = {art, theme, scenery, demo:{...fitLamp(monkey.demo, fit, 1 - art.bottom), ...demo, callouts:monkey.demo.callouts.map((c, i) => i ? c : {...c, label:title})}};
 }
-export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},demo:entry.demo||null};}
+export function showcase(key){const entry=SHOWCASE[key]||{};return {art:{...DEFAULT_SHOWCASE.art,...entry.art},theme:{...DEFAULT_SHOWCASE.theme,...entry.theme},scenery:{...DEFAULT_SHOWCASE.scenery,...entry.scenery},demo:entry.demo||null};}
 export function defaults(key){return Object.fromEntries(PRODUCTS[key].parts.map(part=>[part.id,part.default]));}
 export function color(id){return PALETTE.find(c=>c.id===id)||PALETTE[0];}
 // Peça de cores fixas (as lâmpadas): nada para escolher — sem partes; as cores são as dela (`colors`).

@@ -31,6 +31,10 @@ lá ele já recebeu as cores novas do dinossauro.
   `hero-demo.js` ou `motion-timeline.js` (Web Animations API, sem biblioteca). O avião
   continua abrindo o popup.
 - **Hover na vitrine:** a peça da frente inclina de leve seguindo o mouse (só com mouse).
+- **Fundo desenhado (07/10/2026):** o desenho atrás da peça (bananas, arco-íris, acácia, flores, pata de T-rex; ver
+  HERO-BANNER-QA.md) fica dentro da raiz do fundo, que escurece para 30% e recua. Com movimento, o desenho também desliza
+  com a câmera (`translate`/`scale` próprios, até 1,2×) e fica atrás da peça montada; na volta, faz o caminho inverso.
+  Com movimento reduzido, só esmaece.
 - **Dinossauroscópio:** renderizado de novo a partir das peças 3D originais (STL), de frente e
   nas cores reais: verde-musgo, crista e bolinhas amarelo-claras, dentes brancos, olhos pretos.
   - A crista escurece de leve nas bordas e tem um contorno fino, só onde encosta no fundo.
