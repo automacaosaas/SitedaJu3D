@@ -18,7 +18,8 @@ const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8',
   '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary'
+  '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.glb': 'model/gltf-binary',
+  '.webmanifest': 'application/manifest+json; charset=utf-8'   // o manifesto dos ícones (site.webmanifest, 09/10/2026)
 };
 // Text compresses well; Meshopt-compressed models still shrink by about a fifth.
 const COMPRESSIBLE = new Set(['.html', '.js', '.mjs', '.css', '.json', '.txt', '.xml', '.svg', '.glb']);
@@ -41,7 +42,7 @@ const best = ext => ext === '.glb' ? 6 : 11;   // Meshopt models gain almost not
 // keep them. nosniff, HSTS and Referrer-Policy stay everywhere: nosniff is checked on the scripts and stylesheets
 // themselves, HSTS is read from any HTTPS answer, and a module's or stylesheet's own Referrer-Policy rules what it imports.
 const DOCUMENT_ONLY = new Set(['content-security-policy', 'x-frame-options', 'permissions-policy']);
-const SUBRESOURCE = /\.(?:m?js|css|webp|png|jpe?g|ico|woff2|glb)$/i;
+const SUBRESOURCE = /\.(?:m?js|css|webp|png|jpe?g|ico|woff2|glb|webmanifest)$/i;
 // as páginas que continuam com ".html" no endereço (cleanPath): o painel da Ju, a prévia de e-mails e a página de erro
 const KEEP_HTML = new Set(['admin', 'email-preview', '404']);
 

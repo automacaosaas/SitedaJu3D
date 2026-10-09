@@ -3,6 +3,7 @@
 // (audit J1). One block per page, between <!-- og --> and <!-- /og -->, written from the table below and from the
 // store's address in api/_lib/legal.js (COMPANY.website), so the launch domain is changed in one place. Like
 // tools/sync-legal.cjs: static HTML, readable without scripts; tests/storefront.mjs fails if a page is out of date.
+// Also the site's icons on every page (09/10/2026), between <!-- icons --> and <!-- /icons -->: see ICONS below.
 // Run: node tools/sync-meta.cjs   (or --check to only report)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -29,6 +30,20 @@ const PAGES = {
   'comprar-agora.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP},
   'conta.html': {url: '', title: 'Ju, imprime pra mim? · Peças em 3D para a consulta', description: SHOP}
 };
+
+// Ícones (09/10/2026; o Google mostrava um globo): o "Ju," do logo, feito por tools/make-logo-icons.cjs. O mesmo conjunto em todas
+// as páginas, como o Google pede (quadrado, múltiplo de 48 px, mesmo ícone no site todo, num endereço estável e rastreável):
+// /favicon.ico na raiz com 16, 32 e 48 px (onde o Google e os navegadores procuram mesmo sem link), o PNG de 48 e o de 192 px, o
+// do iPhone (180 px, com fundo) e o manifesto (192 e 512 px, Android). Sem ?v=: o endereço do ícone não muda; o servidor revalida
+// pelo ETag (um 304 de poucos bytes). O favicon.svg provisório ("Ju." num quadrado) saiu das páginas.
+const ICONS = [
+  '<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">',
+  '<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">',
+  '<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">',
+  '<link rel="apple-touch-icon" href="apple-touch-icon.png">',
+  '<link rel="manifest" href="site.webmanifest">'
+];
+const LOGO = 'assets/logo-ju-transparente.png';   // o logo da empresa para o Google: só a escrita, fundo transparente, 1024 px
 
 const esc = value => String(value).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const base = () => String(COMPANY.website).replace(/\/+$/, '');
@@ -61,7 +76,7 @@ const intlPhone = digits => digits.replace(/^(\d{2})(\d{2})(\d{4,5})(\d{4})$/, '
 function organization() {
   const {whatsapp, email} = contact(), telephone = whatsapp ? intlPhone(whatsapp) : '';
   return {'@context': 'https://schema.org', '@type': 'Organization', name: SITE, legalName: COMPANY.legalName, url: `${base()}/`,
-    logo: `${base()}/assets/logo-ju.webp`, sameAs: ['https://www.instagram.com/juimprimepramim/'],
+    logo: `${base()}/${LOGO}`, sameAs: ['https://www.instagram.com/juimprimepramim/'],
     ...(telephone ? {telephone, contactPoint: {'@type': 'ContactPoint', contactType: 'customer service', telephone, ...(email ? {email} : {}), areaServed: 'BR', availableLanguage: ['Portuguese', 'English', 'Spanish']}} : {})};
 }
 
@@ -71,7 +86,21 @@ function block(name) {
   return tags({url: `${base()}/${page.url ?? name.replace(/\.html$/, '')}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null, canonical: Boolean(page.canonical)});
 }
 
+// The icons block of any page: in place of the old block, else of the old single <link rel="icon">, else right after <title>.
+function icons(html, name) {
+  const eol = html.includes('\r\n') ? '\r\n' : '\n';
+  const lines = ['<!-- icons -->', ...ICONS, '<!-- /icons -->'].map(line => '  ' + line).join(eol);
+  const existing = /[ \t]*<!-- icons -->[^]*?<!-- \/icons -->/;
+  if (existing.test(html)) return html.replace(existing, () => lines);
+  const single = /[ \t]*<link rel="icon"[^>]*>/;
+  if (single.test(html)) return html.replace(single, () => lines);
+  const title = /[ \t]*<title>[^]*?<\/title>/;
+  if (!title.test(html)) throw new Error(`${name}: no <title>`);
+  return html.replace(title, found => found + eol + lines);
+}
+
 function sync(html, name) {
+  html = icons(html, name);
   if (!PAGES[name]) return html;
   const eol = html.includes('\r\n') ? '\r\n' : '\n';
   const lines = block(name).map(line => '  ' + line).join(eol);
@@ -81,7 +110,8 @@ function sync(html, name) {
   return html.replace('</head>', () => lines + eol + '</head>');
 }
 
-const pages = () => Object.keys(PAGES).filter(name => fs.existsSync(path.join(DIST, name)));
+// every page of dist/ (the icons go on all of them; the link previews only on those of PAGES)
+const pages = () => fs.readdirSync(DIST).filter(name => name.endsWith('.html')).sort();
 
 if (require.main === module) {
   const check = process.argv.includes('--check');
@@ -96,4 +126,4 @@ if (require.main === module) {
   if (check && stale.length) process.exitCode = 1;
 }
 
-module.exports = {sync, pages, block, tags, base, PAGES, IMAGE, SITE, DIST};
+module.exports = {sync, pages, block, tags, base, PAGES, IMAGE, SITE, DIST, ICONS, LOGO};
