@@ -308,4 +308,46 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert(jpeg.length < 300 * 1024, 'and small enough for WhatsApp');
 }
 
+// ── Ícones do site (09/10/2026: o Google mostrava um globo) ───────────────
+// O "Ju," do logo (tools/make-logo-icons.cjs), o mesmo bloco em todas as páginas (tools/sync-meta.cjs, conferido acima com o resto
+// do cabeçalho): /favicon.ico com 16, 32 e 48 px na raiz, PNGs quadrados e transparentes (múltiplos de 48 px para o Google), o do
+// iPhone com fundo (o iOS não aceita transparência) e o manifesto.
+{
+  const {createRequire} = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const {ICONS} = require('../tools/sync-meta.cjs');
+  const {decode} = require('../tools/png-codec.cjs');
+  const block = ['<!-- icons -->', ...ICONS, '<!-- /icons -->'].map(line => `  ${line}`).join('\n');
+  for (const name of fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'))) {
+    const page = read('dist/' + name), head = page.slice(0, page.indexOf('</head>'));
+    assert.equal(head.split(block).length, 2, `${name}: the icons block once, in the <head>`);
+    assert.equal([...page.matchAll(/<link rel="(?:icon|apple-touch-icon|manifest)"/g)].length, ICONS.length, `${name}: no other icon link`);
+    assert(!page.includes('favicon.svg'), `${name}: the provisional favicon.svg is gone`);
+  }
+  const hrefs = ICONS.map(line => /href="([^"]+)"/.exec(line)[1]);
+  assert.deepEqual(hrefs, ['favicon.ico', 'favicon-48.png', 'icon-192.png', 'apple-touch-icon.png', 'site.webmanifest']);
+  assert(hrefs.every(href => !href.includes('?')), 'stable icon addresses (no ?v=)');
+  const png = file => decode(fs.readFileSync(path.join(root, 'dist', file)));
+  const corner = image => image.rgba[3];
+  const sizes = {'favicon-48.png': 48, 'icon-192.png': 192, 'icon-512.png': 512, 'apple-touch-icon.png': 180};
+  for (const [file, size] of Object.entries(sizes)) {
+    const image = png(file);
+    assert.deepEqual([image.width, image.height], [size, size], `${file}: ${size} x ${size}`);
+    if (file === 'apple-touch-icon.png') { assert.equal(fs.readFileSync(path.join(root, 'dist', file))[25], 2, `${file}: opaque (RGB), as iOS wants`); continue; }
+    assert.equal(corner(image), 0, `${file}: transparent background`);
+    const opaque = image.rgba.filter((v, i) => i % 4 === 3 && v > 200).length / (size * size);
+    assert(opaque > 0.15 && opaque < 0.7, `${file}: the mark fills the square without being a block (${(opaque * 100).toFixed(0)}% opaque)`);
+  }
+  const ico = fs.readFileSync(path.join(root, 'dist/favicon.ico'));
+  assert.deepEqual([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)], [0, 1, 3], 'favicon.ico: an icon with three images');
+  for (const [n, size] of [16, 32, 48].entries()) {
+    const entry = 6 + 16 * n, offset = ico.readUInt32LE(entry + 12), image = decode(ico.subarray(offset, offset + ico.readUInt32LE(entry + 8)));
+    assert.deepEqual([ico[entry], ico[entry + 1], image.width, image.height], [size, size, size, size], `favicon.ico: ${size} px`);
+    assert.equal(corner(image), 0, `favicon.ico ${size} px: transparent background`);
+  }
+  const manifest = JSON.parse(read('dist/site.webmanifest'));
+  assert.deepEqual(manifest.icons.map(i => [i.src, i.sizes]), [['icon-192.png', '192x192'], ['icon-512.png', '512x512']]);
+  assert.equal(manifest.start_url, '/');
+}
+
 console.log('PASS: storefront — pre-rendered product cards match the default colors, prices and Pix prices; the cart without checkboxes; opening screen once per session; one "Personalizar o meu".');

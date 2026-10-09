@@ -21,12 +21,15 @@ const productsSource = await readFile(new URL('products.js', dist), 'utf8');
 for (const [, name] of productsSource.matchAll(/'([\w-]+\.(?:webp|png|jpe?g|svg))'/g)) referenced.add(name);
 
 for (const name of referenced) assert(await exists(name), `referenced asset exists: assets/${name}`);
-for (const name of referenced) assert(!/\.png$/.test(name) || name === 'logo-ju-email.png', `served images are WebP (PNG only for the e-mail logo): ${name}`);
+// PNG only for the e-mail logo and for the shop's logo in the data for Google (index.html's Organization.logo, 09/10/2026: PNG is the
+// format every reader of structured data takes; visitors never download it)
+const PNG_OK = new Set(['logo-ju-email.png', 'logo-ju-transparente.png']);
+for (const name of referenced) assert(!/\.png$/.test(name) || PNG_OK.has(name), `served images are WebP (PNG only for the e-mail logo and the logo for Google): ${name}`);
 
 // Budgets for what visitors download. Raise them only on purpose, after measuring.
 // The butterfly on the home's banner is the first picture every new visitor downloads (index.html preloads it).
 // The unicorn's head turn (36 frames, 07/10/2026) loads only when its 'Ver encaixado' opens, never with the page.
-const budget = {'logo-ju.webp': 40, 'logo-ju-224.webp': 10, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150, 'unicornioscopio-giro.webp': 450};
+const budget = {'logo-ju.webp': 40, 'logo-ju-224.webp': 10, 'logo-ju-transparente.png': 400, 'julia-auth.webp': 400, 'product-borboletoscopio-cutout.webp': 150, 'unicornioscopio-giro.webp': 450};
 for (const name of referenced) {
   const kb = (await stat(new URL(`assets/${name}`, dist))).size / 1024;
   const limit = budget[name] ?? (name.endsWith('.glb') ? 2500 : 300);
@@ -59,9 +62,12 @@ for (const name of await readdir(new URL('assets/models/', dist))) {
   assert((json.extensionsRequired || []).includes('EXT_meshopt_compression'), `${name}: loader must decode Meshopt`);
 }
 
-// Nothing unused is published: every file in dist/assets is referenced (except the e-mail logo, used by api/).
+// Nothing unused is published: every file in dist/assets is referenced, except the e-mail logo (used by api/) and the transparent
+// logo's WebP (09/10/2026; the same 1024 px logo, lighter, at a stable address for the shop to use elsewhere: Google Business,
+// marketplaces). The site's icons live at the root of dist/ (tests/storefront.mjs).
+const STANDALONE = new Set(['logo-ju-email.png', 'logo-ju-transparente.webp']);
 for (const name of (await readdir(new URL('assets/', dist), {withFileTypes: true})).filter(d => d.isFile()).map(d => d.name)) {
-  assert(referenced.has(name) || name === 'logo-ju-email.png', `assets/${name} is used by the site (move originals to design/originais/)`);
+  assert(referenced.has(name) || STANDALONE.has(name), `assets/${name} is used by the site (move originals to design/originais/)`);
 }
 
 console.log(`PASS: ${referenced.size} referenced assets exist, are WebP/GLB within budget, models are Meshopt-compressed and nothing unused is published.`);

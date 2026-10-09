@@ -208,11 +208,16 @@ function matte(src) {
 // ── 2) arquivos do site ──────────────────────────────────────────────────────────────────────────────────────────────
 const LOGO_SIZE = 1024;
 const LOGO_MARGIN = 0.04;                                  // folga em volta da escrita, de cada lado
-const MARK_BOX = [0.216, 0.225, 0.548, 0.470];             // o "Ju," (sem a estrelinha à esquerda nem o pingo do "i")
+const MARK_BOX = [0.216, 0.225, 0.548, 0.478];             // o "Ju," (sem a estrelinha à esquerda nem o pingo do "i")
 const OUTLINE = [0x9e, 0x3a, 0x55];                        // rosa-escuro do contorno (um tom abaixo do --rose #b64c68 da loja)
 const APPLE_BG = [0xff, 0xf7, 0xf2];                       // o creme do logo
-// tamanho → [folga de cada lado (fração), contorno (px no tamanho final), reforço do alfa]
-const ICONS = {16: [0, 1, 1.35], 32: [0.02, 1.4, 1.2], 48: [0.03, 1.9, 1.1], 180: [0.15, 4, 1], 192: [0.06, 4.5, 1], 512: [0.06, 11, 1]};
+// tamanho → folga de cada lado (fração), contorno (px no tamanho final), reforço do alfa (borda mais firme) e a vírgula. Em 16 e 32 px
+// a vírgula viraria um borrão de 1-2 px e espremeria o "Ju" (16 x 10 px): sem ela as letras ganham 40% de altura.
+const ICONS = {
+  16: {margin: 0, outline: 0.9, boost: 1.5, comma: false}, 32: {margin: 0.02, outline: 1.3, boost: 1.25, comma: false},
+  48: {margin: 0.03, outline: 1.6, boost: 1.1, comma: true}, 180: {margin: 0.14, outline: 3, boost: 1, comma: true},
+  192: {margin: 0.06, outline: 3.2, boost: 1, comma: true}, 512: {margin: 0.06, outline: 8, boost: 1, comma: true}
+};
 
 function crop({width, height, rgba}, x0, y0, x1, y1) {
   const w = x1 - x0, h = y1 - y0, out = Buffer.alloc(w * h * 4);
@@ -235,8 +240,8 @@ function squared(image, margin) {
   return crop(image, ox, oy, ox + side, oy + side);
 }
 
-// a marca: só os componentes cuja caixa cabe em MARK_BOX
-function mark(master) {
+// a marca: só os componentes cuja caixa cabe em MARK_BOX (o J, o u e a vírgula); comma: false deixa a vírgula de fora
+function mark(master, {comma = true} = {}) {
   const {width: W, height: H, rgba} = master, N = W * H;
   const [bx0, by0, bx1, by1] = [MARK_BOX[0] * W, MARK_BOX[1] * H, MARK_BOX[2] * W, MARK_BOX[3] * H];
   const label = new Int32Array(N).fill(-1), keep = new Uint8Array(N), queue = new Int32Array(N);
@@ -252,8 +257,11 @@ function mark(master) {
         if (nx >= 0 && ny >= 0 && nx < W && ny < H && label[j] < 0 && rgba[j * 4 + 3] > 8) { label[j] = s; queue[tail++] = j; }
       }
     }
-    if (x0 >= bx0 && y0 >= by0 && x1 <= bx1 && y1 <= by1 && tail > 200) { picked.push(`${tail} px em ${(x0 / W).toFixed(3)},${(y0 / H).toFixed(3)}`); for (let k = 0; k < tail; k++) keep[queue[k]] = 1; }
+    if (x0 >= bx0 && y0 >= by0 && x1 <= bx1 && y1 <= by1 && tail > 200) picked.push({x0, pixels: Int32Array.from(queue.subarray(0, tail))});
   }
+  if (picked.length !== 3) throw new Error(`the mark should be J, u and the comma (found ${picked.length})`);
+  picked.sort((a, b) => a.x0 - b.x0);
+  for (const part of comma ? picked : picked.slice(0, 2)) for (const i of part.pixels) keep[i] = 1;
   // a franja (alfa ≤ 8) junto do que ficou também fica
   const out = Buffer.alloc(N * 4);
   for (let i = 0; i < N; i++) {
@@ -261,8 +269,6 @@ function mark(master) {
     if (!near && rgba[i * 4 + 3]) { const x = i % W, y = (i / W) | 0; for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < W && ny < H && keep[ny * W + nx]) { near = 1; break; } } }
     if (near) rgba.copy(out, i * 4, i * 4, i * 4 + 4);
   }
-  console.log(`marca "Ju,": ${picked.length} peças (${picked.join('; ')})`);
-  if (picked.length !== 3) throw new Error(`the mark should be J, u and the comma (found ${picked.length})`);
   const image = {width: W, height: H, rgba: out}, [x0, y0, x1, y1] = bounds(image);
   return crop(image, x0, y0, x1, y1);
 }
@@ -281,7 +287,7 @@ function outlineAlpha({width: W, height: H, rgba}, radius) {
 
 // um ícone: a marca centrada (folga), o contorno por baixo, reduzida por área e com o alfa reforçado nos tamanhos pequenos
 function icon(markImage, size, {background = null} = {}) {
-  const [margin, outlinePx, boost] = ICONS[size];
+  const {margin, outline: outlinePx, boost} = ICONS[size];
   const scale = 8;                                           // desenha a 8x do tamanho final e reduz
   const hi = size * scale, inner = hi * (1 - 2 * margin) - 2 * outlinePx * scale;
   const k = inner / Math.max(markImage.width, markImage.height);
@@ -327,8 +333,8 @@ async function build() {
   write('assets/logo-ju-transparente.png', logoPng);
   write('assets/logo-ju-transparente.webp', await webp(logoPng, 0.9));
   // os ícones
-  const ju = mark(master);
-  const icons = Object.fromEntries(Object.keys(ICONS).map(size => [size, icon(ju, Number(size), Number(size) === 180 ? {background: APPLE_BG} : {})]));
+  const marks = {true: mark(master), false: mark(master, {comma: false})};
+  const icons = Object.fromEntries(Object.entries(ICONS).map(([size, spec]) => [size, icon(marks[spec.comma], Number(size), Number(size) === 180 ? {background: APPLE_BG} : {})]));
   write('favicon.ico', ico([icons[16], icons[32], icons[48]]));
   write('favicon-48.png', encode(icons[48]));
   write('icon-192.png', encode(icons[192]));
@@ -336,6 +342,11 @@ async function build() {
   write('apple-touch-icon.png', encode(icons[180], {opaque: true}));
   const eol = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8').includes('\r\n') ? '\r\n' : '\n';
   write('favicon.svg', Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 192 192"><image width="192" height="192" xlink:href="data:image/png;base64,${encode(icons[192]).toString('base64')}"/></svg>${eol}`));
+  // o manifesto (Android: "adicionar à tela inicial" usa estes ícones); display "browser": o site continua abrindo no navegador
+  const {SITE} = require('./sync-meta.cjs');
+  const manifest = {name: SITE, short_name: 'Ju imprime', start_url: '/', display: 'browser', theme_color: '#fff7f5', background_color: '#fff7f5',
+    icons: [{src: 'icon-192.png', sizes: '192x192', type: 'image/png'}, {src: 'icon-512.png', sizes: '512x512', type: 'image/png'}]};
+  write('site.webmanifest', Buffer.from(JSON.stringify(manifest, null, 2).replace(/\n/g, eol) + eol));
 }
 
 if (require.main === module) {

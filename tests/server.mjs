@@ -80,6 +80,15 @@ try {
   assert.equal((await raw('/?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
   assert.equal((await raw('/carousel.js?view=1')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'only a real v= parameter');
   assert.equal((await raw('/nao-existe.js?v=1')).headers['cache-control'], 'no-store', 'a missing file is never cached');
+  // Os ícones (09/10/2026): na raiz, com o tipo certo, sem redirecionamento (o endereço limpo e o das maiúsculas são só de
+  // página) e sempre revalidados (endereço estável, sem ?v=; o Google pede que o do ícone não mude); o logo para o Google também.
+  for (const [path, type] of [['/favicon.ico', 'image/x-icon'], ['/favicon-48.png', 'image/png'], ['/icon-192.png', 'image/png'], ['/icon-512.png', 'image/png'], ['/apple-touch-icon.png', 'image/png'], ['/site.webmanifest', 'application/manifest+json; charset=utf-8'], ['/assets/logo-ju-transparente.png', 'image/png'], ['/assets/logo-ju-transparente.webp', 'image/webp']]) {
+    const res = await raw(path);
+    assert.equal(res.status, 200, path); assert.equal(res.headers['content-type'], type, `${path}: ${type}`);
+    assert.equal(res.headers['content-security-policy'], undefined, `${path}: not a document`);
+    if (!path.startsWith('/assets/')) assert.equal(res.headers['cache-control'], 'public, max-age=0, must-revalidate', `${path}: revalidated (ETag)`);
+  }
+  assert.equal((await raw('/favicon.ico', {method: 'HEAD'})).status, 200, 'HEAD /favicon.ico');
   // A big file (a 3D model, three.js) is never compressed while a request waits (2026-10-08): the first answer goes out as it
   // is, the compression runs in the background, and the next answers are compressed. A small file is compressed at once.
   const settled = async (path, headers, encoding) => {

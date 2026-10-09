@@ -150,6 +150,25 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert(robots.includes(`Sitemap: ${BASE}/sitemap.xml`));
   const home = JSON.parse(/<script type="application\/ld\+json">([^<]*)<\/script>/.exec(read('dist/index.html'))[1]);
   assert.equal(home['@type'], 'Organization'); assert.equal(home.legalName, COMPANY.legalName);
+  // o logo para o Google (09/10/2026): só a escrita em fundo transparente, PNG quadrado de 1024 px (mín. 112 px), bom sobre branco
+  assert.equal(home.logo, `${BASE}/assets/logo-ju-transparente.png`, 'Organization.logo: the transparent logo');
+  const {decode} = require('../tools/png-codec.cjs');
+  const logo = decode(fs.readFileSync(path.join(root, 'dist/assets/logo-ju-transparente.png')));
+  assert.deepEqual([logo.width, logo.height], [1024, 1024], 'the logo: square, 1024 px');
+  const alpha = i => logo.rgba[i * 4 + 3], n = logo.width * logo.height;
+  assert.equal(alpha(0) + alpha(logo.width - 1) + alpha(n - logo.width) + alpha(n - 1), 0, 'the logo: transparent corners (no cream square)');
+  // sem o círculo rosa: no recorte de trabalho (design/logo, o quadro do logo original) a metade de cima do círculo, onde ele passava
+  // sozinho (centro 50%, 48,5%; raio 36,3% do lado), fica vazia
+  const master = decode(fs.readFileSync(path.join(root, 'design/logo/logo-ju-transparente.png')));
+  let ring = 0, inked = 0;
+  for (let k = 0; k < 1440; k++) {
+    const a = k / 1440 * 2 * Math.PI; if (Math.sin(a) > -0.15) continue;
+    const x = Math.round(master.width * (0.5005 + 0.3632 * Math.cos(a))), y = Math.round(master.height * (0.4849 + 0.3632 * Math.sin(a)));
+    ring++; if (master.rgba[(y * master.width + x) * 4 + 3] > 32) inked++;
+  }
+  assert(inked / ring < 0.01, `the logo: no round frame (${inked}/${ring} points of the old circle still inked)`);
+  const webp = fs.readFileSync(path.join(root, 'dist/assets/logo-ju-transparente.webp'));
+  assert.equal(webp.toString('latin1', 8, 15), 'WEBPVP8', 'and its WebP');
   assert.match(read('server/create-server.cjs'), /'\.xml': 'application\/xml; charset=utf-8'/, 'the server sends the sitemap as XML');
 }
 
