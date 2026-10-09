@@ -29,8 +29,10 @@ subject.traverse(o => {
   const src = o.material, dark = src.name === 'features' || src.name === 'eyes'; o.userData.matName = src.name;
   // gloss=roughness,clearcoat,clearcoatRoughness[,envMapIntensity[,metalness]] (the coloured parts) and gloss_<material>=… for one of them: a glossier
   // plastic for a picture that sits next to glossy studio photos (09/10/2026, the unicorn's front in the gallery); without it, the satin above
-  const [rough, coat, coatRough, envI = .9, metal = 0] = (P['gloss_' + src.name] || (dark ? '' : P.gloss) || (dark ? '.28,.8,.12' : '.46,.28,.4')).split(',').map(Number);
-  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: rough, metalness: metal, clearcoat: coat, clearcoatRoughness: coatRough, envMapIntensity: envI, side: THREE.DoubleSide});
+  const gloss = (P['gloss_' + src.name] || (dark ? '' : P.gloss) || (dark ? '.28,.8,.12' : '.46,.28,.4')).split(',').map(Number), [rough, coat, coatRough, envI = .9, metal = 0] = gloss;
+  // three.js only reads envMapIntensity from a material's own envMap (scene.environment alone keeps it at 1): with a 4th field the
+  // material gets the studio as its own envMap, so the strength really applies (the gold of the horn, 09/10/2026); without it, as before
+  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: rough, metalness: metal, clearcoat: coat, clearcoatRoughness: coatRough, envMapIntensity: envI, envMap: gloss.length > 3 ? scene.environment : null, side: THREE.DoubleSide});
   // flat=1 (checking the paint): the bare colours, no light — a border that leaks shows as it is, not as a shadow
   if (P.flat) o.material = new THREE.MeshBasicMaterial({color: src.color.clone(), side: THREE.DoubleSide});
   // the thin, dense Rodin shells get shadow acne from their own inner wall (as on the site, asset-models.js): they cast, not receive

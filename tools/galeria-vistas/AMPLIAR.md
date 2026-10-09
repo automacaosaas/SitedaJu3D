@@ -40,6 +40,10 @@ da beirada espalhada para fora (sem ela, o modelo vê preto em volta da peça e 
 `RENDER_GPU=d3d11 node tools/render-aviao-macaco/lamp-assets.cjs unicornioscopio --foto` (com o `node serve.cjs` da mesma pasta no ar)
 grava `design/vistas/unicornioscopio-3d-frente.png` e `ampliadas/unicornioscopio-3d-frente-x4.webp`; a luz e as cores ficam em `FOTO`
 no começo do script. A vitrine, os cards e o giro não mudam.
+O dourado das fotos do dono é metal polido (brilhos quase brancos e faixas escuras, L 0,74 com desvio 0,085 em OKLab): como plástico
+acetinado o chifre saía laranja chapado ao lado delas, mesmo com a média certa. Por isso o chifre (e a faixa dourada do arco-íris, o
+mesmo material) usa `gloss_horn=…,<força do reflexo>,1` (metalness 1). O 4º campo do `gloss` só vale com ele: o three.js lê o
+envMapIntensity só do envMap do próprio material, e o `lamp-glb.html` dá o estúdio como envMap a quem tem esse campo.
 
 ## Cores
 

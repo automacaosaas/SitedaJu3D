@@ -26,13 +26,16 @@ const b64 = f => fs.readFileSync(f).toString('base64');
 const LOOK = {girafoscopio: '&exposure=1.12&key=3&dome=0.75&smooth=0&tint=coat:%23e8b616,spots:%23572e1a', unicornioscopio: '&exposure=1.1&key=3&dome=0.8&smooth=0' + HEAD};
 // "--foto": only the gallery's front of the unicorn (09/10/2026: "a primeira foto ainda destoa das outras"). Its other three pictures are
 // the owner's glossy studio renders, so this one gets their look, measured in OKLab against them: a brighter, more frontal and broader
-// softbox (the white reaches pure white in the highlights, with the same soft grey on the sides), glossier plastic, the horn a richer gold
-// with its shine, and the purple and the lavender a touch darker under the brighter light (the same means as in those photos, the approved
-// colours unchanged on screen). Rendered at 2000 px and halved (the faint ripples of the Rodin surface go below a pixel), the colours of the
-// border spread outward (the upscaler then sees no black around the piece: no dark halo), and upscaled 4x by Real-ESRGAN like the owner's
-// photos (tools/galeria-vistas/AMPLIAR.md): design/vistas/unicornioscopio-3d-frente.png and ampliadas/unicornioscopio-3d-frente-x4.webp.
-// The showcase, the cards and the head turn are not touched (the showcase photo stays frame 0 of the turn).
-const FOTO = {unicornioscopio: '&exposure=1.3&key=2.6&dome=0.95&keydir=-.25,.55,.8&spread=.38&smooth=0&gloss=.3,.6,.18,1.1&gloss_purple=.26,.8,.1,1.2&gloss_blue=.26,.8,.1,1.2&gloss_horn=.12,1,.02,3.2&tint=horn:%23ffb612,purple:%238e4ea2,blue:%236d7ac0'};
+// softbox (the white reaches pure white in the highlights, with the same soft grey on the sides), glossier plastic, the horn (and the
+// rainbow's gold band, the same material) polished gold metal — it reflects the studio's softboxes, bright highlights and darker bands
+// like the horn in those photos; as satin plastic it read as flat orange next to them (OKLab, horn of the owner's photos: L 0.74, spread
+// 0.085, 95th percentile 0.92-0.93, hue 79°) —, and the purple and the lavender a touch darker under the brighter light (the same means as
+// in those photos, the approved colours unchanged on screen). Rendered at 2000 px and halved (the faint ripples of the Rodin surface go
+// below a pixel), the colours of the border spread outward (the upscaler then sees no black around the piece: no dark halo), and upscaled
+// 4x by Real-ESRGAN like the owner's photos (tools/galeria-vistas/AMPLIAR.md): design/vistas/unicornioscopio-3d-frente.png and
+// ampliadas/unicornioscopio-3d-frente-x4.webp. The showcase, the cards and the head turn are not touched (the showcase photo stays frame 0
+// of the turn). gloss with 3 fields keeps the studio's own reflection strength; only the horn's 4th field (with metalness) changes it.
+const FOTO = {unicornioscopio: '&exposure=1.3&key=2.6&dome=0.95&keydir=-.25,.55,.8&spread=.38&smooth=0&gloss=.3,.6,.18&gloss_purple=.26,.8,.1&gloss_blue=.26,.8,.1&gloss_horn=.2,1,.02,3,1&tint=horn:%23ffc90e,purple:%238e4ea2,blue:%236d7ac0'};
 const REALESRGAN = process.env.REALESRGAN || 'C:/Users/LUIZ/tools/realesrgan/realesrgan-ncnn-vulkan.exe';
 // halved by area with the transparency premultiplied, then the colours of the solid border spread outward into the transparent pixels
 // (RGB only; ffmpeg reads and writes the raw pixels)
