@@ -103,7 +103,7 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
 }
 
 // The export note (Nota Fiscal de Exportação), as the accountant listed on 08/10/2026 (RICMS/MG, Anexo VIII, art. 166):
-// nature "Exportação de mercadoria", CFOP 7101, CSOSN 300 (origem 0), destination 3 (exterior), the place where the goods
+// nature "Exportação Direta - Simples Nacional", CFOP 7101, CSOSN 300 (origem 0), destination 3 (exterior), the place where the goods
 // leave Brazil (grupo ZA) and, in the "Informações complementares", that place with its address and CNPJ. The freight is
 // stated in its own field with its mode, as on every note, although the operation is immune. No IPI CST (Simples
 // Nacional: Res. CGSN 140/2018, art. 59, § 4º) and no DIFAL line. The buyer goes as foreign: no CPF or CNPJ, the passport or

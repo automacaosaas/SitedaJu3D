@@ -267,7 +267,7 @@ para fora do Brasil segue com **Nota Fiscal de Exportação**. Além do que toda
 
 | Item da orientação | Na nota | Quem preenche |
 |---|---|---|
-| a) Natureza da operação | **Exportação de mercadoria** | natureza no Bling |
+| a) Natureza da operação | **Exportação Direta - Simples Nacional** (nome dado pela contadora em 09/10/2026; id `15111672683`) | natureza no Bling |
 | b) CFOP | **7101**: a loja fabrica o que vende (o 7102 é só para revenda) | natureza no Bling |
 | c) CSOSN | **300** (imune), com origem **0**: é o "X300" da resposta | natureza no Bling |
 | d) Grupo ZA (comércio exterior) | UF e local de embarque, onde é feito o despacho de exportação | site (`export.shipment`) |
@@ -298,18 +298,19 @@ borboleta 75 g, dino 60 g, avião 166 g, macaco 24 g, girafa 18 g e unicórnio 1
 
 ### O que a Júlia cadastra no Bling
 
-1. **Natureza de operação nova: "Exportação de mercadoria"**:
+1. **Natureza de operação nova: "Exportação Direta - Simples Nacional"** (criada em 09/10/2026, id `15111672683`):
    - tipo saída, série 1, Simples Nacional, indicador de presença 2 (internet) e consumidor final ligado, como as de venda;
    - uma regra para **"Exterior" (EX)** com CFOP **7101**, CSOSN **300** e origem 0, sem alíquotas;
-   - PIS e COFINS com o CST que a contadora indicar (nas vendas é o 49);
-   - aba IPI **sem CST**;
+   - PIS e COFINS **CST 49** (a contadora aceita 49 ou 99);
+   - aba IPI **CST 55** (saída com imunidade);
+   - Lei da Transparência (IBPT): **desligada/zerada** nesta natureza (a contadora, 09/10/2026);
    - "Informações complementares" **vazio**, porque o site escreve o texto.
 2. Depois de salvar, o painel mostra o código da natureza no cartão "Nota fiscal · Bling". Esse código vai em
    `export.bling.natureId`, no `api/_lib/fiscal.js`. Aí o painel marca a natureza como "usada nas notas · venda para o
    exterior".
 3. **Enquanto a nota for feita à mão**, preencher no Bling:
    - cliente como **Estrangeiro**: UF "EX", o país, e o passaporte no documento (se o cliente informar);
-   - a natureza "Exportação de mercadoria";
+   - a natureza "Exportação Direta - Simples Nacional";
    - UF e local de embarque;
    - frete "por conta do remetente", com o valor cobrado;
    - em cada item, a unidade tributável da tabela de exportação para o NCM. Se for KG, a quantidade tributável é o peso
@@ -339,11 +340,13 @@ não sai e o pedido mostra "Venda para o exterior: a nota de exportação só sa
 2. **Item e (local de entrega):** numa remessa postal, a mercadoria é entregue na agência dos Correios. Precisa do grupo
    de local de entrega? A API do Bling não tem campo para ele. Se precisar, ele é preenchido na nota, no Bling, antes de
    enviar.
-3. O CST de PIS e COFINS na natureza de exportação: o 49, como nas vendas, ou outro.
-4. O documento do cliente estrangeiro (idEstrangeiro): o site manda o passaporte quando o pedido tem e deixa em branco
-   quando não tem, o que a NF-e aceita. Confirmar se basta.
+3. ~~CST de PIS e COFINS~~ **Respondido (09/10/2026): 49 ou 99; IPI CST 55; IBPT desligado nesta natureza.**
+4. ~~Documento do estrangeiro~~ **Respondido: opcional** (passaporte, Tax ID, SSN ou NIF); CPF/CNPJ em branco, país pelo
+   código do BACEN, UF EX e município EXTERIOR, como o site já faz.
 5. Se o texto do Simples Nacional também vai na nota de exportação, antes do local de embarque, como o site faz.
-6. Acima de US$ 1.000 por remessa é preciso a DU-E (Portal Único Siscomex): quando e como ela entra.
+6. ~~DU-E~~ **Respondido: só para remessa de valor igual ou acima de US$ 1.000** (Portal Único Siscomex). Abaixo disso
+   basta a NF-e (DANFE) e o formulário postal CP72/CN23 gerado na postagem pelos Correios. Hoje nenhum pedido da loja chega a
+   esse valor; se chegar, a DU-E é feita à parte, antes da postagem.
 
 ### Primeiro teste em homologação
 

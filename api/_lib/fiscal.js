@@ -52,12 +52,14 @@ const FISCAL = {
   // (shipTo.country); the national rules above stay as they are. While anything here is left to fill, no export note is
   // sent (the order says what is missing) and the national notes go on as usual.
   export: {
-    nature: 'Exportação de mercadoria',
+    nature: 'Exportação Direta - Simples Nacional',   // the accountant's name for the Bling nature (09/10/2026)
     cfop: '7101',   // the store makes what it sells: 7101 (exportação de produção do estabelecimento); 7102 is for resale
     icms: {origin: '0', csosn: '300'},   // "X300" in the answer: origem 0 (nacional) + CSOSN 300 (imune), Simples Nacional
     // Not in the answer: with Bling, PIS/COFINS come from the export nature set up there (the site does not send them).
-    pis: {cst: PENDING('CST do PIS na exportação (conferir com a contadora)')},
-    cofins: {cst: PENDING('CST da COFINS na exportação (conferir com a contadora)')},
+    // The accountant (09/10/2026): PIS/COFINS CST 49 (or 99); IPI CST 55 (saída com imunidade); the IBPT line off for this nature.
+    pis: {cst: '49'},
+    cofins: {cst: '49'},
+    ipi: {cst: '55'},
     // Where the goods leave Brazil (grupo ZA of the note, "exporta") and the "Informações complementares" line asked in
     // item g (name, address and CNPJ of the bonded area or operator). Parcels go by the Correios (Exporta Fácil, posted
     // at any agency): the place is the Correios unit where the parcel is cleared by customs before it leaves the country.
@@ -90,7 +92,7 @@ const EXAMPLE = Object.freeze({
     additionalInfo: 'Dados fiscais de exemplo, sem valor fiscal.',
     bling: {natureId: {nonTaxpayer: '1', taxpayer: '3'}},
     export: {
-      nature: 'Exportação de mercadoria', cfop: '7101', icms: {origin: '0', csosn: '300'}, pis: {cst: '49'}, cofins: {cst: '49'},
+      nature: 'Exportação Direta - Simples Nacional', cfop: '7101', icms: {origin: '0', csosn: '300'}, pis: {cst: '49'}, cofins: {cst: '49'}, ipi: {cst: '55'},
       shipment: {state: 'SP', place: 'LOCAL DE EMBARQUE DE EXEMPLO (dados de teste)', address: 'Rua de Exemplo, 100, São Paulo/SP', cnpj: '11.222.333/0001-81'},
       taxUnit: {'39269090': 'KG'}, netG: FISCAL.export.netG,
       bling: {natureId: '4'}
