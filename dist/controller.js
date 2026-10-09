@@ -279,8 +279,9 @@ $('#surprise').addEventListener('animationend',e=>e.currentTarget.classList.remo
 document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>{if(!viewer)return;const a=b.dataset.camera;if(a==='left'||a==='right')viewer.rotate(a==='left'?-1:1);else if(a==='in'||a==='out')viewer.zoom(a==='in'?1:-1);else if(a==='reset')viewer.reset();else{const auto=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(auto));b.textContent=auto?'Pausar':'Girar';b.setAttribute('aria-label',auto?'Pausar giro automático':'Girar automaticamente');viewer.setAuto(auto);}}));
 // A janela da peça só abre com as folhas dela já aplicadas (a home as carrega depois da primeira pintura, late-css.js): um
 // #produto/<peça>/personalizar que chega com a página nunca aparece sem estilo. Vale o endereço de quando ele chegou: enquanto
-// as folhas chegam, a demonstração (#produto/<peça>/encaixe) já pode tê-lo trocado para #produto/<peça>.
-const syncStyled=()=>{const hash=location.hash;whenStyled(()=>syncProduct(hash));};
+// as folhas chegam, a demonstração (#produto/<peça>/encaixe) já pode tê-lo trocado para #produto/<peça>. Só um endereço de peça
+// liga as folhas na hora; sem ele (a home aberta normalmente) elas entram na vez delas, depois da carga.
+const syncStyled=()=>{const hash=location.hash;whenStyled(()=>syncProduct(hash),hash.startsWith('#produto/'));};
 window.addEventListener('hashchange',syncStyled);window.addEventListener('pagehide',()=>viewer?.hide());syncStyled();
 setupCartBridge({getProduct:()=>activeProduct,getSelection:()=>({...selections[activeProduct]}),capture:()=>{try{return view==='model'&&viewer?.key===activeProduct?viewer.snapshot():null;}catch{return null;}},restore:selection=>{selections[activeProduct]=validSelection(activeProduct,selection);if(!fixedColors(activeProduct))renderControls();setView('model');}});
 setupPurchaseSheet(dialog);

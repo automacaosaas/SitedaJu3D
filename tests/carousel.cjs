@@ -175,7 +175,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   const tail = css.match(/--tail:\s*clamp\((\d+)px,[^,]+,\s*(\d+)px\)/);
   assert.ok(tail && Number(tail[1]) >= 300 && Number(tail[2]) <= 800, 'a dissolução do banner cobre o título e o começo dos cards');
   assert.ok(/\.scenery-mist \{[^}]*mask-image/.test(css) && !/\.clouds\b|\.cloud \{|class="clouds"/.test(css + read('hero-scenery.js')), 'as silhuetas dos cantos esmaecem antes do limite do banner (sem os discos chapados de antes)');
-  assert.ok(js.includes("put(page, '--hero-h', height + 'px');"), 'altura do banner medida no JS');
+  assert.ok(js.includes("put(bgHost, '--hero-h', height + 'px');"), 'altura do banner medida no JS (escrita no fundo, o único que a usa)');
   // Card central limpo: nada de sombra cortada pela borda do palco nem brilho no alto.
   assert.ok(/@supports \(overflow: clip\) \{ \.home \.product-carousel-stage \{ overflow-x: clip; overflow-y: visible; \} \}/.test(css), 'o palco só recorta na horizontal (a sombra não é cortada em retângulo)');
   const cardShadows = css.match(/\.home \.product-rail-card(\.is-active)? \{[^}]*box-shadow:[^;]*;/g);
@@ -569,10 +569,17 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   const sceneryJs = read('hero-scenery.js'), renderJs = js.slice(js.indexOf('function render()'), js.indexOf('function report('));
   const reportJs = js.slice(js.indexOf('function report('), js.indexOf('// ── Movimento'));
   assert.ok(!new RegExp(Object.keys(PRODUCTS).join('|'), 'i').test(js + sceneryJs), 'vitrine e desenhos sem nome de produto (o desenho vem de SHOWCASE)');
-  assert.ok(js.includes("put(page, '--stage-x'") && js.includes("put(page, '--stage-top'") && js.includes("put(page, '--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
+  assert.ok(js.includes("put(bgHost, '--stage-x'") && js.includes("put(bgHost, '--stage-top'") && js.includes("put(bgHost, '--scn-ped'"), 'o desenho se prende ao palco medido em qualquer tela');
+  // 09/10/2026 (PageSpeed, computador): as quatro medidas vão para o fundo (.hero-bg), não para a .page: variável herdada escrita na .page
+  // recalculava o estilo da página inteira (coleção, novidade, rodapé) a cada medida. Só o que está dentro do fundo as usa.
+  assert.ok(!/put\(page,/.test(js), 'nada medido é escrito na .page');
+  for (const name of ['--hero-h', '--stage-x', '--stage-top', '--scn-ped']) for (const file of fs.readdirSync(path.join(__dirname, '../dist')).filter(n => n.endsWith('.css') && n !== 'fenda.css')) {
+    const sheet = read(file);
+    for (const [, selector, body] of sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)) if (body.includes(`var(${name}`)) assert.ok(/\.hero-bg|\.hero-layer|\.hero-scenery|\.scenery-|^(to|from|\d+%)$/.test(selector.trim()), `${file}: ${name} usada fora do fundo (${selector.trim().slice(-80)})`);
+  }
   // 08/10/2026 (PageSpeed): medir não força layout — todas as leituras antes das escritas, chamado pelo ResizeObserver, nunca na montagem
   const measureJs = js.slice(js.indexOf('function measure()'), js.indexOf('// Um estilo só é escrito quando muda'));
-  assert.ok(measureJs.indexOf('getBoundingClientRect') < measureJs.indexOf('put(page') && measureJs.indexOf('offsetHeight') < measureJs.indexOf('put(page'), 'todas as leituras antes das escritas');
+  assert.ok(measureJs.indexOf('getBoundingClientRect') < measureJs.indexOf('put(bgHost') && measureJs.indexOf('offsetHeight') < measureJs.indexOf('put(bgHost'), 'todas as leituras antes das escritas');
   assert.ok(js.includes("const sizes = new ResizeObserver(() => measure()); sizes.observe(shell); sizes.observe(slots[0]);") && js.includes('setActive(initial); render(); report();') && !/measure\(\); report\(\);/.test(js), 'a primeira medida vem do ResizeObserver, não da montagem');
   assert.ok(!/--scn-x/.test(js + css), 'sem a variável herdada --scn-x (cada escrita recalculava as seis camadas inteiras)');
   assert.ok(renderJs.includes("bgLayers[i].classList.toggle('is-off', !shown)") && renderJs.includes('if (!shown) continue;') && renderJs.includes("put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`)") && renderJs.includes("put(edges[i], 'translate',"), 'camadas apagadas fora da pintura; na à vista, o desenho e os cantos acompanham a peça');
@@ -580,6 +587,18 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(js.includes("const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);") && renderJs.includes('for (const element of live) for (const name in themeNow)') && !renderJs.includes('themed') && reportJs.includes('for (const element of themed) for (const name in themeNow)'), 'cores do tema: header e setas no meio da troca; banner e rodapé ao assentar');
   assert.ok(js.includes("<div class=\"hero-layer${i === initial ? '' : ' is-off'}\""), 'só a camada da abertura nasce na pintura');
   assert.ok(css.includes('.hero-bg .hero-layer.is-off { visibility:hidden; content-visibility:hidden; }'), 'a camada apagada sai da pintura (content-visibility)');
+  // 09/10/2026 (PageSpeed, computador; a ideia da etapa 9a): só a camada da abertura nasce com o desenho; as outras ganham o dela depois
+  // que a página aparece, uma por quadro e a mais perto primeiro, nunca no meio de uma troca, de um arraste ou da demonstração, ou na
+  // hora em que vão aparecer (render); onde não há animation-timeline, os seguidores da rolagem de cada camada são lidos na primeira
+  // vez que ela aparece
+  assert.ok(js.includes('style="--stops:${theme.bannerStops};${lookVars(theme, look)}"></div>`).join(\'\');') && !/bgHost\.innerHTML = [^\n]*scenery\(/.test(js), 'as camadas nascem vazias: nenhum desenho na montagem do fundo');
+  assert.ok(/function sketch\(i\) \{\r?\n    const layer = bgLayers\[i\];\r?\n    if \(layer\.firstElementChild\) return;\r?\n    layer\.innerHTML = scenery\(entries\[i\]\.look, i\);/.test(js) && js.includes('\n  sketch(initial);'), 'o desenho de cada camada uma vez só, e o da abertura já na montagem');
+  assert.ok(renderJs.includes("if (shown) sketch(i); bgLayers[i].classList.toggle('is-off', !shown);"), 'a camada que vai aparecer ganha o desenho na hora, antes de entrar na pintura');
+  const drawnJs = js.slice(js.indexOf('drawn.then(() => {'), js.indexOf('demoFromRoute();   // chegou'));
+  assert.ok(drawnJs.indexOf('window.finishJuOpening?.();') >= 0 && drawnJs.indexOf('window.finishJuOpening?.();') < drawnJs.indexOf('sketchRest();'), 'as outras só depois que a página aparece');
+  const restJs = js.slice(js.indexOf('async function sketchRest()'), js.indexOf('// ── Estado ativo'));
+  assert.ok(/for \(;;\) \{\r?\n      await afterFrame\(\);\r?\n      if \(frame \|\| gesture \|\| locked\) continue;\r?\n      const rest = /.test(restJs) && restJs.includes('wrapDistance(b, active, total)') && (restJs.match(/sketch\(/g) || []).length === 1, 'uma camada por quadro (cada uma na sua tarefa), a mais perto primeiro, esperando a troca, o arraste ou a demonstração terminar');
+  assert.ok(followJs.includes("followers[i] ||= [...layer.querySelectorAll('.scenery-mist, .scenery-back > .scenery-edge')].map(depthOf);") && !/bgLayers\.map\(layer => \[\.\.\.layer\.querySelectorAll/.test(js), 'sem animation-timeline: os seguidores de cada camada lidos quando ela aparece');
   assert.ok(/\.scenery-mist \{[^}]*will-change:translate;/.test(css), 'os cantos na própria camada do compositor (o transform da raiz é da demonstração)');
   assert.ok(/\.scenery-back \{[^}]*mask-image:/.test(css) && /\.scenery-mist \{[^}]*mask-image:/.test(css) && css.includes('.scenery-mist > span { position:absolute;') && !/\.hero-scenery svg \{/.test(css), 'bordas dissolvidas pela máscara; as silhuetas dos cantos não dimensionam o desenho');
   assert.ok(![...css.matchAll(/([^{}]+)\{[^}]*animation:scn-/g)].some(([, selector]) => /\bsvg\s*$/.test(selector.trim())), 'nenhuma animação do fundo num <svg> (só nos <span> em volta, que vão para o compositor)');
