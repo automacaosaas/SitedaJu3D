@@ -235,8 +235,16 @@ const background = [], waitUntil = work => { background.push(work); }, settled =
 
   // /api/payments/config and /api/health hand over the number, never anything else.
   const known = createInterestFree({fetchImpl: watch(createFakeMercadoPago({interestFree: 3})).fetchImpl});
+  // /api/payments/config never waits for it (2026-10-08, review: a slow first ask after a restart, plus a slow network, went past
+  // the checkout's 2.5 s and left the buyer in the demo): the first answer says null at once and starts the ask, the next has it.
+  const first = makeRes(); await configHandler.create({env: ENV, interestFree: known})({method: 'GET'}, first);
+  assert.deepEqual(first.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: null}, 'the first answer does not wait, even for a quick Mercado Pago');
+  await new Promise(resolve => setTimeout(resolve, 20));
   const cfg = makeRes(); await configHandler.create({env: ENV, interestFree: known})({method: 'GET'}, cfg);
-  assert.deepEqual(cfg.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: 3});
+  assert.deepEqual(cfg.json(), {mode: 'test', publicKey: 'TEST-public-key-111', interestFree: 3}, 'the number on the next one');
+  const stuck = createInterestFree({fetchImpl: () => new Promise(() => {}), wait: 5000}), began = Date.now(), quick = makeRes();
+  await configHandler.create({env: ENV, interestFree: stuck})({method: 'GET'}, quick);
+  assert(Date.now() - began < 200 && quick.json().interestFree === null, 'Mercado Pago not answering at all: the config still answers at once');
   const off = makeRes(); await configHandler.create({env: {}, interestFree: known})({method: 'GET'}, off); assert.deepEqual(off.json(), {mode: 'off'});
   const h = makeRes(); await health.create({env: ENV, interestFree: known})({}, h); assert.equal(h.json().interestFree, 3);
   for (const secret of SECRETS) assert(!h.body.includes(secret) && !cfg.body.includes(secret));
@@ -543,7 +551,19 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert.equal((await get('?id=' + id, null)).statusCode, 401, 'needs the session');
   assert.equal((await get('?id=' + id, bia)).statusCode, 404, "another buyer's order does not exist for her");
   assert.equal(net.mails.length, 0);
+  // ?details=1 (2026-10-08): the checkout reloaded with this Pix waiting (dist/pending-pix.js) gets what it needs to show the
+  // same code again, instead of making a second payable one: the code and QR Code, the pieces, the delivery and the amount.
+  const ours = await store.orders.findByReference(reference), again = await get('?id=' + id + '&details=1');
+  assert.equal(again.statusCode, 200);
+  assert.deepEqual(Object.keys(again.json()).sort(), ['expiresAt', 'items', 'method', 'pix', 'reference', 'shipping', 'state', 'statusDetail', 'totalCents']);
+  assert.equal(again.json().method, 'pix'); assert(again.json().pix.qrCode.length > 10 && typeof again.json().pix.qrCodeBase64 === 'string', 'the same code');
+  assert.deepEqual(again.json().items, ours.items.map(({productId, quantity, selection}) => ({productId, quantity, selection})), 'the pieces and their colors, nothing about the buyer');
+  assert.equal(again.json().totalCents, ours.totalCents, 'the amount of this Pix (with its discount)');
+  assert.equal((await get('?id=' + id + '&details=1', bia)).statusCode, 404, 'never to another buyer');
+  assert.deepEqual(Object.keys((await get('?id=' + id + '&details=0')).json()).sort(), ['expiresAt', 'reference', 'state', 'statusDetail'], 'only when asked');
   net.pay(id); assert.equal((await get('?id=' + id)).json().state, 'approved'); await settled();
+  const paidDetails = (await get('?id=' + id + '&details=1')).json();
+  assert.equal(paidDetails.state, 'approved'); assert(!('pix' in paidDetails), 'paid: the pieces for the confirmation, no code any more'); assert.equal(paidDetails.items.length, ours.items.length);
   const order = await store.orders.findByReference(reference);
   assert.equal(order.status, 'pendente', 'a status check records the payment even without a webhook');
   assert.deepEqual(net.mails.map(m => m.to[0]).sort(), ['ana@example.com', 'ju@site.test'], 'and tells Ju and the buyer');
@@ -830,9 +850,12 @@ const as = buyer => ({headers: {cookie: buyer.cookie}});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 3})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 3});
   assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: 0})}), {mode: 'test', publicKey: 'TEST-abc', interestFree: 0});
   for (const odd of [null, '3', 2.5, -1, 99]) assert.deepEqual(await cfg({ok: true, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: odd})}), {mode: 'test', publicKey: 'TEST-abc'}, `unknown: ${odd}`);
-  for (const bad of [{ok: false}, {ok: true, json: async () => ({mode: 'off'})}, {ok: true, json: async () => ({mode: 'test'})}, {ok: true, json: async () => ({mode: 'weird', publicKey: 'k'})}, {ok: true, json: async () => ({mode: 'test', publicKey: 42})}, {ok: true, json: async () => { throw new Error('not json'); }}]) assert.deepEqual(await cfg(bad), {mode: 'off'}, 'anything unexpected keeps the demo');
-  assert.deepEqual(await client.loadPaymentConfig({fetchImpl: async () => { throw new Error('offline'); }}), {mode: 'off'}, 'offline / no API (static hosting) keeps the demo');
-  assert.deepEqual(await client.loadPaymentConfig({timeout: 30, fetchImpl: (url, {signal}) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))}), {mode: 'off'}, 'a hanging API cannot freeze the checkout');
+  for (const bad of [{ok: false}, {ok: false, status: 404}, {ok: true, json: async () => ({mode: 'off'})}, {ok: true, json: async () => ({mode: 'test'})}, {ok: true, json: async () => ({mode: 'weird', publicKey: 'k'})}, {ok: true, json: async () => ({mode: 'test', publicKey: 42})}, {ok: true, json: async () => { throw new Error('not json'); }}]) assert.deepEqual(await cfg(bad), {mode: 'off'}, 'an answer that is not real payments (no API on a static host: 404) keeps the demo');
+  // No answer is not an answer (2026-10-08, review): offline, a hanging API or a server error is 'unreachable', which the
+  // checkout asks again and never turns into the demo (tests/checkout-ux.mjs: loadPaymentConfigPatiently).
+  assert.deepEqual(await client.loadPaymentConfig({fetchImpl: async () => { throw new TypeError('Failed to fetch'); }}), {mode: 'unreachable'}, 'offline: unknown, not the demo');
+  assert.deepEqual(await client.loadPaymentConfig({timeout: 30, fetchImpl: (url, {signal}) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted'))))}), {mode: 'unreachable'}, 'a hanging API cannot freeze the checkout, nor send it to the demo');
+  for (const status of [500, 502, 503, 429]) assert.deepEqual(await cfg({ok: false, status}), {mode: 'unreachable'}, `${status}: try again`);
   assert(/^[A-Za-z0-9-]{16,64}$/.test(client.newAttempt()), 'attempt ids satisfy the server rule'); assert.notEqual(client.newAttempt(), client.newAttempt());
   assert.equal(client.brickLocale('pt-BR'), 'pt-BR'); assert.equal(client.brickLocale('en'), 'en-US'); assert.equal(client.brickLocale('es'), 'es-AR'); assert.equal(client.brickLocale('xx'), 'pt-BR');
   const said = (status, data) => client.paymentMessage(status, data);

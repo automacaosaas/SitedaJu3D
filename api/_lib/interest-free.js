@@ -5,13 +5,15 @@
 // Token for its installment plans on a reference amount, the price of a lamp (the cheapest piece; a larger cart never gets
 // fewer), and the answer is kept for hours. /api/payments/config hands the number to the checkout, which never promises more,
 // and /api/health shows it to the owner. null = unknown (payments off, or Mercado Pago did not answer): the checkout then
-// promises nothing beyond what the buyer's own card table shows. Never throws; only the first ask after a start waits for
-// Mercado Pago (at most WAIT_MS), every later one is answered at once from what is kept.
+// promises nothing beyond what the buyer's own card table shows. Never throws; only the first ask after a start may wait for
+// Mercado Pago (at most WAIT_MS, /api/health), every later one is answered at once from what is kept. /api/payments/config
+// never waits at all ({wait: 0}, 2026-10-08 review): its first answer after a restart says null at once while the number is
+// asked in the background, so a slow Mercado Pago can never hold the checkout.
 const mp = require('./mercadopago');
 const {PRODUCTS} = require('./catalog');
 
 const KEEP_MS = 6 * 60 * 60 * 1000, RETRY_MS = 5 * 60 * 1000;
-// The checkout gives /api/payments/config 2.5 s (dist/live-payment.js): a slow first answer is kept for the next visit instead.
+// /api/health waits this long for the very first answer; /api/payments/config does not wait (the checkout's first try is 2.5 s).
 const WAIT_MS = 1200;
 const REFERENCE_CENTS = Math.min(...Object.values(PRODUCTS).map(p => p.price));
 // The two brands most buyers pay with; the account's setting is the same for every card, so the smaller count of the two is kept.
@@ -24,8 +26,8 @@ function createInterestFree({fetchImpl = globalThis.fetch, now = () => Date.now(
     const counts = answers.map(answer => mp.interestFreeCount(answer, REFERENCE_CENTS)).filter(Number.isInteger);
     return counts.length ? Math.min(...counts) : null;
   }
-  // 0 (interest from 2x on), 2 to 12, or null while unknown.
-  return async function interestFree(env = process.env) {
+  // 0 (interest from 2x on), 2 to 12, or null while unknown. : how long the very first ask may hold the answer (0: not at all).
+  return async function interestFree(env = process.env, {wait: limit = wait} = {}) {
     const s = mp.settings(env);
     if (s.mode === 'off') return null;
     const current = () => kept && kept.token === s.token ? kept.value : null;
@@ -38,8 +40,9 @@ function createInterestFree({fetchImpl = globalThis.fetch, now = () => Date.now(
     // Once these credentials have an answer (even an old one, or null after a failure), it is handed over at once and the new
     // one comes in the background (2026-10-08, review): only the first ask after the site starts waits, and never past `wait`.
     if (mine) return mine.value;
+    if (!(limit > 0)) return null;   // asked in the background; this answer does not wait for it
     let timer;
-    await Promise.race([running.done, new Promise(resolve => { timer = setTimeout(resolve, wait); timer.unref?.(); })]);
+    await Promise.race([running.done, new Promise(resolve => { timer = setTimeout(resolve, limit); timer.unref?.(); })]);
     clearTimeout(timer);
     return current();   // still asking: null for now, the number on a later request
   };

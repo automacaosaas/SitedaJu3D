@@ -51,3 +51,5 @@
 @media (prefers-reduced-motion: reduce) { .free-ship.is-rising, .free-ship.is-rising .free-ship-track i::after, .free-ship.is-rising.is-reached strong { animation: none; } }
 /* A faixa do topo nasce invisível, com o texto e a altura de sempre (os do aviso de demonstração, os mais curtos: com pagamentos reais, quando a faixa sai, a página sobe o mesmo que antes): checkout.js põe o texto do ambiente quando a configuração de pagamento chega e só então a mostra (em produção, a tira). */
 .demo-banner.is-pending { visibility: hidden; }
+/* A régua de 5 etapas do pedido não cabe num celular estreito (2026-10-08, revisão: em 320 px a etapa de pagamento rolava 10 px para o lado): como nas etapas da compra acima, as etapas que não estão em andamento mostram só o círculo, e o nome delas fica para o leitor de tela; o nome da etapa atual fica centrado embaixo do seu círculo. */
+@media(max-width:359px){.order-progress li{min-width:0}.order-progress li:not(.current)>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.order-progress li.current>span{width:max-content;max-width:9.5em}}

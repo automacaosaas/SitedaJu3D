@@ -45,17 +45,56 @@ export async function loadPaymentMethods({fetchImpl = globalThis.fetch, timeout 
   finally { clearTimeout(timer); }
 }
 
+// What the server says about payments: 'test' or 'live' with the public key, or 'off' (no keys, Production not switched on,
+// or a static preview without /api, whose 404 keeps the demo). 'unreachable' when the server could not be heard (no answer in
+// time, the network, a 5xx or 429): never the demo (2026-10-08, review: a slow /api/payments/config left real buyers in the
+// demonstration, unable to pay); the checkout asks again (loadPaymentConfigPatiently) and, still without an answer, asks once
+// more before the payment step instead of showing the demo.
 export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout = 2500} = {}) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
+  let answered = false;
   try {
     const response = await fetchImpl('/api/payments/config', {cache: 'no-store', signal: controller.signal});
-    if (!response.ok) return {mode: 'off'};
+    answered = true;
+    if (!response.ok) return response.status >= 500 || response.status === 429 || response.status === 408 ? {mode: 'unreachable'} : {mode: 'off'};
     const data = await response.json();
     // interestFree: the installments the Mercado Pago account gives without interest (0, 2 to 12), only when the server knows it
     const free = Number.isInteger(data.interestFree) && data.interestFree >= 0 && data.interestFree <= 36 ? {interestFree: data.interestFree} : {};
     return (data.mode === 'test' || data.mode === 'live') && typeof data.publicKey === 'string' && data.publicKey ? {mode: data.mode, publicKey: data.publicKey, ...free} : {mode: 'off'};
-  } catch { return {mode: 'off'}; }
+  } catch {
+    // no answer at all (offline, refused, cut by the timer, even halfway through the body): unknown; an answer that is not
+    // the config (not JSON): the demo
+    return !answered || controller.signal.aborted ? {mode: 'unreachable'} : {mode: 'off'};
+  }
   finally { clearTimeout(timer); }
+}
+// The config with patience: the first request is kept for the whole time (2.5 s + 6 s), so a slow server is never asked again
+// from scratch (2026-10-08, review: the first try used to be cut at 2.5 s and asked again, and a config that took 3.5 s showed
+// only after about 7 s). Past the first 2.5 s, or right after a quick failure (offline, a 5xx) and a pause, a second request
+// goes out beside it, for a first one lost on the way, and onRetry() runs (the checkout then says "Carregando o pagamento…"
+// where it would have fallen into the demo). The first clear answer wins; none at all: 'unreachable'.
+export function loadPaymentConfigPatiently({timeouts = [2500, 6000], pause = 600, onRetry = () => {}, fetchImpl = globalThis.fetch, wait = ms => new Promise(resolve => setTimeout(resolve, ms))} = {}) {
+  const [first, second = 0] = timeouts;
+  return new Promise(resolve => {
+    let settled = false, open = 0, retried = !second, timer = null;
+    const finish = config => { if (settled) return; settled = true; clearTimeout(timer); resolve(config); };
+    const ask = timeout => { open++; loadPaymentConfig({fetchImpl, timeout}).then(answer, () => answer({mode: 'unreachable'})); };
+    function answer(config) {
+      open--;
+      if (settled) return;
+      if (config.mode !== 'unreachable') return finish(config);
+      if (!retried) return retry(true);
+      if (!open) finish(config);
+    }
+    async function retry(afterFailure) {
+      if (retried || settled) return;
+      retried = true; clearTimeout(timer); onRetry(1);
+      if (afterFailure) await wait(pause);
+      if (!settled) ask(second);
+    }
+    ask(first + second);
+    if (!retried) timer = setTimeout(() => retry(false), first);
+  });
 }
 
 let sdkPromise = null;
@@ -89,7 +128,8 @@ async function request(path, {method = 'GET', body, fetchImpl = globalThis.fetch
   } finally { clearTimeout(timer); }
 }
 export const createPayment = (body, options) => request('/api/payments/create', {method: 'POST', body, ...options});
-export const paymentState = (id, options) => request('/api/payments/status?id=' + encodeURIComponent(id), options);
+// `details`: a Pix that still waits comes back with its code, QR Code, pieces, delivery and amount (the checkout reloaded).
+export const paymentState = (id, {details = false, ...options} = {}) => request('/api/payments/status?id=' + encodeURIComponent(id) + (details ? '&details=1' : ''), options);
 // Leaving a Pix that waits: its code is cancelled at Mercado Pago (POST /api/payments/cancel), so it cannot be paid next
 // to a new one. The answer's state says what happened: canceled, or approved when it was paid meanwhile.
 export const cancelPayment = (id, options) => request('/api/payments/cancel', {method: 'POST', body: {id}, ...options});
@@ -112,29 +152,40 @@ export function paymentMessage(status, data) {
   if (code === 'payments_not_configured') return 'Os pagamentos ainda não estão disponíveis. Tente novamente mais tarde.';
   return 'Não conseguimos confirmar o pagamento agora. Se tiver certeza de que não houve cobrança, tente novamente.';
 }
-export const refusedMessage = () => 'O pagamento não foi aprovado. Confira os dados do cartão ou escolha outra forma de pagamento.';
 // Why the card was refused (the reasons the server passes on, api/_lib/mercadopago.js REFUSAL_REASONS), in words the
 // buyer can act on. Mercado Pago's own code is never shown on the real site; an unknown reason gets the general sentence.
+// Each reason has two short sentences, what happened (why) and what to do (todo): the inline text and the announcements join
+// them, and the checkout's notice (payment-notice.js, 2026-10-08) shows them apart under "Pagamento não aprovado", with
+// `plain` as the reason when the joined sentence would repeat the title, `retry` as its main button ("Tentar outro cartão"
+// unless another card is not the answer) and "Pagar com Pix" unless `pix` is false.
 const REFUSALS = {
-  card: 'Algum dado do cartão não confere (número, validade ou código de segurança). Confira e tente de novo.',
-  funds: 'O cartão não tem limite disponível para esta compra. Tente outro cartão ou pague com Pix.',
-  call: 'O banco do cartão pediu para você autorizar esta compra. Fale com o banco e tente de novo.',
-  disabled: 'Este cartão está bloqueado ou inativo. Use outro cartão ou pague com Pix.',
-  attempts: 'Foram muitas tentativas com este cartão. Use outro cartão ou pague com Pix.',
-  installments: 'O cartão não aceita esse número de parcelas. Escolha outra quantidade e tente de novo.',
-  duplicated: 'Um pagamento igual acabou de ser feito. Confira em Meus pedidos antes de tentar de novo.',
-  risk: 'O pagamento não passou pela análise de segurança do Mercado Pago. Tente outro cartão ou pague com Pix.',
-  issuer: 'O banco do cartão não aprovou o pagamento. Tente outro cartão ou pague com Pix.',
-  processing: 'Não conseguimos processar o pagamento agora. Tente de novo em alguns instantes.',
-  challenge: 'O tempo para confirmar a compra com o banco acabou. Tente de novo.'
+  card: {why: 'Algum dado do cartão não confere (número, validade ou código de segurança).', todo: 'Confira e tente de novo.', retry: 'Corrigir os dados do cartão'},
+  funds: {why: 'O cartão não tem limite disponível para esta compra.', todo: 'Tente outro cartão ou pague com Pix.'},
+  call: {why: 'O banco do cartão pediu para você autorizar esta compra.', todo: 'Fale com o banco e tente de novo.', retry: 'Tentar de novo'},
+  disabled: {why: 'Este cartão está bloqueado ou inativo.', todo: 'Use outro cartão ou pague com Pix.'},
+  attempts: {why: 'Foram muitas tentativas com este cartão.', todo: 'Use outro cartão ou pague com Pix.'},
+  installments: {why: 'O cartão não aceita esse número de parcelas.', todo: 'Escolha outra quantidade e tente de novo.', retry: 'Escolher outras parcelas'},
+  duplicated: {why: 'Um pagamento igual acabou de ser feito.', todo: 'Confira em Meus pedidos antes de tentar de novo.', retry: 'Entendi', pix: false},
+  risk: {why: 'O pagamento não passou pela análise de segurança do Mercado Pago.', todo: 'Tente outro cartão ou pague com Pix.'},
+  issuer: {why: 'O banco do cartão não aprovou o pagamento.', plain: 'O banco do seu cartão recusou esta compra.', todo: 'Tente outro cartão ou pague com Pix.'},
+  processing: {why: 'Não conseguimos processar o pagamento agora.', todo: 'Tente de novo em alguns instantes.', retry: 'Tentar de novo'},
+  challenge: {why: 'O tempo para confirmar a compra com o banco acabou.', todo: 'Tente de novo.', retry: 'Tentar de novo'}
 };
+const REFUSED = {why: 'O pagamento não foi aprovado.', plain: 'O cartão não foi aceito desta vez.', todo: 'Confira os dados do cartão ou escolha outra forma de pagamento.'};
+export const refusedMessage = () => `${REFUSED.why} ${REFUSED.todo}`;
 const REASON_GROUP = {
   bad_filled_card_data: 'card', bad_filled_security_code: 'card', bad_filled_date: 'card', bad_filled_other: 'card', invalid_card_token: 'card', invalid_security_code: 'card', invalid_expiration_date: 'card',
   insufficient_amount: 'funds', card_insufficient_amount: 'funds', amount_limit_exceeded: 'funds', required_call_for_authorize: 'call', call_for_authorize: 'call', card_disabled: 'disabled',
   max_attempts_exceeded: 'attempts', invalid_installments: 'installments', duplicated_payment: 'duplicated', high_risk: 'risk', rejected_high_risk: 'risk', blacklist: 'risk', rejected_by_regulations: 'risk',
   rejected_by_issuer: 'issuer', rejected_other_reason: 'issuer', processing_error: 'processing', '3ds_challenge_expired': 'challenge'
 };
-export const refusalMessage = reason => (Object.hasOwn(REASON_GROUP, String(reason)) ? REFUSALS[REASON_GROUP[reason]] : '') || refusedMessage();
+const refusalGroup = reason => Object.hasOwn(REASON_GROUP, String(reason)) && Object.hasOwn(REFUSALS, REASON_GROUP[reason]) ? REASON_GROUP[reason] : '';
+export const refusalMessage = reason => { const group = refusalGroup(reason); return group ? `${REFUSALS[group].why} ${REFUSALS[group].todo}` : refusedMessage(); };
+// What the notice says for a refusal: the reason in one sentence, what to do, the main button and whether to offer Pix.
+export function refusalNotice(reason) {
+  const group = refusalGroup(reason), entry = group ? REFUSALS[group] : REFUSED;
+  return {group: group || 'other', reason: entry.plain || entry.why, todo: entry.todo, retry: entry.retry || 'Tentar outro cartão', pix: entry.pix !== false, text: group ? refusalMessage(reason) : refusedMessage()};
+}
 
 // Looks of the Brick, matched to the shop (rose accents, soft form, rounded fields).
 export const BRICK_STYLE = Object.freeze({

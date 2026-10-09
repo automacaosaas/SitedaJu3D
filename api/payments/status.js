@@ -1,6 +1,7 @@
 'use strict';
 // GET /api/payments/status?id=ORD… — the checkout asks this while a Pix waits or a card is in review. Only the buyer
-// who placed the order gets an answer, and only its state. Each check also brings our order up to date, so a payment is
+// who placed the order gets an answer, and only its state (with ?details=1, a Pix that still waits comes with what the
+// checkout needs to show it again after a reload). Each check also brings our order up to date, so a payment is
 // recorded (and Ju notified) even when a webhook is late or cannot reach the site. The e-mails go out after the answer
 // (`waitUntil` receives them, for a host or a test that wants to keep the work alive or wait for it).
 const {json} = require('../_lib/http');
@@ -30,7 +31,18 @@ function createHandler({env = process.env, fetchImpl = globalThis.fetch, now = (
       const orders = createOrders({store, env, now});
       const {order} = await orders.applyPayment(ours, remote, {actor: 'status'});
       if (orders.PAID.includes(order.status)) waitUntil(orders.notifyPaidLater(order, {fetchImpl, outbox, test: settings.mode === 'test'}));
-      return json(res, 200, {reference: remote.reference, state: remote.state, statusDetail: remote.statusDetail, expiresAt: remote.pix?.expiresAt || null, ...(remote.reason ? {reason: remote.reason} : {})});
+      // ?details=1 (2026-10-08): the checkout reloaded with a Pix that waits asks once for what it needs to show that same Pix
+      // again (its code and QR Code, the pieces, the delivery and the amount) instead of creating a second payable one, or the
+      // confirmation when it was paid meanwhile. Only to the buyer of the order; the code only while it can still be paid; the
+      // 5-second checks never carry any of it.
+      const wanted = new URL(req.url, 'http://localhost').searchParams.get('details') === '1' && ['pending_pix', 'approved'].includes(remote.state);
+      const details = wanted ? {
+        method: remote.method?.type === 'bank_transfer' || remote.method?.id === 'pix' ? 'pix' : 'card', totalCents: order.totalCents,
+        items: (order.items || []).map(({productId, quantity, selection}) => ({productId, quantity, selection})),
+        shipping: order.shippingInfo ? {service: order.shippingInfo.service, label: order.shippingInfo.label, days: order.shippingInfo.days, priceCents: order.shippingCents, free: order.shippingCents === 0} : null,
+        ...(remote.state === 'pending_pix' && remote.pix?.qrCode ? {pix: {qrCode: remote.pix.qrCode, qrCodeBase64: remote.pix.qrCodeBase64 || ''}} : {})
+      } : {};
+      return json(res, 200, {reference: remote.reference, state: remote.state, statusDetail: remote.statusDetail, expiresAt: remote.pix?.expiresAt || null, ...(remote.reason ? {reason: remote.reason} : {}), ...details});
     } catch (error) {
       if (error.status === 404) return json(res, 404, {error: 'not_found'});
       console.error(`payments/status: Mercado Pago answered ${error.status || 'sem resposta'} ${error.code || ''} · ${ours.reference} · x-request-id ${error.requestId || '-'}`);

@@ -103,20 +103,42 @@ tela mostrou, o pedido no painel da Ju e os e-mails.
 | `BLAC` | "O pagamento não passou pela análise de segurança do Mercado Pago…" | nada |
 | Elo **débito** com `APRO` | aprovado, só em 1x | "Cartão de débito" |
 
-No ambiente de teste, o código do Mercado Pago aparece pequeno entre parênteses depois da frase (por exemplo
+Cada recusa abre um aviso no meio da tela (no celular, uma folha que sobe de baixo): **"Pagamento não aprovado"**, o
+motivo em uma frase curta, o que fazer e os botões **"Tentar outro cartão"** (ou "Corrigir os dados do cartão",
+"Escolher outras parcelas", "Tentar de novo", conforme o motivo) e **"Pagar com Pix"**, que troca para o Pix. No `OTHE`
+o motivo do aviso é "O banco do seu cartão recusou esta compra."; nos outros, o começo da frase da tabela. Esc, o ×
+ou o botão principal fecham o aviso e devolvem o cursor ao formulário do cartão, e a frase da tabela fica logo abaixo
+dele, como lembrete, já à vista junto do botão de pagar. Um clique no fundo escurecido também fecha, mas só um clique
+inteiro ali: selecionar o texto do aviso e soltar o mouse fora não fecha.
+
+No ambiente de teste, o código do Mercado Pago aparece pequeno no aviso e entre parênteses depois da frase (por exemplo
 `(insufficient_amount)`). Anote-o se a frase não combinar com a tabela: o Mercado Pago às vezes usa outro nome, e a
 frase volta para a geral ("O pagamento não foi aprovado…"). **No site real esse código nunca aparece.**
 
 ### 3.3 Pix de teste
 
-1. Escolha **Pix**: aparecem o QR Code, o copia e cola e "Válido por 59:59".
+1. Escolha **Pix**: aparecem as etapas (Pedido criado ✓ · Código Pix gerado ✓ · Aguardando pagamento, com o sinal de
+   espera · Pagamento confirmado), o valor, "Válido por 59:59", o QR Code, o copia e cola com **"Copiar código"**
+   (vira "Copiado!") e o passo a passo. Quando o Pix é pago, as etapas ganham o ✓ e a página segue sozinha para
+   "Seu pedido ganhou vida.".
 2. Um Pix de teste normalmente **fica pendente** (não há banco de verdade para pagar). A documentação do Mercado Pago diz
    que um Pix de teste com o nome do comprador **APRO** é aprovado sozinho: crie uma conta no site com o nome "APRO" e
    tente. Se não aprovar, tudo bem: o Pix é comprovado na compra real (etapa 6).
-3. Com um Pix esperando, clique em **"← Alterar dados ou pagamento"** e gere outro. No painel do Mercado Pago, o
+3. Com um Pix esperando, clique em **"← Voltar"** (no alto) ou em **"← Alterar dados ou pagamento"** e gere outro. No painel do Mercado Pago, o
    primeiro pedido deve aparecer **cancelado**: o código antigo não pode mais ser pago junto com o novo.
-4. Deixe um Pix passar de 1 hora: a página mostra "O tempo passou." e **"Gerar novo código Pix"**. O novo código nasce e
-   o antigo é cancelado. Pix que não foi pago some de "Meus pedidos" depois de 2 horas.
+4. Deixe um Pix passar de 1 hora: a página mostra "O tempo passou." e **"Gerar novo código Pix"** (o cursor já vai para
+   ele). O novo código nasce e o antigo é cancelado. Pix que não foi pago some de "Meus pedidos" depois de 2 horas.
+5. Com um Pix esperando, **recarregue a página** (ou saia e volte pela mesma aba): em vez de recomeçar, o checkout
+   mostra **"Seu Pix ainda está aberto."** com **"Continuar com este Pix"** (o mesmo código, o relógio seguindo) e
+   **"Cancelar este Pix e recomeçar"** (o antigo é cancelado antes de qualquer outro). Pago nesse meio-tempo, aparece a
+   confirmação e as peças saem do carrinho, como numa compra sem recarregar. Se a hora do código passar com essa escolha na
+   tela, "Continuar com este Pix" mostra "O tempo passou." e "Gerar novo código Pix". A aba guarda só o número do pedido no
+   Mercado Pago e a referência, nada do comprador.
+6. Se o Mercado Pago recusar a criação do Pix, aparece embaixo do formulário "Não conseguimos gerar o Pix agora. Tente de
+   novo ou pague com cartão." (nunca o aviso de cartão recusado).
+7. Servidor lento: se as configurações de pagamento não chegarem em 2,5 s, o checkout mostra "Carregando o pagamento…" e
+   pergunta de novo sem desistir da primeira pergunta (vale a resposta que chegar antes; até 8,5 s no total); sem resposta
+   nenhuma, "Continuar para pagamento" pergunta mais uma vez e avisa. Nunca cai na demonstração.
 
 ### 3.4 Avisos do Mercado Pago, repetição e cobrança dupla
 

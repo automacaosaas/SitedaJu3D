@@ -111,7 +111,7 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
 {
   for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`dist/${page}`), /<div class="demo-banner is-pending">PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span><\/div>/, `${page}: the strip is born hidden, as tall as always`);
   assert.match(read('dist/commerce.css'), /\n\.demo-banner\.is-pending \{ visibility: hidden; \}\n/, 'hidden, but keeping its height (nothing jumps when it shows)');
-  assert.match(read('dist/checkout.js'), /\nelse if \(live\.mode === 'live' && banner\) banner\.remove\(\);\nelse if \(banner\) banner\.innerHTML = 'PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span>';\nbanner\?\.classList\.remove\('is-pending'\);/, 'the right text first, then shown');
+  assert.match(read('dist/checkout.js'), /\n  else if \(live\.mode === 'live'\) \{ banner\.remove\(\); return; \}\n  else if \(live\.mode !== 'unreachable'\) banner\.innerHTML = 'PROTÓTIPO PARA AVALIAÇÃO <span>Valores ilustrativos · sem cobranças<\/span>';\n  banner\.classList\.remove\('is-pending'\);/, 'the right text first, then shown (paintBanner; unknown payments: no strip at all)');
 }
 
 console.log('PASS: pre-launch — 404 page with the way back, Envio e prazos with the shop\'s own numbers and linked from every delivery fact, a cookie notice that exists only with an analytics tool, asks before loading it and keeps the choice changeable, and a checkout strip that waits for the payment settings.');

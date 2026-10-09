@@ -13,7 +13,8 @@ function createHandler({env = process.env, interestFree = null} = {}) {
     if (req.method !== 'GET') return json(res, 405, {error: 'method_not_allowed'}, {Allow: 'GET'});
     const settings = mp.settings(env);
     if (settings.mode === 'off') return json(res, 200, {mode: 'off'});
-    json(res, 200, {mode: settings.mode, publicKey: settings.publicKey, interestFree: interestFree ? await interestFree(env) : null});
+    // never held by the "sem juros" check: null at once while it is first asked (in the background), the number afterwards
+    json(res, 200, {mode: settings.mode, publicKey: settings.publicKey, interestFree: interestFree ? await interestFree(env, {wait: 0}) : null});
   };
 }
 
