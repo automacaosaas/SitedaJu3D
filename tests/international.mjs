@@ -38,10 +38,10 @@ const lines = [{productId: 'borboletoscopio', quantity: 2}, {productId: 'aviaosc
     assert(answered.options.every(o => o.deliveryDaysMin === 9 && o.deliveryDays === 12), 'the answer the real contract gave: 9 to 12 working days');
   }
   assert.deepEqual(quote.refused, [{service: 'economico', label: 'Exporta Fácil Econômico', code: '45209', reason: 'rejected', messages: ['Serviço não contratado']}], 'a service outside the contract is listed with the Correios\' words');
-  assert.deepEqual(quote.volumes, [{length: 22, width: 20, height: 7, weightG: 129 * 2 + 250, count: 1}], 'the same shared box as in Brazil');
+  assert.deepEqual(quote.volumes, [{length: 22, width: 20, height: 7, weightG: 61 + 75 * 2 + 166, count: 1}], 'the same shared box as in Brazil: its tare and the pieces');
   const price = fake.calls.find(c => c.path === '/preco/v1/internacional/45128').params;
   assert.deepEqual({country: price.sgPaisDestino, from: price.cepOrigem, grams: price.psObjeto, type: price.tpObjeto, contract: price.nuContrato, dr: price.nuDR},
-    {country: 'MX', from: env.SHIP_FROM_CEP, grams: '508', type: '2', contract: env.CORREIOS_CONTRACT, dr: env.CORREIOS_DR}, 'contract price, by country, for the box');
+    {country: 'MX', from: env.SHIP_FROM_CEP, grams: '377', type: '2', contract: env.CORREIOS_CONTRACT, dr: env.CORREIOS_DR}, 'contract price, by country, for the box');
   assert(!('cepDestino' in price));
   const time = fake.calls.find(c => c.path === '/prazo/v2/internacional/exportacao/45128').params;
   assert.deepEqual(time, {sgPaisOrigem: 'BR', sgPaisDestino: 'MX', dtPostagem: '05-10-2026'}, 'export time, posted today (Brasília)');
