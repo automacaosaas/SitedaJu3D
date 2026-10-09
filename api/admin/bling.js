@@ -22,8 +22,10 @@ module.exports = adminEndpoint({methods: ['GET', 'POST'], async handle({req, bod
   const settings = nfeSettings(env);
   if (settings.provider !== 'bling') throw fail('bling_off');
   const bling = createBling({store, env, now, fetchImpl});
-  // The natures the site uses, by kind of buyer (nonTaxpayer, taxpayer); one still to be filled is left out.
-  const natureIds = Object.fromEntries(Object.entries((settings.example ? EXAMPLE.fiscal : FISCAL).bling.natureId).filter(([, id]) => !String(id).startsWith('[PREENCHER')).map(([kind, id]) => [kind, String(id)]));
+  // The natures the site uses, by kind of buyer (nonTaxpayer, taxpayer), and the one for abroad (export); one still to be
+  // filled is left out.
+  const fiscal = settings.example ? EXAMPLE.fiscal : FISCAL;
+  const natureIds = Object.fromEntries(Object.entries({...fiscal.bling.natureId, export: fiscal.export?.bling?.natureId}).filter(([, id]) => id && !String(id).startsWith('[PREENCHER')).map(([kind, id]) => [kind, String(id)]));
 
   async function view() {
     const status = await bling.status();

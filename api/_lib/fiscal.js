@@ -1,6 +1,7 @@
 'use strict';
 // Tax data for the NF-e (nota fiscal eletrônica) and the switch for issuing it. Everything marked "[PREENCHER: …]" comes
-// from the accountant (see NFE-SETUP.md); while anything is left, no invoice is sent and the panel says what is missing.
+// from the accountant (see NFE-SETUP.md); while anything is left, no invoice is sent and the panel says what is missing
+// (what is left in the export group holds back only the notes for abroad).
 // Filled with the accountant's answers of 29/09/2026 and the last note issued before the site (nº 10, série 1,
 // 19/09/2026, emissor do SEBRAE); the next note is nº 11 (set in Bling). The store makes what it sells, so the CFOPs are
 // the "produção do estabelecimento" ones (5101/6101/6107), never the resale ones (5102/6102/6108).
@@ -45,7 +46,30 @@ const FISCAL = {
   // so there are two natures (01/10/2026, NFE-SETUP.md): "Venda de produção do estabelecimento" for a person or a company
   // without a state registration (MG 5101, other states 6107) and "… – contribuinte" for a company with one (MG 5101,
   // other states 6101). The panel lists the ids once the Bling account is connected.
-  bling: {natureId: {nonTaxpayer: '15111617940', taxpayer: '15111617959'}}
+  bling: {natureId: {nonTaxpayer: '15111617940', taxpayer: '15111617959'}},
+  // Sale abroad (exportação): the accountant's answer of 08/10/2026 (RICMS/MG, Parte 1 do Anexo VIII, art. 166) and
+  // NFE-SETUP.md, "Venda para o exterior". api/_lib/nfe.js uses this group for an order delivered outside Brazil
+  // (shipTo.country); the national rules above stay as they are. While anything here is left to fill, no export note is
+  // sent (the order says what is missing) and the national notes go on as usual.
+  export: {
+    nature: 'Exportação de mercadoria',
+    cfop: '7101',   // the store makes what it sells: 7101 (exportação de produção do estabelecimento); 7102 is for resale
+    icms: {origin: '0', csosn: '300'},   // "X300" in the answer: origem 0 (nacional) + CSOSN 300 (imune), Simples Nacional
+    // Not in the answer: with Bling, PIS/COFINS come from the export nature set up there (the site does not send them).
+    pis: {cst: PENDING('CST do PIS na exportação (conferir com a contadora)')},
+    cofins: {cst: PENDING('CST da COFINS na exportação (conferir com a contadora)')},
+    // Where the goods leave Brazil (grupo ZA of the note, "exporta") and the "Informações complementares" line asked in
+    // item g (name, address and CNPJ of the bonded area or operator). Parcels go by the Correios (Exporta Fácil, posted
+    // at any agency): the place is the Correios unit where the parcel is cleared by customs before it leaves the country.
+    // Which unit, its address and its CNPJ come from the Correios / the accountant; never guessed.
+    shipment: {
+      state: PENDING('UF do local de embarque (ex.: SP)'),
+      place: PENDING('local de embarque: nome da unidade dos Correios que despacha a remessa'),
+      address: PENDING('endereço do local de embarque'),
+      cnpj: PENDING('CNPJ do recinto ou da unidade dos Correios do embarque')
+    },
+    bling: {natureId: PENDING('id da natureza "Exportação de mercadoria" no Bling (o painel mostra)')}
+  }
 };
 
 // EXAMPLE values, only to run the whole flow with the simulator (tests, local server with NFE_EXAMPLE_DATA=1). Never
@@ -57,19 +81,32 @@ const EXAMPLE = Object.freeze({
     cfop: {sameState: '5101', otherState: '6101', otherStateConsumer: '6107'}, icms: {origin: '0', csosn: '102'}, pis: {cst: '49'}, cofins: {cst: '49'},
     products: {borboletoscopio: {ncm: '39269090'}, dinossauroscopio: {ncm: '39269090'}, aviaoscopia: {ncm: '39269090'}, macacoscopio: {ncm: '39269090'}, girafoscopio: {ncm: '39269090'}, unicornioscopio: {ncm: '39269090'}},
     additionalInfo: 'Dados fiscais de exemplo, sem valor fiscal.',
-    bling: {natureId: {nonTaxpayer: '1', taxpayer: '3'}}
+    bling: {natureId: {nonTaxpayer: '1', taxpayer: '3'}},
+    export: {
+      nature: 'Exportação de mercadoria', cfop: '7101', icms: {origin: '0', csosn: '300'}, pis: {cst: '49'}, cofins: {cst: '49'},
+      shipment: {state: 'SP', place: 'LOCAL DE EMBARQUE DE EXEMPLO (dados de teste)', address: 'Rua de Exemplo, 100, São Paulo/SP', cnpj: '11.222.333/0001-81'},
+      bling: {natureId: '4'}
+    }
   }
 });
 
 // Paths still to be filled for the chosen service, e.g. ["products.aviaoscopia.ncm", "bling.natureId.taxpayer"]. Bling
 // keeps the series and the tax rules itself; the other services get them from here and have no use for bling.natureId.
+// The export group is checked apart (missingExport): it holds back only the notes for abroad.
 const NOT_NEEDED = {bling: ['series', 'cfop.', 'icms.csosn', 'pis.', 'cofins.'], other: ['bling.']};
 function pendingPaths(fiscal, prefix = '') {
   return Object.entries(fiscal).flatMap(([key, value]) => value && typeof value === 'object' ? pendingPaths(value, `${prefix}${key}.`) : String(value).startsWith('[PREENCHER') ? [`${prefix}${key}`] : []);
 }
+const skipped = (path, skip) => skip.some(s => s.endsWith('.') ? path.startsWith(s) : path === s);
 function missing(fiscal = FISCAL, {provider} = {}) {
   const skip = NOT_NEEDED[provider === 'bling' ? 'bling' : 'other'];
-  return pendingPaths(fiscal).filter(path => !skip.some(s => s.endsWith('.') ? path.startsWith(s) : path === s));
+  return pendingPaths(fiscal).filter(path => !path.startsWith('export.') && !skipped(path, skip));
+}
+// The same for a note for abroad, e.g. ["export.shipment.cnpj", "export.bling.natureId"] (no export group at all: ["export"]).
+const EXPORT_NOT_NEEDED = {bling: ['export.cfop', 'export.icms.csosn', 'export.pis.', 'export.cofins.'], other: ['export.bling.']};
+function missingExport(fiscal = FISCAL, {provider} = {}) {
+  if (!fiscal.export || typeof fiscal.export !== 'object') return ['export'];
+  return pendingPaths(fiscal.export, 'export.').filter(path => !skipped(path, EXPORT_NOT_NEEDED[provider === 'bling' ? 'bling' : 'other']));
 }
 
 function nfeSettings(env = process.env) {
@@ -80,4 +117,4 @@ function nfeSettings(env = process.env) {
   return {mode: environment === 'producao' ? 'live' : 'test', blocked: false, provider, environment, token: String(env.NFE_TOKEN || '').trim(), example: !production && env.NFE_EXAMPLE_DATA === '1'};
 }
 
-module.exports = {FISCAL, EXAMPLE, missing, nfeSettings};
+module.exports = {FISCAL, EXAMPLE, missing, missingExport, nfeSettings};
