@@ -364,6 +364,9 @@ sudo bash /srv/juimprime/current/deploy/config-nginx.sh
 - Rodar de novo não duplica nada. Antes do certbot não há 443: o script avisa, e é só rodar de novo depois dele. O
   `certbot renew` não mexe nessa linha.
 - Navegador sem HTTP/2 continua no HTTP/1.1, como hoje.
+- Estimativa (09/10/2026, Lighthouse, a loja local atrás de um proxy TLS com e sem HTTP/2): no celular, FCP 3,1 → 2,1 s,
+  LCP 4,8 → 3,1 s, nota 60 → 82 (4 pares); no desktop, FCP 0,86 → 0,44 s, LCP 1,33 → 0,65 s. É uma simulação: o número de
+  verdade é o PageSpeed no domínio depois de ligar (3 a 5 execuções, mediana).
 
 Conferir:
 

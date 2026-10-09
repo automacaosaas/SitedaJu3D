@@ -78,8 +78,8 @@ sem mudar o `?v=` deixa quem já visitou com o antigo. Para isso não passar des
 guarda o `?v=` e uma impressão digital de cada um desses arquivos: `tests/versioned-assets.mjs` falha se um deles mudar com
 o mesmo `?v=`. Depois de trocar o arquivo e o `?v=`, rode `node tools/sync-versions.cjs`.
 
-**As folhas de estilo e os scripts do próprio site** (09/10/2026, PageSpeed "ciclos de vida eficientes de cache": iam com
-`max-age=0` e eram revalidados, um pedido cada, uns 50 na home, a cada visita) também vão com `?v=`, mas esse `?v=` é a
+**As folhas de estilo e os scripts do próprio site** (09/10/2026: iam com `max-age=0` e eram revalidados, um pedido cada,
+46 na home, a cada visita de volta) também vão com `?v=`, mas esse `?v=` é a
 impressão digital do conteúdo (`server/asset-version.cjs`, 8 dígitos hex, sem contar o fim de linha), escrito pela ferramenta,
 nunca à mão: `node tools/sync-versions.cjs` põe o `?v=` em todo `<link rel="stylesheet">`, `<script src>` e
 `<link rel="modulepreload">` das páginas (cópias em `<noscript>` também), escreve o import map (cada módulo, como
@@ -97,6 +97,16 @@ já seguir o mapa. Na segunda visita, nenhum CSS ou JS é pedido de novo.
   quem já o tinha continua servindo certo.
 - **Conflito ao juntar branches** numa linha de `?v=`, no import map ou no hash da CSP: aceite qualquer um dos lados e rode
   `node tools/sync-versions.cjs`, que reescreve tudo a partir dos arquivos.
+- **Medido (09/10/2026, laboratório, A/B intercalado com a e7fc4ec):** na visita de volta à home, 46 CSS/JS iam à rede
+  (revalidação) e agora 0 (todos do cache, sem pedido); pedidos à rede 50–52 → 4. Mediana no celular limitado (5 pares):
+  FCP 2,58 → 1,52 s, LCP 5,06 → 4,15 s; no desktop (3 pares): FCP 0,58 → 0,42 s, LCP 0,84 → 0,68 s. A primeira visita fica
+  igual (Lighthouse, 11 pares no celular e 5 no desktop: FCP e LCP iguais, nota com diferença mediana de 1 ponto, dentro do
+  ruído); o HTML cresce ~1,1 KB comprimido (o import map).
+- **O aviso "cache" do PageSpeed (−87 KiB no celular, −101 KiB no desktop) não é sobre CSS/JS:** o Lighthouse ignora de
+  propósito o que vai com `must-revalidate`. São 9 a 11 fotos de `dist/assets/` (os recortes `product-*-cutout-768`, os
+  `card-preview-*` e o `logo-ju-224`) com o cache de 1 dia de `/assets/`. Tirar esse aviso pede o mesmo `?v=` por conteúdo
+  nas fotos (cada lugar que monta o endereço de uma foto: `products.js`, o `page-entry.js` gerado, a vitrine), depois que o
+  trabalho das imagens assentar; esticar o cache de `/assets/` sem `?v=` deixaria uma foto trocada velha por meses.
 
 ## Testes
 

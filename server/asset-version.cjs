@@ -1,5 +1,5 @@
 'use strict';
-// The ?v= of the site's own stylesheets and scripts (09/10/2026, PageSpeed "use efficient cache lifetimes"): a fingerprint of
+// The ?v= of the site's own stylesheets and scripts (09/10/2026, returning visitors: no revalidation each): a fingerprint of
 // the file's contents. tools/sync-versions.cjs writes it into every address the pages use (<link>, <script>, modulepreload
 // and the import map, which carries it to every import without touching the code), and server/create-server.cjs gives a
 // year in the cache, never asked for again, only to the address with the file's current fingerprint. One function for both,

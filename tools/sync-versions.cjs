@@ -6,8 +6,8 @@
 //    any other ?v= in dist/ outside the site's own stylesheets and scripts): this tool keeps, for each of those files, the
 //    ?v= and a fingerprint of the contents in tools/versioned-assets.json; tests/versioned-assets.mjs fails when a file
 //    changed and its ?v= did not (and when the record is out of date).
-// 2. The site's own stylesheets and scripts (09/10/2026, PageSpeed "use efficient cache lifetimes": they went out with
-//    max-age=0, one revalidation each, ~50 on the home, at every visit): the ?v= is the fingerprint of the file's contents
+// 2. The site's own stylesheets and scripts (09/10/2026: they went out with max-age=0, one revalidation each, 46 on the
+//    home, at every returning visit): the ?v= is the fingerprint of the file's contents
 //    (server/asset-version.cjs), written here, never by hand, in every address the pages use: <link rel="stylesheet">,
 //    <script src>, <link rel="modulepreload">, and the import map, one and the same in every page that loads modules, which
 //    maps each module ("./cart-store.js", "three"…) to its versioned address, so the imports in the code stay as they are
