@@ -7,7 +7,8 @@
 //      realesrgan-ncnn-vulkan -i design/originais/logo-ju.png -o <x4>.png -n realesrgan-x4plus -t 128 -s 4
 //      node tools/make-logo-icons.cjs --matte <x4>.png
 //    Como: é fundo o que está perto do creme (inclusive a sombra) e é largo — linhas finas claras por dentro das letras (o brilho
-//    do relevo) ficam; os miolos das letras (o "e", o "p") saem também. A impressora (corpo creme, quase a cor do fundo) é
+//    do relevo) ficam; os miolos das letras (o "e", o "p") saem também, e o creme dos cantos fechados (o vértice do "A", o encontro
+//    do arco com a haste do "m") sai depois, pela fração de letra em volta (corners). A impressora (corpo creme, quase a cor do fundo) é
 //    protegida pela própria silhueta. Os arcos do círculo são achados pela geometria (componentes sobre a circunferência). A borda
 //    de cada letra é "descontaminada": a cor dos pixels da borda vem de dentro da letra, sem a mistura com o creme (sem halo claro
 //    sobre preto ou rosa).
