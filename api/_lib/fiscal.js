@@ -74,7 +74,7 @@ const FISCAL = {
     taxUnit: {'39269090': PENDING('unidade tributável do NCM 3926.90.90 na exportação (tabela "NCM e respectiva uTrib" do Portal da NF-e)')},
     // Net weight of one piece, in grams, without the box (the owner's weights of 08/10/2026).
     netG: {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16},
-    bling: {natureId: PENDING('id da natureza "Exportação de mercadoria" no Bling (o painel mostra)')}
+    bling: {natureId: '15111672683'}   // a natureza "Exportação de mercadoria" no Bling (criada em 09/10/2026, regra EX: CFOP 7101, CSOSN 300)
   }
 };
 
