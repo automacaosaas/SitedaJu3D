@@ -14,9 +14,10 @@
 // 2) Arquivos do site (sempre que mudar algo abaixo): node tools/make-logo-icons.cjs
 //    - dist/assets/logo-ju-transparente.png e .webp (1024 px): o logo da empresa nos dados para o Google (Organization.logo);
 //    - o "Ju," do logo (a marca) para os ícones: dist/favicon.ico (16, 32 e 48 px, onde o Google procura), favicon-48.png,
-//      icon-192.png e icon-512.png (transparentes, com um contorno rosa-escuro sutil que segura a marca em aba clara e escura),
-//      apple-touch-icon.png (180 px, com fundo: o iOS não aceita transparência) e favicon.svg (a marca dentro, para quem ainda
-//      pedir o endereço antigo). As páginas apontam para eles pelo bloco <!-- icons --> de tools/sync-meta.cjs.
+//      icon-192.png e icon-512.png (transparentes, com um contorno rosa-escuro sutil que segura a marca em aba clara e escura;
+//      em 16 e 32 px só o "Ju", sem a vírgula), apple-touch-icon.png (180 px, com fundo: o iOS não aceita transparência),
+//      site.webmanifest e favicon.svg (a marca dentro, para quem ainda pedir o endereço antigo). As páginas apontam para eles
+//      pelo bloco <!-- icons --> de tools/sync-meta.cjs.
 //    O WebP sai pelo codificador do Chrome (como as outras imagens do site): Chrome sem janela.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -32,8 +33,9 @@ const T_BG = 72;            // distância (maior canal) do creme até onde ainda
 const T_PRINTER = 9;        // dentro da caixa da impressora: só o creme quase exato é fundo (o corpo dela fica a ~20)
 const OPEN = 3;             // px: fundo mais estreito que 2·3+1 px (o brilho fino por dentro das letras) não sai
 const EDGE = 3;             // px da borda cuja cor vem de dentro da letra
-// em frações do quadro do logo original
-// a impressora: caixa, um ponto do corpo, de onde a sombra do chão pode começar e os vãos de fundo (cercados pelos cabos; a sombra à\n// direita do carretel), cada um com a distância até onde é fundo
+// em frações do quadro do logo original. A impressora: caixa, um ponto do corpo, de onde a sombra do chão pode começar e os vãos de
+// fundo (cercados pelos cabos; a sombra à direita do carretel), cada um com a distância até onde é fundo. O círculo: aproximado
+// (o ajuste fino é feito pelos pixels).
 const PRINTER = {box: [0.5688, 0.2759, 0.7764, 0.4932], seed: [0.5859, 0.4004], floor: 0.455, loops: [[0.5688, 0.2759, 0.7764, 0.330, 14], [0.734, 0.386, 0.762, 0.408, 14], [0.757, 0.458, 0.7764, 0.4932, 30]]};
 const RING = {center: [0.5054, 0.4761], radius: 0.358, band: 0.03};
 

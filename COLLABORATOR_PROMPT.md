@@ -51,6 +51,11 @@ de efeitos. A interação chama atenção com profundidade e movimento suave.
 - Títulos editoriais: **Playfair Display**.
 - Frases manuscritas: **Parisienne**.
 - Logotipo oficial: `design/originais/logo-ju.png` (original); o site usa `dist/assets/logo-ju.webp` (336 px).
+- Logo sem fundo (só a escrita, sem o círculo): `design/logo/logo-ju-transparente.png` (2048 px) e, no site,
+  `dist/assets/logo-ju-transparente.png`/`.webp` (1024 px; o PNG é o logo da empresa nos dados para o Google). Ícones do
+  site (o "Ju," do logo): `favicon.ico`, `favicon-48.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` e
+  `site.webmanifest` na raiz de `dist/`, feitos por `tools/make-logo-icons.cjs`; os links ficam no bloco `<!-- icons -->`
+  de todas as páginas (`tools/sync-meta.cjs`).
 
 Use bastante respiro, hierarquia editorial, bordas suaves e animações discretas.
 Preserve contraste, legibilidade, áreas de toque de pelo menos 44 px e estados
@@ -100,7 +105,7 @@ publicados ficam em `dist/`:
 - `api/` (fora de `dist/`): contas (`api/auth`, `api/account`) e e-mail, para Vercel e Hostinger. `db/migrations/`: tabelas
   do MySQL, aplicadas quando o servidor liga.
 - `server.cjs` (entrada) e `server/create-server.cjs`: servidor de produção para a Hostinger (serve `dist/` e `api/` com os cabeçalhos de `vercel.json`). Ver `HOSTINGER-SETUP.md`.
-- `tools/`: `dev-server.cjs` (site + API local) e `make-email-logo.cjs`.
+- `tools/`: `dev-server.cjs` (site + API local), `make-email-logo.cjs` e `make-logo-icons.cjs` (logo sem fundo e ícones).
 - `tests/`: testes de regressão executáveis diretamente com Node.js.
 
 O rodapé (Home, Produtos, Sobre e Contato) traz “© 2026 Ju, imprime pra mim?
