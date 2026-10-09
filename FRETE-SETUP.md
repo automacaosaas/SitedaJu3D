@@ -83,7 +83,8 @@ Exemplos do que vai para os Correios: 1 lâmpada macaco = 85 g; 1 borboleta = 13
 as três peças com 362 g + uma lâmpada macaco com 85 g), cada caixa com a sua tara.
 
 O mesmo peso vale para o **envio internacional** (a mesma caixa). A NF-e emitida pelo Bling não leva peso nem volumes hoje (são campos
-opcionais na nota): o peso que importa para o frete é o da etiqueta, que o Correios Empresa calcula com a caixa cadastrada.
+opcionais na nota). Na etiqueta vale o peso da caixa fechada, informado na pré-postagem do Correios Empresa e conferido na agência;
+os números acima são a referência da cotação.
 
 ### Conferir
 
