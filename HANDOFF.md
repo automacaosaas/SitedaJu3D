@@ -214,6 +214,9 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
     página (branco no claro, `--gallery-bg` no escuro). O macaco ganhou as quatro vistas (frente, lado, costas e o rosto de perto).
   - **Testes:** `tests/tema-escuro.mjs`; os testes de desenho do claro leem o CSS por `tests/lib/light-css.cjs` (os tokens caem na
     reserva, as regras do escuro saem).
+  - **Texto na cor da peça (09/10/2026, o "Ver encaixado" do unicórnio):** `--theme-text`, `--pl-ink`, `--auth-rose`… como cor de texto
+    vão sempre dentro de `var(--fg, …)` (o destaque, de `color-mix(…, #fff var(--lift, 0%))`): no claro são elas mesmas, no escuro
+    clareiam. `tokens.py` faz isso também com reservas aninhadas, e `tests/tema-escuro.mjs` barra a cor da peça solta num texto.
   - **"Seu cantinho":** a pessoa (foto do Google ou a inicial num círculo no tom da página), quatro atalhos (Meus pedidos, Meus dados,
     Carrinho, Coleções), Preferências (Aparência, novidades por e-mail, o endereço) e "Sair da conta".
 - **Vitrine de novidade das lâmpadas de fenda (08/10/2026):** `fenda.html` (endereço curto `/fenda`, que o servidor abre como

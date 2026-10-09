@@ -301,7 +301,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-off, .card-off { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-radius: 10px; padding: 8px 12px; font-size: 12px; }
 .pix-off { background: #13864a; color: #fff; box-shadow: 0 8px 18px -12px #13864a; }
 .pix-off strong { font-size: 13px; letter-spacing: .06em; }
-.card-off { background: var(--surface, #edf3ef); color: var(--theme-accent, color-mix(in oklab, #25664c, #fff var(--lift, 0%))); }
+.card-off { background: var(--surface, #edf3ef); color: color-mix(in oklab, var(--theme-accent, color-mix(in oklab, #25664c, #fff var(--lift, 0%))), #fff var(--lift, 0%)); }
 .card-off strong { font-size: 12px; letter-spacing: .05em; }
 /* As duas promessas do cartão no mesmo lugar ("3X SEM JUROS" e "EM ATÉ 12X", checkout.js cardOffer): a maior dá o tamanho e só uma
    aparece, então a troca (quando o Mercado Pago dá menos parcelas sem juros para o cartão digitado) não empurra o Brick. */

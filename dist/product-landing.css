@@ -218,7 +218,7 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
   .pl-thumbs button:hover { opacity: 1; transform: translateY(-2px); }
   .pl-acc summary:hover strong { color: color-mix(in oklab, var(--pl-accent), #fff var(--lift, 0%)); }
 }
-.pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: var(--theme-accent, color-mix(in oklab, #1f7a4d, #fff var(--lift, 0%))); }
+.pl-offer { margin: 2px 0 0; font-size: 14px; font-weight: 650; color: color-mix(in oklab, var(--theme-accent, color-mix(in oklab, #1f7a4d, #fff var(--lift, 0%))), #fff var(--lift, 0%)); }
 /* "Monte seu kit" (as lâmpadas, kit-builder.js; 07/10/2026): logo depois do botão de compra, num cartão que nasce no tom da peça e
    clareia até o branco. Sem JavaScript fica escondido (a frase do kit, embaixo do preço, continua). A base do kit fica em mini-cart.css. */
 .pl-kit { display: grid; gap: 14px; margin-top: 22px; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--pl-accent) 14%, var(--border, #ece7e9)); border-radius: 24px; background: linear-gradient(180deg, color-mix(in srgb, var(--pl-accent) 6%, var(--surface-soft, #fff)) 0%, var(--surface-soft, #fff) 62%); box-shadow: 0 18px 38px -30px color-mix(in srgb, var(--pl-accent) 70%, transparent); }

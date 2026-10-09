@@ -108,6 +108,19 @@ def accents(css):
 # As cores de uma peça que a página escreve no próprio elemento (style="--pl-ink: …"): o estilo do elemento ganha de qualquer folha, então
 # o escuro não as troca; quem usa é que pega o token quando ele existe. Texto: --fg (o escuro claro), cinza: --fg-2, destaque: clareia.
 INLINE = r'(?:pl|pd|kit|auth|cat|nv|tier|fit|rec|theme|text|muted|accent|pick-accent)'
+# var(--<peça>-text, <reserva>) ocupando o valor inteiro, com a reserva em qualquer profundidade de parênteses (09/10/2026: as
+# reservas com color-mix(… var(--lift, 0%)) escapavam, e o texto da demonstração "Ver encaixado" ficava escuro no escuro)
+def whole_var(v):
+    m = re.match(r'var\(--(' + INLINE + r')(-?)(ink|text|strong|muted|accent|rose|)\b(?=\s*[,)])', v)
+    if not m: return None
+    depth = 0
+    for i, ch in enumerate(v):
+        if ch == '(': depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0: return m if i == len(v) - 1 else None
+    return None
+
 def palettes(css):
     n = 0
     def swap(m):
@@ -115,10 +128,11 @@ def palettes(css):
         prop, sep, value = m.group(1), m.group(2), m.group(3)
         v = value.strip(); imp = ''
         if v.endswith('!important'): imp = ' !important'; v = v[:-10].strip()
-        mm = re.fullmatch(r'var\(--(' + INLINE + r')(-?)(ink|text|strong|muted|accent|)\b(?:\s*,[^()]*(?:\([^()]*\))?[^()]*)?\)', v)
+        mm = whole_var(v)
         if not mm or 'var(--fg' in v: return m.group(0)
         name = mm.group(1) + mm.group(2) + mm.group(3)
-        if name in ('accent', 'pick-accent') or mm.group(3) == 'accent': new = f'color-mix(in oklab, {v}, #fff var(--lift, 0%))'
+        # o destaque da peça (--theme-accent, --auth-rose…) como texto: clareia no escuro
+        if name in ('accent', 'pick-accent') or mm.group(3) in ('accent', 'rose'): new = f'color-mix(in oklab, {v}, #fff var(--lift, 0%))'
         elif mm.group(3) == 'muted' or name == 'muted': new = f'var(--fg-2, {v})'
         elif mm.group(3) in ('ink', 'text', 'strong') or name == 'text': new = f'var(--fg, {v})'
         else: return m.group(0)

@@ -115,4 +115,16 @@ for (const text of ['Aparência', 'Automático', 'Claro', 'Escuro', 'Preferênci
   if (!['Automático', 'Claro'].includes(text)) assert.notEqual(translate(text, 'es'), text, `ES: ${text}`);
 }
 
+// ── texto na cor da peça sempre com o ajuste do escuro (09/10/2026: o aviso e os rótulos do "Ver encaixado" do unicórnio sumiam) ──
+// A cor de texto da peça (--theme-text, --pl-ink, --auth-rose…) é escura: como texto, vai dentro de var(--fg, …) — ou, o destaque,
+// de color-mix(…, #fff var(--lift, 0%)) —, que no claro é ela mesma e no escuro clareia. tools/tema-escuro/tokens.py faz isso.
+{
+  const raw = /(?<![-\w])(color|fill|stroke)\s*:\s*var\(--(?:theme|pl|pd|nv|cat|tier|fit|auth|kit|rec)-(text|ink|strong|muted|accent|rose)\b/g;
+  const loose = sheets.flatMap(file => [...read(file).matchAll(raw)].map(m => `${file}: ${read(file).slice(m.index, m.index + 60)}`));
+  assert.deepEqual(loose, [], `texto na cor da peça sem o ajuste do escuro:\n${loose.join('\n')}`);
+  const demo = read('hero-demo.css');
+  assert.match(demo, /\.demo-hint \{[^}]*color: var\(--fg, var\(--theme-text,/, 'o aviso do "Ver encaixado" legível no escuro');
+  assert.match(demo, /:root\[data-theme="dark"\] \.demo-glow \{ background:/, 'no escuro, sem o clarão branco atrás da peça');
+}
+
 console.log('PASS: tema escuro — tema antes da pintura (escolha, aparelho, outra aba), tokens só no escuro, fotos sem filtro, logo, a Aparência em "Seu cantinho" e no menu do perfil, e o perfil renovado.');
