@@ -6,10 +6,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const send = require('../api/contact/send');
 const {renderContactEmail, SUBJECTS} = require('../api/_lib/contact');
 const {createMemoryStore} = require('../api/_lib/store-memory');
@@ -101,7 +103,7 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   const page = read('dist/contato.html'), script = read('dist/contato.js');
   assert.doesNotMatch(page, /name="robots" content="noindex"/, 'the contact page can be found now');
   assert.match(page, /<link rel="stylesheet" href="contact\.css">/); assert.match(page, /<script type="module" src="contato\.js"><\/script>/);
-  assert.doesNotMatch(page.replace(/<script type="application\/ld\+json">[^]*?<\/script>/g, ''), /<script(?![^>]*\bsrc=)[^>]*>/, 'no inline script (CSP)');
+  assert.doesNotMatch(page.replace(/<script type="application\/ld\+json">[^]*?<\/script>/g, '').replace(/<script type="importmap">[^]*?<\/script>/, ''), /<script(?![^>]*\bsrc=)[^>]*>/, 'no inline script but the import map (its hash is in the CSP, tests/headers.mjs)');
   assert.match(page, /<h1 id="contact-title">Fale com a Ju<\/h1>/, 'the title alone, no emoji');
   // Channels: WhatsApp first; its button stays hidden until the number exists, and then carries a greeting.
   const channels = [...page.matchAll(/<article class="contact-channel[^"]*">[^]*?<h2>([^<]+)<\/h2>/g)].map(m => m[1]);

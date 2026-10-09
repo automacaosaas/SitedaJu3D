@@ -139,6 +139,9 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
    ou em `products.js`/`hero-motion.js`: `node tools/sync-modulepreload.cjs` e `node tools/sync-entry.cjs` (PageSpeed, 08/10/2026).
    Trocou um arquivo pedido com `?v=` (modelo 3D, vista da galeria, fonte): mude o `?v=` e rode `node tools/sync-versions.cjs`
    (com `?v=` o navegador guarda o arquivo por um ano; `tests/versioned-assets.mjs` falha se o `?v=` não mudar).
+   Mexeu em qualquer CSS ou JS de `dist/` (09/10/2026): rode `node tools/sync-versions.cjs` por último — ele põe o `?v=` com a
+   impressão do conteúdo em todas as páginas, no import map e no hash da CSP. Conflito de merge nessas linhas: aceite qualquer
+   lado e rode a ferramenta de novo.
 6. Estilo: o repositório usa CRLF no disco (não normalize), com diff mínimo. Texto da loja em português, com tradução EN/ES em
    `dist/translations.js` (linhas `PT|EN|ES`) e regras dinâmicas em `dist/i18n-core.js`. Texto visível com no mínimo 12 px.
    Sem dependências novas. Sem scripts inline (CSP): só o import map (com hash) e blocos JSON-LD.

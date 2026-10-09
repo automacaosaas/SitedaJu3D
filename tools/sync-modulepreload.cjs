@@ -4,10 +4,12 @@
 // showcase can draw. The list is written between <!-- modulepreload --> and <!-- /modulepreload --> in index.html, after the
 // import map (a module fetched before the import map would ignore it), from the import statements themselves, so it cannot
 // drift: tests/pagespeed.mjs fails while the page is out of date. Dynamic import() stays out (three.js, the dictionaries,
-// consent.js load only when needed).
+// consent.js load only when needed). Each href carries the module's ?v=, the very address the import map gives it
+// (tools/sync-versions.cjs, versionize): --check compares the list, the ?v= are that tool's to check.
 // Run: node tools/sync-modulepreload.cjs   (or --check to only report)
 const fs = require('node:fs');
 const path = require('node:path');
+const {strip, versionize, state} = require('./sync-versions.cjs');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const PAGE = 'index.html';
@@ -20,8 +22,8 @@ function imports(file) {
   for (const m of code.matchAll(/^[ \t]*(?:import|export)\s*(?:[\w*${}\s,]*?\bfrom\s*)?['"](\.{1,2}\/[^'"\n]+\.js)['"]/gm)) found.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), m[1])));
   return found;
 }
-// The page's own module scripts, in order.
-const entries = html => [...html.matchAll(/<script type="module" src="([^"]+)"><\/script>/g)].map(m => m[1]);
+// The page's own module scripts, in order (without their ?v=).
+const entries = html => [...html.matchAll(/<script type="module" src="([^"?]+)(?:\?v=[^"]*)?"><\/script>/g)].map(m => m[1]);
 // Every module reachable from them, breadth first (the first levels are what the page waits for longest), entries left out
 // (the page already names them).
 function graph(html) {
@@ -34,20 +36,23 @@ function graph(html) {
   }
   return order;
 }
-function sync(html) {
-  const match = BLOCK.exec(html);
+function sync(html, now = state()) {
+  const plain = strip(html), match = BLOCK.exec(plain);
   if (!match) throw new Error(`${PAGE}: no <!-- modulepreload --> block`);
-  const eol = html.includes('\r\n') ? '\r\n' : '\n', indent = match[1];
-  if (html.indexOf(match[0]) < html.indexOf('<script type="importmap">')) throw new Error(`${PAGE}: the modulepreload block must come after the import map`);
-  const lines = [`${indent}<!-- modulepreload -->`, ...graph(html).map(file => `${indent}<link rel="modulepreload" href="${file}">`), `${indent}<!-- /modulepreload -->`];
-  return html.replace(BLOCK, () => lines.join(eol));
+  const eol = plain.includes('\r\n') ? '\r\n' : '\n', indent = match[1];
+  const lines = [`${indent}<!-- modulepreload -->`, ...graph(plain).map(file => `${indent}<link rel="modulepreload" href="${file}">`), `${indent}<!-- /modulepreload -->`];
+  const next = versionize(plain.replace(BLOCK, () => lines.join(eol)), now);
+  if (next.indexOf('<!-- modulepreload -->') < next.indexOf('<script type="importmap">')) throw new Error(`${PAGE}: the modulepreload block must come after the import map`);
+  return next;
 }
 
 if (require.main === module) {
   const check = process.argv.includes('--check'), file = path.join(DIST, PAGE), html = fs.readFileSync(file, 'utf8'), next = sync(html);
-  if (next === html) console.log(`${PAGE}: modulepreload em dia.`);
-  else if (check) { console.log(`${PAGE}: modulepreload desatualizado — rode node tools/sync-modulepreload.cjs`); process.exitCode = 1; }
-  else { fs.writeFileSync(file, next); console.log(`${PAGE}: modulepreload atualizado (${graph(html).length} módulos).`); }
+  if (strip(next) === strip(html)) {
+    console.log(`${PAGE}: modulepreload em dia.`);
+    if (!check && next !== html) fs.writeFileSync(file, next);   // only the ?v= moved: brought up to date too
+  } else if (check) { console.log(`${PAGE}: modulepreload desatualizado — rode node tools/sync-modulepreload.cjs`); process.exitCode = 1; }
+  else { fs.writeFileSync(file, next); console.log(`${PAGE}: modulepreload atualizado (${graph(strip(html)).length} módulos).`); }
 }
 
 module.exports = {sync, graph, imports, entries, PAGE, DIST};

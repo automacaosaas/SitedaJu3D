@@ -264,7 +264,9 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
 4. **nginx e certificado:**
    - trocar `server_name _` pelo domínio em `/etc/nginx/sites-available/juimprime`;
    - rodar `sudo certbot --nginx -d juimprimepramim.com.br -d www.juimprimepramim.com.br`. Ele emite o certificado
-     gratuito, liga o HTTPS e renova sozinho.
+     gratuito, liga o HTTPS e renova sozinho;
+   - depois do certbot, rodar de novo `sudo bash /srv/juimprime/current/deploy/config-nginx.sh`: ele põe a página
+     "voltamos já" e o **HTTP/2** no bloco do 443 que o certbot criou (veja "HTTP/2" mais abaixo).
 5. **`.env`:** `SITE_URL=https://juimprimepramim.com.br`, e reiniciar o site.
 6. **Recomendado: `www` → domínio sem `www` (301).** O endereço oficial das páginas (o `<link rel="canonical">`, o
    `sitemap.xml`, os webhooks do Mercado Pago e dos Correios) é `https://juimprimepramim.com.br`, sem `www`. Desde
@@ -280,6 +282,7 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
    server {
        listen 443 ssl;
        listen [::]:443 ssl;
+       http2 on;
        server_name www.juimprimepramim.com.br;
        ssl_certificate /etc/letsencrypt/live/juimprimepramim.com.br/fullchain.pem;
        ssl_certificate_key /etc/letsencrypt/live/juimprimepramim.com.br/privkey.pem;
@@ -289,8 +292,8 @@ O `10.0.100.80` só existe na rede interna. Para o domínio funcionar:
 
    (o certbot já cria o redirecionamento de `http://` para `https://`.) Conferir com `sudo nginx -t` e
    `sudo systemctl reload nginx`; depois `curl -sI https://www.juimprimepramim.com.br/produtos.html` responde `301` com
-   `location: https://juimprimepramim.com.br/produtos.html`. Aproveitar para conferir se o bloco do `443` tem HTTP/2
-   (`listen 443 ssl http2;` ou `http2 on;`): a home pede umas 40 folhas de estilo e scripts, e o HTTP/1.1 enfileira.
+   `location: https://juimprimepramim.com.br/produtos.html`. O HTTP/2 de cada bloco do `443` (este também) quem liga é o
+   `deploy/config-nginx.sh` (seção "HTTP/2" abaixo).
    O `deploy/nginx-juimprime.conf` do repositório é só o ponto de partida do setup; a configuração viva é a do servidor.
 
 ### Google (indexação)
@@ -321,7 +324,8 @@ Instalar ou atualizar (num servidor novo, o `setup-servidor.sh` já roda; pode r
 - copia a página para `/var/www/juimprime-manutencao` e grava `/etc/nginx/snippets/juimprime-manutencao.conf`;
 - põe `include snippets/juimprime-manutencao.conf;` uma vez em cada bloco `server` de
   `/etc/nginx/sites-available/juimprime` que leva ao site (o do 443 do certbot e o da porta 80, se ele também leva ao
-  site; o que só redireciona para o https fica como está), sem mexer em HTTPS, http2, HSTS nem no `server_name`;
+  site; o que só redireciona para o https fica como está), sem mexer nos certificados, no HSTS nem no `server_name`;
+- liga o **HTTP/2** (`http2 on;`) em cada bloco `server` do 443 (seção abaixo);
 - guarda antes uma cópia em `/var/backups/juimprime`, confere com `nginx -t` (se falhar, volta a cópia e não recarrega
   nada) e recarrega o nginx;
 - guarda os registros de acesso do nginx (`/var/log/nginx/*.log`) por **190 dias**, um arquivo por dia, comprimidos: a
@@ -341,6 +345,39 @@ Quando a página mudar no Git (por exemplo, um contato novo), rodar o script de 
   mostra `503` e `Retry-After: 120` (depois, `curl -s http://127.0.0.1:3000/api/health` confirma o site de volta);
 - `sudo logrotate -d /etc/logrotate.conf 2>&1 | grep 'nginx/\*.log'` mostra `(190 rotations)` e nenhum
   `duplicate log entry`; os arquivos ficam em `/var/log/nginx` (`access.log.1`, `access.log.2.gz`…).
+
+### HTTP/2
+
+A home pede uns 60 arquivos (folhas de estilo, scripts, fotos). No HTTP/1.1 o navegador abre 6 conexões e os demais fazem
+fila; no HTTP/2 vão todos juntos numa conexão só, com um aperto de mão TLS só (09/10/2026, PageSpeed). Quem liga é o mesmo
+comando de cima, com sudo, em horário de pouco movimento:
+
+```sh
+sudo bash /srv/juimprime/current/deploy/config-nginx.sh
+```
+
+- Ele acrescenta `http2 on;` em cada bloco `server` do 443 de `/etc/nginx/sites-available/juimprime` (o do certbot e,
+  se existir, o do `www`), logo depois das linhas `listen … 443`. É a forma do nginx 1.25.1 em diante (o servidor tem a
+  1.26.3); a antiga, `listen 443 ssl http2;`, está obsoleta e não é usada. Bloco que já decide o HTTP/2 fica como está.
+- Antes de mexer, guarda a cópia em `/var/backups/juimprime/nginx-juimprime.antes-<data>`; confere com `nginx -t` e, se
+  falhar, volta a cópia sem recarregar nada. O reload é gracioso: ninguém que está no site cai.
+- Rodar de novo não duplica nada. Antes do certbot não há 443: o script avisa, e é só rodar de novo depois dele. O
+  `certbot renew` não mexe nessa linha.
+- Navegador sem HTTP/2 continua no HTTP/1.1, como hoje.
+- Estimativa (09/10/2026, Lighthouse, a loja local atrás de um proxy TLS com e sem HTTP/2): no celular, FCP 3,1 → 2,1 s,
+  LCP 4,8 → 3,1 s, nota 60 → 82 (4 pares); no desktop, FCP 0,86 → 0,44 s, LCP 1,33 → 0,65 s. É uma simulação: o número de
+  verdade é o PageSpeed no domínio depois de ligar (3 a 5 execuções, mediana).
+
+Conferir:
+
+- no fim, o próprio script mostra `protocolo pelo 443: HTTP/2`;
+- no servidor: `curl -sI --http2 https://juimprimepramim.com.br/ | head -n 1` mostra `HTTP/2 200`, com os mesmos
+  cabeçalhos de antes (`curl -sI --http2 https://juimprimepramim.com.br/` e `curl -sI --http1.1 …` lado a lado);
+- no computador: DevTools → Network → coluna **Protocol** = `h2`;
+- o fluxo de sempre (vitrine, carrinho, checkout de teste, login) e `/api/health`.
+
+Voltar: `sudo cp /var/backups/juimprime/nginx-juimprime.antes-<data> /etc/nginx/sites-available/juimprime`,
+`sudo nginx -t` e `sudo systemctl reload nginx` (ou apagar a linha `http2 on;` e fazer o mesmo).
 
 ## Cópia do banco na nuvem (Backblaze B2)
 

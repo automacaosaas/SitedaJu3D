@@ -115,7 +115,7 @@ assert(/if \(language !== 'pt-BR'\) await loadCore\(\)\.catch\(\(\) => \{\}\);\n
 assert(/return locale === 'pt-BR' \|\| !core \? value : core\.translate\(value, locale\);/.test(i18n), 'translate() before the dictionary arrives leaves the text as it is');
 assert(/languageReady\.then\(\(\) => window\.dispatchEvent\(new Event\('ju:header-ready'\)\)\);/.test(shell), 'the header waits for the language (English and Spanish never flash Portuguese)');
 const journey = read('dist/journey.js');
-assert(/\/\^\(en\|es\)\$\/\.test\(localStorage\.getItem\('ju\.language'\)/.test(journey) && /\['i18n-core\.js', 'translations\.js'\]/.test(journey) && /link\.rel = 'modulepreload'/.test(journey), 'English or Spanish chosen before: the dictionary starts downloading with the page');
+assert(/\/\^\(en\|es\)\$\/\.test\(localStorage\.getItem\('ju\.language'\)/.test(journey) && /\['i18n-core\.js\?v=[0-9a-f]{8}', 'translations\.js\?v=[0-9a-f]{8}'\]/.test(journey) && /link\.rel = 'modulepreload'/.test(journey), 'English or Spanish chosen before: the dictionary starts downloading with the page, at the versioned addresses the import map gives the modules (tools/sync-versions.cjs)');
 
 // ── the merge-conflict regression that shipped in theme.css ──────────
 for (const file of ['dist/theme.css', 'dist/i18n.js', 'dist/account.js', 'dist/site-shell.js', 'dist/translations.js', 'dist/account.css', 'dist/conta.html']) {

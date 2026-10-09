@@ -4,9 +4,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = file => fs.readFileSync(path.join(root, 'dist', file), 'utf8');
+const read = file => { const text = fs.readFileSync(path.join(root, 'dist', file), 'utf8'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const load = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 const {planTracks} = await load('motion-timeline.js');
 const {PRODUCTS, SOON, SHOWCASE, showcase} = await load('products.js');

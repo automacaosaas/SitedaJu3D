@@ -52,8 +52,9 @@ A CSP libera só o que o site usa:
 `node tools/dev-server.cjs` aplica os mesmos cabeçalhos (menos o cache), então um bloqueio aparece também no computador.
 `tests/headers.mjs` confere a CSP contra as páginas.
 
-**Ao editar o import map de `index.html`**, o hash muda. O teste avisa e mostra o valor novo, que deve ir para o
-`script-src` do `vercel.json` e para a tag `<meta http-equiv="Content-Security-Policy">` de cada página.
+**O import map** (09/10/2026: um só, igual em todas as páginas com módulos, com o `?v=` de cada módulo) é escrito por
+`node tools/sync-versions.cjs`, que também põe o hash dele no `script-src` do `vercel.json` e na tag
+`<meta http-equiv="Content-Security-Policy">` de cada página (`tools/sync-csp.cjs`, que tira os hashes velhos). Não edite à mão.
 
 **A política também está em `<meta>`** em todas as páginas, porque a CDN da Hostinger substitui o cabeçalho CSP pelo dela.
 O `<meta>` é a política do cabeçalho sem `frame-ancestors`; `tests/headers.mjs` exige que as duas fiquem iguais.
@@ -76,6 +77,36 @@ anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes),
 sem mudar o `?v=` deixa quem já visitou com o antigo. Para isso não passar despercebido, `tools/versioned-assets.json`
 guarda o `?v=` e uma impressão digital de cada um desses arquivos: `tests/versioned-assets.mjs` falha se um deles mudar com
 o mesmo `?v=`. Depois de trocar o arquivo e o `?v=`, rode `node tools/sync-versions.cjs`.
+
+**As folhas de estilo e os scripts do próprio site** (09/10/2026: iam com `max-age=0` e eram revalidados, um pedido cada,
+46 na home, a cada visita de volta) também vão com `?v=`, mas esse `?v=` é a
+impressão digital do conteúdo (`server/asset-version.cjs`, 8 dígitos hex, sem contar o fim de linha), escrito pela ferramenta,
+nunca à mão: `node tools/sync-versions.cjs` põe o `?v=` em todo `<link rel="stylesheet">`, `<script src>` e
+`<link rel="modulepreload">` das páginas (cópias em `<noscript>` também), escreve o import map (cada módulo, como
+`"./cart-store.js"`, e o `"three"` apontando para o endereço com `?v=`: os `import` do código continuam como estão e chegam ao
+arquivo versionado) e acerta os `?v=` escritos dentro de scripts (`journey.js`, que pré-carrega o dicionário cedo, e
+`consent.js`, que pede `consent.css`). O import map vem antes do primeiro script da página, para o que o `journey.js` pré-carrega
+já seguir o mapa. Na segunda visita, nenhum CSS ou JS é pedido de novo.
+
+- **Rode `node tools/sync-versions.cjs` depois de mexer em qualquer arquivo de `dist/`** (e depois dos outros geradores,
+  que escrevem as páginas sem os `?v=` e o mapa e as passam por ele). `tests/versioned-assets.mjs` falha enquanto alguma página
+  pede um arquivo sem a impressão digital atual dele, e mostra como acertar.
+- **O servidor só dá o ano com a impressão certa:** `?v=` diferente da do arquivo (uma página aberta antes de uma publicação
+  pedindo logo depois dela) recebe o arquivo com `max-age=0`, como antes, e o conteúdo novo nunca fica um ano guardado num
+  endereço velho. Na volta de versão (`deploy.sh --rollback`), cada arquivo antigo volta ao endereço antigo, que o navegador de
+  quem já o tinha continua servindo certo.
+- **Conflito ao juntar branches** numa linha de `?v=`, no import map ou no hash da CSP: aceite qualquer um dos lados e rode
+  `node tools/sync-versions.cjs`, que reescreve tudo a partir dos arquivos.
+- **Medido (09/10/2026, laboratório, A/B intercalado com a e7fc4ec):** na visita de volta à home, 46 CSS/JS iam à rede
+  (revalidação) e agora 0 (todos do cache, sem pedido); pedidos à rede 50–52 → 4. Mediana no celular limitado (5 pares):
+  FCP 2,58 → 1,52 s, LCP 5,06 → 4,15 s; no desktop (3 pares): FCP 0,58 → 0,42 s, LCP 0,84 → 0,68 s. A primeira visita fica
+  igual (Lighthouse, 11 pares no celular e 5 no desktop: FCP e LCP iguais, nota com diferença mediana de 1 ponto, dentro do
+  ruído); o HTML cresce ~1,1 KB comprimido (o import map).
+- **O aviso "cache" do PageSpeed (−87 KiB no celular, −101 KiB no desktop) não é sobre CSS/JS:** o Lighthouse ignora de
+  propósito o que vai com `must-revalidate`. São 9 a 11 fotos de `dist/assets/` (os recortes `product-*-cutout-768`, os
+  `card-preview-*` e o `logo-ju-224`) com o cache de 1 dia de `/assets/`. Tirar esse aviso pede o mesmo `?v=` por conteúdo
+  nas fotos (cada lugar que monta o endereço de uma foto: `products.js`, o `page-entry.js` gerado, a vitrine), depois que o
+  trabalho das imagens assentar; esticar o cache de `/assets/` sem `?v=` deixaria uma foto trocada velha por meses.
 
 ## Testes
 
@@ -240,9 +271,9 @@ rede simulada, outra máquina) não são estes; servem para comparar antes e dep
   só na primeira resposta); CSS minificado na hora de servir (`server/minify-css.cjs`, 396 → 329 KB antes da compressão;
   `tests/css-minify.mjs` confere token a token); `?v=` com um ano de cache (`immutable`), os outros como antes.
 
-**Ficou de fora, de propósito:** carimbar `?v=<hash>` em todo JS e CSS (cache de um ano para eles). Exige reescrever o import
-map de todas as páginas (e o hash dele na CSP) a cada mudança de qualquer arquivo — conflito garantido entre as branches que
-correm em paralelo. Dá para fazer no servidor, na hora de servir, se valer a pena depois do lançamento.
+**Feito em 09/10/2026** (antes ficara de fora pelo conflito entre branches paralelas): `?v=<impressão do conteúdo>` em todo
+JS e CSS do site, com um ano de cache, e o import map único que leva o `?v=` a todos os `import`. Gerado e conferido por
+`tools/sync-versions.cjs` (seção "Cabeçalhos" acima); o conflito entre branches se resolve rodando a ferramenta de novo.
 
 **Capturas de antes e depois** (home no computador e no celular, coleção, página da peça, carrinho, janela da peça, kit,
 demonstração, contato, Produtos; com e sem movimento reduzido): idênticas pixel a pixel, menos as mudanças pretendidas —

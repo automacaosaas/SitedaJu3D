@@ -6,11 +6,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
-const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const {COMPANY} = require('../api/_lib/legal');
 const {PRODUCTS, FAMILIES, badgeStyle} = await site('products.js');
 const {COMMERCE, money, pixPrice, kitOffer} = await site('commerce-config.js');

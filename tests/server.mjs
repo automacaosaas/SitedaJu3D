@@ -75,8 +75,22 @@ try {
   assert.match(logo.headers['cache-control'], /max-age=86400, stale-while-revalidate=604800/);
   assert.equal(logo.headers['content-encoding'], undefined, 'images are already compressed');
   // With ?v= the address changes with the file: a year, never revalidated (2026-10-07). Pages never.
-  for (const path of ['/assets/logo-ju.webp?v=2', '/carousel.js?v=abc123', '/theme.css?x=1&v=9'])
+  // The site's own stylesheets and scripts (09/10/2026): only with the fingerprint of their contents, the ?v= the pages carry
+  // (tools/sync-versions.cjs). Any other ?v= (a page from before a deploy, asking right after it) still gets the file,
+  // revalidated as before: newer contents never sit a year in a cache under an older address (and a rollback stays clean).
+  const {assetVersion} = require('../server/asset-version.cjs');
+  const own = file => assetVersion(fs.readFileSync(new URL(`../dist/${file}`, import.meta.url)));
+  const hashes = {carousel: own('carousel.js'), theme: own('theme.css'), three: own('vendor/three.module.min.js')};
+  for (const path of ['/assets/logo-ju.webp?v=2', `/carousel.js?v=${hashes.carousel}`, `/theme.css?x=1&v=${hashes.theme}`, `/vendor/three.module.min.js?v=${hashes.three}`])
     assert.equal((await raw(path)).headers['cache-control'], 'public, max-age=31536000, immutable', `versioned: ${path}`);
+  for (const path of ['/carousel.js?v=abc123', `/theme.css?v=${hashes.carousel}`, '/vendor/three.module.min.js?v=1']) {
+    const answer = await raw(path);
+    assert.equal(answer.status, 200, `still served: ${path}`);
+    assert.equal(answer.headers['cache-control'], 'public, max-age=0, must-revalidate', `not the file's fingerprint, revalidated: ${path}`);
+  }
+  // the fingerprint ignores line endings: the Windows checkout (CRLF) and the Linux server (LF) agree
+  assert.equal(assetVersion(Buffer.from('a\r\nb\r\n')), assetVersion(Buffer.from('a\nb\n')));
+  assert.match(hashes.carousel, /^[0-9a-f]{8}$/);
   assert.equal((await raw('/?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
   assert.equal((await raw('/carousel.js?view=1')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'only a real v= parameter');
   assert.equal((await raw('/nao-existe.js?v=1')).headers['cache-control'], 'no-store', 'a missing file is never cached');
@@ -144,7 +158,7 @@ try {
     const html = res.body.toString().replace(/\r\n/g, '\n');   // a Windows checkout has CRLF in dist/ (core.autocrlf)
     assert.match(html, /<h1 id="not-found-title">Ops! Essa página sumiu no meio das impressões 3D\.<\/h1>/, path);
     assert.match(html, /<a class="primary" href="\.\/">Ir para a vitrine/); assert.match(html, /<a class="not-found-secondary" href="produtos">Ver a coleção de produtos<\/a>/);
-    assert.match(html, /<base href="\/">\n  <meta name="robots" content="noindex">\n  <script src="journey\.js"><\/script>/, 'every link resolves from the site root, before the first script');
+    assert.match(html, /<base href="\/">\n  <meta name="robots" content="noindex">\n  <script type="importmap">[^\n]*<\/script>\n  <script src="journey\.js\?v=[0-9a-f]{8}"><\/script>/, 'every link (and the import map) resolves from the site root, before the first script');
   }
   for (const path of ['/nao-existe.js', '/assets/nao-existe.webp']) {
     const res = await raw(path);
@@ -301,7 +315,9 @@ try {
     const page = await get('/page');
     assert.equal((await get('/page', {'if-none-match': page.headers.etag})).headers['content-security-policy'], page.headers['content-security-policy'], "a page's 304 keeps its security headers (the browser updates the cached ones)");
     assert.equal((await get('/app.js', {'if-none-match': first.headers.etag}, 'HEAD')).status, 304, 'HEAD: 304');
-    assert.equal((await get('/app.js?v=7', {'if-none-match': first.headers.etag})).headers['cache-control'], 'public, max-age=31536000, immutable', 'a 304 with ?v= keeps the immutable cache');
+    const appVersion = require('../server/asset-version.cjs').assetVersion(script);
+    assert.equal((await get(`/app.js?v=${appVersion}`, {'if-none-match': first.headers.etag})).headers['cache-control'], 'public, max-age=31536000, immutable', 'a 304 with the ?v= of its contents keeps the immutable cache');
+    assert.equal((await get('/app.js?v=7', {'if-none-match': first.headers.etag})).headers['cache-control'], 'public, max-age=0, must-revalidate', 'with another ?v=, revalidated as before');
 
     // If-None-Match: weak comparison, lists and "*"; when it is there, If-Modified-Since is ignored.
     for (const value of [first.headers.etag.slice(2), `W/"outro", ${first.headers.etag}`, '*']) assert.equal((await get('/app.js', {'if-none-match': value})).status, 304, `If-None-Match: ${value}`);

@@ -14,7 +14,9 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 // o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
 const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.css') ? lightCss(text) : text; };
 const pages = fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'));
-const home = read('dist/index.html');
+// the ?v= of the stylesheets and scripts out (tools/sync-versions.cjs writes them; tests/versioned-assets.mjs checks them)
+const {strip, withoutVersions} = require('../tools/sync-versions.cjs');
+const home = withoutVersions(read('dist/index.html'));
 
 // ── Head order ─────────────────────────────────────────────────────────────────
 for (const page of pages) {
@@ -28,7 +30,8 @@ for (const page of pages) {
 // ── modulepreload: the home's whole static graph, after the import map, generated ──
 {
   const {sync, graph, entries} = require('../tools/sync-modulepreload.cjs');
-  assert.equal(sync(home.replace(/\n/g, fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8').includes('\r\n') ? '\r\n' : '\n')), fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8'), 'index.html modulepreload out of date — run: node tools/sync-modulepreload.cjs');
+  const page = fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8');
+  assert.equal(strip(sync(page)), strip(page), 'index.html modulepreload out of date — run: node tools/sync-modulepreload.cjs');
   const listed = [...home.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(m => m[1]);
   assert.deepEqual(listed, graph(home), 'exactly the static graph');
   assert.deepEqual(entries(home), ['site-shell.js', 'catalog.js', 'carousel.js', 'controller.js']);

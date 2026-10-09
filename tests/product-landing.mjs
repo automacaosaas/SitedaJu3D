@@ -9,7 +9,9 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
-const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+// pages read without the ?v= of their stylesheets and scripts (tools/sync-versions.cjs writes them, tests/versioned-assets.mjs checks them)
+const {strip, withoutVersions} = require('../tools/sync-versions.cjs');
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const {build} = require('../tools/build-product-pages.cjs');
 const {COMPANY} = require('../api/_lib/legal');
 const {PRODUCTS, defaults, color, badgeStyle} = await site('products.js');
@@ -18,7 +20,8 @@ const BASE = COMPANY.website.replace(/\/+$/, '');
 
 // ── the files are what the tool builds now ────────────────────────────
 {
-  const stale = (await build()).filter(({name, text}) => read('dist/' + name) !== text).map(f => f.name);
+  // the tool builds them without the versioned addresses and the import map (tools/sync-versions.cjs puts those in)
+  const stale = (await build()).filter(({name, text}) => strip(read('dist/' + name)) !== text).map(f => f.name);
   assert.deepEqual(stale, [], `out of date — run: node tools/build-product-pages.cjs (${stale.join(', ')})`);
 }
 
@@ -71,9 +74,10 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.match(page, /Desistência em até 7 dias[^]*<a href="trocas">Ver a política<\/a>/);
   if (!fixed) assert.match(page, /<div class="pl-custom" id="pl-custom" data-pl-custom hidden><\/div>/);
   assert.match(page, /<div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden>/, 'the photo / 3D switch only shows with the script');
-  // the 3D model needs three.js by name: the home's import map (its hash is in the security policy) before any module
-  const map = '<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>';
-  assert(page.includes(map) && page.indexOf(map) < page.indexOf('<script type="module"'), `${id}: import map first`);
+  // the 3D model needs three.js by name: the import map every page with modules carries (tools/sync-versions.cjs; its hash is
+  // in the security policy), before any module
+  const map = /<script type="importmap">([^<]*)<\/script>/.exec(page);
+  assert(map && /^\.\/vendor\/three\.module\.min\.js\?v=[0-9a-f]{8}$/.test(JSON.parse(map[1]).imports.three) && map.index < page.indexOf('<script type="module"'), `${id}: import map first`);
   assert.match(page, /<script type="module" src="product-landing\.js"><\/script>/);
   // link preview with the piece's own picture, and the product data search engines read
   assert(page.includes('<meta property="og:type" content="product">'));
@@ -96,7 +100,8 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
 {
   const code = read('dist/product-landing.js'), css = read('dist/product-landing.css'), policy = read('vercel.json');
   const {translate} = await site('i18n-core.js');
-  assert.match(policy, /'sha256-6p13ug9Y\/2TWPZMF0aIT0xv2TqxNkp62hhuZFDN2uAM='/, 'the import map is allowed by the policy');
+  const map = /<script type="importmap">([^<]*)<\/script>/.exec(read('dist/aviaoscopia.html'))[1];
+  assert(policy.includes(`'sha256-${(await import('node:crypto')).createHash('sha256').update(map).digest('base64')}'`), 'the import map is allowed by the policy');
   assert.match(code, /viewerImport \?\?= import\('\.\/viewer\.js'\)/, 'the same 3D viewer as the configurator, loaded only when asked');
   assert.match(code, /v\.controls\.enableZoom = false;/, 'the mouse wheel keeps scrolling the page');
   assert.match(code, /v\.renderer\.domElement\.style\.touchAction = 'pan-y';/, 'on the phone a vertical drag scrolls the page');
