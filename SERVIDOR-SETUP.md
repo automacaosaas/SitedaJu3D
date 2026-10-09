@@ -195,7 +195,9 @@ partir do valor real da conta (`ADMIN-SETUP.md`, "Fluxo de caixa").
 
 1. **Cópia do banco antes de tudo** (`deploy.sh --backup limpeza`, como o usuário do site), conferida (o gzip inteiro e o
    "Dump completed" no fim) e guardada também em `/var/backups/juimprime/limpeza-<data>.sql.gz` (só root), porque as cópias
-   diárias empurram as antigas de `shared/backups` (ficam as 10 mais novas). Se a cópia falhar, nada é apagado.
+   diárias empurram as antigas de `shared/backups` (ficam as 10 mais novas). Se a cópia falhar, nada é apagado. Antes dela,
+   o script confere no `.env` que o banco copiado é o mesmo que ele limpa e o que o site usa (uma linha `DB_NAME` só, sem
+   aspas, e o `DB_HOST` desta máquina); se não for, para sem fazer nada.
 2. **Mostra o que existe:** lançamentos à mão (e quantos são "Ajuste de saldo"), contas a pagar (e quantas trancadas),
    pedidos de teste do Mercado Pago por status e pedidos reais.
 3. **Pergunta o alcance:**
@@ -216,9 +218,17 @@ partir do valor real da conta (`ADMIN-SETUP.md`, "Fluxo de caixa").
    `cash_reset`) a linha "caixa zerado pelo servidor".
 
 Depois: a Júlia abre o painel → **Fluxo de caixa** → **Informar o saldo de hoje** e digita quanto a loja tem (conta e
-caixa). Desfazer, só em caso de engano: `gunzip -c /var/backups/juimprime/limpeza-<data>.sql.gz | sudo mariadb juimprime`
-(volta o banco **inteiro** para antes da limpeza, e o que chegou depois some). Apague essa cópia quando não precisar mais
-(`sudo rm /var/backups/juimprime/limpeza-*`): ela tem os dados dos clientes.
+caixa). Desfazer, só em caso de engano (volta o banco **inteiro** para antes da limpeza, e o que chegou depois some), com o
+site parado e quem abre a cópia é o root (a pasta é só dele; o fim do script mostra as linhas com o nome do arquivo):
+
+```bash
+sudo systemctl stop juimprime.service
+sudo sh -c 'gunzip -c /var/backups/juimprime/limpeza-<data>.sql.gz | mariadb juimprime'
+sudo systemctl start juimprime.service
+```
+
+Apague essa cópia quando não precisar mais (`sudo sh -c 'rm -f /var/backups/juimprime/limpeza-*'`: o `*` só funciona dentro
+do `sudo sh -c`, porque a pasta é só do root): ela tem os dados dos clientes.
 
 ## Se a saída pela porta 22 estiver bloqueada
 

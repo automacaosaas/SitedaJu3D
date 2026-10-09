@@ -427,9 +427,16 @@ const migrationTables = () => {   // the tables as the migrations leave them: co
 {
   const at = text => { const i = cashReset.indexOf(text); assert(i > 0, `limpar-caixa.sh has: ${text}`); return i; };
   assert(cashReset.includes('[ "$(id -u)" -eq 0 ] || { echo "Rode com sudo: sudo bash $0"; exit 1; }') && cashReset.includes('[ "$(id -u)" -ne 0 ] || { echo "JU_TEST é só para o teste no computador'), 'only root (and the test switch never as root)');
-  assert(cashReset.includes(`DB=$(as_app grep -m 1 -E '^DB_NAME=' -- "$ENV_FILE"`) && cashReset.includes('[[ "$DB" =~ ^[A-Za-z0-9_]{1,64}$ ]]'), 'only the DB_NAME line of the .env, read as juimprime');
-  assert(cashReset.includes('db() { mariadb "$@"; }') && cashReset.includes('q() { db --batch --skip-column-names --default-character-set=utf8mb4 "$DB"; }') && cashReset.split('db --batch').length === 2, 'MariaDB as root through the socket, every query through q (the SQL on stdin)');
-  assert(!/DB_PASSWORD|DB_USER|DB_HOST|--password|--user|MYSQL_PWD|defaults-extra-file/.test(cashReset), 'no password nor user anywhere');
+  // only the DB_NAME and DB_HOST lines of the .env, read as juimprime: the database deploy.sh copies (its envget, the first
+  // line) is the one root cleans through the socket and the one the site uses (systemd takes the last): one DB_NAME line, a
+  // local DB_HOST. The .env of the test switch only with it (on the server, always the one deploy.sh reads).
+  assert(cashReset.includes('setting() { as_app grep -E "^[[:space:]]*$1[[:space:]]*=" -- "$ENV_FILE" 2>/dev/null || true; }') && cashReset.includes('if [[ "$(setting DB_NAME)" =~ ^DB_NAME=([A-Za-z0-9_]{1,64})$ ]]; then DB=${BASH_REMATCH[1]}; fi'), 'only the DB_NAME line of the .env, one and plain, read as juimprime');
+  assert(cashReset.includes(`case "$(setting DB_HOST)" in\n  ''|DB_HOST=|DB_HOST=127.0.0.1|DB_HOST=localhost|DB_HOST=::1) ;;`) && at('case "$(setting DB_HOST)"') < at('--backup limpeza 2>&1'), 'the MariaDB of this machine, checked before the copy');
+  assert(cashReset.includes('ENV_FILE=$APP_DIR/shared/.env ') && deploy.includes('ENV_FILE="$APP_DIR/shared/.env"') && cashReset.includes('ENV_FILE=${JU_ENV_FILE:?}; DEPLOY=${JU_DEPLOY:?}') && cashReset.split('JU_ENV_FILE').length === 3, 'the .env deploy.sh reads; another one only in the test');
+  // --skip-force: the client stops at the first error even if a MariaDB option file says "force" (it would go on to the
+  // COMMIT and save half of the transaction)
+  assert(cashReset.includes('db() { mariadb "$@"; }') && cashReset.includes('q() { db --batch --skip-force --skip-column-names --default-character-set=utf8mb4 "$DB"; }') && cashReset.split('db --batch').length === 2, 'MariaDB as root through the socket, every query through q (the SQL on stdin), stopping at the first error');
+  assert(!/DB_PASSWORD|DB_USER|DB_PORT|DATABASE_URL|--password|--user|MYSQL_PWD|defaults-extra-file/.test(cashReset), 'no password nor user anywhere');
   // the copy before anything, with the deploy.sh the setup installs, as juimprime; checked; a copy outside the rotation
   assert(cashReset.includes('DEPLOY=/usr/local/lib/juimprime/deploy.sh') && setup.includes('install -m 755 "$HERE/deploy.sh" /usr/local/lib/juimprime/deploy.sh') && deploy.includes('label=${2:-manual}; [[ "$label" =~ ^[a-z0-9-]{1,20}$ ]]'), 'deploy.sh --backup, where the setup installs it');
   assert(cashReset.includes('as_app() { runuser -u "$APP_USER" -- "$@"; }') && cashReset.includes('if ! out=$(as_app "$DEPLOY" --backup limpeza 2>&1); then'), 'the copy as juimprime');
@@ -462,6 +469,12 @@ const migrationTables = () => {   // the tables as the migrations leave them: co
   const {PAID} = require('../api/_lib/orders.js');
   assert(cashReset.includes(`PAID="${PAID.map(s => `'${s}'`).join(', ')}"`), 'the paid statuses of api/_lib/orders.js');
   assert(cashReset.includes('Informar o saldo de hoje') && raw('dist/admin-cash.js').includes("'Informar o saldo de hoje'"), 'it names the button of the panel');
+  // the copy in /var/backups/juimprime is root's only (700): undoing and removing it go through root's own shell, never the
+  // operator's (a "gunzip -c … | sudo mariadb" or a "sudo rm …/limpeza-*" of the operator cannot open that folder)
+  const resetDoc = raw('SERVIDOR-SETUP.md').split('## Zerar o fluxo de caixa')[1].split('\n## ')[0];
+  assert(cashReset.includes(`echo "  sudo sh -c 'gunzip -c $kept | mariadb $DB'"`) && resetDoc.includes("sudo sh -c 'gunzip -c /var/backups/juimprime/limpeza-<data>.sql.gz | mariadb juimprime'") && resetDoc.includes("sudo sh -c 'rm -f /var/backups/juimprime/limpeza-*'"), 'undo and remove as root');
+  assert(!/(^|[\s`])(gunzip -c [^\n]*\| sudo mariadb|sudo rm [^\n]*limpeza-\*)/.test(cashReset + resetDoc), 'never through the operator');
+  assert(at('sudo systemctl stop juimprime.service') < at("sudo sh -c 'gunzip -c") && resetDoc.indexOf('sudo systemctl stop juimprime.service') < resetDoc.indexOf("sudo sh -c 'gunzip -c"), 'with the site stopped');
 }
 
 // …and run for real (JU_TEST=1) against a database of lies: SQLite (node:sqlite) with the tables of the migrations, the same
@@ -565,6 +578,16 @@ try {
       const full = counts(), liveRows = live();
       assert.deepEqual(full, {cash_entries: 3, bills: 2, orders: 7, order_items: 5, order_events: 4, invoices: 5, integration_log: 3, admin_audit: 1});
 
+      // a .env where the database copied (the first DB_NAME line, DB_HOST) may not be the one cleaned through the socket nor
+      // the one the site uses (the last line): no copy, not one query
+      for (const [name, text] of [['repetido', 'DB_HOST=127.0.0.1\nDB_NAME=juimprime\nDB_NAME=juimprime_novo\n'], ['aspas', 'DB_NAME="juimprime"\n'], ['longe', 'DB_HOST=10.0.0.9\nDB_NAME=juimprime\n'], ['dois-hosts', 'DB_HOST=127.0.0.1\nDB_HOST=10.0.0.9\nDB_NAME=juimprime\n'], ['sem', 'DB_USER=juimprime\n']]) {
+        fs.writeFileSync(p(`${name}.env`), `APP_ENV=production\n${text}DB_USER=juimprime\nDB_PASSWORD=senha-do-banco-nunca-aparece\n`);
+        const r = run(['2', 'LIMPAR'], {JU_ENV_FILE: p(`${name}.env`)});
+        assert.equal(r.status, 1, r.out); assert(/Nada foi feito\.\n$/.test(r.stdout), `${name}: ${r.out}`);
+        assert.deepEqual(calls(), [], `${name}: no copy, no query`);
+        assert(!r.out.includes('senha-do-banco'));
+      }
+      assert.deepEqual(counts(), full);
       // the copy fails, or comes without "Dump completed": not one query, nothing deleted
       for (const [mode, message] of [['fail', 'A cópia do banco falhou: nada foi apagado.'], ['cut', 'Não consegui conferir a cópia do banco: nada foi apagado.']]) {
         const r = run(['2', 'LIMPAR'], {JU_FAKE_BACKUP: mode});
@@ -596,7 +619,8 @@ try {
       assert.equal(cash.status, 0, cash.out);
       assert.deepEqual(counts(), {...full, cash_entries: 0, bills: 0, admin_audit: 2});
       assert.deepEqual(query("SELECT action, detail FROM admin_audit WHERE action = 'cash_reset'"), [{action: 'cash_reset', detail: 'caixa zerado pelo servidor (limpar-caixa.sh, opção 1): 3 lançamento(s) à mão, 2 conta(s) a pagar'}]);
-      for (const text of ['== Caixa zerado.', 'Informar o saldo de hoje', `A cópia de antes da limpeza: ${kept}`, 'gunzip -c']) assert(cash.out.includes(text), `says: ${text}\n${cash.out}`);
+      // undoing it: the copy is root's only, so root opens it (not "gunzip -c … | sudo mariadb"), with the site stopped
+      for (const text of ['== Caixa zerado.', 'Informar o saldo de hoje', `A cópia de antes da limpeza: ${kept}`, '  sudo systemctl stop juimprime.service\n', `  sudo sh -c 'gunzip -c ${kept} | mariadb juimprime'\n`, '  sudo systemctl start juimprime.service\n']) assert(cash.out.includes(text), `says: ${text}\n${cash.out}`);
       assert(!sqlOf(calls()).includes('limpeza_pedidos') && !/DELETE FROM (orders|order_|invoices|integration_log)/.test(sqlOf(calls())), 'option 1 never touches an order');
       const cashAgain = run(['1']);
       assert.equal(cashAgain.status, 0, cashAgain.out); assert(cashAgain.out.includes('Nada: o caixa já está limpo (3 pedido(s) de teste saem na opção 2).'), cashAgain.out);
@@ -617,7 +641,7 @@ try {
       const statements = calls().find(c => c.sql?.includes('START TRANSACTION')).sql.trim().split(/;\n/).map(s => s.split(' (')[0].split(' WHERE')[0]);
       assert.deepEqual(statements, ['CREATE TEMPORARY TABLE limpeza_pedidos AS SELECT id, reference FROM orders', 'START TRANSACTION', 'DELETE FROM cash_entries', 'DELETE FROM bills', 'INSERT INTO limpeza_pedidos', 'DELETE FROM integration_log', 'DELETE FROM invoices', 'DELETE FROM order_events', 'DELETE FROM order_items', 'DELETE FROM orders', 'INSERT INTO admin_audit', 'COMMIT;'], 'one transaction, the order last');
       // every call: the database name and nothing else (no user, no password)
-      assert(calls().filter(c => c.argv).every(c => JSON.stringify(c.argv) === JSON.stringify(['--batch', '--skip-column-names', '--default-character-set=utf8mb4', 'juimprime'])), 'mariadb --batch --skip-column-names <database>, never a password');
+      assert(calls().filter(c => c.argv).every(c => JSON.stringify(c.argv) === JSON.stringify(['--batch', '--skip-force', '--skip-column-names', '--default-character-set=utf8mb4', 'juimprime'])), 'mariadb --batch --skip-force --skip-column-names <database>, never a password');
       assert(!all.out.includes('senha-do-banco'));
       // again, without the late entry: nothing left to delete (the test order with a real NF-e stays), no question, no
       // transaction

@@ -23,13 +23,13 @@ set -euo pipefail
 
 APP_DIR=/srv/juimprime
 APP_USER=juimprime
-ENV_FILE=${JU_ENV_FILE:-$APP_DIR/shared/.env}
+ENV_FILE=$APP_DIR/shared/.env               # o mesmo que o deploy.sh lê para fazer a cópia (nunca outro, no servidor)
 DEPLOY=/usr/local/lib/juimprime/deploy.sh   # instalado por setup-servidor.sh
 KEEP_DIR=/var/backups/juimprime             # só root (o config-loja.sh guarda ali o .env de antes)
 TESTING=${JU_TEST:-}
 if [ -n "$TESTING" ]; then
   [ "$(id -u)" -ne 0 ] || { echo "JU_TEST é só para o teste no computador: no servidor, rode sem ele."; exit 1; }
-  DEPLOY=${JU_DEPLOY:?}; KEEP_DIR=$(dirname -- "$ENV_FILE")
+  ENV_FILE=${JU_ENV_FILE:?}; DEPLOY=${JU_DEPLOY:?}; KEEP_DIR=$(dirname -- "$ENV_FILE")
   as_app() { "$@"; }
   db() { "${JU_MARIADB:?}" "$@"; }
 else
@@ -43,10 +43,20 @@ else
   db() { mariadb "$@"; }
 fi
 
-# Do .env sai só a linha do DB_NAME (como o envget do deploy.sh): nenhum segredo entra neste script.
-DB=$(as_app grep -m 1 -E '^DB_NAME=' -- "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
-[[ "$DB" =~ ^[A-Za-z0-9_]{1,64}$ ]] || { echo "Não achei um DB_NAME válido em $ENV_FILE."; exit 1; }
-q() { db --batch --skip-column-names --default-character-set=utf8mb4 "$DB"; }   # o SQL pela entrada; a resposta, com tabulações
+# Do .env saem só as linhas DB_NAME e DB_HOST: nenhum segredo entra neste script. O banco que o deploy.sh copia (a primeira
+# linha de cada nome, o envget dele) tem de ser o mesmo que o root limpa aqui pelo socket e o mesmo que o site usa (o systemd
+# fica com a ÚLTIMA linha repetida): um DB_NAME só, sem aspas nem espaços, e o MariaDB desta máquina.
+setting() { as_app grep -E "^[[:space:]]*$1[[:space:]]*=" -- "$ENV_FILE" 2>/dev/null || true; }
+DB=''
+if [[ "$(setting DB_NAME)" =~ ^DB_NAME=([A-Za-z0-9_]{1,64})$ ]]; then DB=${BASH_REMATCH[1]}; fi
+[ -n "$DB" ] || { echo "Não achei um DB_NAME válido (numa linha só) em $ENV_FILE. Nada foi feito."; exit 1; }
+case "$(setting DB_HOST)" in
+  ''|DB_HOST=|DB_HOST=127.0.0.1|DB_HOST=localhost|DB_HOST=::1) ;;
+  *) echo "O DB_HOST de $ENV_FILE não é o MariaDB desta máquina (ou aparece em mais de uma linha): este script só limpa o banco daqui. Nada foi feito."; exit 1 ;;
+esac
+# o SQL pela entrada; a resposta, com tabulações. --skip-force: o cliente para no primeiro erro mesmo que um arquivo de
+# configuração do MariaDB diga "force" (senão ele seguiria até o COMMIT e gravaria a transação pela metade)
+q() { db --batch --skip-force --skip-column-names --default-character-set=utf8mb4 "$DB"; }
 reais() { printf 'R$ %d,%02d' $(($1 / 100)) $(($1 % 100)); }
 numbers() { local n; for n in "$@"; do [[ "$n" =~ ^[0-9]+$ ]] || return 1; done; }
 SHOW=40   # linhas de cada lista na tela (as contagens são sempre as de tudo)
@@ -218,5 +228,9 @@ echo
 echo "Agora, com a Júlia: Painel → Fluxo de caixa → \"Informar o saldo de hoje\" e digitar quanto a loja tem hoje (conta e"
 echo "caixa). O caixa passa a partir desse valor; as vendas reais já pagas ($n_paid) continuam nele."
 echo "A cópia de antes da limpeza: $kept (só root; apague quando não precisar mais)."
+# a cópia é só de root: quem abre o arquivo é o root (um "gunzip -c ... | sudo mariadb" esbarraria na permissão), com o
+# site parado para nada ser gravado no meio da volta
 echo "Desfazer, só em caso de engano (volta o banco INTEIRO para antes da limpeza, e o que chegou depois some):"
-echo "  gunzip -c $kept | sudo mariadb $DB"
+echo "  sudo systemctl stop juimprime.service"
+echo "  sudo sh -c 'gunzip -c $kept | mariadb $DB'"
+echo "  sudo systemctl start juimprime.service"
