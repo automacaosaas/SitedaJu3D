@@ -75,12 +75,19 @@ export const FAMILIES = Object.freeze({
   lampada: Object.freeze({label:'Encaixe para lâmpada de fenda', tool:'Lâmpada de fenda', items:Object.freeze(['macacoscopio','girafoscopio','unicornioscopio'])})
 });
 export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio','aviao-magnetico':'aviaoscopia'};
-// Fotos da vitrine também em 768 px (mesmo recorte, reduzidas): a peça na vitrine aparece com 190 a 390 px de largura,
-// então no celular (até 3x) e no computador (1x e 2x) a de 768 basta; a de 1254 fica para telas grandes e muito densas.
-// artSrcset monta o srcset; artSmall é a leve, para miniaturas (mini-carrinho, carrinho), já no cache depois da vitrine.
+// Fotos da vitrine em quatro tamanhos, o mesmo recorte (tools/art-variants.cjs faz as menores a partir da de 1254): 1254, 768, 512
+// e 384 px. A peça na vitrine aparece com 190 a 390 px de largura. Medido em 09/10/2026 (a foto desenhada pelo Chrome comparada com
+// a ideal, de 1x a 3x): um arquivo só um pouco maior que a foto na tela sai um tantinho mais macio que um bem maior, então cada lista
+// tem folga:
+// - vitrine (artSrcset): a de 512 só nas telas de baixa densidade (LIGHT_SCREEN: celular abaixo de 1,9x, computador e tablet em
+//   1x), onde ela é 1,3 vez a foto na tela ou mais; nas mais densas a lista é a de antes (768 e 1254), e o navegador escolhe o mesmo
+//   arquivo de antes. O page-entry.js pré-carrega pela mesma regra (tools/sync-entry.cjs), para baixar um arquivo só;
+// - demonstração (demoSrcset): sempre a lista de antes, porque a peça aparece 1,4 a 1,6 vez maior;
+// - miniaturas (thumbImg: banner da novidade, faixas do kit, carrinho e mini-carrinho): 384, 512 e 768, com sizes 1,45 vez o
+//   tamanho desenhado (thumbSizes: a folga medida para a de 384 sair igual à 768); a lista para na 768, então nenhuma tela baixa
+//   mais do que antes.
 // HERO_SIZES, DEMO_SIZES e PHOTO_SIZES: a largura com que a foto aparece na vitrine, na demonstração (1,4 a 1,6 vez a da
-// vitrine) e na página da peça (medida em 06/10/2026). O index.html repete HERO_SIZES no pré-carregamento e na imagem de
-// reserva, para o navegador baixar um arquivo só.
+// vitrine) e na página da peça (medida em 06/10/2026). O index.html repete HERO_SIZES na imagem de reserva (com a lista de antes).
 export const ART_768 = Object.freeze({
   'product-borboletoscopio-cutout.webp': 'product-borboletoscopio-cutout-768.webp',
   'product-dinossauroscopio-cutout.webp': 'product-dinossauroscopio-cutout-768.webp',
@@ -89,8 +96,16 @@ export const ART_768 = Object.freeze({
   'product-girafoscopio-cutout.webp': 'product-girafoscopio-cutout-768.webp',
   'product-unicornioscopio-cutout.webp': 'product-unicornioscopio-cutout-768.webp'
 });
-export const artSmall = file => ART_768[file] || file;
-export const artSrcset = file => ART_768[file] ? `assets/${ART_768[file]} 768w, assets/${file} 1254w` : '';
+export const artVariant = (file, width) => file.replace(/\.webp$/, `-${width}.webp`);
+export const LIGHT_SCREEN = '(max-width: 600px) and (max-resolution: 1.89dppx), (max-resolution: 1.19dppx)';
+const lightScreen = () => typeof matchMedia === 'function' && matchMedia(LIGHT_SCREEN).matches;
+export const demoSrcset = file => ART_768[file] ? `assets/${ART_768[file]} 768w, assets/${file} 1254w` : '';
+export const artSrcset = (file, light = lightScreen()) => ART_768[file] ? `${light ? `assets/${artVariant(file, 512)} 512w, ` : ''}${demoSrcset(file)}` : '';
+const roomy = px => `${Math.round(px * 1.45)}px`;
+// thumbSizes(200, [900, 132]) → "(max-width: 900px) 191px, 290px": desenhada com 132 px até 900 px de tela e 200 px acima
+export const thumbSizes = (px, ...narrow) => [...narrow.map(([max, size]) => `(max-width: ${max}px) ${roomy(size)}`), roomy(px)].join(', ');
+export const thumbSrcset = file => ART_768[file] ? `assets/${artVariant(file, 384)} 384w, assets/${artVariant(file, 512)} 512w, assets/${ART_768[file]} 768w` : '';
+export const thumbImg = (file, sizes) => ART_768[file] ? `src="assets/${ART_768[file]}" srcset="${thumbSrcset(file)}" sizes="${sizes}"` : `src="assets/${file}"`;
 export const HERO_SIZES = '(max-width: 600px) 56vw, (max-width: 1000px) 310px, (max-width: 1560px) 25vw, 390px';
 export const DEMO_SIZES = '(max-width: 600px) 84vw, (max-width: 900px) 500px, (max-width: 1560px) 35vw, 545px';
 export const PHOTO_SIZES = '(max-width: 899px) 72vw, (max-width: 1400px) 35vw, 460px';

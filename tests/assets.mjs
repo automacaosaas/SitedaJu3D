@@ -2,9 +2,10 @@
 // design/originais/ (not published). See PERFORMANCE-QA.md for how the files were produced.
 import assert from 'node:assert/strict';
 import {readFile, readdir, stat} from 'node:fs/promises';
+import {createRequire} from 'node:module';
 
 const dist = new URL('../dist/', import.meta.url);
-const {PRODUCTS, SOON} = await import('../dist/products.js');
+const {PRODUCTS, SOON, ART_768, artVariant} = await import('../dist/products.js');
 const exists = async name => stat(new URL(`assets/${name}`, dist)).then(() => true, () => false);
 
 // Literal "assets/…" references in pages, scripts and styles.
@@ -19,6 +20,8 @@ for (const product of Object.values(PRODUCTS)) for (const name of [product.image
 for (const id of [...Object.keys(PRODUCTS), ...Object.keys(SOON)]) if (await exists(`card-${id}.webp`)) referenced.add(`card-preview-${id}.webp`);   // also the novelties (SOON)
 const productsSource = await readFile(new URL('products.js', dist), 'utf8');
 for (const [, name] of productsSource.matchAll(/'([\w-]+\.(?:webp|png|jpe?g|svg))'/g)) referenced.add(name);
+// The 512 and 384 px copies of the showcase photos, named at runtime (products.js artSrcset and thumbSrcset).
+for (const big of Object.keys(ART_768)) for (const width of [512, 384]) referenced.add(artVariant(big, width));
 
 for (const name of referenced) assert(await exists(name), `referenced asset exists: assets/${name}`);
 // PNG only for the e-mail logo and for the shop's logo in the data for Google (index.html's Organization.logo, 09/10/2026: PNG is the
@@ -36,11 +39,27 @@ for (const name of referenced) {
   assert(kb <= limit, `assets/${name} is ${Math.round(kb)} KB (budget ${limit} KB)`);
 }
 // The showcase photos also in 768 px (products.js ART_768; same framing, scaled): what phones and 1x/2x computers download.
-const {ART_768} = await import('../dist/products.js');
 for (const [big, small] of Object.entries(ART_768)) {
   assert(referenced.has(big) && referenced.has(small), `${small} is the light version of a showcase photo in use`);
   const kb = (await stat(new URL(`assets/${small}`, dist))).size / 1024;
   assert(kb <= 80, `assets/${small} is ${Math.round(kb)} KB (budget 80 KB)`);
+}
+// 2026-10-09: and in 512 and 384 px (tools/art-variants.cjs, from the 1254 on the site): the 512 in the showcase on low-density
+// screens, 384/512/768 for the miniatures (products.js). Each copy is that many pixels wide and stays light, and
+// tools/art-variants.json is up to date: a 1254 changed without its copies (as the giraffe's 768 on 2026-10-08) fails here.
+{
+  const {stale, readRecord} = createRequire(import.meta.url)('../tools/art-variants.cjs');
+  const record = readRecord();
+  // [width, height] from the WebP header (VP8X: the canvas; VP8: the frame)
+  const webpSize = b => b.toString('latin1', 12, 16) === 'VP8X' ? [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)] : [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
+  for (const big of Object.keys(ART_768)) {
+    for (const [width, limit] of [[512, 50], [384, 35]]) {
+      const name = artVariant(big, width), bytes = await readFile(new URL(`assets/${name}`, dist));
+      assert.deepEqual(webpSize(bytes), [width, width], `${name}: ${width} px, the same framing`);
+      assert(bytes.length / 1024 <= limit, `assets/${name} is ${Math.round(bytes.length / 1024)} KB (budget ${limit} KB)`);
+    }
+    assert.equal(stale(record, big), '', `${big}: ${stale(record, big)} — run node tools/art-variants.cjs`);
+  }
 }
 
 // The logo (shown at 112 px at most) in 224 px for screens up to 2x and in 336 px from 3x on, the same choice everywhere: one

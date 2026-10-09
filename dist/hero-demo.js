@@ -15,8 +15,8 @@ import {Timeline} from './motion-timeline.js';
 import {withAlpha} from './hero-motion.js';
 import {imageReady} from './loading-ui.js';
 import {icon} from './icons.js';
-import {artSrcset, DEMO_SIZES, fixedColors} from './products.js';
-import {lateCss} from './late-css.js';
+import {demoSrcset, DEMO_SIZES, fixedColors} from './products.js';
+import {styleNow} from './late-css.js';
 
 const PERSPECTIVE = 1600;
 // uma entrada interrompida volta de trás para frente em no máximo ~0,6 s (e nunca mais devagar que 1,35×)
@@ -111,9 +111,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       prepared = i;
       const {key, product} = entries[i], {tool, layers = {}, callouts = []} = config;
       const toolSrc = `assets/${tool.src}`, frontFile = layers.front || product.catalogImage || product.image, front = `assets/${frontFile}`;
-      // 768 ou 1254 px conforme a tela (products.js): a peça aqui aparece 1,4 a 1,6 vez maior que na vitrine, então o
-      // celular 2x e o computador 1x reaproveitam a de 768 da vitrine, e as telas 3x e retina pegam a de 1254, nítida.
-      const frontSet = artSrcset(frontFile);
+      // 768 ou 1254 px conforme a tela (products.js demoSrcset): a peça aqui aparece 1,4 a 1,6 vez maior que na vitrine, então
+      // o celular 2x e o computador 1x pegam a de 768 (a mesma da vitrine nas telas densas), e as telas 3x e retina a de 1254.
+      const frontSet = demoSrcset(frontFile);
       // turn: peça fotografada levemente de lado → o equipamento gira igual (graus em Y; negativo = de frente para a esquerda),
       // fica um pouco mais para o lado de trás (shift), escurece do lado que se afasta e mostra a lateral do lado que se aproxima.
       const turn = tool.turn || 0, far = turn < 0 ? ['--tool-dim-l', '--tool-dim-r'] : ['--tool-dim-r', '--tool-dim-l'];
@@ -419,8 +419,9 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
     opener = from !== region && region.contains(from) ? from : null;
     index = i; calm = reduced.matches; state = 'opening'; onLock(true);
     region.setAttribute('aria-busy', 'true');
-    // with its stylesheet applied (the home loads hero-demo.css after the first paint, late-css.js)
-    const [loaded] = await Promise.all([ready, lateCss]);
+    // with its stylesheet applied (the home loads hero-demo.css after the first paint and switches it on after the load, or now:
+    // late-css.js)
+    const [loaded] = await Promise.all([ready, styleNow()]);
     region.removeAttribute('aria-busy');
     if (state !== 'opening') return;
     if (!loaded) { prepared = -1; finish(); status.textContent = 'Não foi possível carregar a demonstração. Tente novamente.'; return; }

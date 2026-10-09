@@ -52,8 +52,9 @@ A CSP libera só o que o site usa:
 `node tools/dev-server.cjs` aplica os mesmos cabeçalhos (menos o cache), então um bloqueio aparece também no computador.
 `tests/headers.mjs` confere a CSP contra as páginas.
 
-**Ao editar o import map de `index.html`**, o hash muda. O teste avisa e mostra o valor novo, que deve ir para o
-`script-src` do `vercel.json` e para a tag `<meta http-equiv="Content-Security-Policy">` de cada página.
+**O import map** (09/10/2026: um só, igual em todas as páginas com módulos, com o `?v=` de cada módulo) é escrito por
+`node tools/sync-versions.cjs`, que também põe o hash dele no `script-src` do `vercel.json` e na tag
+`<meta http-equiv="Content-Security-Policy">` de cada página (`tools/sync-csp.cjs`, que tira os hashes velhos). Não edite à mão.
 
 **A política também está em `<meta>`** em todas as páginas, porque a CDN da Hostinger substitui o cabeçalho CSP pelo dela.
 O `<meta>` é a política do cabeçalho sem `frame-ancestors`; `tests/headers.mjs` exige que as duas fiquem iguais.
@@ -76,6 +77,36 @@ anterior por até um dia. **Com `?v=`** (modelos 3D, vistas da galeria, fontes),
 sem mudar o `?v=` deixa quem já visitou com o antigo. Para isso não passar despercebido, `tools/versioned-assets.json`
 guarda o `?v=` e uma impressão digital de cada um desses arquivos: `tests/versioned-assets.mjs` falha se um deles mudar com
 o mesmo `?v=`. Depois de trocar o arquivo e o `?v=`, rode `node tools/sync-versions.cjs`.
+
+**As folhas de estilo e os scripts do próprio site** (09/10/2026: iam com `max-age=0` e eram revalidados, um pedido cada,
+46 na home, a cada visita de volta) também vão com `?v=`, mas esse `?v=` é a
+impressão digital do conteúdo (`server/asset-version.cjs`, 8 dígitos hex, sem contar o fim de linha), escrito pela ferramenta,
+nunca à mão: `node tools/sync-versions.cjs` põe o `?v=` em todo `<link rel="stylesheet">`, `<script src>` e
+`<link rel="modulepreload">` das páginas (cópias em `<noscript>` também), escreve o import map (cada módulo, como
+`"./cart-store.js"`, e o `"three"` apontando para o endereço com `?v=`: os `import` do código continuam como estão e chegam ao
+arquivo versionado) e acerta os `?v=` escritos dentro de scripts (`journey.js`, que pré-carrega o dicionário cedo, e
+`consent.js`, que pede `consent.css`). O import map vem antes do primeiro script da página, para o que o `journey.js` pré-carrega
+já seguir o mapa. Na segunda visita, nenhum CSS ou JS é pedido de novo.
+
+- **Rode `node tools/sync-versions.cjs` depois de mexer em qualquer arquivo de `dist/`** (e depois dos outros geradores,
+  que escrevem as páginas sem os `?v=` e o mapa e as passam por ele). `tests/versioned-assets.mjs` falha enquanto alguma página
+  pede um arquivo sem a impressão digital atual dele, e mostra como acertar.
+- **O servidor só dá o ano com a impressão certa:** `?v=` diferente da do arquivo (uma página aberta antes de uma publicação
+  pedindo logo depois dela) recebe o arquivo com `max-age=0`, como antes, e o conteúdo novo nunca fica um ano guardado num
+  endereço velho. Na volta de versão (`deploy.sh --rollback`), cada arquivo antigo volta ao endereço antigo, que o navegador de
+  quem já o tinha continua servindo certo.
+- **Conflito ao juntar branches** numa linha de `?v=`, no import map ou no hash da CSP: aceite qualquer um dos lados e rode
+  `node tools/sync-versions.cjs`, que reescreve tudo a partir dos arquivos.
+- **Medido (09/10/2026, laboratório, A/B intercalado com a e7fc4ec):** na visita de volta à home, 46 CSS/JS iam à rede
+  (revalidação) e agora 0 (todos do cache, sem pedido); pedidos à rede 50–52 → 4. Mediana no celular limitado (5 pares):
+  FCP 2,58 → 1,52 s, LCP 5,06 → 4,15 s; no desktop (3 pares): FCP 0,58 → 0,42 s, LCP 0,84 → 0,68 s. A primeira visita fica
+  igual (Lighthouse, 11 pares no celular e 5 no desktop: FCP e LCP iguais, nota com diferença mediana de 1 ponto, dentro do
+  ruído); o HTML cresce ~1,1 KB comprimido (o import map).
+- **O aviso "cache" do PageSpeed (−87 KiB no celular, −101 KiB no desktop) não é sobre CSS/JS:** o Lighthouse ignora de
+  propósito o que vai com `must-revalidate`. São 9 a 11 fotos de `dist/assets/` (os recortes `product-*-cutout-768`, os
+  `card-preview-*` e o `logo-ju-224`) com o cache de 1 dia de `/assets/`. Tirar esse aviso pede o mesmo `?v=` por conteúdo
+  nas fotos (cada lugar que monta o endereço de uma foto: `products.js`, o `page-entry.js` gerado, a vitrine), depois que o
+  trabalho das imagens assentar; esticar o cache de `/assets/` sem `?v=` deixaria uma foto trocada velha por meses.
 
 ## Testes
 
@@ -240,11 +271,74 @@ rede simulada, outra máquina) não são estes; servem para comparar antes e dep
   só na primeira resposta); CSS minificado na hora de servir (`server/minify-css.cjs`, 396 → 329 KB antes da compressão;
   `tests/css-minify.mjs` confere token a token); `?v=` com um ano de cache (`immutable`), os outros como antes.
 
-**Ficou de fora, de propósito:** carimbar `?v=<hash>` em todo JS e CSS (cache de um ano para eles). Exige reescrever o import
-map de todas as páginas (e o hash dele na CSP) a cada mudança de qualquer arquivo — conflito garantido entre as branches que
-correm em paralelo. Dá para fazer no servidor, na hora de servir, se valer a pena depois do lançamento.
+**Feito em 09/10/2026** (antes ficara de fora pelo conflito entre branches paralelas): `?v=<impressão do conteúdo>` em todo
+JS e CSS do site, com um ano de cache, e o import map único que leva o `?v=` a todos os `import`. Gerado e conferido por
+`tools/sync-versions.cjs` (seção "Cabeçalhos" acima); o conflito entre branches se resolve rodando a ferramenta de novo.
 
 **Capturas de antes e depois** (home no computador e no celular, coleção, página da peça, carrinho, janela da peça, kit,
 demonstração, contato, Produtos; com e sem movimento reduzido): idênticas pixel a pixel, menos as mudanças pretendidas —
 a demonstração por `#produto/<peça>/encaixe` (antes a janela da peça abria por cima), a borda das fotos dos cards (agora a de
 384 px no computador 1x) e o corpo do unicórnio na demonstração (a foto de 768 px).
+
+## 09/10/2026: fotos no tamanho certo (branch `trabalho/perf2-imagens`)
+
+O PageSpeed da `e7fc4ec` apontava "Melhorar a entrega de imagens": −110 KiB no celular e −157 KiB no computador. A foto da
+vitrine de 768 px aparecia com ~392 px no celular do PageSpeed (412 px em 1,75x) e com 330 px no computador; as três peças do
+banner da novidade, também de 768 px, aparecem com 132 a 262 px.
+
+**Antes de escolher, a nitidez foi medida na tela.** O Chrome desenhou cada arquivo no tamanho em que a página o mostra, de 1x a 3x,
+e a captura foi comparada com a ideal (a 1254 reduzida direto para os pixels do aparelho, sem perda; SSIM e PSNR):
+
+- a de 512 px no celular do PageSpeed (1,31 vez a foto na tela) fica igual à 768 de antes (SSIM 0,990 × 0,990 na borboleta);
+  no computador 1x (1,3 a 1,6 vez) fica igual ou melhor;
+- um arquivo só um pouco maior que a foto na tela sai um tantinho mais macio: a de 512 num notebook em 125% (1,09 vez: SSIM
+  0,982 × 0,987) e a de 640 nos celulares 3x (1,0 a 1,1 vez). Por isso a de 512 entra só nas telas de baixa densidade e a de 640
+  não existe;
+- a de 384 na vitrine sai mais macia (fora); nas miniaturas, com folga de 1,45 vez, fica igual à 768.
+
+**O que mudou:**
+
+- `tools/art-variants.cjs` (novo) faz as cópias de 768, 512 e 384 px a partir da 1254 do ar (WebP com perda, qualidade 90,
+  redução lanczos3, cor com sharp_yuv) e grava a impressão digital de cada arquivo em `tools/art-variants.json`.
+  `tests/assets.mjs` falha quando a 1254 muda sem as cópias. Foi assim que apareceu a 768 da girafa: era de antes da revisão de
+  08/10 e foi refeita.
+- **Vitrine** (`products.js` `artSrcset`): nas telas de baixa densidade (`LIGHT_SCREEN`: celular abaixo de 1,9x, computador e
+  tablet em 1x), o `srcset` ganha a de 512. Nas outras, a lista é a de antes e o navegador escolhe o mesmo arquivo de antes. O
+  `page-entry.js` pré-carrega pela mesma regra (`tools/sync-entry.cjs` grava as duas listas e a consulta de mídia), então baixa
+  um arquivo só. A imagem de reserva do `index.html` e as páginas escritas pelas ferramentas ficam com a lista de antes.
+- **Demonstração** (`demoSrcset`): sempre a lista de antes (768 e 1254). Nas telas de baixa densidade a 768 deixa de vir de
+  graça da vitrine e é baixada no pré-preparo, que só acontece em conexão folgada, uns 3 s depois do `load`, fora da janela da
+  primeira pintura.
+- **Miniaturas** (`thumbImg` e `thumbSizes`): banner da novidade, faixas do kit, carrinho e mini-carrinho. A lista é 384, 512 e
+  768, com `sizes` 1,45 vez o tamanho desenhado, e para na 768: nenhuma tela baixa mais do que antes. Sai o `artSmall`.
+
+**Quem baixa o quê na home** (conferido pelo registro de rede do Chrome, 19 telas):
+
+| Tela | Vitrine | Banner da novidade (macaco / girafa e unicórnio) |
+|---|---|---|
+| Celular 1,75x (PageSpeed) | 768 → 512 | 768 → 512 / 768 → 384 |
+| Celular 2x, tablet 2x | 768 (igual) | 768 → 512 / 768 → 384 |
+| Celular 2,6x a 3x, Mac 2x | 768 (igual) | 768 (igual) |
+| Computador 1x | 768 → 512 | 768 → 384 |
+| Notebook 1,25x | 768 (igual) | 768 → 512 / 768 → 384 |
+
+**Medido** (`e7fc4ec` × esta branch, rodadas alternadas, mediana; a máquina estava ocupada):
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Lighthouse 12.8 celular (7 de cada): LCP | 4,26 s | 4,23 s (B melhor em 6 de 7 pares) |
+| Lighthouse celular: imagens / total | 216,6 / 539,9 KB | 174,3 / 498,6 KB |
+| Lighthouse celular: "entrega de imagens" | −148 KB | −74 KB |
+| Lighthouse computador (5 de cada): LCP / nota | 0,98 s / 97 | 0,97 s / 97 |
+| Lighthouse computador: imagens / "entrega de imagens" | 251,8 KB / −157 KB | 203,1 KB / −65 KB |
+| Laboratório celular (rede de 1,6 Mbit/s por pedido, CPU 4×, 7 pares): fim da foto | 1,61 s | 1,23 s (7 de 7) |
+| Laboratório celular: LCP | 3,55 s | 3,43 s (−172 ms, 6 de 7) |
+| Laboratório celular: KB antes da vitrine aparecer | 518 | 469 |
+| Laboratório computador (5 pares): fim da foto / KB antes da vitrine | 381 ms / 554 KB | 361 ms / 498 KB |
+
+O total da janela sobe uns 18 a 24 KB nas telas de baixa densidade: a 768 da demonstração, baixada depois, e o unicórnio, que é
+miniatura do banner e vizinho da vitrine, em dois tamanhos. A carga se desloca da primeira pintura para depois dela.
+
+**O que o PageSpeed ainda aponta, de propósito:** a de 512 mostrada com 392 px no celular (e com 330 px no computador) e as
+miniaturas de 384 e 512 px. É a folga que mantém a nitidez; um arquivo do tamanho exato sai mais macio. Os cards da coleção
+(`card-preview` de 384 px em 212 px no computador 1x) ficaram como estavam.

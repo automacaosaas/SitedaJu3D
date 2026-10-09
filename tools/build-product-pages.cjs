@@ -9,12 +9,15 @@
 // footer) and from the store's address in api/_lib/legal.js, so it never drifts from them. Also writes the page
 // Escolha o seu (escolha.html) from dist/escolha.js, the novelty showcase of the slit lamps (fenda.html) and its home banner from
 // dist/fenda-stage.js, and the "3x sem juros" of index.html and contato.html (cardOffer).
+// The pages are built without the ?v= of the site's stylesheets and scripts and without the import map, and go out through
+// versionize (tools/sync-versions.cjs), which puts them in: --check here compares the rest, the addresses are that tool's job.
 // Run: node tools/build-product-pages.cjs   (or --check to only report; tests/product-landing.mjs fails when stale)
 const fs = require('node:fs');
 const path = require('node:path');
 const {pathToFileURL} = require('node:url');
 const {tags, base: siteBase, SITE} = require('./sync-meta.cjs');
 const {COMPANY} = require('../api/_lib/legal');
+const {strip, versionize, state} = require('./sync-versions.cjs');
 
 const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -47,8 +50,8 @@ function page(id, data, base) {
     .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(`${product.title}: ${product.subtitle.toLowerCase()} impressa em 3D, ${fixed ? 'nas cores da peça' : 'nas cores que você escolher'}. ${product.description}`)}">`)
     .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(product.title)} · ${esc(product.subtitle)} | Ju, imprime pra mim?</title>\n  <link rel="canonical" href="${esc(url)}">`)
     .replace('<link rel="stylesheet" href="mini-cart.css">', () => '<link rel="stylesheet" href="mini-cart.css">\n  <link rel="stylesheet" href="product-landing.css">')
-    // the 3D model needs three.js by name (the same import map as the home; its hash is in the security policy)
-    .replace('<script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script>', () => '<script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>\n  <script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script><script type="module" src="product-landing.js"></script>');
+    // the 3D model needs three.js by name: the import map every page with modules gets (tools/sync-versions.cjs) has it
+    .replace('<script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script>', () => '<script type="module" src="site-shell.js"></script><script type="module" src="catalog.js"></script><script type="module" src="product-landing.js"></script>');
   // Link preview with the piece's own picture and price, and the product data search engines read.
   const preview = tags({url, type: 'product', title: `${product.title} · ${product.subtitle} | ${SITE}`, description: product.description,
     image: {path: `assets/og-${id}.jpg`, width: 1200, height: 630, alt: `${product.title}, ${product.subtitle.toLowerCase()}, nas cores originais`},
@@ -168,7 +171,7 @@ const robots = () => `User-agent: *\n${PRIVATE.map(p => `Disallow: ${p}`).join('
 async function build() {
   const data = await site(), ids = Object.keys(data.PRODUCTS);
   // produtos.html: the grid of products (audit B2), the same markup product-grid.js draws in the browser.
-  const base = fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n')
+  const base = strip(fs.readFileSync(path.join(DIST, 'produtos.html'), 'utf8').replace(/\r\n/g, '\n'))
     .replace(/(<div class="product-grid" data-product-grid data-category="([a-z]+)"[^>]*><!-- grid -->)[^]*?(<!-- \/grid -->)/, (all, open, key, close) => open + data.productGrid(key) + close);
   // a home: o "3x sem juros" da janela da peça (cardOffer) e o banner da novidade (withBanner)
   const home = withBanner(cardOffer('index.html', data.COMMERCE), data);
@@ -178,19 +181,21 @@ async function build() {
 // The card offer of two pages not built here, from the same numbers as the product pages (commerce-config.js: the ONE source of
 // the "3x sem juros", interestFreeInstallments, and maxInstallments): the home's product window before controller.js paints it,
 // and the Contato FAQ. Only those words change; the rest of each page stays as it is.
-const cardOffer = (name, commerce) => fs.readFileSync(path.join(DIST, name), 'utf8').replace(/\r\n/g, '\n')
+const cardOffer = (name, commerce) => strip(fs.readFileSync(path.join(DIST, name), 'utf8').replace(/\r\n/g, '\n'))
   .replace(/(<span id="product-installments">ou )\d+(x sem juros no cartão<\/span>)/, (all, before, after) => before + commerce.interestFreeInstallments + after)
   .replace(/(cartão de crédito em até )\d+(x, sendo até )\d+(x sem juros\.)/, (all, before, middle, after) => before + commerce.maxInstallments + middle + commerce.interestFreeInstallments + after);
 
 if (require.main === module) {
   (async () => {
-    const check = process.argv.includes('--check'), stale = [];
+    const check = process.argv.includes('--check'), stale = [], now = state();
     for (const {name, text} of await build()) {
       const file = path.join(DIST, name), current = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : '';
-      if (current === text) continue;
+      if (strip(current) === text) continue;
       stale.push(name);
-      // keeps the file's own line endings (index.html is CRLF in the working copy on Windows)
-      if (!check) fs.writeFileSync(file, /\r\n/.test(current ? fs.readFileSync(file, 'utf8') : '') ? text.replace(/\n/g, '\r\n') : text);
+      // with the versioned addresses and the import map (versionize); the file's own line endings (index.html is CRLF in the
+      // working copy on Windows)
+      const out = name.endsWith('.html') ? versionize(text, now) : text;
+      if (!check) fs.writeFileSync(file, /\r\n/.test(current ? fs.readFileSync(file, 'utf8') : '') ? out.replace(/\n/g, '\r\n') : out);
     }
     console.log(stale.length ? `${check ? 'desatualizada' : 'gerada'}: ${stale.join(', ')}` : 'páginas de produto, sitemap e robots em dia.');
     if (check && stale.length) process.exitCode = 1;

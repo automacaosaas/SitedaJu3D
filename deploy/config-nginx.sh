@@ -7,10 +7,14 @@
 # - Grava /etc/nginx/snippets/juimprime-manutencao.conf e põe o "include" dele, uma vez, em cada bloco server da
 #   configuração do site que leva ao Node (proxy_pass http://127.0.0.1:3000): o do 443 do certbot e o da porta 80, se
 #   ele também leva ao site (o que só redireciona para o https fica como está).
+# - Liga o HTTP/2 (09/10/2026, PageSpeed): "http2 on;" em cada bloco server do 443 (o do certbot e o do www, se houver), a
+#   forma do nginx 1.25.1 em diante (o servidor tem a 1.26.3; a antiga, "listen … http2", está obsoleta). A home pede uns 60
+#   arquivos: no HTTP/1.1 eles fazem fila em 6 conexões; no HTTP/2 vão juntos numa só, com um aperto de mão TLS. Bloco que já
+#   decide o HTTP/2 (http2 on/off, ou o listen antigo) fica como está. Antes do certbot não há 443: rode de novo depois dele.
 # - Guarda os registros de acesso do nginx por 190 dias, um arquivo por dia, comprimidos (a política de privacidade
 #   promete 6 meses: Marco Civil da Internet, art. 15).
 # Antes de mexer, copia o que vai mudar para /var/backups/juimprime; confere com "nginx -t" e, se falhar, volta a cópia
-# sem recarregar nada. Pode rodar de novo (nada duplica). Não mexe em HTTPS, http2, HSTS nem no server_name.
+# sem recarregar nada. Pode rodar de novo (nada duplica). Não mexe nos certificados, no HSTS nem no server_name.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -62,6 +66,41 @@ add_include() {  # add_include <config> <saída> <resumo>
   ' "$1" > "$2"
 }
 
+# Acrescenta "http2 on;" em cada bloco server (do primeiro nível) que escuta no 443 e ainda não decide o HTTP/2 (nem
+# "http2 on;"/"http2 off;" nem o antigo "listen … http2"), logo depois do último "listen" do 443 do bloco, com o mesmo recuo.
+# Em <resumo>: blocos no 443, "http2 on" novo, blocos que já decidiam.
+add_http2() {  # add_http2 <config> <saída> <resumo>
+  awk -v info="$3" '
+    function code(s) { gsub(/"[^"]*"/, "", s); sub(/#.*/, "", s); return s }
+    function flush(   i, c, tls, has, at, pad) {
+      tls = 0; has = 0; at = 0
+      for (i = 1; i <= n; i++) {
+        if (lvl[i] != 1) continue
+        c = code(buf[i])
+        if (c ~ /^[ \t]*listen[ \t]/ && c ~ /[ \t:]443([ \t;]|$)/) { tls = 1; at = i }
+        if (c ~ /^[ \t]*http2[ \t]+(on|off)[ \t]*;/ || (c ~ /^[ \t]*listen[ \t]/ && c ~ /[ \t]http2([ \t;]|$)/)) has = 1
+      }
+      if (tls) blocks++
+      if (tls && has) kept++
+      if (tls && !has) { added++; match(buf[at], /^[ \t]*/); pad = substr(buf[at], 1, RLENGTH) }
+      for (i = 1; i <= n; i++) {
+        print buf[i]
+        if (tls && !has && i == at) print pad "http2 on;  # HTTP/2: os arquivos da página juntos, numa conexão só (deploy/config-nginx.sh)"
+      }
+      n = 0
+    }
+    {
+      c = code($0)
+      if (!inside && depth == 0 && c ~ /^[ \t]*server([ \t]|\{|$)/) { inside = 1; opened = 0; n = 0 }
+      if (inside) { n++; buf[n] = $0; lvl[n] = depth } else print
+      o = gsub(/\{/, "{", c); x = gsub(/\}/, "}", c); depth += o - x
+      if (inside && o > 0) opened = 1
+      if (inside && opened && depth == 0) { flush(); inside = 0 }
+    }
+    END { if (inside) flush(); printf "%d %d %d\n", blocks, added, kept > info }
+  ' "$1" > "$2"
+}
+
 [ "$(id -u)" -eq 0 ] || { echo "Rode com sudo: sudo bash $0"; exit 1; }
 [ -f "$SITE" ] || { echo "Não achei $SITE (rode antes o setup-servidor.sh)."; exit 1; }
 [ -f "$HERE/manutencao.html" ] || { echo "Falta $HERE/manutencao.html (rode o script de dentro da pasta deploy/ do site)."; exit 1; }
@@ -75,7 +114,7 @@ install -d -m 755 "$PAGE_DIR"
 install -m 644 "$HERE/manutencao.html" "$PAGE_DIR/manutencao.html"
 echo "ok ($(wc -c < "$PAGE_DIR/manutencao.html") bytes, tudo dentro do arquivo: não depende do site)"
 
-step "nginx: a página no lugar do 502"
+step "nginx: a página no lugar do 502 e o HTTP/2"
 cat > "$work/snippet" <<'EOF'
 # Gerado por deploy/config-nginx.sh (a cada vez que ele roda: mudanças à mão aqui se perdem). Incluído uma vez em cada
 # bloco server do site: a página "voltamos já" quando o site (Node, 127.0.0.1:3000) não responde.
@@ -114,19 +153,28 @@ install -d -m 755 "$(dirname "$SNIPPET")"
 install -m 644 "$work/snippet" "$SNIPPET"
 echo "trecho gravado em $SNIPPET"
 
-add_include "$SITE" "$work/site" "$work/info"
+add_include "$SITE" "$work/site-include" "$work/info"
 read -r sites added kept < "$work/info"
 if [ "$sites" -eq 0 ]; then
   [ -z "$snippet_copy" ] || cat "$snippet_copy" > "$SNIPPET"; [ "$snippet_new" = 0 ] || rm -f "$SNIPPET"
   echo "Não achei em $SITE nenhum bloco server com \"proxy_pass http://127.0.0.1:3000\". Nada foi alterado."; exit 1
 fi
+echo "include da página: acrescentado em $added bloco(s) server (já havia em $kept)"
+# O HTTP/2 sobre o mesmo arquivo: uma cópia, um nginx -t e um reload para as duas mudanças.
+add_http2 "$work/site-include" "$work/site" "$work/info-http2"
+read -r tls h2_added h2_kept < "$work/info-http2"
+if [ "$tls" -eq 0 ]; then
+  echo "HTTP/2: ainda não há bloco server no 443 (o HTTPS do certbot); depois do certbot, rode este script de novo"
+else
+  echo "HTTP/2 (http2 on;): acrescentado em $h2_added bloco(s) do 443 (já decidido em $h2_kept)"
+fi
 if cmp -s "$work/site" "$SITE"; then
-  echo "o include já estava nos $sites bloco(s) server do site"
+  echo "$SITE já estava assim: nada a mudar nele"
 else
   site_copy="$COPIES/nginx-juimprime.antes-$STAMP"
   cp -p "$SITE" "$site_copy"
   cat "$work/site" > "$SITE"   # escreve por cima, mantendo dono, permissões e o link de sites-enabled
-  echo "include acrescentado em $added bloco(s) server (já havia em $kept); cópia de antes: $site_copy"
+  echo "$SITE alterado; cópia de antes: $site_copy"
 fi
 
 restore() {
@@ -209,13 +257,17 @@ https_code='' listening=$(ss -ltn 2>/dev/null || true)
 # Com HTTPS, a página se confere pelo 443: depois do certbot, o bloco da porta 80 pode só redirecionar para o https (sem
 # o include; pelo IP ele responde 404), e o do 443 é o do site, também pelo IP (-k: o certificado é do domínio).
 web=http://127.0.0.1 k='' tunnel=8080:127.0.0.1:80 view=http://localhost:8080 cert_note=''
+h2=''
 if grep -q ':443 ' <<<"$listening"; then
   https_code=$(code -k https://127.0.0.1/)
   web=https://127.0.0.1 k=k tunnel=8443:127.0.0.1:443 view=https://localhost:8443
   cert_note='; o navegador avisa que o certificado não é de "localhost": Avançado → continuar'
+  # o protocolo que o nginx combina pelo 443 (ALPN): 2 = HTTP/2 ligado; 1.1 = ainda não
+  h2=$(curl -sk --http2 -o /dev/null -m 10 -w '%{http_version}' https://127.0.0.1/ 2>/dev/null || true)
 fi
 echo "site (Node, 127.0.0.1:3000/api/health): $node_code"
 echo "pelo nginx, porta 80: $http_code${https_code:+ · porta 443: $https_code}"
+[ -z "$h2" ] || echo "protocolo pelo 443: HTTP/$h2 (tem de ser 2: HTTP/2 ligado)"
 echo "a página direto, por fora (tem de ser 404: ela é só interna): $(code -k "$web/manutencao.html")"
 echo "a prévia, daqui do servidor (200): $(code -k "$web/manutencao-previa")"
 if [ "$node_code" != 200 ]; then

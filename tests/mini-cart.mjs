@@ -5,10 +5,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
-const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const {miniCartBody, addedItemId} = await site('mini-cart.js');
 const {normalizeCart, putItem} = await site('cart-store.js');
 const {defaults} = await site('products.js');
@@ -47,7 +49,7 @@ const {translate} = await site('i18n-core.js');
   assert.deepEqual([...lampHtml.matchAll(/data-kit-add="([a-z]+)"/g)].map(m => m[1]), ['macacoscopio', 'unicornioscopio'], 'only the other lamps');
   assert.match(lampHtml, /<h3 id="mini-cart-kit-title">Complete o kit<\/h3>/);
   assert.match(lampHtml, /<ul class="mini-cart-colors is-dots" aria-label="Cores de GiraffeLamp"><li><i style="--chip:#eeb012" aria-hidden="true"><\/i><span class="sr-only">Amarelo-ocre<\/span><\/li>/, 'the lamp\'s own colours, as dots');
-  assert.match(lampHtml, /<img src="[^"]+" alt="" width="96" height="96" style="--thumb-wash:#[0-9a-f]{6}">/, 'the thumbnail on the piece\'s wash');
+  assert.match(lampHtml, /<img src="[^"]+" srcset="[^"]*-384\.webp 384w, [^"]*-512\.webp 512w, [^"]*-768\.webp 768w" sizes="139px" alt="" width="96" height="96" style="--thumb-wash:#[0-9a-f]{6}">/, 'the thumbnail on the piece\'s wash, the file picked by its size (products.js thumbImg)');
   assert.doesNotMatch(all, /is-dots/, 'a customizable piece keeps its colours part by part');
   assert.equal((all.match(/<\/span><\/span><b class="mini-cart-add-count" aria-hidden="true"><span>1<\/span><\/b><\/button>/g) || []).length, 2, 'the count on each kit button, outside the track that clips the running cart');
   assert.match(all, /Adicionado nas cores originais/); assert.match(all, /cores originais<\/span>/);

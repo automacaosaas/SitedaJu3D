@@ -702,9 +702,9 @@ try {
 }
 
 // config-nginx.sh: the page and the snippet installed, the include once in each server block that leads to the site
-// (the one on 80 and the one certbot copied for 443), nginx -t before the reload with the copy back when it fails, and the
-// access logs kept 190 days (the privacy policy promises 6 months: Marco Civil, art. 15). HTTPS, http2, HSTS and the
-// server_name are other requests: untouched here.
+// (the one on 80 and the one certbot copied for 443), HTTP/2 ("http2 on;", 09/10/2026) once in each block on 443, nginx -t
+// before the reload with the copy back when it fails, and the access logs kept 190 days (the privacy policy promises 6
+// months: Marco Civil, art. 15). The certificates, HSTS and the server_name are other requests: untouched here.
 {
   const pos = text => { const i = nginxSetup.indexOf(text); assert(i > 0, `config-nginx.sh has: ${text}`); return i; };
   const heredoc = start => nginxSetup.slice(pos(start), nginxSetup.indexOf('\nEOF\n', pos(start)));
@@ -725,10 +725,42 @@ try {
   assert.match(raw('dist/privacidade.html'), /Registros de acesso:<\/strong> por 6 meses/, 'what the privacy policy promises');
   assert(nginxSetup.includes(`grep -q '^[^#]*/var/log/nginx/' "$LOGROTATE_PKG"`) && nginxSetup.includes('cp -p "$LOGROTATE_PKG" "$pkg_copy"') && nginxSetup.includes('LOGROTATE_OWN=/etc/logrotate.d/juimprime-nginx'), "the package's /etc/logrotate.d/nginx set aside, its original kept (one log in two blocks is an error)");
   assert(nginxSetup.includes('check=$(logrotate -d /etc/logrotate.conf 2>&1 || true)') && nginxSetup.includes("if grep -q 'duplicate log entry' <<<\"$check\"; then"), 'and checked with logrotate -d');
-  for (const other of [/http2/, /ssl_/, /Strict-Transport-Security/, /server_name/]) assert.doesNotMatch(code, other, `config-nginx.sh leaves ${other.source} alone`);
+  for (const other of [/ssl_/, /Strict-Transport-Security/, /server_name/]) assert.doesNotMatch(code, other, `config-nginx.sh leaves ${other.source} alone`);
+  // HTTP/2: the nginx 1.25.1+ directive (the server has 1.26.3), never the obsolete "listen … http2"; on the same file as the
+  // include, so one copy, one nginx -t (the copy back when it fails) and one reload cover both; checked at the end (ALPN: h2)
+  assert(nginxSetup.includes('print pad "http2 on;  # HTTP/2') && !/print[^\n]*listen[^\n]*http2/.test(code), 'writes "http2 on;", never the old listen form');
+  assert(nginxSetup.includes(String.raw`if (c ~ /^[ \t]*listen[ \t]/ && c ~ /[ \t:]443([ \t;]|$)/) { tls = 1; at = i }`), 'in each server block that listens on 443, after its last listen');
+  assert(nginxSetup.includes(String.raw`if (c ~ /^[ \t]*http2[ \t]+(on|off)[ \t]*;/ || (c ~ /^[ \t]*listen[ \t]/ && c ~ /[ \t]http2([ \t;]|$)/)) has = 1`), 'a block that already decides HTTP/2 (http2 on/off, the old listen form) stays as it is');
+  assert(pos('add_include "$SITE" "$work/site-include" "$work/info"') < pos('add_http2 "$work/site-include" "$work/site" "$work/info-http2"') && pos('add_http2 "$work/site-include" "$work/site" "$work/info-http2"') < pos('cp -p "$SITE" "$site_copy"'), 'HTTP/2 on top of the include, before the copy and the nginx -t');
+  assert(nginxSetup.includes(`h2=$(curl -sk --http2 -o /dev/null -m 10 -w '%{http_version}' https://127.0.0.1/ 2>/dev/null || true)`), 'and checked after the reload');
   assert(pos('code http://127.0.0.1:3000/api/health') && pos('code -k "$web/manutencao-previa"'), 'at the end it checks the site is still there');
   assert(nginxSetup.includes('web=https://127.0.0.1 k=k tunnel=8443:127.0.0.1:443'), 'with HTTPS, the checks and the hints go by 443 (after certbot the block on 80 may only redirect)');
   assert(setup.includes('bash "$HERE/config-nginx.sh"') && setup.indexOf('bash "$HERE/config-nginx.sh"') > setup.indexOf('ln -sfn /etc/nginx/sites-available/juimprime'), 'a new server gets the same from the setup');
+}
+
+// …and add_http2 run for real on a configuration like the server's after certbot: the site on 443 (listen lines at the
+// end, as certbot writes them), the block on 80 that only redirects, a www block that already has the old listen form, and a
+// nested block. Only where a bash with awk can read this folder (see config-loja.sh above); the static checks stand alone.
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ju-nginx-'));
+  const slash = file => file.split(path.sep).join('/');
+  const script = slash(path.join(root, 'deploy/config-nginx.sh')), conf = slash(path.join(dir, 'juimprime')), out = slash(path.join(dir, 'out')), info = slash(path.join(dir, 'info'));
+  const run = (input) => { fs.writeFileSync(conf, input); const r = spawnSync('bash', ['-c', 'eval "$(sed -n \'/^add_http2() {/,/^}$/p\' "$1")" && add_http2 "$2" "$3" "$4"', 'add_http2', script, conf, out, info], {encoding: 'utf8', timeout: 20000}); assert.equal(r.status, 0, r.stderr); return {text: fs.readFileSync(out, 'utf8'), info: fs.readFileSync(info, 'utf8').trim()}; };
+  const site = (http2 = '') => `server {\n    server_name juimprimepramim.com.br www.juimprimepramim.com.br;\n    client_max_body_size 2m;\n    server_tokens off;\n    include snippets/juimprime-manutencao.conf;\n\n    location / {\n        proxy_pass http://127.0.0.1:3000;\n        # listen 443 ssl; (a comment inside a location)\n    }\n\n    listen [::]:443 ssl ipv6only=on; # managed by Certbot\n    listen 443 ssl; # managed by Certbot\n${http2}    ssl_certificate /etc/letsencrypt/live/juimprimepramim.com.br/fullchain.pem; # managed by Certbot\n    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot\n}\nserver {\n    if ($host = juimprimepramim.com.br) {\n        return 301 https://$host$request_uri;\n    } # managed by Certbot\n    listen 80 default_server;\n    listen [::]:80 default_server;\n    server_name juimprimepramim.com.br;\n    return 404; # managed by Certbot\n}\nserver {\n    listen 443 ssl http2;\n    server_name www.exemplo.test;\n    return 301 https://juimprimepramim.com.br$request_uri;\n}\n`;
+  try {
+    const probe = spawnSync('bash', ['-c', '[ -r "$1" ] && command -v awk >/dev/null && command -v sed >/dev/null', 'probe', script], {encoding: 'utf8', timeout: 10000});
+    if (probe.error || probe.status !== 0) console.log('config-nginx.sh: sem um bash com awk que abra esta pasta aqui; o teste de comportamento do HTTP/2 ficou de fora (os estáticos valem).');
+    else {
+      const once = run(site());
+      assert.equal(once.text, site('    http2 on;  # HTTP/2: os arquivos da página juntos, numa conexão só (deploy/config-nginx.sh)\n'), 'http2 on; once, right after the last listen of the 443 block, with its indentation; the 80 block and the www block (old form) as they were');
+      assert.equal(once.info, '2 1 1', 'two blocks on 443: one turned on, one already deciding');
+      const again = run(once.text);
+      assert.equal(again.text, once.text, 'running again changes nothing'); assert.equal(again.info, '2 0 2');
+      const before = run('server {\n    listen 80 default_server;\n    server_name _;\n    location / {\n        proxy_pass http://127.0.0.1:3000;\n    }\n}\n');
+      assert.equal(before.info, '0 0 0', 'before certbot there is no 443: nothing to do (the script says to run it again later)');
+      assert.equal(run(site('    http2 off;\n')).info, '2 0 2', 'a block that turned HTTP/2 off on purpose stays off');
+    }
+  } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
 
 // The firewall: only the site from everywhere, SSH from the internal networks only, IPv6 included, and back by itself

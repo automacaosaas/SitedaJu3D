@@ -11,6 +11,7 @@ const zlib = require('node:zlib');
 const crypto = require('node:crypto');
 const {isProduction, canonicalHost, indexableHosts, requestHost} = require('../api/_lib/runtime');
 const {minifyCss} = require('./minify-css.cjs');
+const {assetVersion, HASHED} = require('./asset-version.cjs');
 
 const PROJECT = path.join(__dirname, '..');
 
@@ -125,6 +126,16 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     validators.set(file, {version, etag});
     return etag;
   }
+  // The fingerprint of a stylesheet's or script's contents (server/asset-version.cjs, the ?v= tools/sync-versions.cjs writes
+  // into the pages), worked out once per version of the file, like the ETag.
+  const fingerprints = new Map();
+  function fingerprint(file, stat) {
+    const version = `${stat.mtimeMs}|${stat.size}`, known = fingerprints.get(file);
+    if (known?.version === version) return known.value;
+    const value = assetVersion(fs.readFileSync(file));
+    fingerprints.set(file, {version, value});
+    return value;
+  }
   const zipOptions = (encoding, raw, quality, ext) => encoding === 'br'
     ? {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: quality, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length, [zlib.constants.BROTLI_PARAM_MODE]: ext === '.glb' ? zlib.constants.BROTLI_MODE_GENERIC : zlib.constants.BROTLI_MODE_TEXT}}
     : {level: quality >= 9 ? 9 : quality};
@@ -176,7 +187,7 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
       let stat;
       try { stat = fs.statSync(file); } catch { continue; }
       const ext = path.extname(file).toLowerCase();
-      try { validator(file, stat, ext); } catch { continue; }   // the ETag ready before the first visit
+      try { validator(file, stat, ext); if (HASHED.test(ext)) fingerprint(file, stat); } catch { continue; }   // the ETag (and ?v=) ready before the first visit
       if (stat.size > 1024) await compressLater(file, stat, ext, 'br');
     }
     return files.length;
@@ -230,7 +241,11 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     res.setHeader('ETag', etag);
     // A file asked for with ?v= (the fonts, the 3D models, the gallery views…) changes address whenever it changes: a year
     // in the cache, never revalidated. Pages and the same files without ?v= keep the rules above.
-    if (ext !== '.html' && VERSIONED.test(search)) res.setHeader('Cache-Control', IMMUTABLE);
+    // The site's own stylesheets and scripts (09/10/2026) carry the fingerprint of their contents (tools/sync-versions.cjs):
+    // the year only for the file's current one. Any other ?v= (a page from before a deploy asking right after it) still gets
+    // the file, revalidated as before, so newer contents never sit a year in a cache under an older address, and a rollback
+    // (deploy.sh --rollback) brings each old file back at its old address, which the browsers that kept it already hold.
+    if (ext !== '.html' && VERSIONED.test(search)) res.setHeader('Cache-Control', !HASHED.test(ext) || new URLSearchParams(search).get('v') === fingerprint(file, stat) ? IMMUTABLE : DEFAULT_CACHE);
     if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', DEFAULT_CACHE);
     if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');   // also on a 304 (RFC 9110 §15.4.5)
     // RFC 9110 §13.2.2: If-None-Match first (weak comparison, "*" too); If-Modified-Since only without it. A browser sends

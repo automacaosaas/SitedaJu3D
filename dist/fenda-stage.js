@@ -9,7 +9,7 @@
 //    fileira com setas) e o "Monte seu kit" (kit-builder.js) com "Comprar agora", que já chega com a faixa mais vantajosa;
 //  · o banner da home, uma faixa que se funde à vitrine de cima e à coleção de baixo: o título da seção, as peças lado a lado nas cores
 //    delas (cada uma abre a vitrine nela), as faixas do kit com a mais vantajosa marcada e o convite para as ofertas.
-import {PRODUCTS, FAMILIES, showcase, badgeStyle, artSmall} from './products.js';
+import {PRODUCTS, FAMILIES, showcase, badgeStyle, thumbImg, thumbSizes} from './products.js';
 import {COMMERCE, money, pixPrice, pixPercent, installmentLabel, kitOffer} from './commerce-config.js';
 import {kitTiers} from './kit-builder.js';
 import {familyItems, fitFigure} from './escolha.js';
@@ -24,6 +24,9 @@ const round = value => Math.round(value * 10000) / 10000;
 // "R$ 90" para os valores redondos (as faixas do kit), "R$ 85,50" para os outros
 const short = cents => money(cents).replace(/,00$/, '');
 const mid = key => showcase(key).theme.bannerStops.match(/#[0-9a-f]{6}/gi)[1];
+// As fotos das peças em miniatura (products.js thumbImg, o arquivo pelo tamanho desenhado): no banner da home com 200 px (a do meio,
+// 262) e, até 900 px de tela, 132 (172) — catalog.css .nvb-pick img; nas faixas do kit com no máximo 140 px (fenda.css .nv-tier-art).
+const PICK_SIZES = thumbSizes(200, [900, 132]), MAIN_PICK_SIZES = thumbSizes(262, [900, 172]), TIER_SIZES = thumbSizes(140);
 
 // As cores de uma peça: as do tema dela (as mesmas da vitrine da home e da página dela).
 export const tone = key => { const {theme} = showcase(key); return {'--nv-accent': theme.accentColor, '--nv-ink': theme.textColor, '--nv-muted': theme.mutedColor}; };
@@ -91,7 +94,7 @@ export function noveltyOffers(family, {foot = ''} = {}) {
     const pieces = Array.from({length: tier.units}, (_, n) => items[n % items.length]);
     return `<article class="nv-tier${best ? ' is-best' : ''}" data-nv-reveal style="--tier-stops:${theme.bannerStops};--tier-accent:${theme.accentColor};--tier-ink:${theme.textColor};--i:${i}">`
       + (best ? '<span class="nv-tier-flag">Mais vantajoso</span>' : '')
-      + `<span class="nv-tier-art" aria-hidden="true">${pieces.map(key => `<img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async">`).join('')}</span>`
+      + `<span class="nv-tier-art" aria-hidden="true">${pieces.map(key => `<img ${thumbImg(PRODUCTS[key].catalogImage, TIER_SIZES)} alt="" width="768" height="768" loading="lazy" decoding="async">`).join('')}</span>`
       + `<h3 class="nv-tier-n">${tier.units === 1 ? '1 peça' : `${tier.units} peças`}</h3>`
       + `<p class="nv-tier-price"><strong>${nbsp(short(tier.cents))}</strong>${tier.units > 1 ? `<span>${nbsp(short(tier.each))} cada</span>` : '<span>a peça</span>'}</p>`
       + `<p class="nv-tier-save">${saving > 0 ? `Economize ${nbsp(short(saving))}` : 'Escolha a sua'}</p>`
@@ -126,7 +129,7 @@ export function noveltyBanner(family) {
   const middle = items[0], order = [items[1], middle, items[2]].filter(Boolean), tiers = kitTiers(middle), stops = order.map(mid);
   const turn = key => key === middle ? 3 : 4;
   const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" data-nvb-reveal style="--i:${turn(key)};--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda#${key}">`
-    + `<img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span>${esc(PRODUCTS[key].title)}</span></a></li>`).join('');
+    + `<img ${thumbImg(PRODUCTS[key].catalogImage, key === middle ? MAIN_PICK_SIZES : PICK_SIZES)} alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span>${esc(PRODUCTS[key].title)}</span></a></li>`).join('');
   const ladder = tiers.map((t, i) => `<li${i === tiers.length - 1 ? ' class="is-best"' : ''}><b>${t.units}</b><span>por ${nbsp(short(t.cents))}</span></li>`).join('');
   return `<section class="nvb" id="novidade" aria-labelledby="nvb-title" style="--nvb-a:${stops[0]};--nvb-b:${stops[1]};--nvb-c:${stops[2] || stops[1]};${css(tone(middle))}">`
     + `<div class="nvb-head"><p class="nvb-eyebrow" data-nvb-reveal style="--i:0"><span class="nvb-badge is-badge" data-effect="${esc(PRODUCTS[middle].eyebrowEffect || 'shine')}" style="${esc(badgeStyle(middle))}">Novidade</span></p>`
