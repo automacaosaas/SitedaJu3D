@@ -55,7 +55,7 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual([exp.nature, exp.cfop, exp.icms.origin, exp.icms.csosn], ['Exportação de mercadoria', '7101', '0', '300'], 'nature, CFOP 7101 (the store makes what it sells) and CSOSN 300 with origin 0 ("X300")');
   assert.deepEqual(fiscal.missing(fiscal.FISCAL, {provider: 'bling'}), [], 'the export data still to fill never holds back the national notes');
   assert.deepEqual(fiscal.missing(), [], 'nor with another service');
-  assert.deepEqual(fiscal.missingExport(fiscal.FISCAL, {provider: 'bling'}), ['export.shipment.state', 'export.shipment.place', 'export.shipment.address', 'export.shipment.cnpj', 'export.taxUnit.39269090'],
+  assert.deepEqual(fiscal.missingExport(fiscal.FISCAL, {provider: 'bling'}), ['export.shipment.state', 'export.shipment.place', 'export.shipment.address', 'export.shipment.cnpj'],
     'with Bling: the place of embarkation (UF, name, address, CNPJ) and the tax unit of the NCM in the export table; the export nature is set (15111672683, 09/10/2026) and PIS/COFINS come from it in Bling');
   assert.deepEqual(Object.keys(exp.taxUnit), [...new Set(Object.values(fiscal.FISCAL.products).map(p => p.ncm))], 'a tax unit for every NCM of the products');
   assert.deepEqual(exp.netG, {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16}, "the owner's net weights (08/10/2026), one per product");
@@ -115,7 +115,7 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   const problems = (o, extra) => build(o, extra).problems || [];
   const real = buildInvoice({order: exportOrder(), city: null, environment: 'homologacao', provider: 'bling', env: ENV});
   assert.equal(real.ok, false, 'the real store data: held back until the place of embarkation and the export nature are filled');
-  assert.deepEqual(real.problems, ['Venda para o exterior: a nota de exportação só sai depois de preencher em api/_lib/fiscal.js: export.shipment.state, export.shipment.place, export.shipment.address, export.shipment.cnpj, export.taxUnit.39269090 (veja "Venda para o exterior" no NFE-SETUP.md)']);
+  assert.deepEqual(real.problems, ['Venda para o exterior: a nota de exportação só sai depois de preencher em api/_lib/fiscal.js: export.shipment.state, export.shipment.place, export.shipment.address, export.shipment.cnpj (veja "Venda para o exterior" no NFE-SETUP.md)']);
   assert(buildInvoice({order: nationalOrder(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV}).ok, 'while the national note with the same real data goes');
   const withShipment = shipment => ({fiscal: {...fiscal.EXAMPLE.fiscal, export: {...fiscal.EXAMPLE.fiscal.export, shipment: {...fiscal.EXAMPLE.fiscal.export.shipment, ...shipment}}}});
   assert(problems(exportOrder(), withShipment({cnpj: '11.222.333/0001-00'})).some(p => p.includes('CNPJ do local de embarque inválido')), 'a CNPJ that does not check');

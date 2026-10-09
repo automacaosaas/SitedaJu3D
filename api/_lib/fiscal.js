@@ -71,7 +71,8 @@ const FISCAL = {
     // On a note to the exterior the tax authority checks each item's tax unit (uTrib) against its NCM in the table "NCM e
     // respectiva uTrib (Comércio Exterior)" of the Portal da NF-e (rejeição 817), with the quantity in that unit. One per
     // NCM of the products above, from that table; never guessed. UN keeps the pieces; KG sends their net weight (netG).
-    taxUnit: {'39269090': PENDING('unidade tributável do NCM 3926.90.90 na exportação (tabela "NCM e respectiva uTrib" do Portal da NF-e)')},
+    // KG for 3926.90.90: the test export note nº 27 (homologação, 09/10/2026, protocolo 131260153094809) went with uTrib KG and qTrib = net weight and was authorized (no rejection 817).
+    taxUnit: {'39269090': 'KG'},
     // Net weight of one piece, in grams, without the box (the owner's weights of 08/10/2026).
     netG: {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16},
     bling: {natureId: '15111672683'}   // a natureza "Exportação de mercadoria" no Bling (criada em 09/10/2026, regra EX: CFOP 7101, CSOSN 300)
