@@ -82,7 +82,7 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(checkout, /money\(totals\(items, barShipping \?\? 0\)\.total[ )]/, 'the mobile bar adds the real delivery, never the example fee');
   assert.match(checkout, /bar\.innerHTML = mobileBar\(purchaseItems\(\)\)/, 'and follows the delivery when it is quoted or changed');
   assert.doesNotMatch(checkout, /money\(totals\(items\)\.total\)/);
-  assert.match(checkout, /await Promise\.all\(\[refreshSession\(\), loadPaymentConfig\(\), loadShippingConfig\(\)\]\)/, 'one round trip before the cart shows');
+  assert.match(checkout, /await Promise\.all\(\[refreshSession\(\), loadPaymentConfigPatiently\(\{onRetry: /, 'one round trip before the cart shows (asked again only when the first try gets no answer)');
   assert.match(checkout, /onBinChange: bin => showInstallments\(mp, bin\)/); assert.match(checkout, /mp\.getInstallments\(\{amount:/);
   assert.match(checkout, /id="installments-info"/);
   assert.match(checkout, /sessionStorage\.setItem\(CEP_KEY/, 'the CEP typed in the cart goes on to the delivery step');
@@ -98,9 +98,10 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(checkout, /if\(action==='pay-method'\)\{switchMethod\(button\.dataset\.method\);\}/, 'the options, the arrow keys and the refusal notice\'s "Pagar com Pix" all switch the same way');
   assert.match(checkout, /attempt, deviceId: currentDeviceId\(\) \|\| undefined,/, 'the device id goes with the payment');
   assert.match(checkout, /loadDeviceId\(\);/);
-  // a refusal opens the notice (tests/checkout-ux.mjs); Mercado Pago's code goes along only in test mode
-  assert.match(checkout, /refuse\(result\.reason, test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code only in test mode');
-  assert.match(checkout, /refuse\(result\.reason, test \? result\.reason \|\| result\.detail : ''\)/, 'also for Mercado Pago\'s 402');
+  // a refusal opens the card's notice, or the Pix's own line (tests/checkout-ux.mjs, tests/checkout-browser.mjs); Mercado Pago's
+  // code goes along only in test mode
+  assert.match(checkout, /turnedDown\(result\.reason, test \? result\.paymentStatusDetail \|\| result\.statusDetail : ''\)/, 'the code only in test mode');
+  assert.match(checkout, /turnedDown\(result\.reason, test \? result\.reason \|\| result\.detail : ''\)/, 'also for Mercado Pago\'s 402');
   assert.doesNotMatch(checkout, /refusedMessage\(\), result\.statusDetail/);
   assert.match(checkout, /if\(action==='new-pix'\|\|action==='pix-back'\)\{if\(await dropPix\(button\)==='gone'/, '"Gerar novo código Pix" and the Pix screen\'s "Voltar" cancel the old one first');
   assert.match(checkout, /if\(action==='delivery'\)\{if\(order\?\.live&&\['pix','expired'\]\.includes\(order\.phase\)&&await dropPix\(button\)!=='gone'\)return;/, 'and so does going back from a waiting Pix');

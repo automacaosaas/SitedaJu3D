@@ -2,8 +2,10 @@
 // refusal "apareceu, mas embaixo de uma tabela gigantesca de parcelas"; the Pix screen "um loading em 'aguardando
 // pagamento' e, a cada etapa concluída no pagamento, um verificado"). What each piece says and does, from the simulated
 // Mercado Pago's own answers through to the words on the screen, in Portuguese, English and Spanish; the notice's dialog
-// with a stand-in document (open, focus, Esc, buttons, outside click). The full flow in a real browser: the simulator
-// (node tools/dev-server.cjs --fake-mp), MERCADOPAGO-VALIDACAO.md 3.2 and 3.3.
+// with a stand-in document (open, focus, Esc, buttons, a whole click outside); and the payment step's behaviour (the paid Pix
+// closing, "← Voltar", a refusal found while "em análise", the focus, the Pix remembered across a reload, the patient payment
+// settings) with the very code the page runs, on a stand-in page. The same in the real checkout, in Chrome with the simulator:
+// tests/checkout-browser.mjs; by hand: node tools/dev-server.cjs --fake-mp, MERCADOPAGO-VALIDACAO.md 3.2 and 3.3.
 // Run: node tests/checkout-ux.mjs — no network, no browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -17,10 +19,11 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\
 const require = createRequire(import.meta.url);
 const mp = require('../api/_lib/mercadopago');
 const {createFakeMercadoPago} = require('../tools/fake-mercadopago.cjs');
-const {refusalNotice, refusalMessage, refusedMessage} = await site('live-payment.js');
+const {refusalNotice, refusalMessage, refusedMessage, loadPaymentConfigPatiently} = await site('live-payment.js');
 const {refusalNoticeMarkup, openRefusalNotice} = await site('payment-notice.js');
 const {installmentRows, installmentsInfo, installmentsSummary, installmentsTable} = await site('installments.js');
-const {PIX_STEPS, pixStepStates, pixSteps, formatPixClock, pixClockNotice, pixHowTo} = await site('pix-panel.js');
+const {PIX_STEPS, pixStepStates, pixSteps, formatPixClock, pixClockNotice, pixHowTo, nextStep, stillClosing, cancelOutcome, isPixAttempt, lockPanel, holdButton, isHeld, focusInside, focusInSight, copyPixCode, unmarkCopied} = await site('pix-panel.js');
+const {PENDING_KEY, rememberPendingPix, recallPendingPix, forgetPendingPix, resumeStep} = await site('pending-pix.js');
 const {translate} = await site('i18n-core.js');
 const translated = (text, why) => { for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${why || 'missing'} ${lang}: ${text}`); };
 const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').replace(/\s+/g, ' ').trim();
@@ -101,6 +104,7 @@ const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').
         dispatch(type, extra = {}) { const event = {type, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra}; (listeners[type] || []).forEach(fn => fn(event)); return event; },
         set innerHTML(value) { this.html = value; }, get innerHTML() { return this.html; },
         querySelector: selector => { const m = /\[data-notice="(\w+)"\]/.exec(selector); return m && el.html.includes(`data-notice="${m[1]}"`) ? button(m[1]) : null; },
+        getBoundingClientRect: () => ({left: 100, right: 500, top: 100, bottom: 400}),   // the notice's own box; around it, the dimmed page
         showModal() { this.open = true; this.modalCalls++; },
         close(value) { this.open = false; this.returnValue = value ?? this.returnValue; this.dispatch('close'); }};
       return el;
@@ -128,12 +132,23 @@ const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').
   assert.equal(doc.appended.length, 1, 'the same dialog is reused');
   dialog.dispatch('click', {target: {closest: () => ({dataset: {notice: 'pix'}})}}); doc.flush();
   assert.deepEqual(answers, ['close', 'pix']);
-  // a click on the dimmed page around it closes it; a click inside, on text, does not
+  // A whole click on the dimmed page around it (press and release both outside its box) closes it; a click on the words does
+  // not, and neither does a press on the words dragged out to select them, nor a press outside released on the notice: both of
+  // those also end in a click on the dialog itself (2026-10-08, review: the notice closed in the middle of a selection).
   openRefusalNotice({notice, onChoice: choice => answers.push(choice), doc});
-  dialog.dispatch('click', {target: {closest: () => null}}); doc.flush();
+  const words = {closest: () => null}, inside = {clientX: 300, clientY: 250}, around = {clientX: 40, clientY: 30};
+  const click = (down, up) => { dialog.dispatch('pointerdown', down); dialog.dispatch('click', up); doc.flush(); };
+  click({target: words, ...inside}, {target: words, ...inside});
   assert(dialog.open, 'a click on the words keeps it open');
-  dialog.dispatch('click', {target: dialog}); doc.flush();
-  assert(!dialog.open); assert.deepEqual(answers, ['close', 'pix', 'close']);
+  click({target: words, ...inside}, {target: dialog, ...around});
+  assert(dialog.open, 'selecting the words and letting go on the dimmed page keeps it open');
+  click({target: dialog, ...around}, {target: dialog, ...inside});
+  assert(dialog.open, 'a press on the dimmed page let go on the notice keeps it open');
+  dialog.dispatch('click', {target: dialog, ...around}); doc.flush();
+  assert(dialog.open, 'a click with no press before it (nothing pressed on the dimmed page) keeps it open');
+  assert.deepEqual(answers, ['close', 'pix'], 'nothing answered meanwhile');
+  click({target: dialog, ...around}, {target: dialog, ...around});
+  assert(!dialog.open, 'a whole click on the dimmed page closes it'); assert.deepEqual(answers, ['close', 'pix', 'close']);
   // a second refusal while it is open only changes the words (no second showModal, one answer)
   openRefusalNotice({notice: refusalNotice('insufficient_amount'), onChoice: choice => answers.push('first ' + choice), doc});
   const calls = dialog.modalCalls;
@@ -221,35 +236,219 @@ const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').
     'Não deu para copiar sozinho. O código ficou selecionado: use a opção Copiar do seu aparelho.', 'O código Pix anterior não vale mais. Escolha como prefere pagar.']) translated(text);
 }
 
-// ── checkout.js: where the pieces are wired (the page itself needs a browser: see the header) ──
+// ── D) the payment step's behaviour, with the very code the page runs (pix-panel.js, pending-pix.js, live-payment.js) on a
+//    stand-in page. The same behaviour in the real checkout, in Chrome with the simulator: tests/checkout-browser.mjs ──
 {
-  const checkout = read('dist/checkout.js');
-  // both kinds of refusal (Mercado Pago's 402, and a refused order) and a refusal found while "em análise" open the notice
-  assert.equal((checkout.match(/refuse\(result\.reason, test \? /g) || []).length, 2);
-  assert.match(checkout, /else if \(state === 'refused'\) \{ order = \{\.\.\.order, phase: 'form', id: null, mpId: null, pix: null, attempt: null\}; render\(\); refuse\(reason\); \}/);
-  assert.match(checkout, /if \(choice === 'pix' && notice\.pix\) return switchMethod\('pix'\);\n    showPaymentError\(notice\.text, code, \{quiet: true\}\);/, '"Pagar com Pix" switches; otherwise the reminder goes under the form');
-  // the installments box keeps "Ver todas as parcelas" open when the buyer opened it
-  assert.match(checkout, /box\.innerHTML = installmentsInfo\(rows, \{open: Boolean\(box\.querySelector\('details'\)\?\.open\)\}\);/);
-  // the refusal reminder sits right under the payment form, before the installments
-  assert(checkout.indexOf('<p id="card-error" class="inline-error" role="alert"></p><div id="installments-info"') > checkout.indexOf('<div id="payment-brick"'));
-  // "← Voltar" and "Gerar novo código Pix" both cancel the waiting code first, like "Alterar dados ou pagamento"
-  assert.match(checkout, /if\(action==='new-pix'\|\|action==='pix-back'\)\{if\(await dropPix\(button\)==='gone'&&stage==='payment'&&order\?\.live\)\{order=\{\.\.\.order,phase:'form',id:null,mpId:null,pix:null,status:'pending',attempt:null\};render\(\);/);
-  assert.match(checkout, /data-action="pix-back"/); assert.match(checkout, /<button class="text-button payment-back" data-action="delivery">← Alterar dados ou pagamento<\/button>/, '"Alterar dados ou pagamento" stays');
-  // paid while waiting: the steps close with their checks, then the confirmation that existed
-  assert.match(checkout, /if \(state === 'approved' && order\.phase === 'pix'\) closePixSteps\(\);/);
-  assert.match(checkout, /steps\.outerHTML = pixSteps\('paid', \{fresh: \[2, 3\]\}\);/);
-  assert.match(checkout, /order = \{\.\.\.order, phase: 'done', closing: false\};\n    finishPaid\(\);/);
-  // the clock changes quietly; it speaks only through pixClockNotice
-  assert.match(checkout, /<strong id="pix-time" role="timer">/);
-  assert.match(checkout, /if \(clock\) clock\.textContent = formatPixClock\(left\);\n        if \(notice\) announce\(notice\);/);
-  // no inline style written by the checkout for these pieces (the Content-Security-Policy; the looks are in cart-page.css)
-  assert.doesNotMatch(checkout, /\.style\.fontSize/);
-  for (const file of ['dist/payment-notice.js', 'dist/pix-panel.js']) assert.doesNotMatch(read(file), /style=|\.style\./, `${file}: no inline style`);
-  const css = read('dist/cart-page.css');
-  assert.match(css, /\.pay-notice\[open\] \{ display: block;/, 'not the two columns of the product window');
-  assert.match(css, /@media \(max-width: 600px\) \{\n  \.pay-notice \{ width: 100%;[^}]*margin: auto 0 0;[^}]*border-radius: 24px 24px 0 0;/, 'a sheet from the bottom on phones');
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  \.pay-notice\[open\], \.pay-notice\[open\]::backdrop, \.pay-notice\.is-closing \{ animation: none; \}[^@]*\.pix-wait \{ width: 12px; height: 12px; border: 0; background: var\(--rose\); animation: none; \}/, 'reduced motion: no slide, a still wait mark');
-  assert.match(css, /\.pix-back \{[^}]*min-height: 44px;/); assert.match(css, /\.installments-more > summary \{[^}]*min-height: 44px;/);
+  // Just enough of a page: elements with attributes, classes, children and text, the keyboard focus with the browser's focus
+  // fixup (a focused element that gets disabled or leaves the page hands the focus to the body), and innerHTML kept as a
+  // snapshot that can be put back (what holdButton does with a button's words).
+  const page = () => {
+    const doc = {}, snapshots = [];
+    const make = (tag, attrs = {}, children = [], text = '') => {
+      const el = {tagName: tag.toUpperCase(), ownerDocument: doc, attrs: {...attrs}, kids: [], parent: null, text, classes: new Set(String(attrs.class || '').split(' ').filter(Boolean)), off: false, scrolled: null,
+        get isConnected() { for (let n = this; n; n = n.parent) if (n === doc.body) return true; return false; },
+        get disabled() { return this.off; }, set disabled(value) { this.off = Boolean(value); if (value && doc.activeElement === this) doc.activeElement = doc.body; },
+        setAttribute(key, value) { this.attrs[key] = String(value); }, getAttribute(key) { return Object.hasOwn(this.attrs, key) ? this.attrs[key] : null; }, removeAttribute(key) { delete this.attrs[key]; },
+        focus() { if (!this.off && this.isConnected) doc.activeElement = this; },
+        contains(other) { for (let n = other; n; n = n.parent) if (n === this) return true; return false; },
+        append(...nodes) { for (const node of nodes) { node.parent = this; this.kids.push(node); } },
+        remove() { const lost = this.contains(doc.activeElement); this.parent.kids = this.parent.kids.filter(k => k !== this); this.parent = null; if (lost) doc.activeElement = doc.body; },
+        all() { return this.kids.flatMap(k => [k, ...k.all()]); },
+        matches(selector) { return selector.split(',').some(one => { one = one.trim(); const attr = /^\[([\w-]+)(?:="([^"]*)")?\]$/.exec(one); if (attr) return Object.hasOwn(this.attrs, attr[1]) && (attr[2] === undefined || this.attrs[attr[1]] === attr[2]); return one.startsWith('.') ? this.classes.has(one.slice(1)) : this.tagName === one.toUpperCase(); }); },
+        querySelector(selector) { return this.all().find(n => n.matches(selector)) || null; },
+        querySelectorAll(selector) { return this.all().filter(n => n.matches(selector)); },
+        get textContent() { return this.text + this.kids.map(k => k.textContent).join(''); },
+        set textContent(value) { this.kids = []; this.text = String(value); },
+        get innerHTML() { const keep = n => ({node: n, text: n.text, kids: n.kids.map(keep)}); snapshots.push(keep(this)); return `#${snapshots.length - 1}`; },
+        set innerHTML(value) { const put = ({node, text, kids}) => { node.text = text; node.kids = []; node.append(...kids.map(put)); return node; }; put(snapshots[Number(String(value).slice(1))]); },
+        getBoundingClientRect() { return this.box || {top: 100, bottom: 150}; },
+        scrollIntoView(options) { this.scrolled = options; },
+        setSelectionRange(start, end) { this.selection = [start, end]; }
+      };
+      el.classList = {add: c => el.classes.add(c), remove: c => el.classes.delete(c), contains: c => el.classes.has(c), toggle: (c, on) => (on ? el.classes.add(c) : el.classes.delete(c))};
+      el.append(...children);
+      return el;
+    };
+    doc.body = make('body'); doc.activeElement = doc.body; doc.make = make;
+    return doc;
+  };
+  // The Pix screen as checkout.js draws it: "← Voltar" (arrow + words), the steps, "Copiar código", "Já paguei", "Alterar dados".
+  const pixScreen = () => {
+    const doc = page(), make = doc.make;
+    const arrow = make('span', {class: 'pix-back-icon'}, [], '←');
+    const back = make('button', {class: 'pix-back', 'data-action': 'pix-back'}, [arrow, make('span', {'data-label': ''}, [], 'Voltar')]);
+    const copy = make('button', {class: 'pix-copy-button', 'data-action': 'copy-live-pix'}, [make('span', {class: 'pix-copy-idle', 'aria-hidden': 'false'}, [], 'Copiar código'), make('span', {class: 'pix-copy-done', 'aria-hidden': 'true'}, [], 'Copiado!')]);
+    const check = make('button', {'data-action': 'check-now'}, [], 'Já paguei · verificar agora');
+    const change = make('button', {'data-action': 'delivery'}, [], '← Alterar dados ou pagamento');
+    const steps = make('ol', {class: 'pix-steps'}), input = make('input', {id: 'pix-code'}), hint = make('p', {id: 'pix-copy-hint'});
+    hint.hidden = true; input.value = 'PIX-CODE';
+    const panel = make('section', {class: 'pix-panel'}, [back, steps, input, copy, hint, check, change]), main = make('main', {id: 'shop-main'}, [panel]);
+    doc.body.append(main);
+    return {doc, main, panel, arrow, back, copy, check, change, steps, input, hint};
+  };
+  const buttons = panel => panel.querySelectorAll('button').map(b => `${b.getAttribute('data-action')}:${b.disabled ? 'off' : isHeld(b) ? 'held' : 'on'}`).join(' ');
+
+  // 1) The Pix paid, found by "Já paguei · verificar agora" (checkout.js checkNow + closePixSteps): the button waits keeping the
+  //    focus; the answer closes the steps (nextStep → 'close'), every button stops (lockPanel) and the focus waits on the steps;
+  //    the button's own release afterwards, with {closing}, never wakes it up again (2026-10-08, review: it came back on).
+  {
+    const {doc, panel, check, steps} = pixScreen();
+    check.focus();
+    const release = holdButton(check, 'Verificando…');
+    assert.deepEqual([check.textContent, check.getAttribute('aria-disabled'), doc.activeElement === check, isHeld(check)], ['Verificando…', 'true', true, true], 'waiting: its words say so, it keeps the focus and does not answer twice');
+    const order = {phase: 'pix', method: 'pix', mpId: 'ORD1', closing: false};
+    assert.equal(nextStep(order, 'approved'), 'close');
+    order.closing = true;
+    lockPanel(panel);
+    assert.equal(buttons(panel), 'pix-back:off copy-live-pix:off check-now:off delivery:off', 'nothing on the closing screen answers');
+    assert(panel.classList.contains('is-paid'));
+    assert.equal(doc.activeElement, steps, 'the focus waits on the steps ("Pagamento confirmado"), not on the page');
+    assert.equal(steps.getAttribute('tabindex'), '-1', 'focusable by the script only');
+    release({closing: Boolean(order.closing)});
+    assert.deepEqual([check.textContent, check.disabled, doc.activeElement === steps], ['Já paguei · verificar agora', true, true], 'its words back, still off, the focus left where it was');
+    for (const state of ['approved', 'expired', 'refused', 'pending_pix']) assert.equal(nextStep(order, state), '', `${state} while closing: nothing reopens or redraws the screen`);
+    assert.equal(buttons(panel), 'pix-back:off copy-live-pix:off check-now:off delivery:off');
+    assert.equal(stillClosing(order, 'ORD1', 'payment'), true, 'the confirmation follows');
+    assert.equal(stillClosing(order, 'ORD2', 'payment'), false, 'another Pix meanwhile: no confirmation for the old one');
+    assert.equal(stillClosing(order, 'ORD1', 'delivery'), false, 'the buyer left the step: none either');
+    // a 5-second check that finds it paid while the focus is somewhere else on the page: the focus is not taken from there
+    const other = pixScreen(), elsewhere = other.doc.make('a', {href: '#'});
+    other.doc.body.append(elsewhere); elsewhere.focus();
+    lockPanel(other.panel);
+    assert.equal(other.doc.activeElement, elsewhere, 'focus outside the Pix screen stays where it is');
+  }
+
+  // 2) "← Voltar" (checkout.js dropPix): the old code is cancelled first. While Mercado Pago answers, the button says so next
+  //    to its arrow and keeps the focus; when the cancel is not confirmed ('kept'), its words come back and the focus is still
+  //    (or again) on it, ready to try again (2026-10-08, review: the focus fell to the page and stayed there).
+  {
+    const {doc, back, arrow} = pixScreen();
+    back.focus();
+    const release = holdButton(back, 'Cancelando o código anterior…');
+    assert.deepEqual([back.querySelector('[data-label]').textContent, back.contains(arrow), doc.activeElement === back], ['Cancelando o código anterior…', true, true], 'the arrow stays, the words change, the focus stays');
+    assert.equal(cancelOutcome({status: 503, data: {error: 'unavailable'}}), 'kept');
+    release();
+    assert.deepEqual([back.textContent, back.getAttribute('aria-disabled'), doc.activeElement === back], ['←Voltar', null, true], 'kept: the button again, with the focus');
+    // the focus had fallen to the page meanwhile (the page redrew something): it comes back to the button
+    const again = holdButton(back, 'Cancelando o código anterior…');
+    doc.activeElement = doc.body; again();
+    assert.equal(doc.activeElement, back, 'lost meanwhile: back on the button');
+    // the buyer moved on to something else meanwhile: not taken from there
+    const moved = holdButton(back, 'Cancelando o código anterior…'), link = doc.make('a');
+    doc.body.append(link); link.focus(); moved();
+    assert.equal(doc.activeElement, link, 'moved on: left alone');
+    // a button that left the page meanwhile (the step was drawn again) is not touched
+    const gone = holdButton(back, 'Cancelando o código anterior…');
+    back.remove(); gone();
+    assert.equal(back.getAttribute('aria-disabled'), 'true', 'nothing done on a button no longer in the page');
+    // what each answer of /api/payments/cancel means
+    assert.equal(cancelOutcome({status: 200, data: {state: 'canceled'}}), 'gone');
+    assert.equal(cancelOutcome({status: 200, data: {state: 'expired'}}), 'gone');
+    assert.equal(cancelOutcome({status: 200, data: {state: 'approved'}}), 'paid', 'paid meanwhile: the confirmation');
+    assert.equal(cancelOutcome({status: 200, data: {state: 'pending_pix'}}), 'kept', 'still payable: stay');
+    assert.equal(cancelOutcome(null), 'kept', 'no answer: stay');
+    assert.equal(cancelOutcome(null, true), 'gone', 'no answer about an expired code: it cannot be paid anyway');
+  }
+
+  // 3) Answers about an order, from where the page is (checkout.js applyState → nextStep): a card refused while "em análise"
+  //    opens the card's notice ('refuse'); a Pix order refused never does ('refused-pix'); a Pix that could not be created is
+  //    told apart from a card by the attempt (isPixAttempt), so it gets its own line and never the card's notice.
+  {
+    assert.equal(nextStep({phase: 'review', method: 'card'}, 'refused'), 'refuse');
+    assert.equal(nextStep({phase: 'review', method: 'card'}, 'approved'), 'finish');
+    assert.equal(nextStep({phase: 'pix', method: 'pix'}, 'refused'), 'refused-pix');
+    assert.equal(nextStep({phase: 'pix', method: 'pix'}, 'expired'), 'expire');
+    assert.equal(nextStep({phase: 'expired', method: 'pix'}, 'expired'), '', 'already on the expired screen');
+    assert.equal(nextStep({phase: 'expired', method: 'pix'}, 'approved'), 'finish', 'paid just before it ran out: the confirmation');
+    for (const state of ['pending_pix', 'in_review', undefined]) assert.equal(nextStep({phase: 'pix', method: 'pix'}, state), '');
+    assert.equal(isPixAttempt('bank_transfer', 'card'), true); assert.equal(isPixAttempt(undefined, 'pix'), true);
+    assert.equal(isPixAttempt('credit_card', 'card'), false); assert.equal(isPixAttempt('debit_card', 'card'), false);
+    translated('Não conseguimos gerar o Pix agora. Tente de novo ou pague com cartão.', 'the Pix line');
+  }
+
+  // 4) The code runs out (checkout.js expirePix): the screen is drawn again, so the focus that was in it falls to the page;
+  //    it goes to "Gerar novo código Pix", brought into sight when it is not (2026-10-08, review: it stayed on the page's top).
+  {
+    const {doc, main, panel, check} = pixScreen();
+    check.focus();
+    assert.equal(focusInside(doc, main), true, 'the focus is in the step that is about to be drawn again');
+    panel.remove();
+    assert.equal(doc.activeElement, doc.body, 'drawn again: the browser hands the focus to the page');
+    const renew = doc.make('button', {'data-action': 'new-pix'}, [], 'Gerar novo código Pix');
+    main.append(doc.make('section', {class: 'pix-panel'}, [renew]));
+    renew.box = {top: 900, bottom: 950};
+    const win = {innerHeight: 780, matchMedia: () => ({matches: false})};
+    focusInSight(main.querySelector('[data-action="new-pix"]'), win);
+    assert.equal(doc.activeElement, renew, 'the focus on "Gerar novo código Pix"');
+    assert.deepEqual(renew.scrolled, {block: 'center', behavior: 'smooth'}, 'below the fold: brought to the middle of the screen');
+    renew.scrolled = null; renew.box = {top: 300, bottom: 350}; doc.activeElement = doc.body;
+    focusInSight(renew, {innerHeight: 780, matchMedia: () => ({matches: true})});
+    assert.equal(renew.scrolled, null, 'already in sight: the page does not move');
+    // the focus was elsewhere on the page (the summary, the header): nothing is taken from there
+    const link = doc.make('a'); doc.body.append(link); link.focus();
+    assert.equal(focusInside(doc, main), false);
+  }
+
+  // 5) "Copiar código" (pix-panel.js copyPixCode): "Copiado!" in the same place, or, with the clipboard refused, the code
+  //    selected and the line saying how to copy it by hand.
+  {
+    const {doc, copy, input, hint} = pixScreen();
+    const said = await copyPixCode({text: 'PIX-CODE', clipboard: {writeText: async text => assert.equal(text, 'PIX-CODE')}, button: copy, input, hint});
+    assert.equal(said, 'copied');
+    assert.deepEqual([copy.classList.contains('is-copied'), copy.querySelector('.pix-copy-idle').getAttribute('aria-hidden'), copy.querySelector('.pix-copy-done').getAttribute('aria-hidden')], [true, 'true', 'false']);
+    unmarkCopied(copy);
+    assert.deepEqual([copy.classList.contains('is-copied'), copy.querySelector('.pix-copy-idle').getAttribute('aria-hidden')], [false, 'false']);
+    assert.equal(await copyPixCode({text: 'PIX-CODE', clipboard: undefined, button: copy, input, hint}), 'selected', 'no clipboard at all (an insecure page)');
+    assert.deepEqual([doc.activeElement === input, input.selection, hint.hidden], [true, [0, 8], false], 'the code selected and the line shown');
+  }
+
+  // 6) The Pix that waits, remembered by the tab (pending-pix.js): only Mercado Pago's id and the reference; what the server's
+  //    answer leads to after a reload.
+  {
+    const memory = new Map(), storage = {getItem: k => memory.get(k) ?? null, setItem: (k, v) => memory.set(k, v), removeItem: k => memory.delete(k)};
+    rememberPendingPix(storage, {mpId: 'ORD01FAKE00000001ABCDE', reference: 'JU-24DBC2E70F', qrCode: 'never kept', email: 'ana@exemplo.test'});
+    assert.deepEqual(JSON.parse(memory.get(PENDING_KEY)), {mpId: 'ORD01FAKE00000001ABCDE', reference: 'JU-24DBC2E70F'}, 'nothing but the id and the reference');
+    assert.deepEqual(recallPendingPix(storage), {mpId: 'ORD01FAKE00000001ABCDE', reference: 'JU-24DBC2E70F'});
+    forgetPendingPix(storage); assert.equal(recallPendingPix(storage), null);
+    rememberPendingPix(storage, {mpId: '../x', reference: 'JU-1'}); assert.equal(memory.size, 0, 'an id that does not look like Mercado Pago\'s is not kept');
+    memory.set(PENDING_KEY, '{"mpId":"<script>","reference":"x"}'); assert.equal(recallPendingPix(storage), null, 'nor read back');
+    memory.set(PENDING_KEY, 'not json'); assert.equal(recallPendingPix(storage), null);
+    const broken = {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); }};
+    rememberPendingPix(broken, {mpId: 'ORD01FAKE00000001ABCDE'}); forgetPendingPix(broken); assert.equal(recallPendingPix(broken), null, 'storage blocked: no memory, no error');
+    assert.equal(recallPendingPix(null), null);
+    const pending = {state: 'pending_pix', pix: {qrCode: 'PIX'}, items: [{productId: 'borboletoscopio', quantity: 1}]};
+    assert.equal(resumeStep({status: 200, data: pending}), 'resume', 'still payable, with its code: go on with it or cancel it');
+    assert.equal(resumeStep({status: 200, data: {...pending, pix: null}}), 'unknown', 'payable but without its code: ask again, never a new one');
+    assert.equal(resumeStep({status: 200, data: {state: 'approved'}}), 'paid');
+    for (const state of ['expired', 'canceled', 'refused', 'refunded']) assert.equal(resumeStep({status: 200, data: {state}}), 'gone', state);
+    assert.equal(resumeStep({status: 404, data: {error: 'not_found'}}), 'gone');
+    assert.equal(resumeStep({status: 401}), 'signin');
+    for (const unclear of [null, {status: 502}, {status: 429}, {status: 200, data: {state: 'in_review'}}]) assert.equal(resumeStep(unclear), 'unknown', JSON.stringify(unclear));
+    for (const text of ['Seu Pix', 'ainda está aberto.', 'Você saiu da página com um código Pix aguardando pagamento.', 'Este código ainda pode ser pago.', 'Continuar com este Pix', 'Cancelar este Pix e recomeçar', 'Conferindo o Pix…',
+      'Continue com ele, ou cancele antes de pagar de outro jeito: assim nunca ficam dois Pix abertos.', 'Esse Pix não vale mais. Escolha como prefere pagar.', 'Pix aberto de novo. Pague com o código ou o QR Code.', 'O Pix anterior foi cancelado. Você pode recomeçar.']) translated(text);
+  }
+
+  // 7) The payment settings with patience (live-payment.js loadPaymentConfigPatiently): a slow or failed first try is tried
+  //    again after a pause, saying so (onRetry), instead of falling into the demo (2026-10-08, review).
+  {
+    const waits = [], retries = [];
+    const answers = list => { let n = 0; return async (url, {signal}) => { const next = list[Math.min(n++, list.length - 1)]; if (next === 'hang') return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), {name: 'AbortError'})))); if (next === 'offline') throw new TypeError('Failed to fetch'); return next; }; };
+    const ok = {ok: true, status: 200, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: null})};
+    const patient = list => loadPaymentConfigPatiently({timeouts: [20, 40], pause: 5, fetchImpl: answers(list), onRetry: i => retries.push(i), wait: ms => { waits.push(ms); return Promise.resolve(); }});
+    assert.deepEqual(await patient(['hang', ok]), {mode: 'test', publicKey: 'TEST-abc'}, 'slow at first, then the answer: real payments');
+    assert.deepEqual([retries, waits], [[1], [5]], 'one more try, after a pause, said aloud');
+    assert.deepEqual(await patient(['offline', 'offline']), {mode: 'unreachable'}, 'never heard: unknown, never the demo');
+    assert.deepEqual(await patient([{ok: false, status: 503}, {ok: false, status: 503}]), {mode: 'unreachable'});
+    retries.length = 0;
+    assert.deepEqual(await patient([{ok: false, status: 404}]), {mode: 'off'}, 'no /api (a static preview): the demo, at once');
+    assert.deepEqual(await patient([{ok: true, status: 200, json: async () => ({mode: 'off'})}]), {mode: 'off'}, 'the server says off: the demo');
+    assert.deepEqual(retries, [], 'a clear answer is not asked again');
+    translated('Carregando o pagamento…'); translated('Não conseguimos carregar o pagamento. Verifique sua conexão e tente de novo.');
+  }
 }
 
-console.log('PASS: checkout UX — the refused card notice (the simulator\'s reasons in plain words, its dialog: modal, focus, Esc, Pix, outside click, reduced motion), the short installments box with the whole table one click away, and the Pix screen (steps with checks, a quiet clock that speaks at 5 and 1 minute, how to pay), in Portuguese, English and Spanish.');
+// The Content-Security-Policy: the pieces of the payment step write no inline style (the looks are in cart-page.css).
+for (const file of ['dist/payment-notice.js', 'dist/pix-panel.js', 'dist/pending-pix.js']) assert.doesNotMatch(read(file), /style=|\.style\./, `${file}: no inline style`);
+assert.doesNotMatch(read('dist/checkout.js'), /\.style\./, 'checkout.js sets no style from script');
+
+console.log('PASS: checkout UX — the refused card notice (the simulator\'s reasons in plain words, its dialog: modal, focus, Esc, Pix, only a whole click outside closes it, reduced motion), the short installments box with the whole table one click away, the Pix screen (steps with checks, a quiet clock that speaks at 5 and 1 minute, how to pay), and the payment step\'s behaviour on a stand-in page (the paid Pix closing with nothing waking up, "Voltar" keeping the focus, refusals routed, the focus after expiry, copy, the Pix remembered by the tab, patient settings), in Portuguese, English and Spanish.');

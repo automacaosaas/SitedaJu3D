@@ -351,6 +351,11 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .payment-brick:focus { outline: none; }
 .payment-brick:focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; border-radius: 14px; }
 .inline-error-code { font-size: 12px; }
+/* Ao fechar o aviso, o lembrete é trazido para a vista alinhado ao pé da tela (checkout.js revealPaymentError), com o botão de
+   pagar logo acima e folga para a mensagem que aparece embaixo. */
+#card-error { scroll-margin-bottom: 72px; }
+/* Um botão esperando a resposta (pix-panel.js holdButton): continua com o foco, mas não responde de novo. */
+#shop-main button[aria-disabled="true"] { cursor: progress; opacity: .72; }
 
 /* Parcelas do cartão digitado (installments.js): o resumo à vista e a tabela inteira em "Ver todas as parcelas". */
 .installments-summary { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
@@ -358,6 +363,7 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .installments-summary strong { font-weight: 650; font-variant-numeric: tabular-nums; }
 .installments-summary small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .installments-summary .is-free strong + span { color: #0f6b3b; font-weight: 650; }
+.installments-summary strong + span { white-space: nowrap; }   /* "sem juros" e "com juros" nunca se partem (320 px) */
 .installments-mark { display: grid; place-items: center; width: 22px; height: 22px; margin-top: -1px; border-radius: 50%; }
 .installments-mark svg { width: 14px; height: 14px; }
 .is-free .installments-mark { background: #e2f2e8; color: #13864a; }
@@ -378,10 +384,18 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-back-icon { display: grid; place-items: center; width: 20px; height: 20px; color: var(--rose); transition: transform .2s ease; }
 .pix-back-icon svg { width: 18px; height: 18px; transform: rotate(180deg); }
 .pix-back:hover .pix-back-icon { transform: translateX(-3px); }
-.pix-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 30px; padding: 0; list-style: none; }
-.pix-step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 2px; text-align: center; font-size: 12px; line-height: 1.35; color: var(--muted); }
-.pix-step:not(:last-child)::after { content: ''; position: absolute; top: 15px; left: calc(50% + 20px); right: calc(-50% + 20px); height: 2px; border-radius: 2px; background: var(--line); }
-.pix-step.is-done:not(:last-child)::after { background: #13864a; }
+/* As etapas nunca se sobrepõem (2026-10-08, revisão: em 320–360 px "Aguardando" em negrito invadia as vizinhas): cada coluna
+   tem pelo menos a largura da sua palavra mais longa (min-content) e as que sobram dividem o resto; a linha entre duas etapas
+   é feita de duas metades (o fim de uma, o começo da outra), então continua ligando os círculos com colunas de larguras
+   diferentes. Em telas estreitas o texto fica um pouco menor e a hifenização do navegador entra se precisar. */
+.pix-steps { display: grid; grid-template-columns: repeat(4, minmax(min-content, 1fr)); margin: 0 0 30px; padding: 0; list-style: none; }
+.pix-steps:focus { outline: none; }
+.pix-step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; padding: 0 3px; text-align: center; font-size: 12px; line-height: 1.35; color: var(--muted); }
+.pix-step::before, .pix-step::after { content: ''; position: absolute; top: 15px; height: 2px; background: var(--line); }
+.pix-step::before { left: 0; right: calc(50% + 20px); }
+.pix-step::after { left: calc(50% + 20px); right: 0; }
+.pix-step:first-child::before, .pix-step:last-child::after { content: none; }
+.pix-step.is-done::after, .pix-step.is-done + .pix-step::before { background: #13864a; }
 .pix-step-mark { position: relative; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; border: 1.5px solid var(--line); border-radius: 50%; background: var(--panel); color: var(--muted); font-size: 12px; }
 .pix-step-mark b { font-weight: 650; }
 .pix-step.is-done .pix-step-mark { border-color: #13864a; background: #13864a; color: #fff; }
@@ -404,6 +418,9 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-head { text-align: center; }
 .pix-head h2 { margin: 0 0 8px; font: 500 28px/1.25 'Playfair Display', 'Playfair Display Fallback', serif; }
 .pix-head p { max-width: 36ch; margin: 0 auto; font-size: 13px; line-height: 1.6; color: var(--muted); }
+/* Títulos em linhas equilibradas, sem palavra sozinha na última (768 px: "Pague do seu jeito, com / Pix."); frases sem órfãs. */
+:is(.pix-head h2, .pay-notice h2, .payment-state h2) { text-wrap: balance; }
+:is(.pix-head p, .payment-state p, .pay-notice-reason, .pay-notice-todo, .pix-howto li, .installments-summary li, .pix-copy-hint, #card-error) { text-wrap: pretty; }
 .pix-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0 0; }
 .pix-facts div { display: grid; gap: 2px; padding: 12px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); text-align: center; }
 .pix-facts dt { font-size: 12px; color: var(--muted); }
@@ -431,6 +448,8 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .pix-howto li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 13px; line-height: 1.5; counter-increment: pix-howto; }
 .pix-howto li::before { content: counter(pix-howto); display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--rose); font-size: 12px; font-weight: 700; }
 .pix-panel .payment-buttons { margin-top: 18px; }
+/* De volta com um Pix aberto (checkout.js, fase "resume"): "Continuar com este Pix" e, embaixo, "Cancelar este Pix e recomeçar". */
+.pix-resume .payment-buttons { display: grid; gap: 10px; }
 .pix-panel.is-paid .live-qr { opacity: .35; }
 @media (max-width: 700px) {
   .pix-top { margin-bottom: 18px; }
@@ -448,3 +467,24 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
   .pix-step.is-fresh .pix-check { animation: none; clip-path: none; }
   .pix-wait { width: 12px; height: 12px; border: 0; background: var(--rose); animation: none; }
 }
+
+/* O esboço da etapa enquanto o checkout pergunta ao servidor (2026-10-08, revisão: no "comprar agora" pelo celular a página
+   nascia vazia, o rodapé aparecia no alto e saltava para baixo quando a etapa chegava, CLS 0,36 a 0,41 em 360 px). Ocupa a tela,
+   então o rodapé já nasce fora da vista; o checkout troca o esboço pela etapa (main.innerHTML) e, se o servidor demora,
+   escreve "Carregando o pagamento…" na linha de status (checkout.js). Só opacidade anima (no compositor, sem repintar). */
+.shop-skeleton { min-height: 100vh; min-height: 100svh; }
+.shop-skeleton i { display: block; border-radius: 10px; background: #f3e6e9; animation: shop-skeleton-pulse 1.1s ease-in-out infinite alternate; }
+.shop-skeleton-heading { display: grid; gap: 12px; justify-items: start; padding: 46px 0 34px; }   /* o mesmo respiro de .shop-heading (commerce.css) */
+.shop-skeleton-heading i:nth-child(1) { width: 120px; height: 12px; }
+.shop-skeleton-heading i:nth-child(2) { width: min(420px, 82%); height: 76px; }
+.shop-skeleton-heading i:nth-child(3) { width: min(360px, 70%); height: 14px; }
+.shop-skeleton-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(285px, 1fr); gap: 28px; }
+.shop-skeleton-layout i { height: 440px; border-radius: 22px; }
+.shop-skeleton-status { margin: 18px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+@keyframes shop-skeleton-pulse { to { opacity: .55; } }
+@media (max-width: 700px) {
+  .shop-skeleton-heading { padding: 30px 0 25px; }
+  .shop-skeleton-layout { grid-template-columns: minmax(0, 1fr); }
+  .shop-skeleton-layout i:last-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .shop-skeleton i { animation: none; } }

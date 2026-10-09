@@ -855,6 +855,22 @@ Confira o valor e confirme. Esta página avança sozinha.|Check the amount and c
 Falta 1 minuto para o código Pix expirar.|1 minute left before the Pix code expires.|Falta 1 minuto para que el código Pix caduque.
 Faltam 5 minutos para o código Pix expirar.|5 minutes left before the Pix code expires.|Faltan 5 minutos para que el código Pix caduque.
 O código Pix anterior não vale mais. Escolha como prefere pagar.|The previous Pix code is no longer valid. Choose how you prefer to pay.|El código Pix anterior ya no es válido. Elige cómo prefieres pagar.
+Não conseguimos gerar o Pix agora. Tente de novo ou pague com cartão.|We could not create the Pix right now. Try again or pay by card.|No pudimos generar el Pix ahora. Inténtalo de nuevo o paga con tarjeta.
+Seu Pix|Your Pix|Tu Pix
+ainda está aberto.|is still open.|sigue abierto.
+Você saiu da página com um código Pix aguardando pagamento.|You left the page with a Pix code awaiting payment.|Saliste de la página con un código Pix esperando el pago.
+Pix aguardando pagamento|Pix awaiting payment|Pix esperando el pago
+Este código ainda pode ser pago.|This code can still be paid.|Este código todavía se puede pagar.
+Continue com ele, ou cancele antes de pagar de outro jeito: assim nunca ficam dois Pix abertos.|Go on with it, or cancel it before paying another way: that way there are never two open Pix codes.|Sigue con él, o cancélalo antes de pagar de otra forma: así nunca quedan dos Pix abiertos.
+Continuar com este Pix|Go on with this Pix|Seguir con este Pix
+Cancelar este Pix e recomeçar|Cancel this Pix and start over|Cancelar este Pix y empezar de nuevo
+Conferindo o Pix…|Checking the Pix…|Revisando el Pix…
+Esse Pix não vale mais. Escolha como prefere pagar.|That Pix is no longer valid. Choose how you prefer to pay.|Ese Pix ya no es válido. Elige cómo prefieres pagar.
+Não foi possível conferir o Pix agora. Tente de novo em instantes.|Could not check the Pix right now. Try again in a moment.|No se pudo revisar el Pix ahora. Inténtalo de nuevo en unos instantes.
+Pix aberto de novo. Pague com o código ou o QR Code.|Pix open again. Pay with the code or the QR code.|Pix abierto de nuevo. Paga con el código o el código QR.
+O Pix anterior foi cancelado. Você pode recomeçar.|The previous Pix was cancelled. You can start over.|El Pix anterior fue cancelado. Puedes empezar de nuevo.
+Carregando o pagamento…|Loading the payment…|Cargando el pago…
+Não conseguimos carregar o pagamento. Verifique sua conexão e tente de novo.|We could not load the payment. Check your connection and try again.|No pudimos cargar el pago. Revisa tu conexión e inténtalo de nuevo.
 ENVIO PARA TODO O BRASIL|SHIPPING ALL OVER BRAZIL|ENVÍO A TODO BRASIL
 Frete calculado pelo CEP|Shipping calculated by postal code|Envío calculado por código postal
 PIX E CARTÃO|PIX AND CARD|PIX Y TARJETA

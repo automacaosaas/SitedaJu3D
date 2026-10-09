@@ -29,13 +29,27 @@ function finish(dialog, choice) {
   dialog.classList.add('is-closing');
   win.setTimeout(() => { dialog.classList.remove('is-closing'); if (dialog.open) dialog.close(choice); }, 160);
 }
+// Whether a pointer event happened outside the notice's own box (on the dimmed page: the ::backdrop belongs to the dialog).
+function outside(dialog, {clientX, clientY}) {
+  const box = dialog.getBoundingClientRect();
+  return clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom;
+}
 function create(doc) {
   const dialog = doc.createElement('dialog');
   dialog.id = 'pay-notice'; dialog.className = 'pay-notice';
   dialog.setAttribute('role', 'alertdialog'); dialog.setAttribute('aria-modal', 'true');
   dialog.setAttribute('aria-labelledby', 'pay-notice-title'); dialog.setAttribute('aria-describedby', 'pay-notice-reason pay-notice-todo');
-  // the buttons answer; a click on the dimmed page around the notice (the dialog itself, outside its body) closes it
-  dialog.addEventListener('click', event => { const choice = event.target.closest?.('[data-notice]')?.dataset.notice; if (choice) finish(dialog, choice); else if (event.target === dialog) finish(dialog, 'close'); });
+  // The buttons answer; a click on the dimmed page around the notice closes it, but only a whole click there: the press and
+  // the release both outside the notice's box. A press on the words dragged out to select them (or a press outside released
+  // on the notice) also ends in a click on the dialog, which used to close it in the middle of the selection.
+  let pressedOutside = false;
+  dialog.addEventListener('pointerdown', event => { pressedOutside = event.target === dialog && outside(dialog, event); });
+  dialog.addEventListener('click', event => {
+    const choice = event.target.closest?.('[data-notice]')?.dataset.notice, whole = pressedOutside;
+    pressedOutside = false;
+    if (choice) finish(dialog, choice);
+    else if (event.target === dialog && whole && outside(dialog, event)) finish(dialog, 'close');
+  });
   dialog.addEventListener('cancel', event => { event.preventDefault(); finish(dialog, 'close'); });   // Esc
   dialog.addEventListener('close', () => { const answer = settle; settle = null; answer?.(dialog.returnValue || 'close'); });
   doc.body.append(dialog);

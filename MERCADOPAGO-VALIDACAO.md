@@ -106,7 +106,8 @@ motivo em uma frase curta, o que fazer e os botões **"Tentar outro cartão"** (
 "Escolher outras parcelas", "Tentar de novo", conforme o motivo) e **"Pagar com Pix"**, que troca para o Pix. No `OTHE`
 o motivo do aviso é "O banco do seu cartão recusou esta compra."; nos outros, o começo da frase da tabela. Esc, o ×
 ou o botão principal fecham o aviso e devolvem o cursor ao formulário do cartão, e a frase da tabela fica logo abaixo
-dele, como lembrete.
+dele, como lembrete, já à vista junto do botão de pagar. Um clique no fundo escurecido também fecha, mas só um clique
+inteiro ali: selecionar o texto do aviso e soltar o mouse fora não fecha.
 
 No ambiente de teste, o código do Mercado Pago aparece pequeno no aviso e entre parênteses depois da frase (por exemplo
 `(insufficient_amount)`). Anote-o se a frase não combinar com a tabela: o Mercado Pago às vezes usa outro nome, e a
@@ -123,8 +124,17 @@ frase volta para a geral ("O pagamento não foi aprovado…"). **No site real es
    tente. Se não aprovar, tudo bem: o Pix é comprovado na compra real (etapa 6).
 3. Com um Pix esperando, clique em **"← Voltar"** (no alto) ou em **"← Alterar dados ou pagamento"** e gere outro. No painel do Mercado Pago, o
    primeiro pedido deve aparecer **cancelado**: o código antigo não pode mais ser pago junto com o novo.
-4. Deixe um Pix passar de 1 hora: a página mostra "O tempo passou." e **"Gerar novo código Pix"**. O novo código nasce e
-   o antigo é cancelado. Pix que não foi pago some de "Meus pedidos" depois de 2 horas.
+4. Deixe um Pix passar de 1 hora: a página mostra "O tempo passou." e **"Gerar novo código Pix"** (o cursor já vai para
+   ele). O novo código nasce e o antigo é cancelado. Pix que não foi pago some de "Meus pedidos" depois de 2 horas.
+5. Com um Pix esperando, **recarregue a página** (ou saia e volte pela mesma aba): em vez de recomeçar, o checkout
+   mostra **"Seu Pix ainda está aberto."** com **"Continuar com este Pix"** (o mesmo código, o relógio seguindo) e
+   **"Cancelar este Pix e recomeçar"** (o antigo é cancelado antes de qualquer outro). Pago nesse meio-tempo, aparece a
+   confirmação. A aba guarda só o número do pedido no Mercado Pago e a referência, nada do comprador.
+6. Se o Mercado Pago recusar a criação do Pix, aparece embaixo do formulário "Não conseguimos gerar o Pix agora. Tente de
+   novo ou pague com cartão." (nunca o aviso de cartão recusado).
+7. Servidor lento: se as configurações de pagamento não chegarem em 2,5 s, o checkout pergunta de novo e mostra
+   "Carregando o pagamento…"; sem resposta nenhuma, "Continuar para pagamento" pergunta mais uma vez e avisa. Nunca cai na
+   demonstração.
 
 ### 3.4 Avisos do Mercado Pago, repetição e cobrança dupla
 

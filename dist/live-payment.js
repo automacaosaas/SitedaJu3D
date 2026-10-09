@@ -45,17 +45,39 @@ export async function loadPaymentMethods({fetchImpl = globalThis.fetch, timeout 
   finally { clearTimeout(timer); }
 }
 
+// What the server says about payments: 'test' or 'live' with the public key, or 'off' (no keys, Production not switched on,
+// or a static preview without /api, whose 404 keeps the demo). 'unreachable' when the server could not be heard (no answer in
+// time, the network, a 5xx or 429): never the demo (2026-10-08, review: a slow /api/payments/config left real buyers in the
+// demonstration, unable to pay); the checkout asks again (loadPaymentConfigPatiently) and, still without an answer, asks once
+// more before the payment step instead of showing the demo.
 export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout = 2500} = {}) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeout);
+  let answered = false;
   try {
     const response = await fetchImpl('/api/payments/config', {cache: 'no-store', signal: controller.signal});
-    if (!response.ok) return {mode: 'off'};
+    answered = true;
+    if (!response.ok) return response.status >= 500 || response.status === 429 || response.status === 408 ? {mode: 'unreachable'} : {mode: 'off'};
     const data = await response.json();
     // interestFree: the installments the Mercado Pago account gives without interest (0, 2 to 12), only when the server knows it
     const free = Number.isInteger(data.interestFree) && data.interestFree >= 0 && data.interestFree <= 36 ? {interestFree: data.interestFree} : {};
     return (data.mode === 'test' || data.mode === 'live') && typeof data.publicKey === 'string' && data.publicKey ? {mode: data.mode, publicKey: data.publicKey, ...free} : {mode: 'off'};
-  } catch { return {mode: 'off'}; }
+  } catch {
+    // no answer at all (offline, refused, cut by the timer, even halfway through the body): unknown; an answer that is not
+    // the config (not JSON): the demo
+    return !answered || controller.signal.aborted ? {mode: 'unreachable'} : {mode: 'off'};
+  }
   finally { clearTimeout(timer); }
+}
+// The config with patience: a first try of 2.5 s and, without an answer, a pause and a longer one (6 s); onRetry() runs before
+// each new try (the checkout then says "Carregando o pagamento…" where it would have fallen into the demo).
+export async function loadPaymentConfigPatiently({timeouts = [2500, 6000], pause = 600, onRetry = () => {}, fetchImpl = globalThis.fetch, wait = ms => new Promise(resolve => setTimeout(resolve, ms))} = {}) {
+  let config = {mode: 'unreachable'};
+  for (const [i, timeout] of timeouts.entries()) {
+    if (i) { onRetry(i); await wait(pause * i); }
+    config = await loadPaymentConfig({fetchImpl, timeout});
+    if (config.mode !== 'unreachable') break;
+  }
+  return config;
 }
 
 let sdkPromise = null;
@@ -89,7 +111,8 @@ async function request(path, {method = 'GET', body, fetchImpl = globalThis.fetch
   } finally { clearTimeout(timer); }
 }
 export const createPayment = (body, options) => request('/api/payments/create', {method: 'POST', body, ...options});
-export const paymentState = (id, options) => request('/api/payments/status?id=' + encodeURIComponent(id), options);
+// `details`: a Pix that still waits comes back with its code, QR Code, pieces, delivery and amount (the checkout reloaded).
+export const paymentState = (id, {details = false, ...options} = {}) => request('/api/payments/status?id=' + encodeURIComponent(id) + (details ? '&details=1' : ''), options);
 // Leaving a Pix that waits: its code is cancelled at Mercado Pago (POST /api/payments/cancel), so it cannot be paid next
 // to a new one. The answer's state says what happened: canceled, or approved when it was paid meanwhile.
 export const cancelPayment = (id, options) => request('/api/payments/cancel', {method: 'POST', body: {id}, ...options});
