@@ -9,6 +9,7 @@
 //   The device id (X-meli-session-id) of each order is kept in `deviceIds`.
 //   Installment plans (GET /v1/payment_methods/installments): 2x to 12x with interest, except the first `interestFree` ones
 //   (an account with "parcelas sem juros" turned on); by default none, like an account that has not turned it on.
+//   `pix: false` leaves Pix out of GET /v1/payment_methods (an account without a Pix key, like the live one on 09/10/2026).
 const zlib = require('node:zlib');
 
 const crc = (() => { const table = Array.from({length: 256}, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }); return buffer => { let c = 0xffffffff; for (const byte of buffer) c = table[(c ^ byte) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }; })();
@@ -30,7 +31,7 @@ const durationMs = text => { const m = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(String(
 
 const REFUSALS = {FUND: 'insufficient_amount', SECU: 'bad_filled_card_data', EXPI: 'bad_filled_card_data', FORM: 'bad_filled_card_data', CALL: 'required_call_for_authorize', LOCK: 'card_disabled', ATTE: 'max_attempts_exceeded', INST: 'invalid_installments', BLAC: 'high_risk'};
 
-function createFakeMercadoPago({now = () => Date.now(), onPaid, interestFree = 0} = {}) {
+function createFakeMercadoPago({now = () => Date.now(), onPaid, interestFree = 0, pix: pixKey = true} = {}) {
   const orders = new Map(), keys = new Map(), deviceIds = new Map();
   const reply = (status, body) => ({ok: status < 400, status, headers: {get: name => String(name).toLowerCase() === 'x-request-id' ? 'fake-req-' + (orders.size + 1) : null}, json: async () => body});
   const error = (status, code, message, extra = {}) => reply(status, {errors: [{code, message, ...extra}]});
@@ -124,7 +125,7 @@ function createFakeMercadoPago({now = () => Date.now(), onPaid, interestFree = 0
     // GET /v1/payment_methods: a Brazilian account's usual list (Pix, the credit cards, the Caixa virtual debit card), plus the
     // boleto and lottery ones the checkout does not offer, so the filter is exercised.
     if (path === '/v1/payment_methods' && (init.method || 'GET') === 'GET') return reply(200, [
-      {id: 'pix', name: 'Pix', payment_type_id: 'bank_transfer', status: 'active', secure_thumbnail: ''},
+      ...(pixKey ? [{id: 'pix', name: 'Pix', payment_type_id: 'bank_transfer', status: 'active', secure_thumbnail: ''}] : []),
       {id: 'visa', name: 'Visa', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
       {id: 'master', name: 'Mastercard', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},
       {id: 'elo', name: 'Elo', payment_type_id: 'credit_card', status: 'active', secure_thumbnail: ''},

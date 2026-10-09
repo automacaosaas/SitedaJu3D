@@ -23,7 +23,12 @@ const main = document.querySelector('#shop-main'), liveRegion = document.querySe
 // Real payments (Mercado Pago) are on only when the server says so; otherwise everything below behaves as the demo.
 // Real shipping (Correios contract) is on only when the server says so; otherwise the fixed example fee stays.
 // The session, the payment keys and the shipping settings are asked at once: the cart shows after a single round trip.
-const [, live, shipCfg] = await Promise.all([refreshSession(), loadPaymentConfig(), loadShippingConfig()]);
+// Pix only where the Mercado Pago account really takes it (09/10/2026: the live account still had no Pix). /api/payments/methods
+// lists what the account accepts; with an answer and no bank transfer in it, the checkout opens on the card and Pix is not offered.
+// No answer (or payments off): Pix stays, as before.
+const pixOffered = () => fetch('/api/payments/methods', {headers: {accept: 'application/json'}, signal: AbortSignal.timeout?.(2500)})
+  .then(r => r.ok ? r.json() : null).then(d => !Array.isArray(d?.methods) || d.methods.some(m => m?.type === 'bank_transfer' || m?.id === 'pix')).catch(() => true);
+const [, live, shipCfg, pixAvailable] = await Promise.all([refreshSession(), loadPaymentConfig(), loadShippingConfig(), pixOffered()]);
 const real = shipCfg.mode === 'correios';
 const banner = document.querySelector('.demo-banner');
 if (live.mode === 'test' && banner) banner.innerHTML = 'AMBIENTE DE TESTE <span>Pagamentos de teste do Mercado Pago · nenhum valor real é cobrado</span>';
@@ -38,7 +43,7 @@ const formatCep = value => { const digits = String(value ?? '').replace(/\D/g, '
 const savedCep = () => { try { return formatCep(sessionStorage.getItem(CEP_KEY) || ''); } catch { return ''; } };
 const saveCep = cep => { try { sessionStorage.setItem(CEP_KEY, String(cep).replace(/\D/g, '')); } catch {} };
 // payMethod: the method chosen above the Mercado Pago Brick (pix | card). Pix pays 5% less on the pieces.
-let payMethod = 'pix';
+let payMethod = live.mode === 'off' || pixAvailable ? 'pix' : 'card';
 let cart = direct ? readDirect() : readCart(), stage = direct && readDirect().length ? 'delivery' : 'cart', method = 'pix', order = null, draft = {name:getSession()?.name || '', email:getSession()?.email || '', cep: savedCep()}, timer = null, busy = false, noticeTimer = null;
 const purchaseItems = () => cart;   // the whole cart is bought (no checkboxes)
 // ── real shipping (Correios contract) ───────────────────────────────────
@@ -176,7 +181,7 @@ function livePaymentView() {
 function payChoice() {
   const full = order.amounts.total, discount = pixDiscount(order.items), pix = payMethod === 'pix';
   const option = (value, checked, inner) => `<button type="button" class="pay-option pay-${value}" role="radio" aria-checked="${checked}" tabindex="${checked ? 0 : -1}" data-action="pay-method" data-method="${value}">${inner}</button>`;
-  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`)}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off" data-card-offer>${cardOffer(full)}</span>`)}</div>`;
+  return `<div class="pay-choice" role="radiogroup" aria-label="Forma de pagamento">${live.mode === 'off' || pixAvailable ? option('pix', pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('pix')}</span><strong>Pix</strong><b>${money(full - discount)}</b></span><small>QR Code ou copia e cola · confirmação na hora</small><span class="pix-off"><strong>5% OFF NO PIX</strong><span>economize ${money(discount)}</span></span>`) : ''}${option('card', !pix, `<span class="pay-head"><span class="method-symbol" aria-hidden="true">${icon('card')}</span><strong>Cartão</strong><b>${money(full)}</b></span><small>Crédito ou débito</small><span class="card-off" data-card-offer>${cardOffer(full)}</span>`)}</div>`;
 }
 // The card's promise (2026-10-08): "3X SEM JUROS" only as far as Mercado Pago really gives it — for the typed card, its own
 // table (cardFree); before that, the account's number from /api/payments/config (unknown: no promise) — and never past what

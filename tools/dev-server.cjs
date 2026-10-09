@@ -5,6 +5,7 @@
 //   node tools/dev-server.cjs --ask-key    → asks for the Resend key (hidden) and sends real e-mails
 //   RESEND_API_KEY=... node tools/dev-server.cjs   → same, key taken from the environment
 //   node tools/dev-server.cjs --fake-mp    → payments with a simulated Mercado Pago and a simulated Payment Brick (no credentials)
+//   … --fake-mp --sem-pix                  → the simulated account has no Pix (the checkout opens on the card and hides Pix)
 //   … --fake-mp --sem-juros=3              → the simulated account gives 3 installments without interest (default: none, like an
 //                                            account that has not turned "parcelas sem juros" on); the checkout's card option follows
 //   node tools/dev-server.cjs --ask-mp     → asks for the Mercado Pago TEST credentials (hidden) and talks to the real service
@@ -173,7 +174,7 @@ async function main() {
   if (fakeMp) {
     // When the simulated customer "pays" a Pix, deliver a properly signed notification to our own webhook, like Mercado Pago would.
     const semJuros = Number((process.argv.find(arg => arg.startsWith('--sem-juros=')) || '').split('=')[1]) || 0;
-    fake = createFakeMercadoPago({interestFree: semJuros, onPaid: async id => {
+    fake = createFakeMercadoPago({interestFree: semJuros, pix: !process.argv.includes('--sem-pix'), onPaid: async id => {
       const ts = String(Date.now()), requestId = crypto.randomUUID(), sign = crypto.createHmac('sha256', env.MP_WEBHOOK_SECRET).update(`id:${id.toLowerCase()};request-id:${requestId};ts:${ts};`).digest('hex');
       const res = {statusCode: 200, setHeader() {}, end() {}};
       await routes['/api/payments/webhook']({method: 'POST', url: `/api/payments/webhook?data.id=${id}&type=order`, headers: {'x-signature': `ts=${ts},v1=${sign}`, 'x-request-id': requestId}, body: {type: 'order', data: {id}}, socket: {}}, res);
