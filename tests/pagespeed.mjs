@@ -184,7 +184,7 @@ for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`d
   assert.match(band, /entry\.boundingClientRect\.top > \(entry\.rootBounds\?\.bottom \?\? innerHeight\)\) \{ entry\.target\.classList\.add\('is-pending'\); seen\.observe\(entry\.target\); \}/, 'the same rule as before: what starts below the screen waits for the scroll');
   // under the opening screen the collection is built right after the first frame (its style and layout out of the task that styles
   // the showcase), still before the page shows; on a page without that screen, at once
-  assert(catalog.includes("if (/\\bju-(opening|returning)\\b/.test(document.documentElement?.className || '')) requestAnimationFrame(() => setTimeout(mountAll));\nelse mountAll();"), 'catalog.js: the collection after the first frame, under the opening screen');
+  assert(catalog.includes("if (/\\bju-(opening|returning)\\b/.test(document.documentElement?.className || '')) { requestAnimationFrame(() => setTimeout(mountAll)); setTimeout(mountAll, 200); }\nelse mountAll();") && catalog.includes('const mountAll = () => { if (mounted) return; mounted = true;'), 'catalog.js: the collection after the first frame, under the opening screen (once; 200 ms later in a tab opened in the background)');
   // the measures of the showcase go to the background (the only one that uses them), not to the .page: an inherited variable written
   // on the .page restyled the whole page at each measure
   assert.doesNotMatch(read('dist/carousel.js'), /put\(page,/);

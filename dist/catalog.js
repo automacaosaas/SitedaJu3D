@@ -216,9 +216,11 @@ function mountCarousel(host, key = host.dataset.category) { rails.get(host)?.awa
 // Com a página escondida pela abertura (page-entry.js: ju-opening, ou ju-returning na volta), a coleção é montada logo depois do
 // primeiro quadro: o estilo e o layout dela saem da tarefa em que o navegador calcula a vitrine inteira, que passava dos 50 ms
 // (PageSpeed, computador, 09/10/2026). Ela fica pronta antes de a página aparecer: a vitrine espera a primeira medida, que vem
-// nesse mesmo quadro, e mais um quadro (carousel.js › drawn). A peça é a da vitrine (startAt: o endereço ou a última vista).
-const mountAll = () => { for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host); };
-if (/\bju-(opening|returning)\b/.test(document.documentElement?.className || '')) requestAnimationFrame(() => setTimeout(mountAll));
+// nesse mesmo quadro, e mais um quadro (carousel.js › drawn). A peça é a da vitrine (startAt: o endereço ou a última vista). Numa aba
+// aberta em segundo plano não há quadros: aí ela é montada 200 ms depois, para já estar pronta quando a aba aparecer.
+let mounted = false;
+const mountAll = () => { if (mounted) return; mounted = true; for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host); };
+if (/\bju-(opening|returning)\b/.test(document.documentElement?.className || '')) { requestAnimationFrame(() => setTimeout(mountAll)); setTimeout(mountAll, 200); }
 else mountAll();
 window.addEventListener(FOCUS, event => { if (event.detail?.source === 'showcase') for (const rail of rails.values()) rail.follow(event.detail?.product); });
 // Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
