@@ -103,7 +103,7 @@ for (const page of ['checkout.html', 'comprar-agora.html']) assert.match(read(`d
   assert(read('dist/journey.js').includes(`const defaults = {${Object.entries(theme).map(([k, v]) => `'${k}':'${v}'`).join(', ')}};`));
   // page-entry.js preloads the photo of any piece of the showcase (all of them, in its order), with the showcase's srcset and sizes
   assert.deepEqual(Object.keys(pieces), [...Object.keys(PRODUCTS), ...Object.keys(SOON)]);
-  for (const [key, [file, srcset]] of Object.entries(pieces)) { const name = PRODUCTS[key]?.catalogImage || PRODUCTS[key]?.image || SOON[key]?.catalogImage || SOON[key]?.image; assert.equal(file, `assets/${name}`); assert.equal(srcset, artSrcset(name)); assert(srcset, `${key}: a 768 px photo too (products.js ART_768)`); }
+  for (const [key, [file, srcset, light]] of Object.entries(pieces)) { const name = PRODUCTS[key]?.catalogImage || PRODUCTS[key]?.image || SOON[key]?.catalogImage || SOON[key]?.image; assert.equal(file, `assets/${name}`); assert.equal(srcset, artSrcset(name, false)); assert.equal(light, artSrcset(name, true)); assert(srcset && light, `${key}: a 768 px photo too (products.js ART_768), and the 512 px one`); }
   assert(read('dist/page-entry.js').includes(`const HERO_SIZES = '${HERO_SIZES}';`));
 }
 

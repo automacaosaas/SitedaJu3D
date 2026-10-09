@@ -1,0 +1,50 @@
+{
+  "product-borboletoscopio-cutout.webp": {
+    "source": "dfb657a4660bc8de",
+    "copies": {
+      "product-borboletoscopio-cutout-768.webp": "49af54b9624edb25",
+      "product-borboletoscopio-cutout-512.webp": "56f61f8aeb45e23a",
+      "product-borboletoscopio-cutout-384.webp": "362ea06cb676d89c"
+    }
+  },
+  "product-dinossauroscopio-cutout.webp": {
+    "source": "a68369781ed86dca",
+    "copies": {
+      "product-dinossauroscopio-cutout-768.webp": "91426cefec81f2e1",
+      "product-dinossauroscopio-cutout-512.webp": "fbb4a610b5e3cfba",
+      "product-dinossauroscopio-cutout-384.webp": "adc46ef53889a56e"
+    }
+  },
+  "product-aviaoscopia-cutout.webp": {
+    "source": "e93c5976d0c7b5f6",
+    "copies": {
+      "product-aviaoscopia-cutout-768.webp": "4b0eb94f7ba0e9e3",
+      "product-aviaoscopia-cutout-512.webp": "9adfed7b8254b4e9",
+      "product-aviaoscopia-cutout-384.webp": "4f9c82aff29907de"
+    }
+  },
+  "product-macacoscopio-cutout.webp": {
+    "source": "91d06ab13c886de6",
+    "copies": {
+      "product-macacoscopio-cutout-768.webp": "742ca61ee15aa004",
+      "product-macacoscopio-cutout-512.webp": "3bc857f9621574ce",
+      "product-macacoscopio-cutout-384.webp": "edd802c2c0e28ce0"
+    }
+  },
+  "product-girafoscopio-cutout.webp": {
+    "source": "a78e24935fab7330",
+    "copies": {
+      "product-girafoscopio-cutout-768.webp": "eb6f0a63024938a6",
+      "product-girafoscopio-cutout-512.webp": "bcf6482fde13a804",
+      "product-girafoscopio-cutout-384.webp": "fb8954d0f76dfe7a"
+    }
+  },
+  "product-unicornioscopio-cutout.webp": {
+    "source": "3b1a4ec62e92e6fb",
+    "copies": {
+      "product-unicornioscopio-cutout-768.webp": "436a91570fb5ac97",
+      "product-unicornioscopio-cutout-512.webp": "4d7c1b30d077b447",
+      "product-unicornioscopio-cutout-384.webp": "7f9cdda9582f3b69"
+    }
+  }
+}
