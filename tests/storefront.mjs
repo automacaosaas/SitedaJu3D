@@ -181,10 +181,20 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // 2026-10-06: the showcase photos in 768 px for phones and 1x/2x computers (products.js). The home's preload, the
   // picture written in the page and the carousel share one srcset and one sizes: one file downloaded. The demonstration
   // shows the piece larger, with its own sizes.
-  const {ART_768, HERO_SIZES, PHOTO_SIZES, artSrcset, artSmall} = await import('../dist/products.js');
+  const {ART_768, HERO_SIZES, PHOTO_SIZES, LIGHT_SCREEN, artSrcset, demoSrcset, thumbSrcset, thumbSizes, thumbImg} = await import('../dist/products.js');
   const butterfly = 'product-borboletoscopio-cutout.webp', set = artSrcset(butterfly), home = read('dist/index.html');
   assert.equal(set, 'assets/product-borboletoscopio-cutout-768.webp 768w, assets/product-borboletoscopio-cutout.webp 1254w');
-  assert.equal(artSmall(butterfly), 'product-borboletoscopio-cutout-768.webp'); assert.equal(artSmall('card-x.webp'), 'card-x.webp'); assert.equal(artSrcset('card-x.webp'), '');
+  assert.equal(artSrcset('card-x.webp'), ''); assert.equal(artSrcset('card-x.webp', true), ''); assert.equal(thumbImg('card-x.webp', '84px'), 'src="assets/card-x.webp"');
+  // 2026-10-09: the 512 px copy only on low-density screens (phones under 1.9x, 1x computers and tablets), where it is still 1.3x
+  // the photo on the screen; denser screens keep the list above, so they pick the same file as before. The demonstration always
+  // keeps it. The miniatures pick from 384, 512 and 768 with a 1.45x margin over the size they are drawn at, never above the 768.
+  assert.equal(LIGHT_SCREEN, '(max-width: 600px) and (max-resolution: 1.89dppx), (max-resolution: 1.19dppx)');
+  assert.equal(artSrcset(butterfly, true), `assets/product-borboletoscopio-cutout-512.webp 512w, ${set}`);
+  assert.equal(artSrcset(butterfly), set, 'outside the browser (the pages written by the tools): the list as before');
+  assert.equal(demoSrcset(butterfly), set);
+  assert.equal(thumbSrcset(butterfly), 'assets/product-borboletoscopio-cutout-384.webp 384w, assets/product-borboletoscopio-cutout-512.webp 512w, assets/product-borboletoscopio-cutout-768.webp 768w');
+  assert.equal(thumbSizes(200, [900, 132]), '(max-width: 900px) 191px, 290px');
+  assert.equal(thumbImg(butterfly, '84px'), `src="assets/product-borboletoscopio-cutout-768.webp" srcset="${thumbSrcset(butterfly)}" sizes="84px"`);
   assert.ok(home.includes(`<img class="hero-fallback" loading="lazy" src="assets/${butterfly}" srcset="${set}" sizes="${HERO_SIZES}"`), 'the picture written in the page matches the showcase, and is lazy');
   // The first photo is preloaded by page-entry.js for the piece the home opens on (the address, then the remembered one,
   // then the butterfly), not by a fixed link that always fetched the butterfly; the picture written in the page stays out
@@ -196,7 +206,9 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // checked in tests/pagespeed.mjs); the address may use an alias.
   const pieces = JSON.parse(/const PIECES = (\{[^\n]+\});/.exec(entryCode)[1].replace(/'/g, '"'));
   assert.deepEqual(Object.values(pieces).map(([file]) => file.slice('assets/'.length)).sort(), Object.keys(ART_768).sort(), 'every showcase photo with a 768 px version, by the same names');
-  for (const [key, [file, srcset]] of Object.entries(pieces)) assert.equal(srcset, artSrcset(file.slice('assets/'.length)), `${key}: the srcset carousel.js gives it`);
+  for (const [key, [file, srcset, light]] of Object.entries(pieces)) { assert.equal(srcset, artSrcset(file.slice('assets/'.length), false), `${key}: the srcset carousel.js gives it`); assert.equal(light, artSrcset(file.slice('assets/'.length), true), `${key}: on low-density screens, too`); }
+  assert.ok(entryCode.includes(`const LIGHT_SCREEN = '${LIGHT_SCREEN}';`), 'page-entry.js tells the screens apart like carousel.js');
+  assert.match(entryCode, /const srcset = light && matchMedia\(LIGHT_SCREEN\)\.matches \? light : dense;/);
   assert.equal(Object.keys(pieces)[0], 'borboletoscopio', 'the butterfly when there is no piece to open on');
   assert.match(entryCode, /const piece = \[asked, saved\]\.find\(key => Object\.hasOwn\(PIECES, key \|\| ''\)\) \|\| Object\.keys\(PIECES\)\[0\]/, 'the address first (or its alias), then the remembered piece');
   assert.match(entryCode, /if \(srcset\) \{ preload\.setAttribute\('imagesrcset', srcset\); preload\.setAttribute\('imagesizes', HERO_SIZES\); \}/);
@@ -212,7 +224,9 @@ const html = string => string.replace(/ /g, '&nbsp;');
   for (const file of ['dist/carousel.js', 'dist/catalog.js']) assert.doesNotMatch(read(file), /imageReady/, `${file}: no late photo hidden as unavailable`);
   assert.match(showcase, /if \(img\.dataset\.srcset\) \{ img\.srcset = img\.dataset\.srcset; delete img\.dataset\.srcset; \}/, 'a distant piece gets its srcset when its turn comes');
   assert.match(read('dist/hero-demo.js'), /img\.sizes = frontSet \? DEMO_SIZES : ''; img\.srcset = frontSet;/, 'the demonstration picks its file by its own size');
-  for (const file of ['dist/mini-cart.js', 'dist/cart-view.js']) assert.match(read(file), /artSmall\(/, `${file}: the light photo for the small pictures`);
+  assert.match(read('dist/hero-demo.js'), /const frontSet = demoSrcset\(frontFile\);/, 'the demonstration keeps the list as before');
+  for (const file of ['dist/mini-cart.js', 'dist/cart-view.js', 'dist/fenda-stage.js']) assert.match(read(file), /thumbImg\(/, `${file}: the small pictures pick their file by size`);
+  for (const [tag] of read('dist/index.html').matchAll(/<img\b[^>]*cutout-768[^>]*>/g)) assert.ok(tag.includes('class="hero-fallback"') || /srcset="[^"]*-384\.webp 384w/.test(tag), `index.html: a miniature with the 384/512/768 list (${tag.slice(0, 80)}…)`);
   const {hasGallery} = await import('../dist/gallery.js');
   for (const id of ['borboletoscopio', 'dinossauroscopio', 'aviaoscopia']) {
     const photo = /<img class="pl-photo"[^>]*>/.exec(read(`dist/${id}.html`))[0];

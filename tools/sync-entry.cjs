@@ -6,7 +6,8 @@
 //   it opens on (journeyColors of the first piece, hero-motion.js). When they differed by one unit, every themed element
 //   (announcement bar, cards) ran a colour transition right at load (Lighthouse: non-composited animations).
 // - page-entry.js: the first photo of the showcase, preloaded for the piece the home opens on (the address, its alias, the
-//   remembered piece, else the first), every piece of the showcase with the very srcset and sizes carousel.js gives it.
+//   remembered piece, else the first), every piece of the showcase with the very srcset and sizes carousel.js gives it (on
+//   low-density screens, products.js LIGHT_SCREEN, the list with the 512 px copy).
 // Run: node tools/sync-entry.cjs   (or --check to only report)
 const fs = require('node:fs');
 const path = require('node:path');
@@ -17,15 +18,16 @@ const BLOCK = /([ \t]*)\/\/ <entry-data>[^]*?\/\/ <\/entry-data>/;
 
 async function data() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
-  const {PRODUCTS, SOON, ALIASES, HERO_SIZES, artSrcset, showcase} = await load('products.js');
+  const {PRODUCTS, SOON, ALIASES, HERO_SIZES, LIGHT_SCREEN, artSrcset, showcase} = await load('products.js');
   const {journeyColors} = await load('hero-motion.js');
   // the showcase's own order (carousel.js): the pieces on sale, then the novelties
   const keys = [...Object.keys(PRODUCTS), ...Object.keys(SOON)];
+  // [photo, srcset, srcset on low-density screens (LIGHT_SCREEN, with the 512 px copy)]: the very lists carousel.js gives it
   const pieces = Object.fromEntries(keys.map(key => {
     const product = PRODUCTS[key] || SOON[key], file = product.catalogImage || product.image;
-    return [key, [`assets/${file}`, artSrcset(file)]];
+    return [key, [`assets/${file}`, artSrcset(file, false), artSrcset(file, true)]];
   }));
-  return {pieces, aliases: ALIASES, sizes: HERO_SIZES, theme: journeyColors(showcase(keys[0]).theme)};
+  return {pieces, aliases: ALIASES, sizes: HERO_SIZES, light: LIGHT_SCREEN, theme: journeyColors(showcase(keys[0]).theme)};
 }
 
 function write(html, lines, file) {
@@ -38,12 +40,12 @@ const quote = value => `'${String(value).replace(/\\/g, '\\\\').replace(/'/g, "\
 const object = record => `{${Object.entries(record).map(([key, value]) => `${quote(key)}:${Array.isArray(value) ? `[${value.map(quote).join(', ')}]` : quote(value)}`).join(', ')}}`;
 
 async function sync() {
-  const {pieces, aliases, sizes, theme} = await data();
+  const {pieces, aliases, sizes, light, theme} = await data();
   const out = {};
   const journey = fs.readFileSync(path.join(DIST, 'journey.js'), 'utf8');
   out['journey.js'] = [journey, write(journey, [`const defaults = ${object(theme)};`], 'journey.js')];
   const entry = fs.readFileSync(path.join(DIST, 'page-entry.js'), 'utf8');
-  out['page-entry.js'] = [entry, write(entry, [`const PIECES = ${object(pieces)};`, `const ALIASES = ${object(aliases)};`, `const HERO_SIZES = ${quote(sizes)};`], 'page-entry.js')];
+  out['page-entry.js'] = [entry, write(entry, [`const PIECES = ${object(pieces)};`, `const ALIASES = ${object(aliases)};`, `const HERO_SIZES = ${quote(sizes)};`, `const LIGHT_SCREEN = ${quote(light)};`], 'page-entry.js')];
   return out;
 }
 

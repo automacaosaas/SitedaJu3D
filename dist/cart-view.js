@@ -1,4 +1,4 @@
-import {PRODUCTS, SOON, color, showcase, artSmall, itemColors, fixedColors, noticeOf} from './products.js';
+import {PRODUCTS, SOON, color, showcase, thumbImg, thumbSizes, itemColors, fixedColors, noticeOf} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {totals, pixDiscount, lineCents} from './cart-store.js';
 import {icon} from './icons.js';
@@ -23,7 +23,7 @@ function swatches(item) {
 function itemCard(item, cart) {
   const product = PRODUCTS[item.productId];
   return `<article class="cart-product" aria-label="${esc(item.title)}">
-    <div class="cart-product-art"><img src="assets/${esc(artSmall(product.catalogImage || product.image))}" width="1024" height="1024" alt="${esc(item.title)} — imagem nas cores originais">${editButton(item, true)}</div>
+    <div class="cart-product-art"><img ${thumbImg(product.catalogImage || product.image, thumbSizes(156))} width="1024" height="1024" alt="${esc(item.title)} — imagem nas cores originais">${editButton(item, true)}</div>
     <div class="cart-product-info"><h2>${esc(item.title)}</h2><p class="item-type">${esc(product.subtitle)}</p>${swatches(item)}${editButton(item)}</div>
     <div class="cart-product-controls"><div class="quantity-control" role="group" aria-label="Quantidade de ${esc(item.title)}"><button type="button" data-action="minus" data-id="${esc(item.id)}" aria-label="Diminuir quantidade de ${esc(item.title)}" ${item.quantity <= 1 ? 'disabled' : ''}>−</button><output aria-label="Quantidade de ${esc(item.title)}">${item.quantity}</output><button type="button" data-action="plus" data-id="${esc(item.id)}" aria-label="Aumentar quantidade de ${esc(item.title)}" ${item.quantity >= 99 ? 'disabled' : ''}>+</button></div><button type="button" class="trash-button" data-action="remove" data-id="${esc(item.id)}" aria-label="Remover ${esc(item.title)}">${icon('trash')}</button></div>
     <strong class="cart-product-price" aria-label="Preço de ${item.quantity} ${esc(item.title)}">${money(lineCents(cart, item))}</strong>

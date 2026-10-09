@@ -4,7 +4,7 @@
 // two ways on: "Ver carrinho" and "Continuar escolhendo". Drawer on the right on a computer, sheet from the bottom on a
 // phone; it slides away when closed. A <dialog>, so it sits above everything, traps focus and closes with Esc.
 // "Monte seu kit" (kit-builder.js) opens it for several pieces added at once: each one is confirmed (itemIds).
-import {PRODUCTS, color, defaults, artSmall, itemColors, fixedColors, showcase} from './products.js';
+import {PRODUCTS, color, defaults, thumbImg, thumbSizes, itemColors, fixedColors, showcase} from './products.js';
 import {COMMERCE, money, kitOf} from './commerce-config.js';
 import {readCart, writeCart, putItem, totals, pixDiscount, priceSegments, signature} from './cart-store.js';
 import {loadShippingConfig} from './shipping-client.js';
@@ -15,7 +15,8 @@ import {lateCssReady, whenStyled} from './late-css.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const pieces = n => `${n} ${n === 1 ? 'peça' : 'peças'}`;
-const picture = item => item.thumbnail || `assets/${artSmall(PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image)}`;
+// a foto da peça pelo tamanho desenhado (products.js thumbImg): 96 px na linha do que entrou, 56 na lista do kit (mini-cart.css)
+const picture = item => item.thumbnail ? `src="${esc(item.thumbnail)}"` : thumbImg(PRODUCTS[item.productId].catalogImage || PRODUCTS[item.productId].image, thumbSizes(96));
 // the thumbnail sits on its own piece's wash (the --theme-wash of the dialog and the page of that piece), not on a fixed pink
 const wash = id => journeyColors(showcase(id).theme)['--theme-wash'];
 
@@ -41,13 +42,13 @@ export function miniCartBody({cart, itemId, itemIds = null, original = false, fr
   const colorsOf = line => fixedColors(line.productId)
     ? `<ul class="mini-cart-colors is-dots" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId).map(c => `<li><i style="--chip:${c.paint}" aria-hidden="true"></i><span class="sr-only">${esc(c.name)}</span></li>`).join('')}</ul>`
     : `<ul class="mini-cart-colors" aria-label="Cores de ${esc(line.title)}">${itemColors(line.productId, line.selection).map(c => `<li><i style="--chip:${c.paint}" aria-hidden="true"></i>${c.part ? `${esc(c.part)}: ` : ''}<strong>${esc(c.name)}</strong></li>`).join('')}</ul>`;
-  const added = shown.map(line => `<article class="mini-cart-item"><img src="${esc(picture(line))}" alt="" width="96" height="96" style="--thumb-wash:${wash(line.productId)}"><div><h3>${esc(line.title)}</h3>`
+  const added = shown.map(line => `<article class="mini-cart-item"><img ${picture(line)} alt="" width="96" height="96" style="--thumb-wash:${wash(line.productId)}"><div><h3>${esc(line.title)}</h3>`
     + colorsOf(line)
     + `<p>${priceSegments(cart).filter(s => s.item === line).map(s => `${s.quantity} × ${money(s.unitCents)}`).join(' + ')}${original ? ' · <span>cores originais</span>' : ''}</p></div></article>`).join('');
   const kitList = kit.length ? `<section class="mini-cart-kit" aria-labelledby="mini-cart-kit-title"><h3 id="mini-cart-kit-title">${kitTitle}</h3><ul>${kit.map(id => {
     const product = PRODUCTS[id];
     const count = inCart(id);
-    return `<li><img src="assets/${esc(artSmall(product.catalogImage || product.image))}" alt="" width="56" height="56" style="--thumb-wash:${wash(id)}"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
+    return `<li><img ${thumbImg(product.catalogImage || product.image, thumbSizes(56))} alt="" width="56" height="56" style="--thumb-wash:${wash(id)}"><span><strong>${esc(product.title)}</strong><small>${money(COMMERCE.prices[id])}</small></span><button type="button" class="mini-cart-add" data-kit-add="${id}" aria-label="Adicionar ${esc(product.title)} nas cores originais"><span class="mini-cart-add-track"><span class="mini-cart-add-cart">${icon('cart')}</span><span class="mini-cart-add-label">Adicionar</span></span>${count ? `<b class="mini-cart-add-count" aria-hidden="true"><span>${count}</span></b>` : ''}</button></li>`;
   }).join('')}</ul></section>` : '';
   return `<header class="mini-cart-head"><p class="mini-cart-check">${icon('check')}<span id="mini-cart-title">${several.length > 1 ? 'Kit adicionado ao carrinho' : original ? 'Adicionado nas cores originais' : 'Adicionado ao carrinho'}</span></p>`
     + `<button type="button" class="mini-cart-close" data-mini-close aria-label="Fechar o carrinho">×</button></header>`

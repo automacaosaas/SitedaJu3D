@@ -248,3 +248,66 @@ correm em paralelo. Dá para fazer no servidor, na hora de servir, se valer a pe
 demonstração, contato, Produtos; com e sem movimento reduzido): idênticas pixel a pixel, menos as mudanças pretendidas —
 a demonstração por `#produto/<peça>/encaixe` (antes a janela da peça abria por cima), a borda das fotos dos cards (agora a de
 384 px no computador 1x) e o corpo do unicórnio na demonstração (a foto de 768 px).
+
+## 09/10/2026: fotos no tamanho certo (branch `trabalho/perf2-imagens`)
+
+O PageSpeed da `e7fc4ec` apontava "Melhorar a entrega de imagens": −110 KiB no celular e −157 KiB no computador. A foto da
+vitrine de 768 px aparecia com ~392 px no celular do PageSpeed (412 px em 1,75x) e com 330 px no computador; as três peças do
+banner da novidade, também de 768 px, aparecem com 132 a 262 px.
+
+**Antes de escolher, a nitidez foi medida na tela.** O Chrome desenhou cada arquivo no tamanho em que a página o mostra, de 1x a 3x,
+e a captura foi comparada com a ideal (a 1254 reduzida direto para os pixels do aparelho, sem perda; SSIM e PSNR):
+
+- a de 512 px no celular do PageSpeed (1,31 vez a foto na tela) fica igual à 768 de antes (SSIM 0,990 × 0,990 na borboleta);
+  no computador 1x (1,3 a 1,6 vez) fica igual ou melhor;
+- um arquivo só um pouco maior que a foto na tela sai um tantinho mais macio: a de 512 num notebook em 125% (1,09 vez: SSIM
+  0,982 × 0,987) e a de 640 nos celulares 3x (1,0 a 1,1 vez). Por isso a de 512 entra só nas telas de baixa densidade e a de 640
+  não existe;
+- a de 384 na vitrine sai mais macia (fora); nas miniaturas, com folga de 1,45 vez, fica igual à 768.
+
+**O que mudou:**
+
+- `tools/art-variants.cjs` (novo) faz as cópias de 768, 512 e 384 px a partir da 1254 do ar (WebP com perda, qualidade 90,
+  redução lanczos3, cor com sharp_yuv) e grava a impressão digital de cada arquivo em `tools/art-variants.json`.
+  `tests/assets.mjs` falha quando a 1254 muda sem as cópias. Foi assim que apareceu a 768 da girafa: era de antes da revisão de
+  08/10 e foi refeita.
+- **Vitrine** (`products.js` `artSrcset`): nas telas de baixa densidade (`LIGHT_SCREEN`: celular abaixo de 1,9x, computador e
+  tablet em 1x), o `srcset` ganha a de 512. Nas outras, a lista é a de antes e o navegador escolhe o mesmo arquivo de antes. O
+  `page-entry.js` pré-carrega pela mesma regra (`tools/sync-entry.cjs` grava as duas listas e a consulta de mídia), então baixa
+  um arquivo só. A imagem de reserva do `index.html` e as páginas escritas pelas ferramentas ficam com a lista de antes.
+- **Demonstração** (`demoSrcset`): sempre a lista de antes (768 e 1254). Nas telas de baixa densidade a 768 deixa de vir de
+  graça da vitrine e é baixada no pré-preparo, que só acontece em conexão folgada, uns 3 s depois do `load`, fora da janela da
+  primeira pintura.
+- **Miniaturas** (`thumbImg` e `thumbSizes`): banner da novidade, faixas do kit, carrinho e mini-carrinho. A lista é 384, 512 e
+  768, com `sizes` 1,45 vez o tamanho desenhado, e para na 768: nenhuma tela baixa mais do que antes. Sai o `artSmall`.
+
+**Quem baixa o quê na home** (conferido pelo registro de rede do Chrome, 19 telas):
+
+| Tela | Vitrine | Banner da novidade (macaco / girafa e unicórnio) |
+|---|---|---|
+| Celular 1,75x (PageSpeed) | 768 → 512 | 768 → 512 / 768 → 384 |
+| Celular 2x, tablet 2x | 768 (igual) | 768 → 512 / 768 → 384 |
+| Celular 2,6x a 3x, Mac 2x | 768 (igual) | 768 (igual) |
+| Computador 1x | 768 → 512 | 768 → 384 |
+| Notebook 1,25x | 768 (igual) | 768 → 512 / 768 → 384 |
+
+**Medido** (`e7fc4ec` × esta branch, rodadas alternadas, mediana; a máquina estava ocupada):
+
+| Medida | Antes | Depois |
+|---|---|---|
+| Lighthouse 12.8 celular (7 de cada): LCP | 4,26 s | 4,23 s (B melhor em 6 de 7 pares) |
+| Lighthouse celular: imagens / total | 216,6 / 539,9 KB | 174,3 / 498,6 KB |
+| Lighthouse celular: "entrega de imagens" | −148 KB | −74 KB |
+| Lighthouse computador (5 de cada): LCP / nota | 0,98 s / 97 | 0,97 s / 97 |
+| Lighthouse computador: imagens / "entrega de imagens" | 251,8 KB / −157 KB | 203,1 KB / −65 KB |
+| Laboratório celular (rede de 1,6 Mbit/s por pedido, CPU 4×, 7 pares): fim da foto | 1,61 s | 1,23 s (7 de 7) |
+| Laboratório celular: LCP | 3,55 s | 3,43 s (−172 ms, 6 de 7) |
+| Laboratório celular: KB antes da vitrine aparecer | 518 | 469 |
+| Laboratório computador (5 pares): fim da foto / KB antes da vitrine | 381 ms / 554 KB | 361 ms / 498 KB |
+
+O total da janela sobe uns 18 a 24 KB nas telas de baixa densidade: a 768 da demonstração, baixada depois, e o unicórnio, que é
+miniatura do banner e vizinho da vitrine, em dois tamanhos. A carga se desloca da primeira pintura para depois dela.
+
+**O que o PageSpeed ainda aponta, de propósito:** a de 512 mostrada com 392 px no celular (e com 330 px no computador) e as
+miniaturas de 384 e 512 px. É a folga que mantém a nitidez; um arquivo do tamanho exato sai mais macio. Os cards da coleção
+(`card-preview` de 384 px em 212 px no computador 1x) ficaram como estavam.
