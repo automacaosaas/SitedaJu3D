@@ -33,6 +33,9 @@ const T_BG = 72;            // distância (maior canal) do creme até onde ainda
 const T_PRINTER = 9;        // dentro da caixa da impressora: só o creme quase exato é fundo (o corpo dela fica a ~20)
 const OPEN = 3;             // px: fundo mais estreito que 2·3+1 px (o brilho fino por dentro das letras) não sai
 const EDGE = 3;             // px da borda cuja cor vem de dentro da letra
+// os cantos fechados: janela de 17 px, fração de letra para começar e para seguir, alcance (px), e o que conta ali como o creme ou a
+// sombra do fundo (distância ao creme e o tom: R−G como o do creme; o brilho das letras rosa é mais rosado, R−G de 25 para cima)
+const CORNER = {radius: 8, seed: 0.62, grow: 0.55, depth: 8, cream: 24, warm: 20};
 // em frações do quadro do logo original. A impressora: caixa, um ponto do corpo, de onde a sombra do chão pode começar e os vãos de
 // fundo (cercados pelos cabos; a sombra à direita do carretel), cada um com a distância até onde é fundo. O círculo: aproximado
 // (o ajuste fino é feito pelos pixels).
@@ -113,6 +116,38 @@ function matte(src) {
     }
     return removed;
   }
+  // os cantos fechados (revisão, 09/10/2026): a abertura não entra num canto mais estreito que 2·OPEN+1 px — o vértice de dentro
+  // do "A" de "CRIATIVIDADE", a ponta do gancho do "J", o encontro da serifa com a haste —, e ali ficava um pontinho creme que
+  // aparece sobre fundo escuro e no contorno dos ícones. Sai o creme/sombra (cor e tom do fundo, mais estrito que T_BG) encostado no
+  // fundo onde a vizinhança é quase toda letra (canto côncavo: ≥ CORNER.seed da janela). O brilho rosado dos traços de "pra mim?" e
+  // o brilho fino ao longo de uma borda reta ou de curva aberta (~50% da janela) ficam.
+  function corners(passable, removed) {
+    const {radius, seed, grow, depth, cream, warm} = CORNER, side = 2 * radius + 1;
+    const ground = i => passable[i] && d[i] <= cream && px[i * 4] - px[i * 4 + 1] <= warm;
+    let total = 0;
+    for (let round = 0; round < 3; round++) {
+      const sum = new Int32Array((W + 1) * (H + 1));   // tabela de somas do que fica (letra), para a fração de cada janela
+      for (let y = 0; y < H; y++) { let row = 0; for (let x = 0; x < W; x++) { row += removed[y * W + x] ? 0 : 1; sum[(y + 1) * (W + 1) + x + 1] = sum[y * (W + 1) + x + 1] + row; } }
+      const frac = i => {
+        const x = i % W, y = (i / W) | 0, x0 = Math.max(0, x - radius), y0 = Math.max(0, y - radius), x1 = Math.min(W, x + radius + 1), y1 = Math.min(H, y + radius + 1);
+        return (sum[y1 * (W + 1) + x1] - sum[y0 * (W + 1) + x1] - sum[y1 * (W + 1) + x0] + sum[y0 * (W + 1) + x0]) / (side * side);
+      };
+      const level = new Uint8Array(N); let head = 0, tail = 0;
+      for (let i = 0; i < N; i++) {
+        if (removed[i] || !ground(i)) continue;
+        let edge = false; neighbours(i, j => { if (removed[j]) edge = true; });
+        if (edge && frac(i) >= seed) { level[i] = 1; queue[tail++] = i; }
+      }
+      while (head < tail) {
+        const i = queue[head++]; if (level[i] >= depth) continue;
+        neighbours(i, j => { if (!level[j] && !removed[j] && ground(j) && frac(j) >= grow) { level[j] = level[i] + 1; queue[tail++] = j; } });
+      }
+      if (!tail) break;
+      for (let k = 0; k < tail; k++) removed[queue[k]] = 1;
+      total += tail;
+    }
+    console.log(`cantos fechados: ${total} px de creme saíram`);
+  }
   const passable = new Uint8Array(N);
   for (let i = 0; i < N; i++) passable[i] = d[i] <= T_BG && !printer[i] ? 1 : 0;
   let removed = background(passable);
@@ -171,6 +206,7 @@ function matte(src) {
   // o círculo e os pontinhos viram fundo (com a sombra em volta): de novo a abertura
   for (const comp of [...ring, ...specks]) for (const i of comp.pixels) { passable[i] = 1; neighbours(i, j => { if (!printer[j]) passable[j] = 1; }); }
   removed = background(passable);
+  corners(passable, removed);
 
   // borda: camadas de dentro (1..EDGE) e de fora (1..2); a cor da borda vem da camada mais funda
   const layer = new Int8Array(N);   // >0 dentro (camada), <0 fora, 0 longe da borda
