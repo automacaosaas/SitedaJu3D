@@ -187,13 +187,13 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.equal(artSrcset('card-x.webp'), ''); assert.equal(artSrcset('card-x.webp', true), ''); assert.equal(thumbImg('card-x.webp', '84px'), 'src="assets/card-x.webp"');
   // 2026-10-09: the 512 px copy only on low-density screens (phones under 1.9x, 1x computers and tablets), where it is still 1.3x
   // the photo on the screen; denser screens keep the list above, so they pick the same file as before. The demonstration always
-  // keeps it. The miniatures pick from 384, 512 and 768 with a 1.5x margin over the size they are drawn at, never above the 768.
+  // keeps it. The miniatures pick from 384, 512 and 768 with a 1.45x margin over the size they are drawn at, never above the 768.
   assert.equal(LIGHT_SCREEN, '(max-width: 600px) and (max-resolution: 1.89dppx), (max-resolution: 1.19dppx)');
   assert.equal(artSrcset(butterfly, true), `assets/product-borboletoscopio-cutout-512.webp 512w, ${set}`);
   assert.equal(artSrcset(butterfly), set, 'outside the browser (the pages written by the tools): the list as before');
   assert.equal(demoSrcset(butterfly), set);
   assert.equal(thumbSrcset(butterfly), 'assets/product-borboletoscopio-cutout-384.webp 384w, assets/product-borboletoscopio-cutout-512.webp 512w, assets/product-borboletoscopio-cutout-768.webp 768w');
-  assert.equal(thumbSizes(200, [900, 132]), '(max-width: 900px) 198px, 300px');
+  assert.equal(thumbSizes(200, [900, 132]), '(max-width: 900px) 191px, 290px');
   assert.equal(thumbImg(butterfly, '84px'), `src="assets/product-borboletoscopio-cutout-768.webp" srcset="${thumbSrcset(butterfly)}" sizes="84px"`);
   assert.ok(home.includes(`<img class="hero-fallback" loading="lazy" src="assets/${butterfly}" srcset="${set}" sizes="${HERO_SIZES}"`), 'the picture written in the page matches the showcase, and is lazy');
   // The first photo is preloaded by page-entry.js for the piece the home opens on (the address, then the remembered one,

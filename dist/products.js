@@ -83,8 +83,9 @@ export const ALIASES = {'capa-01':'borboletoscopio','capa-02':'dinossauroscopio'
 //   1x), onde ela é 1,3 vez a foto na tela ou mais; nas mais densas a lista é a de antes (768 e 1254), e o navegador escolhe o mesmo
 //   arquivo de antes. O page-entry.js pré-carrega pela mesma regra (tools/sync-entry.cjs), para baixar um arquivo só;
 // - demonstração (demoSrcset): sempre a lista de antes, porque a peça aparece 1,4 a 1,6 vez maior;
-// - miniaturas (thumbImg: banner da novidade, faixas do kit, carrinho e mini-carrinho): 384, 512 e 768, com sizes 1,5 vez o tamanho
-//   desenhado (thumbSizes); a lista para na 768, então nenhuma tela baixa mais do que antes.
+// - miniaturas (thumbImg: banner da novidade, faixas do kit, carrinho e mini-carrinho): 384, 512 e 768, com sizes 1,45 vez o
+//   tamanho desenhado (thumbSizes: a folga medida para a de 384 sair igual à 768); a lista para na 768, então nenhuma tela baixa
+//   mais do que antes.
 // HERO_SIZES, DEMO_SIZES e PHOTO_SIZES: a largura com que a foto aparece na vitrine, na demonstração (1,4 a 1,6 vez a da
 // vitrine) e na página da peça (medida em 06/10/2026). O index.html repete HERO_SIZES na imagem de reserva (com a lista de antes).
 export const ART_768 = Object.freeze({
@@ -100,8 +101,8 @@ export const LIGHT_SCREEN = '(max-width: 600px) and (max-resolution: 1.89dppx), 
 const lightScreen = () => typeof matchMedia === 'function' && matchMedia(LIGHT_SCREEN).matches;
 export const demoSrcset = file => ART_768[file] ? `assets/${ART_768[file]} 768w, assets/${file} 1254w` : '';
 export const artSrcset = (file, light = lightScreen()) => ART_768[file] ? `${light ? `assets/${artVariant(file, 512)} 512w, ` : ''}${demoSrcset(file)}` : '';
-const roomy = px => `${Math.round(px * 1.5)}px`;
-// thumbSizes(200, [900, 132]) → "(max-width: 900px) 198px, 300px": desenhada com 132 px até 900 px de tela e 200 px acima
+const roomy = px => `${Math.round(px * 1.45)}px`;
+// thumbSizes(200, [900, 132]) → "(max-width: 900px) 191px, 290px": desenhada com 132 px até 900 px de tela e 200 px acima
 export const thumbSizes = (px, ...narrow) => [...narrow.map(([max, size]) => `(max-width: ${max}px) ${roomy(size)}`), roomy(px)].join(', ');
 export const thumbSrcset = file => ART_768[file] ? `assets/${artVariant(file, 384)} 384w, assets/${artVariant(file, 512)} 512w, assets/${ART_768[file]} 768w` : '';
 export const thumbImg = (file, sizes) => ART_768[file] ? `src="assets/${ART_768[file]}" srcset="${thumbSrcset(file)}" sizes="${sizes}"` : `src="assets/${file}"`;
