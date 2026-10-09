@@ -102,6 +102,9 @@ Com o Bling, o site só precisa de:
 Série, CFOP, CSOSN e PIS/COFINS ficam no Bling, e o site não pede. UF (MG), regime (Simples Nacional, CRT 1) e
 inscrição estadual já estão preenchidos. Enquanto faltar algum dado, nenhuma nota sai e o pedido mostra o que falta.
 
+A venda para o exterior tem um grupo à parte, `export` (veja "Venda para o exterior"): o que falta nele segura só as
+notas de exportação.
+
 ### 5. Homologação e produção
 
 No Bling, o ambiente é uma configuração da **conta**, não de cada nota. Por isso o site confere o ambiente no XML de
@@ -250,10 +253,128 @@ padrão do Bling. O site consulta essa lista uma vez por hora: depois de cadastr
      - revisar os DANFEs de homologação: nº 13 (MG, 5101), nº 14 (SP, pessoa física, 6107, com a linha do DIFAL) e
        nº 17 (RS, contribuinte, 6101);
      - confirmar se o texto pode ficar sem acentos ("NAO", "CREDITO"), como está.
+3. **Venda para o exterior:** criar no Bling a natureza "Exportação de mercadoria" e descobrir o local de embarque das
+   remessas pelos Correios (seção abaixo). Até lá, a nota de exportação fica bloqueada; as nacionais seguem normais.
 
 CNAE (resolvido em 29/09/2026): a 22.29-3-99 (artefatos de plástico) já é da empresa, pelo CNPJ. O comprovante de
 inscrição estadual da SEFAZ-MG só tem espaço para uma CNAE secundária (mostra a 1813-0/01), então não lista todas; não
 precisa incluir nada.
+
+## Venda para o exterior (NF-e de exportação)
+
+Orientação da contadora (consulta de 08/10/2026, art. 166 da Parte 1 do Anexo VIII do RICMS/MG): a mercadoria que vai
+para fora do Brasil segue com **Nota Fiscal de Exportação**. Além do que toda nota já tem, ela leva:
+
+| Item da orientação | Na nota | Quem preenche |
+|---|---|---|
+| a) Natureza da operação | **Exportação de mercadoria** | natureza no Bling |
+| b) CFOP | **7101**: a loja fabrica o que vende (o 7102 é só para revenda) | natureza no Bling |
+| c) CSOSN | **300** (imune), com origem **0**: é o "X300" da resposta | natureza no Bling |
+| d) Grupo ZA (comércio exterior) | UF e local de embarque, onde é feito o despacho de exportação | site (`export.shipment`) |
+| e) Local de entrega | nome e endereço do recinto, quando houver | ver "Conferir com a contadora" |
+| f) Modalidade do frete | **0** (por conta do remetente: a loja contrata os Correios), com o valor do frete no campo do frete, mesmo com a operação imune | site |
+| g) Informações complementares | local de embarque: nome, endereço e CNPJ do recinto ou da unidade responsável | site |
+| IPI | **sem CST**: optante do Simples não preenche (Res. CGSN 140/2018, art. 59, § 4º) | natureza no Bling |
+
+O texto das informações complementares fica assim: "DOCUMENTO EMITIDO POR ME OU EPP OPTANTE PELO SIMPLES NACIONAL. NAO
+GERA DIREITO A CREDITO FISCAL DE IPI. Local de embarque: (nome), (endereço), CNPJ (CNPJ). Pedido nº: JU-…". A linha do
+DIFAL não entra.
+
+Fora da lista da contadora, mas exigido de toda nota para o exterior: a **unidade tributável** de cada item tem de ser a
+que a tabela "NCM e respectiva uTrib (Comércio Exterior)" do Portal da NF-e dá para o NCM, com a quantidade nessa unidade.
+Senão a Fazenda recusa a nota (rejeição 817). As peças são vendidas por unidade (UN). Se a tabela pedir KG para o NCM
+3926.90.90, a quantidade tributável é o peso líquido das peças, sem a caixa. O dono passou esses pesos em 08/10/2026:
+borboleta 75 g, dino 60 g, avião 166 g, macaco 24 g, girafa 18 g e unicórnio 16 g.
+
+### Como o pedido internacional existe hoje
+
+- O **checkout do site vende só para o Brasil**. O pedido de fora é combinado por WhatsApp ou e-mail, cotado no painel em
+  **Envio internacional** (Correios Exporta Fácil), cobrado por link de pagamento do Mercado Pago e pré-postado no Minhas
+  Exportações (`FRETE-SETUP.md`). Ele não vira um pedido no site, então, **por enquanto, a nota de exportação é feita à
+  mão no Bling**, com a natureza abaixo.
+- O site já monta a nota de exportação sozinho: um pedido com país de entrega fora do Brasil (`shipTo.country`, o
+  código de duas letras, como `MX`) sai como exportação pelo Bling quando a Ju confirma o pedido, sem consultar CEP. Isso
+  passa a valer no dia em que o pedido internacional entrar no site. As notas nacionais não mudaram em nada.
+
+### O que a Júlia cadastra no Bling
+
+1. **Natureza de operação nova: "Exportação de mercadoria"**:
+   - tipo saída, série 1, Simples Nacional, indicador de presença 2 (internet) e consumidor final ligado, como as de venda;
+   - uma regra para **"Exterior" (EX)** com CFOP **7101**, CSOSN **300** e origem 0, sem alíquotas;
+   - PIS e COFINS com o CST que a contadora indicar (nas vendas é o 49);
+   - aba IPI **sem CST**;
+   - "Informações complementares" **vazio**, porque o site escreve o texto.
+2. Depois de salvar, o painel mostra o código da natureza no cartão "Nota fiscal · Bling". Esse código vai em
+   `export.bling.natureId`, no `api/_lib/fiscal.js`. Aí o painel marca a natureza como "usada nas notas · venda para o
+   exterior".
+3. **Enquanto a nota for feita à mão**, preencher no Bling:
+   - cliente como **Estrangeiro**: UF "EX", o país, e o passaporte no documento (se o cliente informar);
+   - a natureza "Exportação de mercadoria";
+   - UF e local de embarque;
+   - frete "por conta do remetente", com o valor cobrado;
+   - em cada item, a unidade tributável da tabela de exportação para o NCM. Se for KG, a quantidade tributável é o peso
+     das peças (acima);
+   - nas informações complementares, o texto acima, com o local de embarque e o nº do pedido.
+
+### O que ainda não se sabe (e por isso a nota de exportação está bloqueada)
+
+Em `api/_lib/fiscal.js`, o grupo `export` ainda tem campos marcados **[PREENCHER]**. Enquanto isso, a nota de exportação
+não sai e o pedido mostra "Venda para o exterior: a nota de exportação só sai depois de preencher em api/_lib/fiscal.js:
+…", com a lista do que falta. O site não inventa nenhum desses dados, muito menos o CNPJ.
+
+- `export.shipment.state`, `place`, `address` e `cnpj`: o **local de embarque**. Pela Exporta Fácil, a remessa é postada em
+  qualquer agência, mas o despacho de exportação é feito numa unidade dos Correios que cuida das remessas internacionais.
+  O nome dessa unidade, o endereço, a UF e o CNPJ vêm dos Correios (gerente do contrato) e da contadora. O nome vai no
+  campo do local de embarque da nota, que aceita até 60 caracteres.
+- `export.taxUnit.39269090`: a unidade tributável do NCM 3926.90.90 na tabela de exportação do Portal da NF-e (rejeição
+  817). Se for UN, as peças vão como estão. Se for KG, o site manda o peso líquido de `export.netG` (os pesos do dono). Se
+  for outra unidade, o site não converte e a nota é feita à mão.
+- `export.bling.natureId`: o código da natureza, depois de criada no Bling.
+- `export.pis.cst` e `export.cofins.cst`: só seriam usados com outro emissor. Com o Bling, PIS e COFINS vêm da natureza.
+
+### Conferir com a contadora
+
+1. Qual é o **local de embarque** de uma remessa postal pelos Correios (Exporta Fácil) saindo de Ouro Preto: nome,
+   endereço, UF e CNPJ da unidade dos Correios. É o que vai no grupo ZA e nas informações complementares (itens d e g).
+2. **Item e (local de entrega):** numa remessa postal, a mercadoria é entregue na agência dos Correios. Precisa do grupo
+   de local de entrega? A API do Bling não tem campo para ele. Se precisar, ele é preenchido na nota, no Bling, antes de
+   enviar.
+3. O CST de PIS e COFINS na natureza de exportação: o 49, como nas vendas, ou outro.
+4. O documento do cliente estrangeiro (idEstrangeiro): o site manda o passaporte quando o pedido tem e deixa em branco
+   quando não tem, o que a NF-e aceita. Confirmar se basta.
+5. Se o texto do Simples Nacional também vai na nota de exportação, antes do local de embarque, como o site faz.
+6. Acima de US$ 1.000 por remessa é preciso a DU-E (Portal Único Siscomex): quando e como ela entra.
+
+### Primeiro teste em homologação
+
+Com a natureza criada e o `export.shipment` e o `export.taxUnit` preenchidos, emitir uma nota de exportação em
+homologação e conferir no XML ou no DANFE:
+
+- `idDest` 3, CFOP 7101 e CSOSN 300;
+- destinatário com UF EX, município EXTERIOR (código 9999999) e o país certo (`cPais`/`xPais`). O site manda o nome do
+  país em português, sem acentos (ex.: "MEXICO"), e o Bling converte para o código. Se o país sair errado, avisar para
+  trocar pelo nome que o Bling usa;
+- grupo `exporta` com a UF e o local de embarque. A rejeição 355 é a falta dele;
+- `uTrib` e `qTrib` de cada item: a unidade da tabela de exportação e a quantidade nela. A rejeição 817 é a unidade errada;
+- modalidade do frete 0, com o valor do frete;
+- o texto das informações complementares.
+
+### Como o site manda a nota para o Bling (API v3)
+
+O Bling aceita notas de exportação pela API (`POST /nfe`) desde a versão 345 da API. O site manda:
+
+- `operacaoComExterior: true` (o Bling trata a nota de saída como exportação);
+- `exportacao: {ufEmbarque, localEmbarque}`;
+- o contato com `tipoPessoa: "E"`, `contribuinte: 9` e o passaporte em `numeroDocumento` (ou vazio);
+- o endereço com `uf: "EX"`, `municipio: "EXTERIOR"` e `pais`, sem CEP. A cidade, a região e o código postal do
+  cliente vão no bairro e no complemento;
+- `transporte.fretePorConta: 0` e o valor do frete;
+- em cada item, `unidadeTributavel: {unidade: "KG", quantidade}` com o peso líquido, quando a unidade da tabela é KG (com
+  UN, nada a mais);
+- a natureza `export.bling.natureId` (CFOP e CSOSN vêm dela).
+
+Testes: `node tests/nfe-exportacao.mjs` (com o Bling simulado, que também recusa uma nota de exportação sem o local de
+embarque).
 
 ## CEP conferido antes de cobrar
 
@@ -272,4 +393,5 @@ node tools/dev-server.cjs --fake-mp --fake-bling   # Bling simulado: conectar no
 Mercado Pago e serviço de NF-e simulados, com **dados fiscais de exemplo** (sem valor fiscal; nunca usados em produção).
 No simulador, um comprador com "REJEITAR" no nome tem a nota recusada e um com "DEMORAR" fica em "emitindo…" até
 clicar em Atualizar. `node tests/nfe.mjs` cobre a montagem, as regras de ambiente, a consulta de CEP e o fluxo inteiro; `node tests/bling.mjs`
-cobre a conexão com o Bling, a nota enviada, as novas tentativas, a renovação da autorização e a conferência do ambiente.
+cobre a conexão com o Bling, a nota enviada, as novas tentativas, a renovação da autorização e a conferência do ambiente;
+`node tests/nfe-exportacao.mjs` cobre a nota de exportação.

@@ -15,7 +15,7 @@
 // One attempt at a time per note (store.invoices.lease): the panel and the queue never send the same note together.
 const crypto = require('node:crypto');
 const {nfeSettings, EXAMPLE} = require('./fiscal');
-const {buildInvoice} = require('./nfe');
+const {buildInvoice, abroad} = require('./nfe');
 const {lookupCep} = require('./cep');
 const {providerFor} = require('./nfe-providers');
 const {createOrders, INVOICED} = require('./orders');
@@ -143,9 +143,12 @@ function createInvoicing({store, env = process.env, now = () => Date.now(), fetc
     if (force) await provider()?.wake?.();
     invoice = await store.invoices.update(invoice.id, {attempts: (invoice.attempts || 0) + 1});
 
+    // An order for abroad has no CEP: its note goes to "EXTERIOR" (api/_lib/nfe.js, buildExport).
     let city = null;
-    try { city = await lookup(order.shipTo?.cep, {fetchImpl}); }
-    catch (error) { return later(invoice, order, {message: `Não foi possível consultar o CEP agora (${clean(error.message)}).`, wait: 'cep'}, actor); }
+    if (!abroad(order)) {
+      try { city = await lookup(order.shipTo?.cep, {fetchImpl}); }
+      catch (error) { return later(invoice, order, {message: `Não foi possível consultar o CEP agora (${clean(error.message)}).`, wait: 'cep'}, actor); }
+    }
     const built = buildInvoice({order, city, environment: settings.environment, provider: settings.provider, env, now: now(), ...(settings.example ? EXAMPLE : {})});
     if (!built.ok) return record(invoice, {status: 'erro', message: clean(built.problems.join(' · ')), nextAttemptAt: null, retries: 0}, order, {kind: 'nfe:erro', detail: clean(built.problems[0]), actor});
 

@@ -29,18 +29,26 @@ const https = value => /^https:\/\//.test(String(value || '')) ? String(value) :
 // dataOperacao ("Data de operação inválida"); the site keeps UTC, which would also turn an evening sale into the next day.
 const brasilia = iso => new Intl.DateTimeFormat('sv-SE', {timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}).format(new Date(iso));
 
-// Bling's body for the note (API v3, POST/PUT /nfe).
+// Bling's body for the note (API v3, POST/PUT /nfe). A note for abroad (invoice.export, api/_lib/nfe.js) goes as an
+// operation with the exterior (operacaoComExterior, which Bling treats as an export on a "saída" note) with the place of
+// embarkation (exportacao: ufEmbarque, localEmbarque) and a foreign contact (tipoPessoa E, UF "EX", the country's name,
+// no CEP); the CFOP 7101 and the CSOSN 300 come from the export nature in Bling. Its items may carry a tax unit other than
+// the note's (unidadeTributavel: KG and the net weight), as the export table asks for the NCM.
 function toBling(invoice, paymentMethodId) {
-  const r = invoice.recipient, a = r.address, when = brasilia(invoice.issuedAt);
+  const r = invoice.recipient, a = r.address, when = brasilia(invoice.issuedAt), abroad = Boolean(invoice.export);
   return {
     tipo: 1, finalidade: 1, dataEmissao: when, dataOperacao: when,
     naturezaOperacao: {id: Number(invoice.bling.natureId)},
-    contato: {
+    ...(abroad ? {operacaoComExterior: true, exportacao: {ufEmbarque: invoice.export.exitState, localEmbarque: invoice.export.place}} : {}),
+    contato: abroad ? {
+      nome: r.name, tipoPessoa: 'E', numeroDocumento: r.foreignId || '', contribuinte: 9, ...(r.email ? {email: r.email} : {}),
+      endereco: {endereco: a.street, numero: a.number, complemento: a.complement || '', bairro: a.district, municipio: a.city, uf: a.state, pais: a.country}
+    } : {
       nome: r.name, tipoPessoa: r.cnpj ? 'J' : 'F', numeroDocumento: r.cnpj || r.cpf, contribuinte: Number(r.ieIndicator),
       ...(r.stateRegistration ? {ie: r.stateRegistration} : {}), ...(r.email ? {email: r.email} : {}),
       endereco: {endereco: a.street, numero: a.number, complemento: a.complement || '', bairro: a.district, cep: cep(a.cep), municipio: a.city, uf: a.state, pais: 'Brasil'}
     },
-    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin)})),
+    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin), ...(i.tax ? {unidadeTributavel: {unidade: i.tax.unit, quantidade: i.tax.quantity}} : {})})),
     parcelas: [{data: when.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
     transporte: {fretePorConta: Number(invoice.freight.mode), frete: money(invoice.freight.cents)},
     ...(invoice.totals?.discountCents ? {desconto: money(invoice.totals.discountCents)} : {}),   // Pix discount, on the whole note
@@ -88,11 +96,13 @@ function createBlingProvider({store, env = process.env, now, fetchImpl, sleep, c
   }
 
   // The note a broken creation may have left in Bling: among the notes of that day not yet sent, the one of this buyer
-  // (CPF or CNPJ) issued at that exact second. Exactly one: its id. None, or more than one: null, and a person decides.
-  async function findCreated(stamp, document, ref) {
+  // (CPF or CNPJ; a buyer abroad without a document: the name) issued at that exact second. Exactly one: its id. None, or
+  // more than one: null, and a person decides.
+  async function findCreated(stamp, document, ref, name = '') {
     const day = `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`;
     const data = await bling.api('GET', `/nfe?pagina=1&limite=100&tipo=1&situacao=1&dataEmissaoInicial=${day}&dataEmissaoFinal=${day}`, null, ref);
-    const found = (data?.data || []).filter(n => n?.id && String(n.dataEmissao || '').replace(/\D/g, '') === stamp && plain(n.contato?.numeroDocumento) === plain(document) && (n.situacao === undefined || Number(n.situacao) === 1));
+    const same = n => plain(document) ? plain(n.contato?.numeroDocumento) === plain(document) : !plain(n.contato?.numeroDocumento) && plain(n.contato?.nome) === plain(name);
+    const found = (data?.data || []).filter(n => n?.id && String(n.dataEmissao || '').replace(/\D/g, '') === stamp && same(n) && (n.situacao === undefined || Number(n.situacao) === 1));
     return found.length === 1 ? String(found[0].id) : null;
   }
 
@@ -110,7 +120,7 @@ function createBlingProvider({store, env = process.env, now, fetchImpl, sleep, c
         const search = SEARCH.exec(id || '');
         if (search) {
           // Bling not answering throws here and the invoice keeps the marker: the search runs again on the next attempt.
-          id = await findCreated(search[1], invoice.recipient.cnpj || invoice.recipient.cpf, ref);
+          id = await findCreated(search[1], invoice.recipient.cnpj || invoice.recipient.cpf || invoice.recipient.foreignId, ref, invoice.recipient.name);
           if (!id) { await bling.log({kind: 'incerta', operation: 'GET /nfe', reference: invoice.reference, message: 'A nota não foi encontrada no Bling com segurança: é preciso conferir à mão.'}); return {status: 'erro', providerId: null, message: UNKNOWN_CREATION}; }
           await bling.log({kind: 'achada', operation: 'GET /nfe', reference: invoice.reference, message: `A nota ${id} foi encontrada no Bling: o envio segue com ela, sem criar outra.`});
         }

@@ -154,7 +154,8 @@ escolhe o país e as peças, e o site cota com o mesmo contrato e a mesma caixa 
 - **Endpoint:** `POST /api/admin/international-quote` `{country, items: [{productId, quantity}]}`, só com o login do painel (senha + código).
 - **Ainda é manual:**
   - cobrar (link de pagamento do Mercado Pago, cartão);
-  - a nota de exportação (natureza com CFOP 7101 no Bling, criada pela contadora);
+  - a nota de exportação (natureza "Exportação de mercadoria", CFOP 7101 e CSOSN 300, no Bling; veja "Venda para o exterior"
+    no `NFE-SETUP.md`);
   - a pré-postagem no Minhas Exportações.
 
   O checkout do site continua só para o Brasil. O plano completo está em `Plano-vender-para-o-exterior` (Pedro, 05/10/2026).
