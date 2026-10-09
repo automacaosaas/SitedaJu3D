@@ -1,4 +1,4 @@
-import {PRODUCTS,SOON,PALETTE,PALETTE_GROUPS,ALIASES,defaults,color,paint,isLight,validSelection,fixedColors,showcase,badgeStyle} from './products.js';
+import {PRODUCTS,SOON,PALETTE,PALETTE_GROUPS,ALIASES,defaults,color,paint,isLight,noticeOf,validSelection,fixedColors,showcase,badgeStyle} from './products.js';
 import {setupCartBridge} from './cart-bridge.js';
 import {COMMERCE,money,installmentLabel,kitOffer,kitOf} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -170,6 +170,8 @@ function updateControls(){
   const chosen=color(s[selectedPart]);
   document.querySelectorAll('#palette [data-color]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.color===s[selectedPart])));
   paintGroups();
+  // o aviso de uma cor escolhida (o arco-íris varia com o rolo de filamento): entra embaixo das cores, sem empurrar de uma vez
+  const notice=noticeOf(p.parts.map(item=>color(s[item.id]))),box=$('#palette-notice');if(notice)box.querySelector('span').textContent=notice;box.classList.toggle('is-on',!!notice);
   $('#selected-color').textContent=`${part.name}: ${chosen.name}${chosen.note?` · ${chosen.note}`:''}`;$('#part-hint').textContent=part.hint;
   $('#pdp-preview-dots').replaceChildren(...p.parts.map(item=>{const i=document.createElement('i');i.style.background=paint(color(s[item.id]));i.title=`${item.name}: ${color(s[item.id]).name}`;return i;}));
   viewer?.update(chosenColors());revealSwatch();

@@ -1,4 +1,4 @@
-import {PRODUCTS, SOON, color, showcase, artSmall, itemColors, fixedColors} from './products.js';
+import {PRODUCTS, SOON, color, showcase, artSmall, itemColors, fixedColors, noticeOf} from './products.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {totals, pixDiscount, lineCents} from './cart-store.js';
 import {icon} from './icons.js';
@@ -11,11 +11,13 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const editButton = (item, circular = false) => fixedColors(item.productId) ? '' : `<button type="button" class="${circular ? 'cart-customize' : 'cart-edit-link'}" data-action="edit" data-id="${esc(item.id)}" aria-label="Editar personalização de ${esc(item.title)}">${circular ? icon('pencil') : 'Editar cores'}</button>`;
 const formatCep = cep => { const digits = String(cep ?? '').replace(/\D/g, '').slice(0, 8); return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits; };
 
+// o aviso de uma cor escolhida (o arco-íris varia com o rolo de filamento), embaixo das cores da peça
+const cartNotice = item => { const notice = fixedColors(item.productId) ? '' : noticeOf(PRODUCTS[item.productId]?.parts.map(part => color(item.selection?.[part.id] ?? part.default)) || []); return notice ? `<p class="cart-notice">${esc(notice)}</p>` : ''; };
 function swatches(item) {
   return `<div class="cart-colors"><span>Cores</span><ul aria-label="Cores ${fixedColors(item.productId) ? 'de' : 'escolhidas para'} ${esc(item.title)}">${itemColors(item.productId, item.selection).map(c => {
     const label = c.part ? `${c.part}: ${c.name}` : c.name;
     return `<li><span class="cart-swatch" style="--chip:${c.paint}" role="img" aria-label="${esc(label)}" title="${esc(label)}"></span></li>`;
-  }).join('')}</ul></div>`;
+  }).join('')}</ul></div>${cartNotice(item)}`;
 }
 
 function itemCard(item, cart) {

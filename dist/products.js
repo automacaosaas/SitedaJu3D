@@ -2,7 +2,8 @@
 // (pérola, metalizados e seda) e as multicor (seda: o arco-íris e as duais). Cada cor: `hex`, a cor de referência (a das contas de cor,
 // das auras e do pedido); `finish`, como a peça brilha no 3D (asset-models.js: pearl, metal, silk, rainbow, dual; sem ele, fosco);
 // `stops`, as cores de um filamento multicor (no arco-íris, de baixo para cima, como a peça sai da impressora; na dual, os dois lados
-// do fio, a de baixo e a de cima; na pérola, os tons dos redemoinhos); `swatch`, a bolinha dela em CSS (o degradê dos brilhos e das multicor; sem ele, o hex); `note`, o acabamento, ao lado do nome.
+// do fio, a de baixo e a de cima; na pérola, os tons dos redemoinhos); `swatch`, a bolinha dela em CSS (o degradê dos brilhos e das multicor; sem ele, o hex); `note`, o acabamento, ao lado do nome;
+// `notice`, um aviso que aparece embaixo das cores (e no carrinho) quando a cor está escolhida.
 // As cores medidas nas fotos da Ju; o Azul BIC é o Pantone 2728 C. Os ids das cores que trocaram de nome ficaram (moss: Verde-oliva,
 // blue: Azul BIC, pink: Rosa-bebê): carrinhos, combinações compartilhadas e pedidos já salvos continuam valendo.
 const SHINE = (spot = 'rgba(255,255,255,.9)') => `radial-gradient(circle at 31% 26%, ${spot} 0 9%, rgba(255,255,255,0) 40%)`;
@@ -26,7 +27,7 @@ export const PALETTE = [
     swatch:`${SHINE('rgba(255,251,214,.95)')}, linear-gradient(135deg, #ac7803 0%, #faed63 32%, #c69a13 52%, #f7e658 70%, #b98808 100%)`},
   {id:'bronze',name:'Bronze',hex:'#ce8946',group:'shine',finish:'silk',note:'acabamento seda',
     swatch:`${SHINE('rgba(255,236,210,.85)')}, linear-gradient(135deg, #8e4f1c 0%, #f0b276 32%, #ce8946 55%, #e8a564 72%, #8e4f1c 100%)`},
-  {id:'rainbow',name:'Arco-íris',hex:'#9aa6e0',group:'special',finish:'rainbow',note:'seda multicor',stops:['#fd7ab0','#b689d1','#7b96e2','#75cacf','#6cb089'],
+  {id:'rainbow',name:'Arco-íris',hex:'#9aa6e0',group:'special',finish:'rainbow',note:'seda multicor',notice:'As cores do arco-íris variam conforme o rolo de filamento do momento: cada peça sai única.',stops:['#fd7ab0','#b689d1','#7b96e2','#75cacf','#6cb089'],
     swatch:`${SHINE('rgba(255,255,255,.8)')}, linear-gradient(0deg, #fd7ab0, #b689d1 28%, #7b96e2 52%, #75cacf 76%, #6cb089)`},
   {id:'duopinkblue',name:'Dual rosa e azul',hex:'#e2307a',group:'special',finish:'dual',note:'seda dual',stops:['#1240d8','#e2307a'],swatch:DUAL('#1240d8','#e2307a')},
   {id:'duogoldorange',name:'Dual dourado e laranja',hex:'#fbaa3c',group:'special',finish:'dual',note:'seda dual',stops:['#ef670e','#fbaa3c'],swatch:DUAL('#ef670e','#fbaa3c')},
@@ -36,6 +37,8 @@ export const PALETTE = [
 export const PALETTE_GROUPS = [{id:'solid',name:'Foscas'},{id:'shine',name:'Com brilho'},{id:'special',name:'Multicor'}];
 // A bolinha de uma cor (da paleta ou das cores fixas de uma peça): o degradê dela, ou o hex.
 export const paint = c => c?.swatch || c?.hex || '#cccccc';
+// O aviso das cores escolhidas (o primeiro que houver; '' sem nenhum): o do arco-íris, que varia com o rolo de filamento.
+export const noticeOf = colors => colors.find(c => c?.notice)?.notice || '';
 // Cor clara: o ✓ por cima dela vai escuro.
 export const isLight = c => { const n = parseInt(String(c?.hex || '#000000').slice(1), 16); return .2126 * (n >> 16) / 255 + .7152 * ((n >> 8) & 255) / 255 + .0722 * (n & 255) / 255 > .62; };
 export const PRODUCT_CATEGORIES = Object.freeze({

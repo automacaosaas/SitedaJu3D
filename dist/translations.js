@@ -446,6 +446,7 @@ Foscas|Matte|Mates
 Com brilho|With shine|Con brillo
 Multicor|Multicolor|Multicolor
 Tipos de cor|Color types|Tipos de color
+As cores do arco-íris variam conforme o rolo de filamento do momento: cada peça sai única.|Rainbow colors vary with the filament spool in use at the time: every piece comes out unique.|Los colores del arcoíris varían según el rollo de filamento del momento: cada pieza sale única.
 acabamento perolado|pearl finish|acabado perlado
 acabamento metalizado|metallic finish|acabado metalizado
 acabamento seda|silk finish|acabado seda

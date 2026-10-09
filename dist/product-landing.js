@@ -1,4 +1,4 @@
-import {PRODUCTS, PALETTE, PALETTE_GROUPS, defaults, color, paint as swatchOf, isLight, validSelection} from './products.js';
+import {PRODUCTS, PALETTE, PALETTE_GROUPS, defaults, color, paint as swatchOf, isLight, noticeOf, validSelection} from './products.js';
 import {readCart, writeCart, putItem, putItems, totals} from './cart-store.js';
 import {openMiniCart, addedItemId} from './mini-cart.js';
 import {icon} from './icons.js';
@@ -149,6 +149,7 @@ function setup(root, key) {
     <p class="pl-hint" data-pl-hint></p>
     <div class="pl-groups" role="group" aria-label="Tipos de cor">${PALETTE_GROUPS.map(g => `<button type="button" data-pl-group="${g.id}" aria-pressed="false" aria-controls="pl-palette"><span></span><i aria-hidden="true"></i></button>`).join('')}</div>
     <div class="pl-palette" id="pl-palette" role="radiogroup" aria-label="Cores" data-group="solid">${PALETTE.map(c => `<button type="button" class="pl-swatch" role="radio" aria-checked="false" data-pl-color="${c.id}" data-group="${c.group}"${c.finish ? ` data-finish="${c.finish}"` : ''} style="--swatch:${swatchOf(c)};--check:${isLight(c) ? '#332b32' : '#fff'}"><i aria-hidden="true"></i><span class="pl-swatch-name"></span></button>`).join('')}</div>
+    <div class="pl-notice" data-pl-notice aria-live="polite"><div><p>${icon('info')}<span></span></p></div></div>
     <p class="pl-now" data-pl-now aria-live="polite"></p>
   </div></div>`;
   // nomes por textContent/atributo (vêm dos dados, e o i18n.js traduz)
@@ -183,6 +184,10 @@ function setup(root, key) {
     panel.querySelectorAll('[data-pl-tab]').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.plTab === part)); b.querySelector('i').style.background = swatchOf(color(selection[b.dataset.plTab])); });
     panel.querySelectorAll('[data-pl-color]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.plColor === selection[part])));
     paintGroups();
+    // o aviso de uma cor escolhida (o arco-íris varia com o rolo de filamento), embaixo das cores
+    const notice = noticeOf(product.parts.map(p => color(selection[p.id]))), box = panel.querySelector('[data-pl-notice]');
+    if (notice) box.querySelector('span').textContent = notice;
+    box.classList.toggle('is-on', !!notice);
     panel.querySelector('[data-pl-hint]').textContent = current.hint;
     panel.querySelector('[data-pl-reset]').hidden = isOriginal();
     if (!add.classList.contains('is-added')) add.querySelector('span').textContent = isOriginal() ? 'Adicionar nas cores originais' : 'Adicionar com estas cores';

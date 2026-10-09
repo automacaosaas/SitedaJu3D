@@ -24,6 +24,9 @@ body[data-stage="cart"] #shop-main { max-width: 1148px; }
 .cart-product h2 { font: 500 23px/1.25 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; margin: 0; letter-spacing: -.55px; overflow-wrap: anywhere; }
 .cart-product .item-type { font-size: 12px; margin: 4px 0 7px; line-height: 1.45; }
 .cart-colors { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+/* o aviso de uma cor escolhida (o arco-íris varia com o rolo de filamento), com um pontinho no degradê dele */
+.cart-notice { display: flex; align-items: baseline; gap: 7px; margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.cart-notice::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, #fd7ab0, #b689d1, #7b96e2, #75cacf, #6cb089); translate: 0 -1px; }
 .cart-colors ul { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; }
 .cart-swatch { display: block; height: 20px; width: 20px; border-radius: 50%; background: var(--chip); border: 1px solid #38232630; box-shadow: inset 0 0 0 2px #fffcfb80; }
 .cart-edit-link { display: block; padding: 6px 0; min-height: 32px; background: none; border: 0; color: var(--rose); text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }

@@ -172,6 +172,14 @@
 #product-dialog #palette:not([data-group="solid"]) .swatch-name { display: inline; }
 #product-dialog #palette:not([data-group="solid"]) .swatch:hover { background: color-mix(in srgb, var(--pd-wash) 45%, #fff); }
 #product-dialog #palette:not([data-group="solid"]) .swatch[aria-checked=true] { background: color-mix(in srgb, var(--pd-wash) 55%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-accent) 35%, transparent); }
+/* O aviso de uma cor escolhida (products.js › notice: o arco-íris varia com o rolo de filamento): embaixo das cores, numa pílula com a
+   borda no degradê do arco-íris; a altura abre devagar (grade de 0fr a 1fr) e o painel não pula de uma vez. Fechado, não ocupa nada
+   (a margem negativa desfaz o espaço da grade). */
+#product-dialog .palette-notice { display: grid; grid-template-rows: 0fr; margin-top: -14px; opacity: 0; transition: grid-template-rows .35s var(--pd-ease), margin-top .35s var(--pd-ease), opacity .3s ease; }
+#product-dialog .palette-notice.is-on { grid-template-rows: 1fr; margin-top: 0; opacity: 1; }
+#product-dialog .palette-notice > div { min-height: 0; overflow: hidden; }
+#product-dialog .palette-notice p { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 9px 13px 9px 11px; border: 1px solid transparent; border-radius: 14px; background: linear-gradient(var(--pd-notice-bg, #fff), var(--pd-notice-bg, #fff)) padding-box, linear-gradient(100deg, #fd7ab0, #b689d1, #7b96e2, #75cacf, #6cb089) border-box; font-size: 12.5px; line-height: 1.45; color: var(--pd-text); }
+#product-dialog .palette-notice .icon { flex: none; width: 17px; height: 17px; margin-top: 1px; color: #8f7bd1; }
 #product-dialog .swatch[data-finish] i { position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
 #product-dialog .swatch[data-finish] i::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); translate: -60% 0; transition: translate .6s var(--pd-ease); pointer-events: none; }
 #product-dialog .swatch[data-finish]:hover i::before, #product-dialog .swatch[data-finish][aria-checked=true] i::before { translate: 60% 0; }
@@ -405,7 +413,7 @@
 /* Celular e tablet: na barra do 3D ficam "Girar", aproximar, afastar e "Início" (arrastar gira a peça; pinça também aproxima). */
 @media (max-width: 900px) { .viewer-tools [data-camera="left"], .viewer-tools [data-camera="right"], .viewer-tools > span { display: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .pdp-sheet, #product-dialog .swatch i, #product-dialog .swatch[data-finish] i::before { transition: none; }
+  .pdp-sheet, #product-dialog .swatch i, #product-dialog .swatch[data-finish] i::before, #product-dialog .palette-notice { transition: none; }
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
 /* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */

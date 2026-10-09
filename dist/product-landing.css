@@ -171,6 +171,11 @@ html.pl-focus .header.site-header.is-floating, html.pl-focus .header.site-header
 .pl-palette[data-group="shine"] .pl-swatch[data-group="shine"], .pl-palette[data-group="special"] .pl-swatch[data-group="special"] { display: inline-flex; align-items: center; gap: 9px; width: auto; height: 46px; padding: 0 16px 0 6px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #38232617; }
 .pl-palette:not([data-group="solid"]) { gap: 8px; }
 .pl-palette:not([data-group="solid"]) .pl-swatch i { flex: none; width: 34px; height: 34px; }
+.pl-notice { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .35s var(--pl-ease), opacity .3s ease, margin-top .35s var(--pl-ease); }
+.pl-notice.is-on { grid-template-rows: 1fr; margin-top: 12px; opacity: 1; }
+.pl-notice > div { min-height: 0; overflow: hidden; }
+.pl-notice p { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 10px 14px 10px 12px; border: 1px solid transparent; border-radius: 14px; background: linear-gradient(var(--pl-notice-bg, #fff), var(--pl-notice-bg, #fff)) padding-box, linear-gradient(100deg, #fd7ab0, #b689d1, #7b96e2, #75cacf, #6cb089) border-box; font-size: 13px; line-height: 1.45; color: var(--pl-ink); }
+.pl-notice .icon { flex: none; width: 17px; height: 17px; margin-top: 1px; color: #8f7bd1; }
 .pl-swatch-name { display: none; font-size: 13.5px; font-weight: 600; color: var(--pl-ink, #2a1c22); white-space: nowrap; }
 .pl-palette:not([data-group="solid"]) .pl-swatch-name { display: inline; }
 .pl-palette:not([data-group="solid"]) .pl-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pl-accent); }
