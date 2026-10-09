@@ -23,7 +23,7 @@ function init() {
   const status = region.querySelector('#gallery-status');
   // Abaixo do banner só o rodapé segue o tema da vitrine. A seção dos produtos tem o tema do card do centro (catalog.js).
   const themed = [shell, document.querySelector('.home footer')].filter(Boolean);
-  // O fundo de tema cobre a página inteira; --hero-h (altura do banner) fica na .page, ancestral comum.
+  // O fundo de tema cobre a página inteira; --hero-h (altura do banner) é medida na .page e escrita no fundo (measure()).
   const page = shell.closest('.page'), bgHost = document.querySelector('[data-hero-bg]');
   const prevButton = region.querySelector('.hero-prev'), nextButton = region.querySelector('.hero-next');
   const TEXT_SHIFT = 36, TEXT_DROP = 10;
@@ -51,8 +51,10 @@ function init() {
   // ── Estrutura ────────────────────────────────────────────────────────────────
   // Cada camada de fundo: o degradê do tema e o desenho da peça (hero-scenery.js), com as cores dela já clareadas (sceneryVars).
   const lookVars = (theme, look) => Object.entries(sceneryVars(theme, look)).map(([name, value]) => `${name}:${value}`).join(';');
-  // Só a camada da peça de abertura entra na pintura; as outras nascem fora dela (.is-off) até a vez delas.
-  bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer${i === initial ? '' : ' is-off'}" style="--stops:${theme.bannerStops};${lookVars(theme, look)}">${scenery(look, i)}</div>`).join('');
+  // Só a camada da peça de abertura entra na pintura; as outras nascem fora dela (.is-off) até a vez delas. E nascem vazias: o desenho
+  // de cada uma (~90 elementos de SVG) era 5/6 do fundo montado na abertura e só entra depois que a página aparece, uma camada por
+  // quadro (sketchRest), ou na hora em que a camada vai aparecer, se for antes disso (render).
+  bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer${i === initial ? '' : ' is-off'}" style="--stops:${theme.bannerStops};${lookVars(theme, look)}"></div>`).join('');
   shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="--band:${theme.headerBackground};--band-dark:${darkBand(theme)}"></div>`).join('');
   region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price, soon}) =>
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : soon ? '<p class="copy-price"><span class="palette-soon">Novidade · em breve</span></p>' : ''}</div>`).join('');
@@ -73,7 +75,15 @@ function init() {
   const slots = [...region.querySelectorAll('.slot')], copies = [...region.querySelectorAll('.copy')], palettes = [...region.querySelectorAll('.palette')];
   const bgLayers = [...bgHost.querySelectorAll('.hero-layer')], bandLayers = [...shell.querySelectorAll('[data-hero-band] .hero-layer')];
   // As silhuetas das bordas e as dos cantos de cada camada: o parallax do arraste escreve `translate` direto nelas.
-  const motifs = bgLayers.map(layer => layer.querySelector('.scenery-back')), edges = bgLayers.map(layer => layer.querySelector('.scenery-mist'));
+  const motifs = [], edges = [];
+  // O desenho de uma camada (hero-scenery.js), uma vez só.
+  function sketch(i) {
+    const layer = bgLayers[i];
+    if (layer.firstElementChild) return;
+    layer.innerHTML = scenery(entries[i].look, i);
+    motifs[i] = layer.querySelector('.scenery-back'); edges[i] = layer.querySelector('.scenery-mist');
+  }
+  sketch(initial);
   // No meio da troca as cores do tema vão só para o header e as setas (o resto do banner e o rodapé recebem a cor final em report()).
   const live = [shell.querySelector('.site-header'), prevButton, nextButton].filter(Boolean);
   const images = slots.map(slot => slot.querySelector('img'));
@@ -109,6 +119,7 @@ function init() {
     window.finishJuOpening?.();
     // a primeira foto entra sem esmaecer (carousel.css); daqui em diante, as que chegam esmaecem
     requestAnimationFrame(() => requestAnimationFrame(() => region.classList.add('is-drawn')));
+    sketchRest();
     // as vizinhas, para o primeiro arraste, só agora: até aqui a banda era toda da foto da frente. Se ela ainda não chegou (rede
     // lenta, passou dos 6,5 s), só quando chegar ou 15 s depois, para não disputarem a banda com ela
     ready[initial].then(state => state === 'slow' && waitImage(images[initial], 15000)).then(() => preloadAround(active));
@@ -136,6 +147,18 @@ function init() {
     if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; prepareImage(img); }
   }
   const preloadAround = index => { load(index - 1); load(index); load(index + 1); };
+  // O desenho das outras camadas do fundo, depois que a página aparece: um quadro depois, uma camada por quadro (cada uma na sua
+  // tarefa curta), a mais perto da peça da frente primeiro. Nunca no meio de uma troca, de um arraste ou da demonstração (um quadro
+  // perdido no meio do movimento): espera ele terminar. A que for aparecer antes disso já é desenhada por render().
+  async function sketchRest() {
+    for (;;) {
+      await afterFrame();
+      if (frame || gesture || locked) continue;
+      const rest = bgLayers.flatMap((layer, i) => layer.firstElementChild ? [] : [i]);
+      if (!rest.length) return;
+      sketch(rest.reduce((a, b) => Math.abs(wrapDistance(b, active, total)) < Math.abs(wrapDistance(a, active, total)) ? b : a));
+    }
+  }
 
   // ── Estado ativo: só o produto de destino é focável/lido ─────────────────────
   function setActive(index) {
@@ -155,12 +178,14 @@ function init() {
   function measure() {
     const viewport = document.documentElement.clientWidth, pedestal = slots[0].offsetWidth || 320, height = shell.offsetHeight;
     // O desenho do fundo (hero-scenery.js) se prende ao palco em qualquer tela: o centro e o alto dele, medidos na .page (onde
-    // o fundo começa), e a largura da pilastra.
+    // o fundo começa), e a largura da pilastra. Escritos no próprio fundo (.hero-bg, do tamanho da .page), o único que os usa
+    // (carousel.css): variável herdada escrita na .page fazia o navegador recalcular o estilo da página inteira (a coleção, a
+    // novidade, o rodapé) a cada medida, ~660 elementos no primeiro quadro (PageSpeed, 09/10/2026).
     const host = page.getBoundingClientRect(), box = stage.getBoundingClientRect();
-    put(page, '--hero-h', height + 'px');
-    put(page, '--stage-x', `${(box.left + box.width / 2 - host.left).toFixed(1)}px`);
-    put(page, '--stage-top', `${(box.top - host.top).toFixed(1)}px`);
-    put(page, '--scn-ped', `${pedestal}px`);
+    put(bgHost, '--hero-h', height + 'px');
+    put(bgHost, '--stage-x', `${(box.left + box.width / 2 - host.left).toFixed(1)}px`);
+    put(bgHost, '--stage-top', `${(box.top - host.top).toFixed(1)}px`);
+    put(bgHost, '--scn-ped', `${pedestal}px`);
     travel = Math.max(pedestal * 1.3, viewport * .48);
     rise = Math.max(8, pedestal * .035);
     heroHeight = height;
@@ -187,7 +212,8 @@ function init() {
   // elementos) e só o que mudou. Com movimento reduzido, tudo no lugar.
   const scrollLinked = !!window.CSS?.supports?.('animation-timeline: scroll()');
   const depthOf = el => ({el, depth: el.classList.contains('scenery-mist') ? 'near' : el.classList.contains('scn-far') ? 'far' : 'mid', side: el.classList.contains('scn-l') ? -1 : el.classList.contains('scn-r') ? 1 : 0});
-  const followers = scrollLinked ? [] : bgLayers.map(layer => [...layer.querySelectorAll('.scenery-mist, .scenery-back > .scenery-edge')].map(depthOf));
+  // os de cada camada, na primeira vez que ela aparece (o desenho dela pode ter entrado depois da abertura: sketch)
+  const followers = [];
   let heroHeight = 720, scrollFrame = 0, followed = -1;
   function follow(force = false) {
     scrollFrame = 0;
@@ -196,6 +222,7 @@ function init() {
     followed = progress;
     bgLayers.forEach((layer, i) => {
       if (layer.classList.contains('is-off')) return;
+      followers[i] ||= [...layer.querySelectorAll('.scenery-mist, .scenery-back > .scenery-edge')].map(depthOf);
       for (const item of followers[i]) {
         const {x, y, opacity} = sceneryScroll(progress, item, heroHeight);
         put(item.el, 'transform', x || y ? `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)` : '');
@@ -223,9 +250,10 @@ function init() {
     for (let i = 0; i < total; i++) {
       const opacity = i === mix.from ? 1 : i === mix.to ? mix.t : 0, z = i === mix.to ? '2' : '1', shown = opacity >= .005;
       for (const layer of [bgLayers[i], bandLayers[i]]) { put(layer, 'opacity', opacity.toFixed(3)); put(layer, 'zIndex', z); }
-      // a camada apagada sai da pintura e para de animar (.is-off: visibility e content-visibility); na que aparece, o desenho
-      // acompanha a peça a 12% do caminho e os cantos a 5% (profundidade), cada um no seu translate, parados no movimento reduzido
-      if (bgLayers[i].classList.contains('is-off') === shown) { bgLayers[i].classList.toggle('is-off', !shown); if (shown) catchUp(); }
+      // a camada apagada sai da pintura e para de animar (.is-off: visibility e content-visibility); a que aparece ganha o desenho
+      // na hora, se ainda não tinha (sketch), e nela o desenho acompanha a peça a 12% do caminho e os cantos a 5% (profundidade),
+      // cada um no seu translate, parados no movimento reduzido
+      if (bgLayers[i].classList.contains('is-off') === shown) { if (shown) sketch(i); bgLayers[i].classList.toggle('is-off', !shown); if (shown) catchUp(); }
       if (!shown) continue;
       const d = wrapDistance(i, position, total);
       if (motifs[i]) put(motifs[i], 'translate', `${Math.round(sceneryShift(d, travel, motion))}px 0`);

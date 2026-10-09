@@ -42,7 +42,7 @@ assert(/@media \(prefers-reduced-motion: reduce\) \{\s*\.pdp-sheet/.test(css));
 assert(/@media \(max-width: 600px\) \{[\s\S]*\.pdp-sheet \{ top: auto; left: 0;/.test(css), 'no celular o painel sobe de baixo');
 // carregada depois da primeira pintura da home (late-css.js); a janela só abre com ela aplicada (tests/pagespeed.mjs)
 assert(html.includes('<link rel="stylesheet" href="product-page.css" media="print" data-late-css><noscript><link rel="stylesheet" href="product-page.css"></noscript>'));
-assert(js.includes('const syncStyled=()=>{const hash=location.hash;whenStyled(()=>syncProduct(hash));};') && js.includes("window.addEventListener('hashchange',syncStyled);"), 'a janela da peça espera pelas folhas dela, com o endereço de quando ele chegou');
+assert(js.includes("const syncStyled=()=>{const hash=location.hash;whenStyled(()=>syncProduct(hash),hash.startsWith('#produto/'));};") && js.includes("window.addEventListener('hashchange',syncStyled);"), 'a janela da peça espera pelas folhas dela, com o endereço de quando ele chegou (um endereço de peça as liga na hora)');
 // Novidade sem venda (SOON, cores fixas): #produto/<peça>/3d abre só para ver — foto e 3D, as cores da peça e um aviso no lugar da compra.
 assert(js.includes("dialog.dataset.mode=soon?'preview':'compact'") && js.includes("if(step==='encaixe'||(!PRODUCTS[key]&&!(SOON[key]&&step==='3d')))") && js.includes('if(!PRODUCTS[key])return null;'), 'novidade: modo só para ver, pela rota /3d');
 assert(dialog.includes('id="fixed-colors"') && dialog.includes('<p class="pdp-soon-bar">'), 'novidade: as cores fixas e o aviso no lugar da compra');

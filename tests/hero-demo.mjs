@@ -70,7 +70,7 @@ const html = read('index.html'), controller = read('controller.js');
 assert.ok(!/borboletosc|dinossaurosc|aviaosc|retinosc/i.test(demo + timeline), 'a experiência vem dos dados: nada específico de produto no código');
 // a folha da demonstração chega depois da primeira pintura (late-css.js; tests/pagespeed.mjs) e a abertura espera por ela
 assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>'));
-assert.ok(demo.includes("import {lateCss} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, lateCss]);'), 'a demonstração só aparece com o estilo dela');
+assert.ok(demo.includes("import {styleNow} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, styleNow()]);'), 'a demonstração só aparece com o estilo dela (e o liga na hora, se ainda não estava ligado)');
 // 2026-10-08: um preparo que deu "não" (o equipamento passou dos 6,5 s numa rede lenta) não fica guardado: o clique confere de novo,
 // e com as imagens já chegadas o 1º toque em "Ver encaixado" abre (antes, só o 2º)
 assert.ok(/\} else if \(dom\.failed\) check\(\);/.test(demo), 'a demonstração lenta abre no 1º toque: o prepare do clique confere de novo');

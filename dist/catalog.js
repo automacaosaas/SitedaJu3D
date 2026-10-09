@@ -213,7 +213,13 @@ class ProductCarousel {
 }
 const rails = new Map();   // uma coleção por host; trocar de categoria troca a do host
 function mountCarousel(host, key = host.dataset.category) { rails.get(host)?.away?.disconnect(); const list = entries.filter(({product}) => product.category === key); if (!list.length) { host.innerHTML = emptyState(key); rails.delete(host); return; } rails.set(host, new ProductCarousel(host, list)); }
-for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host);
+// Com a página escondida pela abertura (page-entry.js: ju-opening, ou ju-returning na volta), a coleção é montada logo depois do
+// primeiro quadro: o estilo e o layout dela saem da tarefa em que o navegador calcula a vitrine inteira, que passava dos 50 ms
+// (PageSpeed, computador, 09/10/2026). Ela fica pronta antes de a página aparecer: a vitrine espera a primeira medida, que vem
+// nesse mesmo quadro, e mais um quadro (carousel.js › drawn). A peça é a da vitrine (startAt: o endereço ou a última vista).
+const mountAll = () => { for (const host of document.querySelectorAll('[data-product-carousel]')) mountCarousel(host); };
+if (/\bju-(opening|returning)\b/.test(document.documentElement?.className || '')) requestAnimationFrame(() => setTimeout(mountAll));
+else mountAll();
 window.addEventListener(FOCUS, event => { if (event.detail?.source === 'showcase') for (const rail of rails.values()) rail.follow(event.detail?.product); });
 // Produtos page: a grid with every piece side by side (audit B2); produtos.html already carries the same markup.
 // Aberta por um banner da página Escolha o seu (produtos.html?encaixe=<família>): só as peças daquele encaixe, com um selo
@@ -245,7 +251,14 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
       if (!entry.isIntersecting) return;
       entry.target.classList.replace('is-pending', 'is-in'); seen.unobserve(entry.target);
     }), {rootMargin: '0px 0px -10% 0px', threshold: .05});
-    for (const part of parts) if (part.getBoundingClientRect().top > innerHeight) { part.classList.add('is-pending'); seen.observe(part); }
+    // quem está abaixo da tela: a medida vem de um primeiro IntersectionObserver, entregue depois do layout que o navegador já faz
+    // (um getBoundingClientRect aqui, com a página ainda sendo montada, obrigava estilo e layout da página inteira no meio do
+    // script: PageSpeed, "reflow forçado", 09/10/2026). A entrega vem no primeiro quadro, com a página ainda por aparecer.
+    const sort = new IntersectionObserver(list => list.forEach(entry => {
+      sort.unobserve(entry.target);
+      if (entry.boundingClientRect.top > (entry.rootBounds?.bottom ?? innerHeight)) { entry.target.classList.add('is-pending'); seen.observe(entry.target); }
+    }));
+    for (const part of parts) sort.observe(part);
   }
   // indo para a vitrine, a home guarda a altura: o "Voltar" de lá traz a pessoa de volta exatamente aqui (fenda.js)
   for (const link of document.querySelectorAll('.nvb a[href^="fenda"]')) link.addEventListener('click', () => {
