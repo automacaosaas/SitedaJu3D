@@ -208,10 +208,14 @@ partir do valor real da conta (`ADMIN-SETUP.md`, "Fluxo de caixa").
      do painel também começa limpa.
 
    Os pedidos **reais** ficam intactos nas duas. Um pedido de teste com nota fiscal no ambiente de **produção** que passou
-   pelo Bling também fica (a tela mostra `FICA:`): essa nota pode ser de verdade; confira no Bling, cancele se foi
+   pelo Bling, ou que o site já tentou enviar (mesmo sem o código da nota no Bling: "o Bling não confirmou se criou a
+   nota"), também fica (a tela mostra `FICA:`): essa nota pode ser de verdade; confira no Bling, cancele se foi
    autorizada e fale com a contadora. As notas de homologação continuam na conta do Bling: o script só limpa o banco do site.
 4. **Mostra o que vai apagar** (cada lançamento, cada conta, cada pedido de teste e quantas peças, linhas de histórico,
-   notas e registros vão junto) e só segue com **LIMPAR** (em maiúsculas; qualquer outra resposta cancela). Apaga numa
+   notas e registros vão junto) e só segue com **LIMPAR** (em maiúsculas; qualquer outra resposta cancela). Se algum
+   pedido de teste for mais novo que o primeiro pedido real, a tela mostra `ATENÇÃO`: depois do lançamento, pedido de
+   teste só aparece se o site voltou ao modo de teste do Mercado Pago, e com a credencial de produção ele cobra de verdade;
+   confira na conta do Mercado Pago da Júlia antes de digitar LIMPAR. Apaga numa
    transação só (um erro no meio desfaz tudo) e por id: só o que foi mostrado; um lançamento que a Júlia fizer enquanto
    isso fica.
 5. No fim, conta de novo, mostra **Caixa zerado** e deixa no registro de auditoria do painel (`admin_audit`, ação

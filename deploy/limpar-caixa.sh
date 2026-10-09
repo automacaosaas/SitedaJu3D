@@ -15,7 +15,8 @@
 #      mostrado (um lançamento feito durante a rodada fica). Registra "caixa zerado pelo servidor" no registro de auditoria
 #      do painel (admin_audit) e conta de novo.
 # Pedidos REAIS (source 'live') nunca são apagados: as vendas de verdade continuam no caixa. Um pedido de teste com nota
-# fiscal no ambiente de PRODUÇÃO que passou pelo Bling também fica: ela pode ser de verdade (cancelar no Bling).
+# fiscal no ambiente de PRODUÇÃO que passou pelo Bling (ou que o site já tentou enviar) também fica: ela pode ser de verdade
+# (cancelar no Bling). Pedido de teste mais novo que o primeiro real aparece com ATENÇÃO antes do LIMPAR.
 # Depois, a Júlia toca em "Informar o saldo de hoje" no painel. Veja ADMIN-SETUP.md ("Fluxo de caixa") e SERVIDOR-SETUP.md.
 # Testar no computador (sem root, com um banco de mentira; tests/deploy.mjs faz isso):
 #   JU_TEST=1 JU_ENV_FILE=<.env> JU_DEPLOY=<cópia de mentira> JU_MARIADB=<mariadb de mentira> bash deploy/limpar-caixa.sh
@@ -81,9 +82,11 @@ echo "    e outra fora do rodízio (as cópias diárias empurram as antigas de s
 
 PAID="'pendente', 'confirmado', 'enviado', 'concluido', 'recusado'"   # pedido pago (PAID em api/_lib/orders.js)
 # Nota fiscal no ambiente de PRODUÇÃO que passou pelo Bling ou ainda vai (autorizada, em processamento, na fila, com chave
-# de acesso ou com o código da nota no Bling): pode ser de verdade, então o pedido de teste dela não sai daqui. Sai só a
-# recusada antes de ir ao Bling ("pedido de teste, sem nota real", api/_lib/invoicing.js).
-REAL_NOTE="EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = orders.id AND i.environment = 'producao' AND (i.status <> 'erro' OR i.access_key IS NOT NULL OR i.provider_id IS NOT NULL))"
+# de acesso, com o código da nota no Bling, ou que o site já tentou enviar): pode ser de verdade, então o pedido de teste
+# dela não sai daqui. Uma tentativa que não deixou o código no Bling também conta: "o Bling não confirmou se criou a nota"
+# (a conexão caiu no meio) e "o Bling não devolveu o código da nota" ficam como erro, sem código, e a nota pode existir lá.
+# Sai só a recusada antes de ir ao Bling ("pedido de teste, sem nota real", api/_lib/invoicing.js), que nunca conta tentativa.
+REAL_NOTE="EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = orders.id AND i.environment = 'producao' AND (i.status <> 'erro' OR i.access_key IS NOT NULL OR i.provider_id IS NOT NULL OR i.attempts > 0))"
 TEST_ORDERS="source <> 'live' AND NOT $REAL_NOTE"
 
 echo
@@ -165,6 +168,17 @@ if [ ${#order_ids[@]} -gt 0 ]; then
     (SELECT COUNT(*) FROM integration_log WHERE reference IN (SELECT reference FROM orders WHERE id IN ($list))) AS registros;")"
   echo "    junto com eles: $n_items peça(s), $n_events linha(s) de histórico, $n_notes nota(s) fiscal(is) (de homologação ou recusadas"
   echo "    por serem de teste: nenhuma vale como nota de verdade) e $n_log registro(s) do Bling"
+  # Depois do lançamento (MP_MODE=live), todo pedido novo é real. Um pedido de teste mais novo que o primeiro real só aparece
+  # se o site voltou ao modo de teste, e com a credencial de produção e MP_MODE=test (ou sem APP_ENV=production) o Mercado
+  # Pago cobra de verdade e o pedido fica marcado como teste: o dono confere antes de apagar.
+  newer=$(q <<<"SELECT COUNT(*) FROM orders WHERE id IN ($list) AND created_at > (SELECT MIN(created_at) FROM orders WHERE source = 'live');") || newer=''
+  numbers "${newer:-x}" || { echo "Erro ao ler o banco: nada foi apagado."; exit 1; }
+  if [ "$newer" -gt 0 ]; then
+    echo "ATENÇÃO: pedido(s) de teste desta lista feito(s) depois do primeiro pedido real: $newer. Depois do lançamento, pedido de"
+    echo "    teste só aparece se o site voltou ao modo de teste do Mercado Pago. Antes de digitar LIMPAR, confira na conta do"
+    echo "    Mercado Pago da Júlia que nenhum deles foi cobrado de verdade; se algum foi, cancele (qualquer outra resposta) e"
+    echo "    chame quem cuida do código."
+  fi
 fi
 if [ "$scope" = 2 ]; then
   while IFS=$'\t' read -r ref status; do

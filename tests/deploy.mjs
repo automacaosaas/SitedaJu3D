@@ -454,8 +454,15 @@ const migrationTables = () => {   // the tables as the migrations leave them: co
   assert(!/\b(UPDATE \w+ SET|TRUNCATE|DROP TABLE|ALTER TABLE|REPLACE INTO)\b/i.test(cashReset), 'nothing is updated, truncated or dropped');
   assert(deletes.includes("DELETE FROM cash_entries WHERE id IN ($(in_list \"${entry_ids[@]}\"));\"$'\\n'; fi") && deletes.includes("DELETE FROM bills WHERE id IN ($(in_list \"${bill_ids[@]}\"));\"$'\\n'; fi"), 'the cash flow by the ids that were shown');
   // real orders never: the test orders are source <> 'live', checked again when the ids go in, and the order itself last
-  assert(cashReset.includes(`TEST_ORDERS="source <> 'live' AND NOT $REAL_NOTE"`) && cashReset.includes(`REAL_NOTE="EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = orders.id AND i.environment = 'producao' AND (i.status <> 'erro' OR i.access_key IS NOT NULL OR i.provider_id IS NOT NULL))"`), 'test orders only, never one whose production NF-e went near Bling (only the one refused before it is cleaned)');
+  assert(cashReset.includes(`TEST_ORDERS="source <> 'live' AND NOT $REAL_NOTE"`) && cashReset.includes(`REAL_NOTE="EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = orders.id AND i.environment = 'producao' AND (i.status <> 'erro' OR i.access_key IS NOT NULL OR i.provider_id IS NOT NULL OR i.attempts > 0))"`), 'test orders only, never one whose production NF-e went near Bling or that the site tried to send (only the one refused before it is cleaned)');
   assert(raw('api/_lib/invoicing.js').includes("return record(invoice, {status: 'erro', message: 'Pedido de teste (pago no modo de teste do Mercado Pago): não emitimos nota fiscal real para ele.', nextAttemptAt: null, retries: 0}"), 'that refusal is an "erro" before anything goes to Bling');
+  // …and before the attempt is counted: a production note with attempts > 0 went past that refusal (to the CEP lookup or to
+  // Bling), and the errors that leave no Bling id ("o Bling não confirmou se criou a nota") may have left a note there
+  { const invoicing = raw('api/_lib/invoicing.js'), refusal = invoicing.indexOf("message: 'Pedido de teste (pago no modo de teste do Mercado Pago)"), counted = invoicing.indexOf('attempts: (invoice.attempts || 0) + 1');
+    assert(refusal > 0 && counted > refusal && invoicing.split('attempts: (invoice.attempts || 0) + 1').length === 2, 'the refusal of a test order never counts an attempt'); }
+  // a test order newer than the first real one (the site back in Mercado Pago's test mode after the launch) is pointed out
+  // before LIMPAR, and a failed check stops
+  assert(cashReset.includes(`AND created_at > (SELECT MIN(created_at) FROM orders WHERE source = 'live');") || newer=''`) && cashReset.includes('numbers "${newer:-x}" || { echo "Erro ao ler o banco: nada foi apagado."; exit 1; }') && at('ATENÇÃO: pedido(s) de teste desta lista') < at('Para apagar, digite LIMPAR'), 'the warning before LIMPAR');
   assert(sqlLines[line('INSERT INTO limpeza_pedidos')].includes('FROM orders WHERE $TEST_ORDERS AND id IN (') && line('CREATE TEMPORARY TABLE limpeza_pedidos AS SELECT id, reference FROM orders WHERE 1 = 0;') < line('START TRANSACTION;') && line('INSERT INTO limpeza_pedidos') > line('START TRANSACTION;'), 'the ids filtered again by the database, inside the transaction (the temporary table, with the columns of orders, made before it)');
   assert.equal(deletes.filter(l => l.startsWith('DELETE FROM orders')).join(), `DELETE FROM orders WHERE source <> 'live' AND id IN (SELECT id FROM limpeza_pedidos);"$'\\n'`, 'and the DELETE of the orders says source <> \'live\' itself');
   assert(!/source = 'live'[^\n]*\b(DELETE|INSERT INTO limpeza)/.test(cashReset) && !/(DELETE|INSERT INTO limpeza)[^\n]*source = 'live'/.test(cashReset), 'source = \'live\' only in counts');
@@ -534,7 +541,7 @@ try {
 }
 `);
       const tables = migrationTables(), id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-      const L1 = id(1), L2 = id(2), T1 = id(11), T2 = id(12), T3 = id(13), T4 = id(14), T5 = id(15);
+      const L1 = id(1), L2 = id(2), T1 = id(11), T2 = id(12), T3 = id(13), T4 = id(14), T5 = id(15), T6 = id(16);
       const open = () => new DatabaseSync(p('caixa.db'));
       const seed = () => {
         fs.rmSync(p('caixa.db'), {force: true});
@@ -548,16 +555,19 @@ try {
         add('cash_entries', {id: id(103), kind: 'entrada', category: 'ajuste', description: 'Ajuste de saldo', amount_cents: 25000, occurred_on: '2026-10-03', created_at: '2026-10-03 12:00:00.000'});
         add('bills', {id: id(201), description: 'Aluguel', amount_cents: 120000, due_on: '2026-10-10', paid_on: null, locked_at: null, created_at: '2026-10-01 12:00:00.000'});
         add('bills', {id: id(202), description: 'Internet', amount_cents: 9990, due_on: '2026-10-05', paid_on: '2026-10-05', locked_at: '2026-10-05 10:00:00.000', created_at: '2026-10-01 12:00:00.000'});
-        const order = (oid, reference, source, status, paid) => add('orders', {id: oid, reference, source, status, total_cents: 15990, paid_at: paid ? '2026-10-08 13:00:00.000' : null, refund_state: null, created_at: `2026-10-0${1 + Number(oid.slice(-2)) % 8} 12:00:00.000`});
-        order(L1, 'JU-LIVE00001', 'live', 'pendente', true); order(L2, 'JU-LIVE00002', 'live', 'aguardando_pagamento', false);
-        order(T1, 'JU-TESTE0001', 'test', 'concluido', true); order(T2, 'JU-TESTE0002', 'test', 'cancelado', false);
-        order(T3, 'JU-TESTE0003', 'test', 'confirmado', true); order(T4, 'JU-TESTE0004', 'test', 'pendente', true); order(T5, 'JU-TESTE0005', 'test', 'confirmado', true);
+        // the test orders from before the launch (3 to 8/10), the real ones from it (9/10, 10h and 11h)
+        const order = (oid, reference, source, status, paid, at) => add('orders', {id: oid, reference, source, status, total_cents: 15990, paid_at: paid ? '2026-10-09 13:00:00.000' : null, refund_state: null, created_at: `${at}:00:00.000`});
+        order(L1, 'JU-LIVE00001', 'live', 'pendente', true, '2026-10-09 10'); order(L2, 'JU-LIVE00002', 'live', 'aguardando_pagamento', false, '2026-10-09 11');
+        order(T1, 'JU-TESTE0001', 'test', 'concluido', true, '2026-10-04 12'); order(T2, 'JU-TESTE0002', 'test', 'cancelado', false, '2026-10-05 12');
+        order(T3, 'JU-TESTE0003', 'test', 'confirmado', true, '2026-10-06 12'); order(T4, 'JU-TESTE0004', 'test', 'pendente', true, '2026-10-07 12'); order(T5, 'JU-TESTE0005', 'test', 'confirmado', true, '2026-10-08 12'); order(T6, 'JU-TESTE0006', 'test', 'confirmado', true, '2026-10-03 12');
         for (const [n, oid] of [[1, L1], [2, T1], [3, T2], [4, T3], [5, T4]]) add('order_items', {id: n, order_id: oid, position: 0, product_id: 'dino', title: 'Dino', quantity: 1, unit_price_cents: 15990, selection: '{}'});
         for (const [n, oid] of [[1, L1], [2, T1], [3, T1], [4, T3]]) add('order_events', {id: n, order_id: oid, kind: 'pago', detail: null, actor: null, created_at: '2026-10-08 13:00:00.000'});
         // L1 with a real NF-e; T1 homologação; T3 a REAL NF-e on a test order (stays); T4 refused as a test order before it
-        // went to Bling (goes); T5 a production note created in Bling and refused there (stays: the note exists in Bling)
-        for (const [oid, ref, environment, status, key, providerId] of [[L1, 'JU-LIVE00001', 'producao', 'autorizada', '3'.repeat(44), '901'], [T1, 'JU-TESTE0001', 'homologacao', 'autorizada', '1'.repeat(44), '902'], [T3, 'JU-TESTE0003', 'producao', 'autorizada', '2'.repeat(44), '903'], [T4, 'JU-TESTE0004', 'producao', 'erro', null, null], [T5, 'JU-TESTE0005', 'producao', 'erro', null, '905']]) {
-          add('invoices', {id: `${oid.slice(0, -4)}9${oid.slice(-3)}`, order_id: oid, provider: 'bling', provider_id: providerId, environment, reference: ref, status, access_key: key});
+        // went to Bling (goes: no attempt counted); T5 a production note created in Bling and refused there (stays: the note
+        // exists in Bling); T6 a production note the site tried to send whose creation Bling never confirmed (an "erro" with no
+        // Bling id, "o Bling não confirmou se criou a nota"): it may exist in Bling, so it stays
+        for (const [oid, ref, environment, status, key, providerId, attempts] of [[L1, 'JU-LIVE00001', 'producao', 'autorizada', '3'.repeat(44), '901', 1], [T1, 'JU-TESTE0001', 'homologacao', 'autorizada', '1'.repeat(44), '902', 1], [T3, 'JU-TESTE0003', 'producao', 'autorizada', '2'.repeat(44), '903', 1], [T4, 'JU-TESTE0004', 'producao', 'erro', null, null, 0], [T5, 'JU-TESTE0005', 'producao', 'erro', null, '905', 2], [T6, 'JU-TESTE0006', 'producao', 'erro', null, null, 1]]) {
+          add('invoices', {id: `${oid.slice(0, -4)}9${oid.slice(-3)}`, order_id: oid, provider: 'bling', provider_id: providerId, environment, reference: ref, status, access_key: key, attempts});
         }
         for (const [n, ref] of [[1, 'JU-LIVE00001'], [2, 'JU-TESTE0001'], [3, null]]) add('integration_log', {id: n, name: 'bling', kind: 'falha', reference: ref, message: 'x', created_at: '2026-10-08 13:00:00.000'});
         add('admin_audit', {id: 1, admin_id: null, action: 'login', detail: null, ip: null});
@@ -576,7 +586,7 @@ try {
       const sqlOf = list => list.filter(c => c.sql).map(c => c.sql).join('\n');
       seed();
       const full = counts(), liveRows = live();
-      assert.deepEqual(full, {cash_entries: 3, bills: 2, orders: 7, order_items: 5, order_events: 4, invoices: 5, integration_log: 3, admin_audit: 1});
+      assert.deepEqual(full, {cash_entries: 3, bills: 2, orders: 8, order_items: 5, order_events: 4, invoices: 6, integration_log: 3, admin_audit: 1});
 
       // a .env where the database copied (the first DB_NAME line, DB_HOST) may not be the one cleaned through the socket nor
       // the one the site uses (the last line): no copy, not one query
@@ -600,10 +610,19 @@ try {
       assert.equal(shown.status, 1, shown.out); assert.match(shown.stdout, /Nada foi apagado\.\n$/);
       assert.deepEqual(calls()[0], {backup: '--backup limpeza'}, 'the copy first');
       assert(calls().slice(1).every(c => c.sql && !/DELETE|START TRANSACTION|INSERT/.test(c.sql)), 'only reads before LIMPAR');
-      for (const text of ['Lançamentos à mão (entradas e despesas): 3, dos quais 1 são "Ajuste de saldo"', 'Contas a pagar: 2 (1 trancadas)', 'Pedidos de TESTE do Mercado Pago: 5', '    cancelado: 1', '    confirmado: 2', '    pendente: 1', 'Pedidos REAIS: 2 (1 pagos', '3 lançamento(s) à mão:', '2026-10-02  saída · materiais  R$ 45,90  Filamento PLA',
+      for (const text of ['Lançamentos à mão (entradas e despesas): 3, dos quais 1 são "Ajuste de saldo"', 'Contas a pagar: 2 (1 trancadas)', 'Pedidos de TESTE do Mercado Pago: 6', '    cancelado: 1', '    confirmado: 3', '    pendente: 1', 'Pedidos REAIS: 2 (1 pagos', '3 lançamento(s) à mão:', '2026-10-02  saída · materiais  R$ 45,90  Filamento PLA',
         '2 conta(s) a pagar:', 'vence 2026-10-05  R$ 99,90  paga em 2026-10-05 · trancada  Internet', 'vence 2026-10-10  R$ 1200,00  pendente  Aluguel', '3 pedido(s) de teste:', 'JU-TESTE0001  concluido  R$ 159,90', 'JU-TESTE0004', 'junto com eles: 3 peça(s), 2 linha(s) de histórico, 2 nota(s) fiscal(is)',
-        'e 1 registro(s) do Bling', 'FICA: JU-TESTE0003 (confirmado; pedido de teste com nota fiscal de PRODUÇÃO', 'FICA: JU-TESTE0005 (confirmado;', 'Os 2 pedidos REAIS não são tocados.']) assert(shown.out.includes(text), `shows: ${text}\n${shown.out}`);
+        'e 1 registro(s) do Bling', 'FICA: JU-TESTE0003 (confirmado; pedido de teste com nota fiscal de PRODUÇÃO', 'FICA: JU-TESTE0005 (confirmado;', 'FICA: JU-TESTE0006 (confirmado;', 'Os 2 pedidos REAIS não são tocados.']) assert(shown.out.includes(text), `shows: ${text}\n${shown.out}`);
       assert(!shown.out.includes('JU-LIVE') && !shown.out.includes('senha-do-banco'), 'no real order listed, no password');
+      assert(!shown.out.includes('ATENÇÃO'), 'all the test orders are older than the first real one: no warning');
+      assert.deepEqual(counts(), full);
+      // a test order made after the first real one (the site back in test mode after the launch: with the production
+      // credential, MP_MODE=test charges for real and marks the order as a test): the owner is told to check before LIMPAR
+      { const db = open(); db.exec(`UPDATE orders SET created_at = '2026-10-09 10:30:00.000' WHERE id = '${T1}'`); db.close(); }
+      const newer = run(['2', '']);
+      assert.equal(newer.status, 1, newer.out); assert.match(newer.stdout, /Nada foi apagado\.\n$/);
+      assert(newer.out.includes('ATENÇÃO: pedido(s) de teste desta lista feito(s) depois do primeiro pedido real: 1.') && newer.out.indexOf('ATENÇÃO') < newer.out.indexOf('Os 2 pedidos REAIS não são tocados.'), newer.out);
+      { const db = open(); db.exec(`UPDATE orders SET created_at = '2026-10-04 12:00:00.000' WHERE id = '${T1}'`); db.close(); }
       assert.deepEqual(counts(), full);
       const kept = p('limpeza-20261009-120000.sql.gz');
       assert(fs.existsSync(kept) && fs.readFileSync(kept).equals(fs.readFileSync(p('backups/limpeza-20261009-120000.sql.gz'))), 'the copy kept outside the rotation');
@@ -632,8 +651,8 @@ try {
       const late = `INSERT INTO cash_entries (id, kind, category, description, amount_cents, occurred_on) VALUES ('${id(150)}', 'saida', 'frete', 'Correios', 2500, '2026-10-09')`;
       const all = run(['2', 'LIMPAR'], {JU_FAKE_LATE: late});
       assert.equal(all.status, 0, all.out);
-      assert.deepEqual(query('SELECT id FROM orders ORDER BY id').map(r => r.id), [L1, L2, T3, T5]);
-      assert.deepEqual(counts(), {cash_entries: 1, bills: 0, orders: 4, order_items: 2, order_events: 2, invoices: 3, integration_log: 2, admin_audit: 2});
+      assert.deepEqual(query('SELECT id FROM orders ORDER BY id').map(r => r.id), [L1, L2, T3, T5, T6]);
+      assert.deepEqual(counts(), {cash_entries: 1, bills: 0, orders: 5, order_items: 2, order_events: 2, invoices: 4, integration_log: 2, admin_audit: 2});
       assert.deepEqual(live(), liveRows, 'the real orders, their pieces, history, NF-e and Bling log exactly as they were');
       assert.deepEqual(query('SELECT id FROM cash_entries').map(r => r.id), [id(150)], 'what came in during the reading stays');
       assert(all.out.includes('Ficaram 1 lançamento(s) e 0 conta(s) feitos durante a limpeza'), all.out);
@@ -648,7 +667,7 @@ try {
       { const db = open(); db.exec('DELETE FROM cash_entries'); db.close(); }
       const again = run(['2']);
       assert.equal(again.status, 0, again.out);
-      assert(again.out.includes('Nada: o caixa já está limpo.') && again.out.includes('FICA: JU-TESTE0003') && again.out.includes('Informar o saldo de hoje'), again.out);
+      assert(again.out.includes('Nada: o caixa já está limpo.') && again.out.includes('FICA: JU-TESTE0003') && again.out.includes('FICA: JU-TESTE0006') && again.out.includes('Informar o saldo de hoje'), again.out);
       assert(!sqlOf(calls()).includes('START TRANSACTION'));
       const onlyCash = run(['1']);
       assert.equal(onlyCash.status, 0, onlyCash.out); assert(onlyCash.out.includes('Nada: o caixa já está limpo.'), onlyCash.out);
