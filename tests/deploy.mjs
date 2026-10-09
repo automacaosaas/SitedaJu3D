@@ -2,7 +2,7 @@
 // LF line endings (bash refuses CRLF), every setting the code reads listed in the .env the setup writes, the app on
 // 127.0.0.1 behind nginx, an X-Forwarded-For nobody can forge, and the deploy: tests before the switch, a copy of the
 // database before new migrations, a health check that proves the new commit and the database, the rollback that the
-// timer respects, the e-mail when it fails.
+// timer respects, the e-mail when it fails, and the scripts the owner runs with sudo (limpar-caixa.sh among them).
 // Run: node tests/deploy.mjs
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,7 +16,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const raw = file => fs.readFileSync(path.join(root, file), 'utf8');
 const files = fs.readdirSync(path.join(root, 'deploy'));
-assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-loja.sh', 'config-nginx.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'manutencao.html', 'nginx-juimprime.conf', 'setup-servidor.sh']);
+assert.deepEqual(files.sort(), ['backup-config.sh', 'backup-nuvem.sh', 'config-loja.sh', 'config-nginx.sh', 'config-pagamentos.sh', 'deploy.sh', 'firewall.sh', 'juimprime-backup.service', 'juimprime-backup.timer', 'juimprime-deploy-alert.service', 'juimprime-deploy.service', 'juimprime-deploy.timer', 'juimprime-rollback.service', 'juimprime.service', 'limpar-caixa.sh', 'manutencao.html', 'nginx-juimprime.conf', 'setup-servidor.sh']);
 for (const file of files) assert(!raw(`deploy/${file}`).includes('\r'), `deploy/${file}: LF only (the Linux server runs it)`);
 assert.match(raw('.gitattributes'), /^deploy\/\*\* text eol=lf$/m, 'and Git keeps them LF, also on Windows');
 
@@ -25,7 +25,8 @@ const firewall = raw('deploy/firewall.sh');
 const cloud = raw('deploy/backup-nuvem.sh'), cloudSetup = raw('deploy/backup-config.sh'), payments = raw('deploy/config-pagamentos.sh');
 const shop = raw('deploy/config-loja.sh');
 const nginxSetup = raw('deploy/config-nginx.sh');
-for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments], ['config-loja.sh', shop], ['config-nginx.sh', nginxSetup]]) {
+const cashReset = raw('deploy/limpar-caixa.sh');
+for (const [name, script] of [['setup-servidor.sh', setup], ['deploy.sh', deploy], ['firewall.sh', firewall], ['backup-nuvem.sh', cloud], ['backup-config.sh', cloudSetup], ['config-pagamentos.sh', payments], ['config-loja.sh', shop], ['config-nginx.sh', nginxSetup], ['limpar-caixa.sh', cashReset]]) {
   assert(script.startsWith('#!/usr/bin/env bash\n'), `${name}: bash`);
   assert.match(script, /^set -euo pipefail$/m, `${name}: stops at the first error`);
 }
@@ -398,6 +399,285 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
 
+// limpar-caixa.sh (09/10/2026, "Reinicia o fluxo de caixa da Júlia. Deixa limpo, com tudo validado."): root only; only the
+// DB_NAME line of the .env (as deploy.sh's envget), MariaDB as root through the socket, no password anywhere; the copy of
+// the database before anything (deploy.sh's own, as juimprime), checked and kept outside the rotation; LIMPAR in capitals;
+// one transaction, by id (only what was shown); every table that hangs on an order cleaned with it; real orders (source
+// 'live') never, nor a test order whose NF-e is a real one; a line in the panel's audit log.
+const migrationTables = () => {   // the tables as the migrations leave them: columns and foreign keys
+  const tables = new Map();
+  for (const file of fs.readdirSync(path.join(root, 'db/migrations')).filter(f => f.endsWith('.sql')).sort()) {
+    const text = raw(`db/migrations/${file}`).replace(/\r\n/g, '\n').replace(/--[^\n]*/g, '');
+    for (const [, name, body] of text.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+) \(\n([\s\S]*?)\n\)/g)) {
+      const table = {columns: [], primary: [], fks: []};
+      for (const line of body.split('\n').map(l => l.trim().replace(/,$/, '')).filter(Boolean)) {
+        const fk = /FOREIGN KEY \((\w+)\) REFERENCES (\w+) \((\w+)\)(?: ON DELETE (CASCADE|SET NULL))?/.exec(line);
+        if (fk) table.fks.push({column: fk[1], table: fk[2], ref: fk[3], onDelete: fk[4] || null});
+        else if (!/^(PRIMARY|UNIQUE|KEY|INDEX|CONSTRAINT)\b/.test(line)) {
+          table.columns.push(line.split(/\s/)[0]);
+          if (/\bPRIMARY KEY\b/.test(line)) table.primary.push(line.split(/\s/)[0]);
+        }
+      }
+      tables.set(name, table);
+    }
+    for (const [, name, body] of text.matchAll(/ALTER TABLE (\w+)\s([\s\S]*?);/g)) for (const [, column] of body.matchAll(/ADD COLUMN (\w+)/g)) tables.get(name).columns.push(column);
+  }
+  return tables;
+};
+{
+  const at = text => { const i = cashReset.indexOf(text); assert(i > 0, `limpar-caixa.sh has: ${text}`); return i; };
+  assert(cashReset.includes('[ "$(id -u)" -eq 0 ] || { echo "Rode com sudo: sudo bash $0"; exit 1; }') && cashReset.includes('[ "$(id -u)" -ne 0 ] || { echo "JU_TEST é só para o teste no computador'), 'only root (and the test switch never as root)');
+  // only the DB_NAME and DB_HOST lines of the .env, read as juimprime: the database deploy.sh copies (its envget, the first
+  // line) is the one root cleans through the socket and the one the site uses (systemd takes the last): one DB_NAME line, a
+  // local DB_HOST. The .env of the test switch only with it (on the server, always the one deploy.sh reads).
+  assert(cashReset.includes('setting() { as_app grep -E "^[[:space:]]*$1[[:space:]]*=" -- "$ENV_FILE" 2>/dev/null || true; }') && cashReset.includes('if [[ "$(setting DB_NAME)" =~ ^DB_NAME=([A-Za-z0-9_]{1,64})$ ]]; then DB=${BASH_REMATCH[1]}; fi'), 'only the DB_NAME line of the .env, one and plain, read as juimprime');
+  assert(cashReset.includes(`case "$(setting DB_HOST)" in\n  ''|DB_HOST=|DB_HOST=127.0.0.1|DB_HOST=localhost|DB_HOST=::1) ;;`) && at('case "$(setting DB_HOST)"') < at('--backup limpeza 2>&1'), 'the MariaDB of this machine, checked before the copy');
+  assert(cashReset.includes('ENV_FILE=$APP_DIR/shared/.env ') && deploy.includes('ENV_FILE="$APP_DIR/shared/.env"') && cashReset.includes('ENV_FILE=${JU_ENV_FILE:?}; DEPLOY=${JU_DEPLOY:?}') && cashReset.split('JU_ENV_FILE').length === 3, 'the .env deploy.sh reads; another one only in the test');
+  // --skip-force: the client stops at the first error even if a MariaDB option file says "force" (it would go on to the
+  // COMMIT and save half of the transaction)
+  assert(cashReset.includes('db() { mariadb "$@"; }') && cashReset.includes('q() { db --batch --skip-force --skip-column-names --default-character-set=utf8mb4 "$DB"; }') && cashReset.split('db --batch').length === 2, 'MariaDB as root through the socket, every query through q (the SQL on stdin), stopping at the first error');
+  assert(!/DB_PASSWORD|DB_USER|DB_PORT|DATABASE_URL|--password|--user|MYSQL_PWD|defaults-extra-file/.test(cashReset), 'no password nor user anywhere');
+  // the copy before anything, with the deploy.sh the setup installs, as juimprime; checked; a copy outside the rotation
+  assert(cashReset.includes('DEPLOY=/usr/local/lib/juimprime/deploy.sh') && setup.includes('install -m 755 "$HERE/deploy.sh" /usr/local/lib/juimprime/deploy.sh') && deploy.includes('label=${2:-manual}; [[ "$label" =~ ^[a-z0-9-]{1,20}$ ]]'), 'deploy.sh --backup, where the setup installs it');
+  assert(cashReset.includes('as_app() { runuser -u "$APP_USER" -- "$@"; }') && cashReset.includes('if ! out=$(as_app "$DEPLOY" --backup limpeza 2>&1); then'), 'the copy as juimprime');
+  assert(at('--backup limpeza 2>&1') < at('q <<<') && at('--backup limpeza 2>&1') < at('| q'), 'the copy before the first query');
+  assert(cashReset.includes('gzip -t "$1" && gzip -dc "$1" | tail -n 1 | grep -q "Dump completed"') && at('Dump completed') < at('q <<<'), 'checked before anything is read');
+  assert(cashReset.includes('KEEP_DIR=/var/backups/juimprime') && cashReset.includes('install -d -o root -g root -m 700 "$KEEP_DIR"') && cashReset.includes('(umask 077; as_app cat -- "$copy" > "$kept")'), 'and kept outside the rotation of shared/backups, root only, read as juimprime');
+  // LIMPAR, then one transaction; every DELETE inside it; nothing else changes the data
+  assert(cashReset.includes('[ "$answer" = LIMPAR ] || { echo "Nada foi apagado."; exit 1; }') && at('[ "$answer" = LIMPAR ]') < at('sql+="START TRANSACTION;"'), 'LIMPAR in capitals before the SQL that deletes');
+  const sqlLines = cashReset.split('\n').filter(line => line.includes('sql+="')).map(line => line.slice(line.indexOf('sql+="') + 6));
+  const line = start => { const i = sqlLines.findIndex(l => l.startsWith(start)); assert(i >= 0, `limpar-caixa.sh builds: ${start}`); return i; };
+  const deletes = sqlLines.filter(l => l.startsWith('DELETE FROM'));
+  assert.equal(cashReset.split('DELETE FROM').length - 1, deletes.length, 'every DELETE is in the SQL of the transaction');
+  assert(deletes.every(l => sqlLines.indexOf(l) > line('START TRANSACTION;')) && line('COMMIT;') === sqlLines.length - 1, 'all between START TRANSACTION and COMMIT');
+  assert(line('INSERT INTO admin_audit (admin_id, action, detail, ip) VALUES (NULL, \'cash_reset\', \'$detail\', NULL);') > line('START TRANSACTION;') && cashReset.includes('detail="caixa zerado pelo servidor (limpar-caixa.sh'), 'the audit line in the same transaction');
+  assert(!/\b(UPDATE \w+ SET|TRUNCATE|DROP TABLE|ALTER TABLE|REPLACE INTO)\b/i.test(cashReset), 'nothing is updated, truncated or dropped');
+  assert(deletes.includes("DELETE FROM cash_entries WHERE id IN ($(in_list \"${entry_ids[@]}\"));\"$'\\n'; fi") && deletes.includes("DELETE FROM bills WHERE id IN ($(in_list \"${bill_ids[@]}\"));\"$'\\n'; fi"), 'the cash flow by the ids that were shown');
+  // real orders never: the test orders are source <> 'live', checked again when the ids go in, and the order itself last
+  assert(cashReset.includes(`TEST_ORDERS="source <> 'live' AND NOT $REAL_NOTE"`) && cashReset.includes(`REAL_NOTE="EXISTS (SELECT 1 FROM invoices i WHERE i.order_id = orders.id AND i.environment = 'producao' AND (i.status <> 'erro' OR i.access_key IS NOT NULL OR i.provider_id IS NOT NULL OR i.attempts > 0))"`), 'test orders only, never one whose production NF-e went near Bling or that the site tried to send (only the one refused before it is cleaned)');
+  assert(raw('api/_lib/invoicing.js').includes("return record(invoice, {status: 'erro', message: 'Pedido de teste (pago no modo de teste do Mercado Pago): não emitimos nota fiscal real para ele.', nextAttemptAt: null, retries: 0}"), 'that refusal is an "erro" before anything goes to Bling');
+  // …and before the attempt is counted: a production note with attempts > 0 went past that refusal (to the CEP lookup or to
+  // Bling), and the errors that leave no Bling id ("o Bling não confirmou se criou a nota") may have left a note there
+  { const invoicing = raw('api/_lib/invoicing.js'), refusal = invoicing.indexOf("message: 'Pedido de teste (pago no modo de teste do Mercado Pago)"), counted = invoicing.indexOf('attempts: (invoice.attempts || 0) + 1');
+    assert(refusal > 0 && counted > refusal && invoicing.split('attempts: (invoice.attempts || 0) + 1').length === 2, 'the refusal of a test order never counts an attempt'); }
+  // a test order newer than the first real one (the site back in Mercado Pago's test mode after the launch) is pointed out
+  // before LIMPAR, and a failed check stops
+  assert(cashReset.includes(`AND created_at > (SELECT MIN(created_at) FROM orders WHERE source = 'live');") || newer=''`) && cashReset.includes('numbers "${newer:-x}" || { echo "Erro ao ler o banco: nada foi apagado."; exit 1; }') && at('ATENÇÃO: pedido(s) de teste desta lista') < at('Para apagar, digite LIMPAR'), 'the warning before LIMPAR');
+  assert(sqlLines[line('INSERT INTO limpeza_pedidos')].includes('FROM orders WHERE $TEST_ORDERS AND id IN (') && line('CREATE TEMPORARY TABLE limpeza_pedidos AS SELECT id, reference FROM orders WHERE 1 = 0;') < line('START TRANSACTION;') && line('INSERT INTO limpeza_pedidos') > line('START TRANSACTION;'), 'the ids filtered again by the database, inside the transaction (the temporary table, with the columns of orders, made before it)');
+  assert.equal(deletes.filter(l => l.startsWith('DELETE FROM orders')).join(), `DELETE FROM orders WHERE source <> 'live' AND id IN (SELECT id FROM limpeza_pedidos);"$'\\n'`, 'and the DELETE of the orders says source <> \'live\' itself');
+  assert(!/source = 'live'[^\n]*\b(DELETE|INSERT INTO limpeza)/.test(cashReset) && !/(DELETE|INSERT INTO limpeza)[^\n]*source = 'live'/.test(cashReset), 'source = \'live\' only in counts');
+  // every table that hangs on an order (a foreign key to orders in the migrations) goes with it, and the Bling log by reference
+  const tables = migrationTables();
+  assert(tables.get('orders').columns.includes('source') && tables.get('orders').columns.includes('tracking_last') && tables.get('invoices').columns.includes('next_attempt_at') && tables.get('cash_entries').columns.includes('category'), 'the migrations read');
+  const hanging = [...tables].flatMap(([name, table]) => table.fks.filter(fk => fk.table === 'orders').map(fk => [name, fk.column]));
+  assert.deepEqual(hanging.map(([name]) => name).sort(), ['invoices', 'order_events', 'order_items'], 'the tables that hang on an order (a new one must be cleaned by limpar-caixa.sh too)');
+  for (const [name, column] of hanging) assert(line(`DELETE FROM ${name} WHERE ${column} IN (SELECT id FROM limpeza_pedidos);`) < line('DELETE FROM orders'), `${name} before the orders`);
+  assert(tables.get('integration_log').columns.includes('reference') && line('DELETE FROM integration_log WHERE reference IN (SELECT reference FROM limpeza_pedidos);') > 0, 'the Bling log lines of those orders');
+  const {PAID} = require('../api/_lib/orders.js');
+  assert(cashReset.includes(`PAID="${PAID.map(s => `'${s}'`).join(', ')}"`), 'the paid statuses of api/_lib/orders.js');
+  assert(cashReset.includes('Informar o saldo de hoje') && raw('dist/admin-cash.js').includes("'Informar o saldo de hoje'"), 'it names the button of the panel');
+  // the copy in /var/backups/juimprime is root's only (700): undoing and removing it go through root's own shell, never the
+  // operator's (a "gunzip -c … | sudo mariadb" or a "sudo rm …/limpeza-*" of the operator cannot open that folder)
+  const resetDoc = raw('SERVIDOR-SETUP.md').split('## Zerar o fluxo de caixa')[1].split('\n## ')[0];
+  assert(cashReset.includes(`echo "  sudo sh -c 'gunzip -c $kept | mariadb $DB'"`) && resetDoc.includes("sudo sh -c 'gunzip -c /var/backups/juimprime/limpeza-<data>.sql.gz | mariadb juimprime'") && resetDoc.includes("sudo sh -c 'rm -f /var/backups/juimprime/limpeza-*'"), 'undo and remove as root');
+  assert(!/(^|[\s`])(gunzip -c [^\n]*\| sudo mariadb|sudo rm [^\n]*limpeza-\*)/.test(cashReset + resetDoc), 'never through the operator');
+  assert(at('sudo systemctl stop juimprime.service') < at("sudo sh -c 'gunzip -c") && resetDoc.indexOf('sudo systemctl stop juimprime.service') < resetDoc.indexOf("sudo sh -c 'gunzip -c"), 'with the site stopped');
+}
+
+// …and run for real (JU_TEST=1) against a database of lies: SQLite (node:sqlite) with the tables of the migrations, the same
+// SQL on stdin. Only where a bash 4 can open this folder and node:sqlite exists, and never as root.
+{
+  let DatabaseSync = null;
+  try { ({DatabaseSync} = require('node:sqlite')); } catch {}
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ju-caixa-'));
+  const slash = file => file.split(path.sep).join('/');
+  const p = name => slash(path.join(dir, name));
+  const script = slash(path.join(root, 'deploy/limpar-caixa.sh'));
+  const env = {...process.env, JU_TEST: '1', JU_ENV_FILE: p('.env'), JU_DEPLOY: p('deploy.sh'), JU_MARIADB: p('mariadb'), JU_NODE: slash(process.execPath), JU_FAKE_JS: p('fake-mariadb.cjs'), JU_FAKE_DB: p('caixa.db'), JU_FAKE_LOG: p('calls.log'), JU_FAKE_DIR: slash(dir), JU_FAKE_BACKUP: '', JU_FAKE_FAIL: '', JU_FAKE_LATE: ''};
+  try {
+    fs.writeFileSync(p('.env'), 'APP_ENV=production\nDB_HOST=127.0.0.1\nDB_NAME=juimprime\nDB_USER=juimprime\nDB_PASSWORD=senha-do-banco-nunca-aparece\n');
+    const probe = spawnSync('bash', ['-c', '[ "${BASH_VERSINFO[0]}" -ge 4 ] && [ -r "$1" ] && [ -r "$2" ]', 'probe', script, p('.env')], {encoding: 'utf8', env, timeout: 10000});
+    if (!DatabaseSync || process.getuid?.() === 0 || probe.error || probe.status !== 0) console.log('limpar-caixa.sh: sem bash 4 que abra esta pasta, sem node:sqlite ou como root; o teste de comportamento ficou de fora (os estáticos valem).');
+    else {
+      // the copy: deploy.sh --backup's line, a gzip with or without the "Dump completed" mariadb-dump writes at the end
+      fs.writeFileSync(p('deploy.sh'), `#!/bin/sh
+echo "{\\"backup\\":\\"$*\\"}" >> "$JU_FAKE_LOG"
+if [ "$JU_FAKE_BACKUP" = fail ]; then echo "Cópia do banco falhou (mariadb-dump)." >&2; exit 1; fi
+mkdir -p "$JU_FAKE_DIR/backups"; f="$JU_FAKE_DIR/backups/limpeza-20261009-120000.sql.gz"
+if [ "$JU_FAKE_BACKUP" = cut ]; then printf '%s\\n' '-- MariaDB dump' | gzip > "$f"; else printf '%s\\n' '-- MariaDB dump' '-- Dump completed on 2026-10-09 12:00:00' | gzip > "$f"; fi
+echo "Cópia do banco: $f (4,0K)"
+`);
+      fs.writeFileSync(p('mariadb'), '#!/bin/sh\nexec "$JU_NODE" --no-warnings "$JU_FAKE_JS" "$@"\n');
+      fs.chmodSync(p('deploy.sh'), 0o755); fs.chmodSync(p('mariadb'), 0o755);
+      // the mariadb of lies: statements split on ; outside quotes, START TRANSACTION as BEGIN, rows with tabs and NULL like
+      // mariadb --batch; stops at the first error (the open transaction rolled back), like the real client. JU_FAKE_FAIL fails
+      // the statement that starts with it; JU_FAKE_LATE is something Ju adds while the owner reads the screen.
+      fs.writeFileSync(p('fake-mariadb.cjs'), String.raw`'use strict';
+const fs = require('node:fs');
+const {DatabaseSync} = require('node:sqlite');
+const sql = fs.readFileSync(0, 'utf8');
+fs.appendFileSync(process.env.JU_FAKE_LOG, JSON.stringify({argv: process.argv.slice(2), sql}) + '\n');
+const statements = [];
+let current = '', quoted = false;
+for (const ch of sql) {
+  if (ch === "'") quoted = !quoted;
+  if (ch === ';' && !quoted) { if (current.trim()) statements.push(current.trim()); current = ''; } else current += ch;
+}
+if (current.trim()) statements.push(current.trim());
+const db = new DatabaseSync(process.env.JU_FAKE_DB);
+db.exec('PRAGMA foreign_keys = ON');
+try {
+  for (const text of statements) {
+    if (process.env.JU_FAKE_FAIL && text.startsWith(process.env.JU_FAKE_FAIL)) throw new Error('falha de mentira');
+    if (/^START TRANSACTION$/.test(text) && process.env.JU_FAKE_LATE) db.exec(process.env.JU_FAKE_LATE);
+    const statement = db.prepare(/^START TRANSACTION$/.test(text) ? 'BEGIN' : text);
+    if (/^SELECT\b/.test(text)) for (const row of statement.all()) process.stdout.write(Object.values(row).map(v => v === null ? 'NULL' : String(v)).join('\t') + '\n');
+    else statement.run();
+  }
+} catch (error) {
+  try { db.exec('ROLLBACK'); } catch {}
+  process.stderr.write('ERROR: ' + error.message + '\n');
+  process.exit(1);
+}
+`);
+      const tables = migrationTables(), id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+      const L1 = id(1), L2 = id(2), T1 = id(11), T2 = id(12), T3 = id(13), T4 = id(14), T5 = id(15), T6 = id(16);
+      const open = () => new DatabaseSync(p('caixa.db'));
+      const seed = () => {
+        fs.rmSync(p('caixa.db'), {force: true});
+        const db = open();
+        try {
+        // the columns of the migrations, without types (SQLite takes any value); the keys a foreign key needs, and the keys
+        for (const [name, table] of tables) db.exec(`CREATE TABLE ${name} (${[...table.columns.map(c => table.primary.includes(c) ? `${c} PRIMARY KEY` : c), ...table.fks.map(fk => `FOREIGN KEY (${fk.column}) REFERENCES ${fk.table} (${fk.ref})${fk.onDelete ? ` ON DELETE ${fk.onDelete}` : ''}`)].join(', ')})`);
+        const add = (table, row) => db.prepare(`INSERT INTO ${table} (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map(() => '?').join(', ')})`).run(...Object.values(row));
+        add('cash_entries', {id: id(101), kind: 'entrada', category: 'outros', description: 'Venda na feira', amount_cents: 10000, occurred_on: '2026-10-01', created_at: '2026-10-01 12:00:00.000'});
+        add('cash_entries', {id: id(102), kind: 'saida', category: 'materiais', description: 'Filamento PLA', amount_cents: 4590, occurred_on: '2026-10-02', created_at: '2026-10-02 12:00:00.000'});
+        add('cash_entries', {id: id(103), kind: 'entrada', category: 'ajuste', description: 'Ajuste de saldo', amount_cents: 25000, occurred_on: '2026-10-03', created_at: '2026-10-03 12:00:00.000'});
+        add('bills', {id: id(201), description: 'Aluguel', amount_cents: 120000, due_on: '2026-10-10', paid_on: null, locked_at: null, created_at: '2026-10-01 12:00:00.000'});
+        add('bills', {id: id(202), description: 'Internet', amount_cents: 9990, due_on: '2026-10-05', paid_on: '2026-10-05', locked_at: '2026-10-05 10:00:00.000', created_at: '2026-10-01 12:00:00.000'});
+        // the test orders from before the launch (3 to 8/10), the real ones from it (9/10, 10h and 11h)
+        const order = (oid, reference, source, status, paid, at) => add('orders', {id: oid, reference, source, status, total_cents: 15990, paid_at: paid ? '2026-10-09 13:00:00.000' : null, refund_state: null, created_at: `${at}:00:00.000`});
+        order(L1, 'JU-LIVE00001', 'live', 'pendente', true, '2026-10-09 10'); order(L2, 'JU-LIVE00002', 'live', 'aguardando_pagamento', false, '2026-10-09 11');
+        order(T1, 'JU-TESTE0001', 'test', 'concluido', true, '2026-10-04 12'); order(T2, 'JU-TESTE0002', 'test', 'cancelado', false, '2026-10-05 12');
+        order(T3, 'JU-TESTE0003', 'test', 'confirmado', true, '2026-10-06 12'); order(T4, 'JU-TESTE0004', 'test', 'pendente', true, '2026-10-07 12'); order(T5, 'JU-TESTE0005', 'test', 'confirmado', true, '2026-10-08 12'); order(T6, 'JU-TESTE0006', 'test', 'confirmado', true, '2026-10-03 12');
+        for (const [n, oid] of [[1, L1], [2, T1], [3, T2], [4, T3], [5, T4]]) add('order_items', {id: n, order_id: oid, position: 0, product_id: 'dino', title: 'Dino', quantity: 1, unit_price_cents: 15990, selection: '{}'});
+        for (const [n, oid] of [[1, L1], [2, T1], [3, T1], [4, T3]]) add('order_events', {id: n, order_id: oid, kind: 'pago', detail: null, actor: null, created_at: '2026-10-08 13:00:00.000'});
+        // L1 with a real NF-e; T1 homologação; T3 a REAL NF-e on a test order (stays); T4 refused as a test order before it
+        // went to Bling (goes: no attempt counted); T5 a production note created in Bling and refused there (stays: the note
+        // exists in Bling); T6 a production note the site tried to send whose creation Bling never confirmed (an "erro" with no
+        // Bling id, "o Bling não confirmou se criou a nota"): it may exist in Bling, so it stays
+        for (const [oid, ref, environment, status, key, providerId, attempts] of [[L1, 'JU-LIVE00001', 'producao', 'autorizada', '3'.repeat(44), '901', 1], [T1, 'JU-TESTE0001', 'homologacao', 'autorizada', '1'.repeat(44), '902', 1], [T3, 'JU-TESTE0003', 'producao', 'autorizada', '2'.repeat(44), '903', 1], [T4, 'JU-TESTE0004', 'producao', 'erro', null, null, 0], [T5, 'JU-TESTE0005', 'producao', 'erro', null, '905', 2], [T6, 'JU-TESTE0006', 'producao', 'erro', null, null, 1]]) {
+          add('invoices', {id: `${oid.slice(0, -4)}9${oid.slice(-3)}`, order_id: oid, provider: 'bling', provider_id: providerId, environment, reference: ref, status, access_key: key, attempts});
+        }
+        for (const [n, ref] of [[1, 'JU-LIVE00001'], [2, 'JU-TESTE0001'], [3, null]]) add('integration_log', {id: n, name: 'bling', kind: 'falha', reference: ref, message: 'x', created_at: '2026-10-08 13:00:00.000'});
+        add('admin_audit', {id: 1, admin_id: null, action: 'login', detail: null, ip: null});
+        } finally { db.close(); }
+      };
+      const query = sql => { const db = open(); try { return db.prepare(sql).all().map(row => ({...row})); } finally { db.close(); } };
+      const NAMES = ['cash_entries', 'bills', 'orders', 'order_items', 'order_events', 'invoices', 'integration_log', 'admin_audit'];
+      const counts = () => Object.fromEntries(NAMES.map(name => [name, query(`SELECT COUNT(*) AS n FROM ${name}`)[0].n]));
+      const live = () => ['orders WHERE id', 'order_items WHERE order_id', 'order_events WHERE order_id', 'invoices WHERE order_id'].map(t => query(`SELECT * FROM ${t} IN ('${L1}', '${L2}') ORDER BY 1`)).concat([query("SELECT * FROM integration_log WHERE reference = 'JU-LIVE00001'")]);
+      const calls = () => fs.existsSync(p('calls.log')) ? fs.readFileSync(p('calls.log'), 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)) : [];
+      const run = (lines, extra = {}) => {
+        fs.rmSync(p('calls.log'), {force: true});
+        const r = spawnSync('bash', [script], {input: lines.map(l => `${l}\n`).join(''), encoding: 'utf8', env: {...env, ...extra}, timeout: 120000});
+        return {...r, out: r.stdout + r.stderr};
+      };
+      const sqlOf = list => list.filter(c => c.sql).map(c => c.sql).join('\n');
+      seed();
+      const full = counts(), liveRows = live();
+      assert.deepEqual(full, {cash_entries: 3, bills: 2, orders: 8, order_items: 5, order_events: 4, invoices: 6, integration_log: 3, admin_audit: 1});
+
+      // a .env where the database copied (the first DB_NAME line, DB_HOST) may not be the one cleaned through the socket nor
+      // the one the site uses (the last line): no copy, not one query
+      for (const [name, text] of [['repetido', 'DB_HOST=127.0.0.1\nDB_NAME=juimprime\nDB_NAME=juimprime_novo\n'], ['aspas', 'DB_NAME="juimprime"\n'], ['longe', 'DB_HOST=10.0.0.9\nDB_NAME=juimprime\n'], ['dois-hosts', 'DB_HOST=127.0.0.1\nDB_HOST=10.0.0.9\nDB_NAME=juimprime\n'], ['sem', 'DB_USER=juimprime\n']]) {
+        fs.writeFileSync(p(`${name}.env`), `APP_ENV=production\n${text}DB_USER=juimprime\nDB_PASSWORD=senha-do-banco-nunca-aparece\n`);
+        const r = run(['2', 'LIMPAR'], {JU_ENV_FILE: p(`${name}.env`)});
+        assert.equal(r.status, 1, r.out); assert(/Nada foi feito\.\n$/.test(r.stdout), `${name}: ${r.out}`);
+        assert.deepEqual(calls(), [], `${name}: no copy, no query`);
+        assert(!r.out.includes('senha-do-banco'));
+      }
+      assert.deepEqual(counts(), full);
+      // the copy fails, or comes without "Dump completed": not one query, nothing deleted
+      for (const [mode, message] of [['fail', 'A cópia do banco falhou: nada foi apagado.'], ['cut', 'Não consegui conferir a cópia do banco: nada foi apagado.']]) {
+        const r = run(['2', 'LIMPAR'], {JU_FAKE_BACKUP: mode});
+        assert.equal(r.status, 1, r.out); assert(r.out.includes(message), r.out);
+        assert.deepEqual(calls(), [{backup: '--backup limpeza'}], 'the copy, and no query at all');
+        assert.deepEqual(counts(), full);
+      }
+      // what exists, what would go, and anything but LIMPAR: nothing deleted, no transaction opened
+      const shown = run(['2', 'limpar']);
+      assert.equal(shown.status, 1, shown.out); assert.match(shown.stdout, /Nada foi apagado\.\n$/);
+      assert.deepEqual(calls()[0], {backup: '--backup limpeza'}, 'the copy first');
+      assert(calls().slice(1).every(c => c.sql && !/DELETE|START TRANSACTION|INSERT/.test(c.sql)), 'only reads before LIMPAR');
+      for (const text of ['Lançamentos à mão (entradas e despesas): 3, dos quais 1 são "Ajuste de saldo"', 'Contas a pagar: 2 (1 trancadas)', 'Pedidos de TESTE do Mercado Pago: 6', '    cancelado: 1', '    confirmado: 3', '    pendente: 1', 'Pedidos REAIS: 2 (1 pagos', '3 lançamento(s) à mão:', '2026-10-02  saída · materiais  R$ 45,90  Filamento PLA',
+        '2 conta(s) a pagar:', 'vence 2026-10-05  R$ 99,90  paga em 2026-10-05 · trancada  Internet', 'vence 2026-10-10  R$ 1200,00  pendente  Aluguel', '3 pedido(s) de teste:', 'JU-TESTE0001  concluido  R$ 159,90', 'JU-TESTE0004', 'junto com eles: 3 peça(s), 2 linha(s) de histórico, 2 nota(s) fiscal(is)',
+        'e 1 registro(s) do Bling', 'FICA: JU-TESTE0003 (confirmado; pedido de teste com nota fiscal de PRODUÇÃO', 'FICA: JU-TESTE0005 (confirmado;', 'FICA: JU-TESTE0006 (confirmado;', 'Os 2 pedidos REAIS não são tocados.']) assert(shown.out.includes(text), `shows: ${text}\n${shown.out}`);
+      assert(!shown.out.includes('JU-LIVE') && !shown.out.includes('senha-do-banco'), 'no real order listed, no password');
+      assert(!shown.out.includes('ATENÇÃO'), 'all the test orders are older than the first real one: no warning');
+      assert.deepEqual(counts(), full);
+      // a test order made after the first real one (the site back in test mode after the launch: with the production
+      // credential, MP_MODE=test charges for real and marks the order as a test): the owner is told to check before LIMPAR
+      { const db = open(); db.exec(`UPDATE orders SET created_at = '2026-10-09 10:30:00.000' WHERE id = '${T1}'`); db.close(); }
+      const newer = run(['2', '']);
+      assert.equal(newer.status, 1, newer.out); assert.match(newer.stdout, /Nada foi apagado\.\n$/);
+      assert(newer.out.includes('ATENÇÃO: pedido(s) de teste desta lista feito(s) depois do primeiro pedido real: 1.') && newer.out.indexOf('ATENÇÃO') < newer.out.indexOf('Os 2 pedidos REAIS não são tocados.'), newer.out);
+      { const db = open(); db.exec(`UPDATE orders SET created_at = '2026-10-04 12:00:00.000' WHERE id = '${T1}'`); db.close(); }
+      assert.deepEqual(counts(), full);
+      const kept = p('limpeza-20261009-120000.sql.gz');
+      assert(fs.existsSync(kept) && fs.readFileSync(kept).equals(fs.readFileSync(p('backups/limpeza-20261009-120000.sql.gz'))), 'the copy kept outside the rotation');
+      const wrong = run(['3']);
+      assert.equal(wrong.status, 1); assert(wrong.out.includes('Responda 1 ou 2. Nada foi apagado.')); assert.deepEqual(counts(), full);
+      // an error in the middle of the transaction: everything before it is undone
+      const broken = run(['2', 'LIMPAR'], {JU_FAKE_FAIL: 'DELETE FROM orders'});
+      assert.equal(broken.status, 1, broken.out); assert(broken.out.includes('A limpeza parou com erro'), broken.out);
+      assert(sqlOf(calls()).includes('DELETE FROM cash_entries'), 'it got that far'); assert.deepEqual(counts(), full, 'and nothing was deleted');
+
+      // 1 = only the cash flow (the locked bill too); orders untouched; the audit line; "caixa zerado" and the next step
+      const cash = run(['1', 'LIMPAR']);
+      assert.equal(cash.status, 0, cash.out);
+      assert.deepEqual(counts(), {...full, cash_entries: 0, bills: 0, admin_audit: 2});
+      assert.deepEqual(query("SELECT action, detail FROM admin_audit WHERE action = 'cash_reset'"), [{action: 'cash_reset', detail: 'caixa zerado pelo servidor (limpar-caixa.sh, opção 1): 3 lançamento(s) à mão, 2 conta(s) a pagar'}]);
+      // undoing it: the copy is root's only, so root opens it (not "gunzip -c … | sudo mariadb"), with the site stopped
+      for (const text of ['== Caixa zerado.', 'Informar o saldo de hoje', `A cópia de antes da limpeza: ${kept}`, '  sudo systemctl stop juimprime.service\n', `  sudo sh -c 'gunzip -c ${kept} | mariadb juimprime'\n`, '  sudo systemctl start juimprime.service\n']) assert(cash.out.includes(text), `says: ${text}\n${cash.out}`);
+      assert(!sqlOf(calls()).includes('limpeza_pedidos') && !/DELETE FROM (orders|order_|invoices|integration_log)/.test(sqlOf(calls())), 'option 1 never touches an order');
+      const cashAgain = run(['1']);
+      assert.equal(cashAgain.status, 0, cashAgain.out); assert(cashAgain.out.includes('Nada: o caixa já está limpo (3 pedido(s) de teste saem na opção 2).'), cashAgain.out);
+      assert.deepEqual(counts(), {...full, cash_entries: 0, bills: 0, admin_audit: 2}, 'nothing to delete: no LIMPAR asked, no audit line');
+
+      // 2 = the cash flow and the test orders with everything that hangs on them; the real orders exactly as they were, the
+      // test order with a real NF-e kept; something Ju adds while the screen is read stays (only the ids shown go)
+      seed();
+      const late = `INSERT INTO cash_entries (id, kind, category, description, amount_cents, occurred_on) VALUES ('${id(150)}', 'saida', 'frete', 'Correios', 2500, '2026-10-09')`;
+      const all = run(['2', 'LIMPAR'], {JU_FAKE_LATE: late});
+      assert.equal(all.status, 0, all.out);
+      assert.deepEqual(query('SELECT id FROM orders ORDER BY id').map(r => r.id), [L1, L2, T3, T5, T6]);
+      assert.deepEqual(counts(), {cash_entries: 1, bills: 0, orders: 5, order_items: 2, order_events: 2, invoices: 4, integration_log: 2, admin_audit: 2});
+      assert.deepEqual(live(), liveRows, 'the real orders, their pieces, history, NF-e and Bling log exactly as they were');
+      assert.deepEqual(query('SELECT id FROM cash_entries').map(r => r.id), [id(150)], 'what came in during the reading stays');
+      assert(all.out.includes('Ficaram 1 lançamento(s) e 0 conta(s) feitos durante a limpeza'), all.out);
+      assert.equal(query("SELECT detail FROM admin_audit WHERE action = 'cash_reset'")[0].detail, 'caixa zerado pelo servidor (limpar-caixa.sh, opção 2): 3 lançamento(s) à mão, 2 conta(s) a pagar, 3 pedido(s) de teste');
+      const statements = calls().find(c => c.sql?.includes('START TRANSACTION')).sql.trim().split(/;\n/).map(s => s.split(' (')[0].split(' WHERE')[0]);
+      assert.deepEqual(statements, ['CREATE TEMPORARY TABLE limpeza_pedidos AS SELECT id, reference FROM orders', 'START TRANSACTION', 'DELETE FROM cash_entries', 'DELETE FROM bills', 'INSERT INTO limpeza_pedidos', 'DELETE FROM integration_log', 'DELETE FROM invoices', 'DELETE FROM order_events', 'DELETE FROM order_items', 'DELETE FROM orders', 'INSERT INTO admin_audit', 'COMMIT;'], 'one transaction, the order last');
+      // every call: the database name and nothing else (no user, no password)
+      assert(calls().filter(c => c.argv).every(c => JSON.stringify(c.argv) === JSON.stringify(['--batch', '--skip-force', '--skip-column-names', '--default-character-set=utf8mb4', 'juimprime'])), 'mariadb --batch --skip-force --skip-column-names <database>, never a password');
+      assert(!all.out.includes('senha-do-banco'));
+      // again, without the late entry: nothing left to delete (the test order with a real NF-e stays), no question, no
+      // transaction
+      { const db = open(); db.exec('DELETE FROM cash_entries'); db.close(); }
+      const again = run(['2']);
+      assert.equal(again.status, 0, again.out);
+      assert(again.out.includes('Nada: o caixa já está limpo.') && again.out.includes('FICA: JU-TESTE0003') && again.out.includes('FICA: JU-TESTE0006') && again.out.includes('Informar o saldo de hoje'), again.out);
+      assert(!sqlOf(calls()).includes('START TRANSACTION'));
+      const onlyCash = run(['1']);
+      assert.equal(onlyCash.status, 0, onlyCash.out); assert(onlyCash.out.includes('Nada: o caixa já está limpo.'), onlyCash.out);
+    }
+  } finally {
+    // a failed assertion may leave the SQLite file open on Windows: the cleanup never hides that failure
+    try { fs.rmSync(dir, {recursive: true, force: true, maxRetries: 5, retryDelay: 200}); } catch (error) { console.error(`limpar-caixa.sh: não apaguei ${dir} (${error.code})`); }
+  }
+}
+
 // The "voltamos já" page (08/10/2026: "uma página de voltamos já bonita e profissional"): when Node is down or too slow,
 // nginx answers with deploy/manutencao.html and a 503 instead of its 502. Nothing of the site is up then, so the page asks
 // for nothing: no script, no stylesheet, font or image from anywhere (the logo is a small data URI); only the contact
@@ -508,4 +788,4 @@ assert(firewall.includes('nft -c -f "$new" ||'), 'the new rules are checked befo
     assert.equal((await run({env: {...env, ORDER_NOTIFY_EMAIL: ''}, dir, fetchImpl, log: quiet, now: () => day + 86400000})).reason, 'mail_off');
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
-console.log('PASS: servidor próprio — LF scripts that stop at the first error, every setting in the .env, the app on 127.0.0.1 behind nginx, X-Forwarded-For from nginx, main by default with a safety guard, tests and a database copy before the switch, a health check that proves the commit and the database, a rollback the timer respects, the failure e-mail, the "voltamos já" page with 190 days of access logs, and only the sudo it needs.');
+console.log('PASS: servidor próprio — LF scripts that stop at the first error, every setting in the .env, the app on 127.0.0.1 behind nginx, X-Forwarded-For from nginx, main by default with a safety guard, tests and a database copy before the switch, a health check that proves the commit and the database, a rollback the timer respects, the failure e-mail, the "voltamos já" page with 190 days of access logs, the cash flow reset (a copy first, LIMPAR, one transaction, real orders never), and only the sudo it needs.');
