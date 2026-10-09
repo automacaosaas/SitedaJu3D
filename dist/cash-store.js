@@ -7,8 +7,10 @@ export const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho
 
 export const monthKey = (year, month) => `${year}-${String(month + 1).padStart(2, '0')}`;
 export const shortDate = (date, withYear = false) => `${date.slice(8, 10)}/${date.slice(5, 7)}${withYear ? `/${date.slice(0, 4)}` : ''}`;
-// An adjustment only sets the balance; it is neither money in nor money out.
-const counts = m => m.category !== 'ajuste';
+// An adjustment only sets the balance, and an order paid in Mercado Pago's test mode (`test`) is no money: neither is money in
+// nor money out. The list still shows both.
+const adjustment = m => m.category === 'ajuste';
+const counts = m => !adjustment(m) && !m.test;
 const total = (list, type) => list.reduce((sum, m) => sum + (m.type === type ? m.amountCents : 0), 0);
 
 // "Entrou este mês", "Saiu este mês" and the result, up to today (a future entry is not money yet).
@@ -33,12 +35,13 @@ export function monthlySeries(movements, year) {
   });
 }
 
-// The Movimentações list: one month, or every month while searching; "entrada" and "saida" leave the adjustments out.
+// The Movimentações list: one month, or every month while searching; "entrada" and "saida" leave the adjustments out (a test
+// order stays, with its label; it is out of the totals only).
 const plain = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 export function filterMovements(movements, {month, type = 'todas', query = ''}) {
   const q = plain(query).trim();
   return movements.filter(m => (q ? plain(`${m.description} ${m.detail || ''} ${CATEGORY_LABEL[m.category] || ''}`).includes(q) : m.date.startsWith(month))
-    && (type === 'todas' || (m.type === type && counts(m))));
+    && (type === 'todas' || (m.type === type && !adjustment(m))));
 }
 export const listTotals = list => ({inCents: total(list.filter(counts), 'entrada'), outCents: total(list.filter(counts), 'saida')});
 

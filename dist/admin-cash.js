@@ -101,9 +101,9 @@ function upcomingView() {
 // ── Movimentações ───────────────────────────────────────────────────────
 function movementRow(m, withYear) {
   const adjust = m.category === 'ajuste', kind = adjust ? 'adjust' : m.type === 'entrada' ? 'in' : 'out';
-  const origin = m.source === 'pedido' ? `<span class="cash-origin">automático${m.test ? ' · pedido de teste' : ''}</span>` : m.source === 'conta' ? '<span class="cash-origin">de Contas a pagar</span>' : '';
+  const origin = m.source === 'pedido' ? `<span class="cash-origin">automático${m.test ? ' · pedido de teste, fora do saldo e dos totais' : ''}</span>` : m.source === 'conta' ? '<span class="cash-origin">de Contas a pagar</span>' : '';
   const remove = m.removable ? `<button type="button" class="cash-remove" data-cash="remove-entry" data-id="${esc(m.id)}" aria-label="Excluir ${esc(m.description)}" title="Excluir">${icon('trash')}</button>` : '';
-  return `<tr class="is-${kind}"><td class="c-date">${esc(shortDate(m.date, withYear))}</td><td class="c-desc"><strong>${esc(m.description)}</strong>${m.detail ? `<small>${esc(m.detail)}</small>` : ''}${origin}</td><td class="c-cat">${esc(CATEGORY_LABEL[m.category] || m.category)}</td><td class="c-type"><span class="cash-type is-${kind}">${adjust ? 'Ajuste' : m.type === 'entrada' ? 'Entrada' : 'Saída'}</span></td><td class="num">${m.type === 'entrada' ? '+' : '−'} ${esc(money(m.amountCents))}</td><td class="c-act">${remove}</td></tr>`;
+  return `<tr class="is-${kind}${m.test ? ' is-test' : ''}"><td class="c-date">${esc(shortDate(m.date, withYear))}</td><td class="c-desc"><strong>${esc(m.description)}</strong>${m.detail ? `<small>${esc(m.detail)}</small>` : ''}${origin}</td><td class="c-cat">${esc(CATEGORY_LABEL[m.category] || m.category)}</td><td class="c-type"><span class="cash-type is-${kind}">${adjust ? 'Ajuste' : m.type === 'entrada' ? 'Entrada' : 'Saída'}</span></td><td class="num">${m.type === 'entrada' ? '+' : '−'} ${esc(money(m.amountCents))}</td><td class="c-act">${remove}</td></tr>`;
 }
 function movementsTable() {
   const searching = Boolean(list.query.trim());

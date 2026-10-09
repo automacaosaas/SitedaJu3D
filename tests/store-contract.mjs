@@ -121,7 +121,9 @@ async function contract(store, label) {
   assert(!(await store.orders.listForCash({statuses: ['concluido']})).some(o => o.id === orderId));
   // The balance summed by the store (other rows may exist: only the difference this order makes is checked).
   const cashBalance = before => store.cashBalance({statuses: ['pendente'], refundStates: ['refunded'], before, until: '2000-01-01'});
-  assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 14700, `${label}: a paid order counts from the instant it was paid`);
+  assert.equal(await cashBalance(new Date(t + 1)) - await cashBalance(new Date(t)), 0, `${label}: an order paid in Mercado Pago's test mode is no money`);
+  await store.orders.create({...draft, id: crypto.randomUUID(), reference: `JU-L${id.slice(0, 8).toUpperCase()}`, customerId: null, source: 'live', status: 'pendente', paidAt: new Date(t + 10)});
+  assert.equal(await cashBalance(new Date(t + 11)) - await cashBalance(new Date(t + 10)), 14700, `${label}: a real paid order counts from the instant it was paid`);
 
   // Painel: a page of paid orders, newest first (ties by id), with what the panel shows; the next page starts right
   // below the last order of the previous one. Far in the future, so rows from earlier runs sit below these.
