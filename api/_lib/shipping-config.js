@@ -8,9 +8,10 @@
 //   production     business days the shop needs before posting; added to the carrier's delivery time in what the buyer sees
 //   labelFeeCents  extra cost per label on top of the carrier's price (0 when a label costs only the freight)
 //   freeShipping   null, or {fromCents, service}: orders whose subtotal reaches `fromCents` ship free on that service
-//   sharedBox      ONE box for any mix of products: its size in cm, `maxPieces` (how many pieces fit) and `pieceG`, the packed weight in
-//                  grams of one piece of each product. A box weighs the sum of its pieces; an order with more pieces than fit makes
-//                  more boxes, and the Correios API prices each volume.
+//   sharedBox      ONE box for any mix of products: its size in cm, `maxPieces` (how many pieces fit), `tareG` (the box ready to
+//                  close, with nothing in it: carton, filling, tape) and `pieceG`, the weight in grams of one piece of each product.
+//                  A box weighs its tare plus its pieces; an order with more pieces than fit makes more boxes, and the Correios API
+//                  prices each volume.
 //   boxes          alternative to sharedBox (used only when there is no sharedBox): per product, the packed size of ONE piece (`unit`),
 //                  how many fit in one box (`perBox`) and the size of that full box (`full`; not needed when perBox is 1). Different
 //                  products then never share a box.
@@ -28,12 +29,13 @@ module.exports = Object.freeze({
   // SEDEX is never free: a buyer who wants it pays its full price.
   freeShipping: Object.freeze({fromCents: 50000, service: 'pac'}),
   // Everything of an order goes in the one box registered at the Correios Empresa (Pré-postagem Web → Embalagens) as "BORBOLETA E DINO":
-  // 22 × 20 × 7 cm, and the three products fit in it together. A box weighs the sum of its pieces. The shop's measures, packed: butterfly +
-  // dinosaur together 257 g (so about half each), the airplane about 250 g on top (all three about 507 g). APPROXIMATE: weigh the real packed
-  // boxes and edit the three numbers below (nothing else changes). The three pieces together sit right at 500 g, so that one matters most.
-  // The lamps (monkey, giraffe, unicorn; on sale since 07/10/2026): ESTIMATED at 110 g packed each (a printed tube with the head, lighter
-  // than the airplane) and assumed to fit the same box — weigh one packed and edit the numbers.
-  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, pieceG: Object.freeze({borboletoscopio: 129, dinossauroscopio: 128, aviaoscopia: 250, macacoscopio: 110, girafoscopio: 110, unicornioscopio: 110})}),
+  // 22 × 20 × 7 cm, up to 3 pieces (butterfly, dinosaur and airplane fit together, and so do the three lamps). WEIGHED by the shop before
+  // the launch (October 2026), in grams: each piece alone — butterfly 75, dinosaur 60, airplane 166, monkey lamp 24, giraffe 18, unicorn
+  // 16; the box closed with the three lamps 119, and with butterfly + dinosaur + airplane 359. A box weighs its tare plus its pieces, and
+  // the two full boxes give the tare: 119 − 58 = 61 g and 359 − 301 = 58 g. tareG is 61, the larger, so the weight sent to the Correios is
+  // never below the scale (three lamps 119 g, as weighed; the three products 362 g, 3 g over). The empty box alone was "about 90 g", an
+  // estimate both weighings contradict. A new product or another box: weigh it and edit the numbers below (nothing else changes).
+  sharedBox: Object.freeze({length: 22, width: 20, height: 7, maxPieces: 3, tareG: 61, pieceG: Object.freeze({borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16})}),
   // Abroad (the panel's "Envio internacional", 05/10/2026): the Correios Exporta Fácil services, quoted with the same contract
   // and the same box. Only the services in the contract answer; one that is not comes back refused and the panel says so.
   // The codes are the ones in the Correios price API manual; confirm in Correios Empresas → Serviços do Contrato.

@@ -170,12 +170,13 @@ function createMemoryStore() {
       async recent(name, limit = 10) { return copy(integrationLog.filter(e => e.name === name).sort((a, b) => b.createdAt - a.createdAt || b.id - a.id).slice(0, limit)); }
     },
     // Fluxo de caixa (db/migrations/009_caixa.sql): entries Ju adds by hand and the bills to pay. Days are "YYYY-MM-DD".
-    // Same sums as the MySQL store: orders and refunds before an instant, entries and paid bills up to a day.
+    // Same sums as the MySQL store: orders and refunds before an instant (real orders only: a test one is no money), entries
+    // and paid bills up to a day.
     async cashBalance({statuses, refundStates, before, until}) {
       const at = value => new Date(value).getTime(), limit = at(before);
       let cents = 0;
       for (const o of orders.values()) {
-        if (!statuses.includes(o.status) || !o.paidAt) continue;
+        if (!statuses.includes(o.status) || !o.paidAt || o.source !== 'live') continue;
         if (at(o.paidAt) < limit) cents += o.totalCents;
         if (refundStates.includes(o.refundState) && at(o.refundedAt || o.decidedAt || o.paidAt) < limit) cents -= o.totalCents;
       }

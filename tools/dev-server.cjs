@@ -122,13 +122,14 @@ async function main() {
   // Calls to Mercado Pago go to the simulator with --fake-mp, otherwise to the real API (only the status is logged, never a body).
   const mpFetch = async (url, init) => { const response = await fetch(url, init); console.log(`[mp] ${init.method} ${String(url).replace('https://api.mercadopago.com', '')} → ${response.status}`); return response; };
   let fake = null;
-  // Shipping: with --fake-correios the quote runs against a simulator and example shop data (NOT the real boxes).
+  // Shipping: with --fake-correios the quote runs against a simulator (made-up prices) with the shop's own box and weights.
   const {createFakeCorreios, EXAMPLE_CONFIG} = require('./fake-correios.cjs');
   const fakeCorreiosApi = fakeCorreios ? createFakeCorreios() : null;
   if (fakeCorreiosApi) Object.assign(env, fakeCorreiosApi.creds);
-  // the example boxes, with the shop's own production time and free shipping, so the preview shows the same rule as the site
+  // the shop's shared box (tare + the pieces it weighed), production time and free shipping, so the preview sends the Correios
+  // simulator the same weights as the site
   const shopShipping = require('../api/_lib/shipping-config');
-  const shippingConfig = fakeCorreiosApi ? {...EXAMPLE_CONFIG, production: shopShipping.production, freeShipping: shopShipping.freeShipping} : undefined;
+  const shippingConfig = fakeCorreiosApi ? {...EXAMPLE_CONFIG, production: shopShipping.production, freeShipping: shopShipping.freeShipping, sharedBox: shopShipping.sharedBox} : undefined;
   // The simulator's writes are logged too (create, cancel, refund), with whether the device id (X-meli-session-id) came along.
   const fakeMpFetch = async (url, init = {}) => {
     const response = await fake.fetchImpl(url, init), path = String(url).replace('https://api.mercadopago.com', '');

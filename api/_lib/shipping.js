@@ -16,12 +16,12 @@ const fail = (code, extra = {}) => Object.assign(new Error(code), {code, ...extr
 const positive = value => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const validBox = box => Boolean(box) && [box.length, box.width, box.height, box.weightG].every(positive) && box.weightG <= 30000
   && Math.max(box.length, box.width, box.height) <= 105 && box.length + box.width + box.height <= 200;
-// One box any product fits in: its size, `maxPieces` (how many pieces fit) and `pieceG`, the packed weight of one piece of each
-// product. A box weighs the sum of the pieces it holds.
+// One box any product fits in: its size, `maxPieces` (how many pieces fit), `tareG` (the empty box ready to close) and `pieceG`, the
+// weight of one piece of each product. A box weighs its tare plus the pieces it holds.
 const validShared = shared => {
-  if (!shared || !Number.isInteger(shared.maxPieces) || shared.maxPieces < 1 || !shared.pieceG) return false;
+  if (!shared || !Number.isInteger(shared.maxPieces) || shared.maxPieces < 1 || !positive(shared.tareG) || !shared.pieceG) return false;
   const weights = Object.keys(PRODUCTS).map(id => shared.pieceG[id]);
-  return weights.every(positive) && validBox({length: shared.length, width: shared.width, height: shared.height, weightG: Math.max(...weights) * shared.maxPieces});
+  return weights.every(positive) && validBox({length: shared.length, width: shared.width, height: shared.height, weightG: shared.tareG + Math.max(...weights) * shared.maxPieces});
 };
 
 // What is still missing in the shop's data (names of the missing pieces; empty when complete).
@@ -41,8 +41,8 @@ function missing(config) {
 }
 
 // Lines → volumes, grouped by identical box: [{box, count}].
-//   sharedBox  every piece of the order, whatever the product, goes in boxes of up to `maxPieces` (heaviest first); a box weighs the sum
-//              of its pieces (`pieceG` of each product).
+//   sharedBox  every piece of the order, whatever the product, goes in boxes of up to `maxPieces` (heaviest first); a box weighs its
+//              tare (`tareG`) plus its pieces (`pieceG` of each product).
 //   boxes      each product fills its own boxes: a full box holds `perBox` pieces; a box left partly full with more than one piece
 //              is sent as a full-size box (the safe side); a single leftover piece goes in its own small box.
 function volumesFor(lines, config) {
@@ -55,9 +55,9 @@ function volumesFor(lines, config) {
     groups.set(key, {box: {length: box.length, width: box.width, height: box.height, weightG: box.weightG}, count: (groups.get(key)?.count || 0) + count});
   };
   if (config.sharedBox) {
-    const {length, width, height, maxPieces, pieceG} = config.sharedBox;
+    const {length, width, height, maxPieces, tareG, pieceG} = config.sharedBox;
     const weights = [...pieces].flatMap(([productId, quantity]) => Array(quantity).fill(pieceG[productId])).sort((a, b) => b - a);
-    for (let i = 0; i < weights.length; i += maxPieces) add(1, {length, width, height, weightG: weights.slice(i, i + maxPieces).reduce((sum, g) => sum + g, 0)});
+    for (let i = 0; i < weights.length; i += maxPieces) add(1, {length, width, height, weightG: weights.slice(i, i + maxPieces).reduce((sum, g) => sum + g, tareG)});
     return [...groups.values()];
   }
   for (const [productId, quantity] of pieces) {
