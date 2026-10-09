@@ -132,18 +132,24 @@ Hostinger continua sendo o site de teste, pelo `.zip`.
   `Aviso: o kit do servidor mudou no Git`. Rodar `sudo bash /srv/juimprime/current/deploy/setup-servidor.sh` (instala o
   `deploy.sh`, as unidades e o sudoers novos; nada mais é mexido) e conferir com `systemctl list-timers` e o journal.
 
-## Painel da Júlia e frete no servidor
+## Painel da Júlia, frete e nota fiscal no servidor
 
-O primeiro acesso do painel e o frete dos Correios entram no `.env` sem abrir o arquivo:
+O primeiro acesso do painel, o frete dos Correios e o aplicativo do Bling entram no `.env` sem abrir o arquivo:
 `sudo bash /srv/juimprime/current/deploy/config-loja.sh`.
 
-- Ele pergunta o que configurar (**1** = Painel da Júlia, **2** = Frete dos Correios, **3** = os dois) e depois cada valor;
-  Enter mantém o que já está certo.
+- Ele pergunta o que configurar (**1** = Painel da Júlia, **2** = Frete dos Correios, **3** = Nota fiscal (Bling),
+  **4** = tudo; Enter escolhe o 4) e depois cada valor. Enter mantém o que já está certo. No 4, com o Bling ainda sem
+  aplicativo, ele pergunta se o Client ID e o Client Secret já estão à mão: sem eles (`n`), a nota fiscal fica para a
+  opção 3 e o resto é gravado.
 - **Painel:** o e-mail de entrada e a senha (12 a 128 caracteres, digitada duas vezes, sem espaços, aspas, barra
   invertida, acentos nem ç). Se o painel já tem alguém, ele avisa antes: essas duas variáveis só criam a primeira pessoa (`ADMIN-SETUP.md`).
 - **Frete:** usuário e código de acesso da API, contrato, cartão de postagem, DR e o CEP de onde a Júlia despacha (onde achar
   cada um: `FRETE-SETUP.md`). Pontos e traços podem ir junto: ficam só os números.
-- A senha e o código de acesso não aparecem na tela. O `.env` de antes fica em `/var/backups/juimprime/`
+- **Nota fiscal (Bling):** o Client ID e o Client Secret do aplicativo do site no Bling e o ambiente das notas: **1** =
+  homologação (testes, sem valor fiscal), **2** = produção (notas de verdade; ele pergunta antes se a contadora está de
+  acordo e se o Bling já está em produção). Grava `NFE_PROVIDER=bling`, e `SITE_URL` fica o domínio da loja. Onde achar
+  cada dado e a ordem do lançamento: `NFE-SETUP.md`.
+- A senha, o código de acesso e o Client Secret não aparecem na tela. O `.env` de antes fica em `/var/backups/juimprime/`
   (`env.antes-<data>-…`, só root lê; ficam as 10 mais novas) e o site reinicia sozinho.
 
 No fim ele mostra o que o `/api/health` enxerga:
@@ -154,8 +160,32 @@ No fim ele mostra o que o `/api/health` enxerga:
   na primeira cotação: faça logo uma no carrinho. Sem PAC e SEDEX, algum dado foi recusado e o checkout não fecha pedidos
   até corrigir (opção 2 de novo). `"pending"`: faltam dados da loja em `api/_lib/shipping-config.js` (chamar
   quem cuida do código). `"off"`: algum dado dos Correios ficou vazio.
+- `"nfe"` (`"test"` = homologação, `"live"` = produção), `"bling"` e `"queue"` (a fila das notas, com `"worker":true`).
+  Com `"bling":"disconnected"`, ele mostra os passos para conectar: no aplicativo do Bling, o **link de redirecionamento**
+  exatamente `https://juimprimepramim.com.br/admin.html` (sem `www`, sem barra no fim); depois Painel da Júlia → cartão
+  **Nota fiscal · Bling** → **Conectar ao Bling**. Pronto quando o health mostra `"bling":"connected"`.
 
-O Mercado Pago e o e-mail da loja entram do mesmo jeito, com `deploy/config-pagamentos.sh`.
+## Mercado Pago e e-mail da loja no servidor
+
+`sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh`
+
+- Primeiro ele pergunta o que configurar: **1** = Mercado Pago (teste ou produção) e o e-mail, **2** = só o e-mail da
+  loja (Resend), sem tocar no Mercado Pago (nem no `APP_ENV`, que é o que faz o site seguir o `MP_MODE`). Para trocar só
+  a chave do Resend, é a opção 2.
+- **Modo:** 1 = teste, 2 = produção. Enter mantém o modo de agora (o `MP_MODE` do `.env`).
+- **Quando o modo muda**, as três credenciais (Public Key, Access Token e assinatura do webhook) precisam ser coladas de
+  novo: Enter não mantém a de antes, e uma Public Key ou um Access Token igual ao que já estava gravado é recusado ("essa é
+  a credencial do outro modo"). A assinatura do webhook pode ser a mesma nos dois modos (o Mercado Pago pode dar uma só
+  por aplicação): igual à de antes, ele pergunta se é essa mesma que o painel mostra. Credencial que começa com `TEST-`
+  nunca vai para a produção, nem fica nela pelo Enter quando já estava gravada.
+- **Indo para a produção**, antes de pedir as credenciais ele mostra o que o `/api/health` enxerga (frete, e-mail e
+  remetente, nota fiscal, painel e quantas parcelas sem juros a conta dá), avisa o que não está pronto (por exemplo, frete
+  que não é `"correios"`) e só segue com um **s** para "vendas de verdade". Vindo do teste, as parcelas sem juros mostradas
+  ali são as da conta de teste (normalmente `0`, não trava nada); as da produção aparecem no fim, com um aviso se forem
+  menos de 3.
+- O resto é como no `config-loja.sh`: as chaves não aparecem na tela, o `.env` de antes vai para
+  `/var/backups/juimprime/`, o site reinicia e o fim mostra `"payments"`, `"mp"`, `"interestFree"`, `"mail"` e
+  `"sender"`. O roteiro completo da produção está em `MERCADOPAGO-VALIDACAO.md` (etapa 5).
 
 ## Se a saída pela porta 22 estiver bloqueada
 
@@ -304,9 +334,10 @@ de senhas.
 
 Junto com o domínio:
 
-- **No `.env`:** `APP_ENV=production` e `MP_MODE=live`, com as credenciais reais do Mercado Pago da conta do CNPJ,
-  e `NFE_ENVIRONMENT=producao`, com o Bling em produção (`NFE-SETUP.md`). O passo a passo do Mercado Pago, do teste
-  à primeira venda real, está em `MERCADOPAGO-VALIDACAO.md`.
+- **No `.env`:** `APP_ENV=production` e `MP_MODE=live`, com as credenciais reais do Mercado Pago da conta do CNPJ
+  (`config-pagamentos.sh`, opção 1, modo 2), e `NFE_ENVIRONMENT=producao`, com o Bling em produção (`config-loja.sh`,
+  opção 3, ambiente 2; `NFE-SETUP.md`). O passo a passo do Mercado Pago, do teste à primeira venda real, está em
+  `MERCADOPAGO-VALIDACAO.md`.
 - **Mercado Pago:** o webhook apontando para `https://juimprimepramim.com.br/api/payments/webhook`, e o
   parcelamento em 3x sem juros configurado na conta (o site anuncia 3x sem juros).
 - **Bling:** o link de redirecionamento do aplicativo trocado para `https://juimprimepramim.com.br/admin.html`, e a
