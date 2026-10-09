@@ -48,7 +48,7 @@ Fica no código (não no hPanel), preenchido a partir das respostas da Ju:
 | `production` | `minDays` e `maxDays`: dias úteis de produção, somados ao prazo dos Correios |
 | `labelFeeCents` | taxa extra por etiqueta (volume), em centavos; `0` se a etiqueta custa só o frete |
 | `freeShipping` | `null` ou `{fromCents, service}`: a partir desse subtotal, o serviço indicado é grátis para o cliente (a Ju continua pagando a etiqueta; o painel mostra o custo) |
-| `sharedBox` | **uma caixa para qualquer mistura de produtos**: as medidas (cm), `maxPieces` (quantas peças cabem) e `pieceG` (o peso embalado, em gramas, de uma peça de cada produto). A caixa pesa a **soma** das peças que leva |
+| `sharedBox` | **uma caixa para qualquer mistura de produtos**: as medidas (cm), `maxPieces` (quantas peças cabem), `tareG` (a caixa pronta para fechar, sem peça: papelão, enchimento e fita) e `pieceG` (o peso, em gramas, de uma peça de cada produto, sozinha). A caixa pesa a **tara + as peças** que leva |
 | `boxes` | alternativa, usada só se não houver `sharedBox`: por produto, `unit` (1 peça embalada), `perBox` (quantas cabem numa caixa) e `full` (a caixa cheia). Medidas em cm, peso em gramas, **com a embalagem** |
 
 Regras: nenhum lado acima de 105 cm, soma dos três lados até 200 cm, peso até 30 kg (limites dos Correios; o arquivo é
@@ -57,6 +57,34 @@ mais uma caixa. Com `boxes`, cada produto forma os seus volumes e uma caixa que 
 caixa cheia (lado seguro). Nos dois casos a API cota cada volume (caixas idênticas são cotadas uma vez e multiplicadas).
 
 Enquanto qualquer valor obrigatório estiver `null` ou inválido, o frete real fica **desligado** (`pending`): nada é chutado.
+
+### Pesos da loja (medidos na balança antes do lançamento)
+
+A caixa é a **"BORBOLETA E DINO"** cadastrada no Correios Empresa: 22 × 20 × 7 cm, até 3 peças (borboleta, dino e avião cabem juntos, e as
+três lâmpadas também).
+
+| Peça (sozinha) | Peso |
+|---|---|
+| Borboletoscópio | 75 g |
+| Dinossauroscópio | 60 g |
+| Aviãoscopia | 166 g |
+| MonkeyLamp (lâmpada macaco) | 24 g |
+| GiraffeLamp (lâmpada girafa) | 18 g |
+| UnicornLamp (lâmpada unicórnio) | 16 g |
+| **Tara da caixa** (`tareG`) | **61 g** |
+
+De onde vem a tara: a loja pesou duas caixas fechadas. As três lâmpadas deram **119 g** (119 − 58 das peças = 61 g de caixa) e borboleta + dino +
+avião deram **359 g** (359 − 301 = 58 g). O site usa **61 g**, a maior das duas, para o peso informado aos Correios nunca ficar abaixo da
+balança: as três lâmpadas saem com **119 g** (igual à balança) e as três peças com **362 g** (3 g acima). A caixa vazia sozinha foi estimada
+em "uns 90 g", mas as duas pesagens de caixa cheia mostram que ela pesa perto de 60 g; se pesar de novo a caixa vazia (com o enchimento e a
+fita) e der outro valor, troque só o `tareG`.
+
+Exemplos do que vai para os Correios: 1 lâmpada macaco = 85 g; 1 borboleta = 136 g; 1 avião = 227 g; 4 peças = **2 caixas** (por exemplo,
+as três peças com 362 g + uma lâmpada macaco com 85 g), cada caixa com a sua tara.
+
+O mesmo peso vale para o **envio internacional** (a mesma caixa). A NF-e emitida pelo Bling não leva peso nem volumes hoje (são campos
+opcionais na nota). Na etiqueta vale o peso da caixa fechada, informado na pré-postagem do Correios Empresa e conferido na agência;
+os números acima são a referência da cotação.
 
 ### Conferir
 
@@ -71,7 +99,8 @@ Enquanto qualquer valor obrigatório estiver `null` ou inválido, o frete real f
 ## Testar
 
 - **Sem credenciais, no computador:** `node tools/dev-server.cjs --fake-mp --fake-correios` sobe o site com os Correios e o Mercado
-  Pago simulados e caixas de **exemplo** (não são as reais). Preços e prazos do simulador são uma fórmula inventada.
+  Pago simulados, com a **caixa e os pesos da loja**. Preços e prazos do simulador são uma fórmula inventada (cobra por kg começado no
+  Brasil e por 500 g no exterior), então só a cotação com o contrato mostra o preço de verdade.
 - **Automáticos:** `node tests/shipping.mjs` (peças, motor, endpoint, pagamento, textos) e `npm test`.
 - **Com o contrato, depois de publicar:** cote alguns CEPs de regiões diferentes e compare **centavo a centavo** com o Correios
   Empresa para a mesma caixa, serviço e CEP. Teste 1, 2 e 3 peças, PAC e SEDEX, um pedido logo abaixo e outro logo acima do
@@ -125,7 +154,8 @@ escolhe o país e as peças, e o site cota com o mesmo contrato e a mesma caixa 
 - **Endpoint:** `POST /api/admin/international-quote` `{country, items: [{productId, quantity}]}`, só com o login do painel (senha + código).
 - **Ainda é manual:**
   - cobrar (link de pagamento do Mercado Pago, cartão);
-  - a nota de exportação (natureza com CFOP 7101 no Bling, criada pela contadora);
+  - a nota de exportação (natureza "Exportação de mercadoria", CFOP 7101 e CSOSN 300, no Bling; veja "Venda para o exterior"
+    no `NFE-SETUP.md`);
   - a pré-postagem no Minhas Exportações.
 
   O checkout do site continua só para o Brasil. O plano completo está em `Plano-vender-para-o-exterior` (Pedro, 05/10/2026).

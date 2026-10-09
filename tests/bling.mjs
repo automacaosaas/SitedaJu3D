@@ -147,7 +147,7 @@ const endpoint = blingEndpoint.create({env: ENV, store, now, fetchImpl: network}
   assert.equal(connected.statusCode, 200);
   const status = connected.json().bling;
   assert.deepEqual([status.connected, status.connectedBy, status.pausedReason], [true, 'ju@site.test', null]);
-  assert.equal(status.natures.length, 3, 'the natures come right after connecting');
+  assert.equal(status.natures.length, 4, 'the natures come right after connecting');
   assert(Math.abs(new Date(status.refreshExpiresAt).getTime() - (clock + 30 * 86400000)) < 5000, 'refresh token good for 30 days');
   assert.equal((await call(endpoint, {body: {action: 'connect', code: allowed.code, state: allowed.state}, cookie: ju.cookie})).json().error, 'bling_code_invalid', 'a code works once');
   assert((await store.adminAudit.list()).some(a => a.action === 'bling_connected'));
@@ -158,8 +158,8 @@ const endpoint = blingEndpoint.create({env: ENV, store, now, fetchImpl: network}
   assert(issued >= 1); assert(!Buffer.from(row.tokensEnc).toString('latin1').includes('eyJ.fake.'), 'tokens encrypted at rest');
 
   const listed = (await call(endpoint, {method: 'GET', cookie: ju.cookie})).json().bling;
-  assert.deepEqual(listed.natures.map(n => [n.id, n.description]), [['1', 'Venda de produção do estabelecimento'], ['2', 'Remessa para conserto'], ['3', 'Venda de produção do estabelecimento – contribuinte']], "Bling's natures with their ids");
-  assert.deepEqual(listed.natureIds, {nonTaxpayer: '1', taxpayer: '3'}, 'the ones the site uses, by kind of buyer');
+  assert.deepEqual(listed.natures.map(n => [n.id, n.description]), [['1', 'Venda de produção do estabelecimento'], ['2', 'Remessa para conserto'], ['3', 'Venda de produção do estabelecimento – contribuinte'], ['4', 'Exportação de mercadoria']], "Bling's natures with their ids");
+  assert.deepEqual(listed.natureIds, {nonTaxpayer: '1', taxpayer: '3', export: '4'}, 'the ones the site uses, by kind of buyer, and the one for abroad');
 }
 
 // ── issuing through Bling ─────────────────────────────────────────────
@@ -250,11 +250,11 @@ const issue = o => invoicing.issue(o, {actor: 'ju@site.test'});
   const start = refreshes();
   clock += 7 * 3600e3; fake.expireAccessTokens();
   const [a, b] = await Promise.all([bling.natures(), bling.natures()]);
-  assert.equal(a.length, 3); assert.equal(b.length, 3);
+  assert.equal(a.length, 4); assert.equal(b.length, 4);
   assert.equal(refreshes(), start + 1, 'two calls needing a new token share one renewal (refresh tokens are single-use)');
 
   fake.expireAccessTokens();   // Bling says the token is dead even though the site thinks it is fresh
-  assert.equal((await bling.natures()).length, 3, 'a 401 renews once and retries');
+  assert.equal((await bling.natures()).length, 4, 'a 401 renews once and retries');
   assert.equal(refreshes(), start + 2);
 
   assert.equal(await bling.keepAlive(), false, 'renewed recently: nothing to do');

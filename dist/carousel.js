@@ -2,7 +2,7 @@
 // Um único valor contínuo (`position`) comanda produto+pilastra, textos, paleta, fundo e header.
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES, fixedColors} from './products.js';
 import {scenery} from './hero-scenery.js';
-import {imageReady} from './loading-ui.js';
+import {revealImage, waitImage} from './loading-ui.js';
 import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, sceneryScroll, SCENERY_EDGE, darkBand} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
@@ -86,10 +86,14 @@ function init() {
     if (!img.hasAttribute('src')) return null;
     return prepareImage(img);
   });
-  async function prepareImage(img) {
-    const ok = await imageReady(img, 6500);
-    if (ok) img.classList.add('is-loaded');
-    else {img.hidden = true; img.parentElement.insertAdjacentHTML('beforeend','<span class="image-unavailable">Imagem indisponível.<br>Conheça as cores da peça.</span>');}
+  // Uma foto que passa dos 6,5 s não é dada como indisponível: a página aparece com a pilastra vazia e a foto entra quando chegar
+  // (loading-ui.js › revealImage). O aviso é só para a que falhou de verdade. As duas respostas podem vir de novo (outro arquivo
+  // do srcset ao girar a tela) sem efeito dobrado.
+  function prepareImage(img) {
+    const piece = img.parentElement;
+    return revealImage(img, {limit: 6500,
+      onReady: () => { img.hidden = false; piece.querySelector('.image-unavailable')?.remove(); img.classList.add('is-loaded'); },
+      onFail: () => { img.hidden = true; if (!piece.querySelector('.image-unavailable')) piece.insertAdjacentHTML('beforeend','<span class="image-unavailable">Imagem indisponível.<br>Conheça as cores da peça.</span>'); }});
   }
   // A página aparece assim que a peça da frente está decodificada e a primeira medida (ResizeObserver, measure()) aplicada — num
   // celular lento ela pode vir depois da foto, e a página não aparece com o desenho do fundo fora do lugar para logo pular (CLS).
@@ -105,8 +109,9 @@ function init() {
     window.finishJuOpening?.();
     // a primeira foto entra sem esmaecer (carousel.css); daqui em diante, as que chegam esmaecem
     requestAnimationFrame(() => requestAnimationFrame(() => region.classList.add('is-drawn')));
-    // as vizinhas, para o primeiro arraste, só agora: até aqui a banda era toda da foto da frente
-    preloadAround(active);
+    // as vizinhas, para o primeiro arraste, só agora: até aqui a banda era toda da foto da frente. Se ela ainda não chegou (rede
+    // lenta, passou dos 6,5 s), só quando chegar ou 15 s depois, para não disputarem a banda com ela
+    ready[initial].then(state => state === 'slow' && waitImage(images[initial], 15000)).then(() => preloadAround(active));
     // Pré-monta a demonstração (as imagens do equipamento, ~130 KB) para estar pronta no clique: ao primeiro sinal de interesse
     // na vitrine (mouse por cima, foco, toque), ainda antes do clique, ou, em conexão folgada, um tempo depois que a página
     // terminou de carregar e ficou ociosa — nunca nos primeiros segundos, disputando a banda com a página. Em 3G/2G ou com

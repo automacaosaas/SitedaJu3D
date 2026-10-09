@@ -7,6 +7,8 @@
 //   · contas a pagar (store.bills): one she marks as paid becomes "Saída · Conta paga" on that day. A locked bill
 //     (the padlock in the panel) keeps its status and cannot be removed until it is unlocked.
 // "Ajuste de saldo" entries set the balance to what is really in the account; they are not money in or out of the month.
+// Orders paid in Mercado Pago's TEST mode (source other than "live": the purchases tried before the launch) are no money: they
+// stay in the list, marked `test` (the panel labels them), but count in no total and not in the balance.
 // Days are calendar days in Brasília ("YYYY-MM-DD"). Nothing about the buyers goes out: the order reference and the pieces.
 const crypto = require('node:crypto');
 const {PAID} = require('./orders');
@@ -72,8 +74,8 @@ function movements({orders = [], entries = [], bills = []}) {
   return [...orders.flatMap(orderMovements), ...entries.map(entryMovement), ...bills.filter(b => b.paidOn).map(billMovement)]
     .sort((a, b) => b.date.localeCompare(a.date) || String(b.at).localeCompare(String(a.at)));
 }
-// What is in the account today: everything up to today (an entry dated in the future does not count yet).
-const balance = (list, today) => list.filter(m => m.date <= today).reduce((sum, m) => sum + (m.type === 'entrada' ? m.amountCents : -m.amountCents), 0);
+// What is in the account today: everything up to today (an entry dated in the future does not count yet), but the test orders.
+const balance = (list, today) => list.filter(m => m.date <= today && !m.test).reduce((sum, m) => sum + (m.type === 'entrada' ? m.amountCents : -m.amountCents), 0);
 const billView = bill => ({id: bill.id, description: bill.description, amountCents: bill.amountCents, dueDate: bill.dueOn, paidDate: bill.paidOn, locked: Boolean(bill.lockedAt)});
 
 function createCash({store, now = () => Date.now()}) {

@@ -5,7 +5,7 @@ const {withBrowser} = require('./cdp.cjs');
 const [query = '', out = 'out.png', page = 'debug.html'] = process.argv.slice(2);
 withBrowser(async b => {
   await b.viewport(1000, 1000);
-  await b.goto(`http://127.0.0.1:8851/${page}?${query}`, {wait: 300});
+  await b.goto(`http://127.0.0.1:${Number(process.env.RENDER_PORT) || 8851}/${page}?${query}`, {wait: 300});
   const started = Date.now();
   let ok = false;
   // each check with its own time limit: a page whose GPU process hung never answers, and the loop must still reach its deadline

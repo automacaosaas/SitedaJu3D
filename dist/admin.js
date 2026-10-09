@@ -224,9 +224,10 @@ function naturesList(b) {
   if (b.naturesError) return `<p class="panel-sub">Não foi possível listar as naturezas de operação: ${esc(b.naturesError)}</p>`;
   if (!b.natures) return '';
   if (!b.natures.length) return '<p class="panel-sub">Nenhuma natureza de operação no Bling ainda. O contador cria a de venda.</p>';
-  // Two natures, by kind of buyer (api/_lib/fiscal.js): the panel says which one each kind of buyer gets.
-  const used = {nonTaxpayer: 'cliente sem IE', taxpayer: 'cliente com IE'}, ids = b.natureIds || {};
-  const items = b.natures.map(n => { const kind = Object.keys(ids).find(k => ids[k] === n.id); return `<li><code translate="no">${esc(n.id)}</code> ${esc(n.description)}${kind ? ` <span class="admin-tag source-live">usada nas notas · ${used[kind] || kind}</span>` : ''}${n.active ? '' : ' <span class="admin-tag">inativa</span>'}</li>`; }).join('');
+  // Two natures, by kind of buyer (api/_lib/fiscal.js): the panel says which one each kind of buyer gets. The export one
+  // (venda para o exterior) is named too, once filled; it is not asked for here, since only orders for abroad need it.
+  const used = {nonTaxpayer: 'cliente sem IE', taxpayer: 'cliente com IE'}, labels = {...used, export: 'venda para o exterior'}, ids = b.natureIds || {};
+  const items = b.natures.map(n => { const kind = Object.keys(ids).find(k => ids[k] === n.id); return `<li><code translate="no">${esc(n.id)}</code> ${esc(n.description)}${kind ? ` <span class="admin-tag source-live">usada nas notas · ${labels[kind] || kind}</span>` : ''}${n.active ? '' : ' <span class="admin-tag">inativa</span>'}</li>`; }).join('');
   const missing = Object.keys(used).filter(k => !ids[k]), unknown = Object.values(ids).filter(id => !b.natures.some(n => n.id === id));
   const note = missing.length === Object.keys(used).length ? 'Nenhuma natureza escolhida no site ainda: as notas só saem depois disso.' : missing.length ? `Falta escolher no site a natureza para ${missing.map(k => used[k]).join(' e ')}: essas notas só saem depois disso.` : unknown.length ? `A natureza ${unknown.join(', ')} usada pelo site não está no Bling: confira antes de confirmar pedidos.` : '';
   return `<p class="panel-sub">Naturezas de operação cadastradas no Bling (o código da natureza de venda vai nos dados fiscais do site):</p><ul class="admin-natures">${items}</ul>${note ? `<p class="admin-bling-note">${note}</p>` : ''}`;

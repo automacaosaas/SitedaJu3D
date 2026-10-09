@@ -49,7 +49,9 @@ dinheiro que de fato entrou e saiu da loja, no dia em que aconteceu, sem termos 
 
 **O que entra sozinho:** todo pedido pago vira **Entrada · Venda** no dia do pagamento (horário de Brasília), pelo valor que o
 cliente pagou, frete incluído. Pedido recusado com o dinheiro devolvido vira **Saída · Estorno** no dia do estorno. Nada disso
-precisa ser digitado, e nenhum dado do cliente aparece aqui (só o número do pedido e as peças).
+precisa ser digitado, e nenhum dado do cliente aparece aqui (só o número do pedido e as peças). Pedido pago no **modo de teste** do
+Mercado Pago (as compras de teste antes do lançamento) aparece na lista com a etiqueta "pedido de teste, fora do saldo e dos totais" e
+o valor riscado: não entra no saldo, nos números do mês, no gráfico nem nos totais da lista.
 
 **Saldo atual:** soma tudo até hoje. Na primeira vez, toque em **Informar o saldo de hoje** e diga quanto a loja tem (conta e
 caixa). A diferença entra como **Ajuste de saldo**, que mexe só no saldo e não conta como entrada nem saída do mês. Use o mesmo

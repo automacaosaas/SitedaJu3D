@@ -5,7 +5,8 @@
 // and error format. Refresh tokens are single-use (the strictest reading of Bling's docs). A recipient named with
 // "REJEITAR" is rejected when sent; correct(id) plays the person who fixes that note in Bling (locally:
 // /__fake-bling/corrigir?id=…). One with "DEMORAR" waits for the protocol once. state.environment '1' answers as
-// produção, '2' (default) as homologação. Nothing here talks to the real Bling.
+// produção, '2' (default) as homologação. Notes for abroad are checked as validate() says (foreign contact, place of
+// embarkation), and the natures include "Exportação de mercadoria" (id 4). Nothing here talks to the real Bling.
 //
 // Failures, to see the site keep going without Bling (BLING-RESILIENCIA.md; locally: /__fake-bling/falha?modo=…):
 // state.fault = 'rede' (the connection is refused), 'lento' (never answers: the site's timeout fires), 'erro' (503),
@@ -15,7 +16,9 @@
 // 'POST /nfe'. state.retryAfter adds a Retry-After header (seconds) to the 429.
 const crypto = require('node:crypto');
 
-const NATURES = [{id: 1, situacao: 1, padrao: 1, descricao: 'Venda de produção do estabelecimento'}, {id: 2, situacao: 1, padrao: 0, descricao: 'Remessa para conserto'}, {id: 3, situacao: 1, padrao: 0, descricao: 'Venda de produção do estabelecimento – contribuinte'}];
+const NATURES = [{id: 1, situacao: 1, padrao: 1, descricao: 'Venda de produção do estabelecimento'}, {id: 2, situacao: 1, padrao: 0, descricao: 'Remessa para conserto'}, {id: 3, situacao: 1, padrao: 0, descricao: 'Venda de produção do estabelecimento – contribuinte'},
+  {id: 4, situacao: 1, padrao: 0, descricao: 'Exportação de mercadoria'}];
+const UFS = new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
 const PAYMENTS = [{id: 500, descricao: 'Dinheiro', tipoPagamento: 1, situacao: 1, padrao: 1}, {id: 501, descricao: 'Pix', tipoPagamento: 17, situacao: 1, padrao: 0},
   {id: 502, descricao: 'Cartão de crédito', tipoPagamento: 3, situacao: 1, padrao: 0}, {id: 503, descricao: 'Cartão de débito', tipoPagamento: 4, situacao: 1, padrao: 0}, {id: 504, descricao: 'Pix antigo', tipoPagamento: 17, situacao: 0, padrao: 1}];
 
@@ -42,16 +45,24 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
     return {code, state: u.searchParams.get('state')};
   }
 
+  // A note for abroad (operacaoComExterior) needs a foreign contact (tipoPessoa E, UF "EX", the country, no CPF/CNPJ: the
+  // passport or nothing) and the place of embarkation (exportacao.ufEmbarque and localEmbarque, the tax authority's
+  // rejection 355 without them); a foreign contact or export data on a national note is refused too.
   function validate(body) {
-    const c = body?.contato || {}, a = c.endereco || {};
+    const c = body?.contato || {}, a = c.endereco || {}, foreign = c.tipoPessoa === 'E';
     if (body?.tipo !== 1) return 'Tipo da nota inválido';
     if (![body.dataEmissao, body.dataOperacao].every(d => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(String(d || '')))) return 'Data de operação inválida';   // as the real Bling (01/10/2026)
     if ((body.parcelas || []).some(p => !/^\d{4}-\d{2}-\d{2}$/.test(String(p.data || '')))) return 'Data da parcela inválida';
     if (!natures.some(n => n.id === body.naturezaOperacao?.id)) return 'Natureza de operação não encontrada';
-    if (!c.nome || !/^(\d{11}|\w{12}\d{2})$/.test(String(c.numeroDocumento || ''))) return 'Documento do contato inválido';
-    if (!['F', 'J'].includes(c.tipoPessoa) || ![1, 2, 9].includes(c.contribuinte) || (c.contribuinte === 1 && !c.ie)) return 'Tipo de pessoa, contribuinte ou inscrição estadual do contato';
-    if (!/^\d{5}-\d{3}$/.test(String(a.cep || '')) || !a.uf || !a.municipio || !a.endereco || !a.bairro) return 'Endereço do contato incompleto';
+    if (!c.nome || !(foreign ? /^([A-Za-z0-9:.+\-/()]{5,20})?$/ : /^(\d{11}|\w{12}\d{2})$/).test(String(c.numeroDocumento ?? ''))) return 'Documento do contato inválido';
+    if (!['F', 'J', 'E'].includes(c.tipoPessoa) || ![1, 2, 9].includes(c.contribuinte) || (c.contribuinte === 1 && !c.ie) || (foreign && (c.contribuinte !== 9 || c.ie))) return 'Tipo de pessoa, contribuinte ou inscrição estadual do contato';
+    if (foreign ? a.uf !== 'EX' || !a.pais || !a.municipio || !a.endereco || !a.bairro : !/^\d{5}-\d{3}$/.test(String(a.cep || '')) || !a.uf || !a.municipio || !a.endereco || !a.bairro) return 'Endereço do contato incompleto';
+    if (body.operacaoComExterior === true) {
+      if (!foreign) return 'Operação com o exterior: o destinatário deve ser estrangeiro (UF EX)';
+      if (!UFS.has(body.exportacao?.ufEmbarque) || !String(body.exportacao?.localEmbarque || '').trim()) return 'Rejeição 355 (simulada): informe a UF e o local de embarque da exportação';
+    } else if (foreign || body.exportacao) return 'Destinatário estrangeiro ou dados de exportação numa nota que não é de operação com o exterior';
     if (!Array.isArray(body.itens) || !body.itens.length || body.itens.some(i => !i.codigo || !i.classificacaoFiscal || !(i.valor > 0) || !(i.quantidade > 0))) return 'Itens incompletos (código, NCM, valor e quantidade)';
+    if (body.itens.some(i => i.unidadeTributavel && (!String(i.unidadeTributavel.unidade || '').trim() || !(i.unidadeTributavel.quantidade > 0)))) return 'Unidade ou quantidade tributável do item inválida';
     const total = body.itens.reduce((sum, i) => sum + i.valor * i.quantidade, 0) + (body.transporte?.frete || 0) - (body.desconto || 0);
     if (Math.abs(total - (body.parcelas || []).reduce((sum, p) => sum + p.valor, 0)) > 0.001) return 'A soma das parcelas difere do total da nota';
     if ((body.parcelas || []).some(p => p.formaPagamento && !paymentMethods.some(f => f.id === p.formaPagamento.id))) return 'Forma de pagamento não encontrada';

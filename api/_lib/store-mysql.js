@@ -287,12 +287,12 @@ function createMysqlStore(pool) {
     },
     // The cash balance summed by the database, without loading a single movement: paid orders up to `before` (the
     // instant the day after `until` starts in Brasília), minus the refunds up to then, plus the entries and minus the bills
-    // paid up to `until` ("YYYY-MM-DD"). Same rules as balance() in cash.js.
+    // paid up to `until` ("YYYY-MM-DD"). Real orders only (source 'live'): a test one is no money. Same rules as balance() in cash.js.
     async cashBalance({statuses, refundStates, before, until}) {
       const marks = list => list.map(() => '?').join(', ');
       const row = await one(`SELECT
-          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND paid_at < ?) AS sales,
-          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND refund_state IN (${marks(refundStates)}) AND COALESCE(refunded_at, decided_at, paid_at) < ?) AS refunds,
+          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE source = 'live' AND status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND paid_at < ?) AS sales,
+          (SELECT COALESCE(SUM(total_cents), 0) FROM orders WHERE source = 'live' AND status IN (${marks(statuses)}) AND paid_at IS NOT NULL AND refund_state IN (${marks(refundStates)}) AND COALESCE(refunded_at, decided_at, paid_at) < ?) AS refunds,
           (SELECT COALESCE(SUM(CASE WHEN kind = 'entrada' THEN amount_cents ELSE -amount_cents END), 0) FROM cash_entries WHERE occurred_on <= ?) AS entries,
           (SELECT COALESCE(SUM(amount_cents), 0) FROM bills WHERE paid_on IS NOT NULL AND paid_on <= ?) AS bills`,
         [...statuses, before, ...statuses, ...refundStates, before, until, until]);

@@ -5,7 +5,7 @@
 // sources (design/vistas/girafoscopio-3d-*.png: frente, lado, costas and the face for the close-up). With "--giro", the unicorn's head turn
 // for "Ver encaixado" (dist/assets/unicornioscopio-giro.webp: the frames in a grid, only the part that changes; the numbers for
 // products.js are printed) — and the showcase photo is then frame 0 itself, so the turn starts without any jump.
-// Needs `node serve.cjs` running (port 8851). RENDER_GPU=d3d11 renders on the graphics card (about 7× faster than the software WebGL,
+// Needs `node serve.cjs` running (port 8851, or RENDER_PORT for both: a worktree serves its own dist/). RENDER_GPU=d3d11 renders on the graphics card (about 7× faster than the software WebGL,
 // the same picture).   node lamp-assets.cjs girafoscopio,unicornioscopio [--vistas] [--giro]
 const fs = require('fs'), path = require('path'), {execFileSync} = require('child_process');
 const {withBrowser} = require('./cdp.cjs');
@@ -18,8 +18,11 @@ const pieces = (process.argv[2] || 'girafoscopio,unicornioscopio').split(','), v
 const TURN_FRAMES = 36, TURN_MAX = 70, TURN_COLS = 6, TURN_SCALE = .75, HEAD = '&cut=0.552&ledge=0.50,0.645,0.42,0.665&axis=0,-0.268&collar=0.628,0.40,0.56';
 const b64 = f => fs.readFileSync(f).toString('base64');
 // light and colour of each piece's pictures: a firmer key than the default (the shading of the showcase photos) and, on the giraffe, the
-// lemon yellow and the darker brown of its showcase photo (only in the picture: lamp-glb.html tint)
-const LOOK = {girafoscopio: '&exposure=1.12&key=3&dome=0.75&tint=coat:%23e8b616,spots:%23572e1a', unicornioscopio: '&exposure=1.1&key=3&dome=0.8&smooth=0' + HEAD};
+// lemon yellow and the darker brown of its showcase photo (only in the picture: lamp-glb.html tint). The giraffe with the model's own
+// normals (smooth=0, 08/10/2026): the rebuilt neck, eyes and cheek spots carry their surfaces' exact normals and the rest the normals
+// lamp-glb.html used to compute (tools/modelo-novidades/pintura, normals: geometry) — recomputing them here from the faces brought
+// back the streaks of the long triangles
+const LOOK = {girafoscopio: '&exposure=1.12&key=3&dome=0.75&smooth=0&tint=coat:%23e8b616,spots:%23572e1a', unicornioscopio: '&exposure=1.1&key=3&dome=0.8&smooth=0' + HEAD};
 
 for (const id of pieces) {
   // one view per page (a long page with several big views could stall the software WebGL)

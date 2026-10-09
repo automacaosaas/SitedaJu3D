@@ -7,7 +7,8 @@ body:not(.home) .header:not(.site-header) .brand img { width:98px; height:98px; 
 body:not(.home) .header:not(.site-header) .edition { display:none; }
 body:not(.home) .header:not(.site-header) .shop-nav { grid-column:3; justify-self:end; }
 .journey-pending body:not(.home) > .page,.journey-pending .auth-composition { opacity:0; }
-.journey-pending body:not(.home)::before { content:''; position:fixed; z-index:1000; left:50%; top:calc(50% - 65px); width:104px; height:104px; transform:translateX(-50%); border-radius:50%; background:url('assets/logo-ju.webp') center/contain no-repeat; mix-blend-mode:multiply; }
+/* The logo while the page prepares: image-set() picks the same file as the logos' srcset (224 px up to 2x, 336 px from 3x on), so a page never downloads both. */
+.journey-pending body:not(.home)::before { content:''; position:fixed; z-index:1000; left:50%; top:calc(50% - 65px); width:104px; height:104px; transform:translateX(-50%); border-radius:50%; background:url('assets/logo-ju.webp') center/contain no-repeat; background-image:-webkit-image-set(url('assets/logo-ju-224.webp') 2x,url('assets/logo-ju.webp') 3x); background-image:image-set(url('assets/logo-ju-224.webp') 2x,url('assets/logo-ju.webp') 3x); mix-blend-mode:multiply; }
 .journey-pending body:not(.home)::after { content:'Preparando tudo com carinho…'; position:fixed; z-index:1000; top:calc(50% + 53px); left:0; right:0; text-align:center; font:13px/1.6 'DM Sans','DM Sans Fallback',sans-serif; color:var(--fg-2, var(--theme-muted)); }
 .journey-ready body:not(.home) > .page > main,.journey-ready .auth-composition { animation:journey-arrive 220ms ease-out both; }
 @keyframes journey-arrive { from {opacity:0} to {opacity:1} }
@@ -162,7 +163,7 @@ html { scrollbar-gutter:stable; }
   background: var(--bg);
 }
 /* o logo da loja (o disco branco dele) não se mistura ao fundo escuro: no claro ele "multiplica" para sumir o branco da imagem */
-:root[data-theme="dark"] :is(.site-header, .account-header, .header) .brand img, :root[data-theme="dark"] .drawer-top img { mix-blend-mode: normal; }
+:root[data-theme="dark"] :is(.site-header, .account-header, .header) .brand img, :root[data-theme="dark"] .drawer-top img, :root[data-theme="dark"].journey-pending body:not(.home)::before { mix-blend-mode: normal; }
 :root[data-theme="dark"] .swatch i { border-color: rgb(255 255 255 / .16); }
 
 /* Aparência (scheme-picker.js): três opções num trilho, com um "polegar" que desliza até a escolhida; o ícone gira um pouco ao

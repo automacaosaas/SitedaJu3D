@@ -1,11 +1,15 @@
 // server.cjs, the production server for the Hostinger: pages, /api routes, vercel.json headers, caching, compression and
 // the guards that keep anything outside dist/ (and api/_lib) unreachable.
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
 import {createRequire} from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
 
 const require = createRequire(import.meta.url);
-const {createServer} = require('../server/create-server.cjs');
+const {createServer, readHeaderRules} = require('../server/create-server.cjs');
 const errors = [];
 const server = createServer({log: {error: (...args) => errors.push(args.join(' '))}});
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -86,6 +90,29 @@ try {
   assert.equal(head.status, 200);
   assert.equal(head.body.length, 0);
   assert.equal(Number(head.headers['content-length']), logo.body.length);
+
+  // Document headers only where a document is (2026-10-08): every page, the 404 page, the SVG, the sitemap and the API carry
+  // the whole vercel.json policy; scripts, stylesheets, images, fonts and models carry what still applies to them.
+  const policy = JSON.parse(fs.readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).headers.find(r => r.source === '/(.*)').headers;
+  const documentHeaders = policy.map(h => h.key.toLowerCase());
+  const documentOnly = ['content-security-policy', 'x-frame-options', 'permissions-policy'];
+  const pages = fs.readdirSync(new URL('../dist/', import.meta.url)).filter(f => f.endsWith('.html')).map(f => `/${f}`);
+  assert(pages.length > 15);
+  for (const path of [...pages, '/', '/produtos', '/nao-existe.html', '/pagina-antiga', '/favicon.svg', '/sitemap.xml', '/api/health', '/api/nao-existe']) {
+    const res = await raw(path, {method: 'HEAD'});
+    for (const {key, value} of policy) assert.equal(res.headers[key.toLowerCase()], value, `${path}: ${key} (a document)`);
+  }
+  for (const path of ['/carousel.js', '/carousel.js?v=abc123', '/theme.css', '/assets/logo-ju.webp', '/assets/logo-ju-email.png', '/assets/fonts/dm-sans-latin.woff2?v=1', modelPath, '/vendor/three.module.min.js']) {
+    const res = await raw(path, {headers: {'accept-encoding': 'br'}});
+    assert.equal(res.status, 200, path);
+    for (const key of documentOnly) assert.equal(res.headers[key], undefined, `${path}: no ${key} (only a document acts on it)`);
+    for (const key of documentHeaders.filter(k => !documentOnly.includes(k))) assert.equal(res.headers[key], policy.find(h => h.key.toLowerCase() === key).value, `${path}: keeps ${key}`);
+    const again = await raw(path, {headers: {'if-none-match': res.headers.etag}});
+    assert.equal(again.status, 304, `${path}: 304`);
+    assert.equal(again.headers['content-security-policy'], undefined, `${path}: nor on its 304`);
+    assert.equal(again.headers['x-content-type-options'], 'nosniff', `${path}: nosniff on its 304`);
+  }
+  assert.equal((await raw('/nao-existe.js')).headers['x-content-type-options'], 'nosniff', 'a missing script still nosniff');
 
   // Nothing outside dist/ is ever served, however the path is spelled.
   for (const path of ['/../package.json', '/%2e%2e/package.json', '/assets/%2e%2e/%2e%2e/server.cjs', '/..%2fvercel.json', '/assets/..%5c..%5cpackage.json', '/%00', '/.git/config', '/assets/.hidden']) {
@@ -221,6 +248,68 @@ try {
   server.close();
 }
 
+// ETag by content (2026-10-08): a deploy gives every file the commit's time (git archive) even when nothing changed. The
+// ETag must survive that, so a returning visitor gets a 304 instead of the whole file again; Last-Modified may move, and
+// If-None-Match decides before If-Modified-Since (RFC 9110 §13.2.2).
+{
+  const {minifyCss} = require('../server/minify-css.cjs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'etag-'));
+  const write = (name, text, when) => { fs.writeFileSync(path.join(dir, name), text); fs.utimesSync(path.join(dir, name), when, when); };
+  const deploy = (name, when) => fs.utimesSync(path.join(dir, name), when, when);
+  const script = '// the shop\n' + 'console.log("vitrine");\n'.repeat(200), sheet = '/* the shop */\n.a {\n  color: red;\n}\n'.repeat(100);
+  const tag = (text, suffix = '') => `W/"${createHash('sha256').update(text).digest('base64url').slice(0, 16)}${suffix}"`;
+  const day1 = new Date('2026-10-01T12:00:00Z'), day2 = new Date('2026-10-08T12:00:00Z'), day3 = new Date('2026-10-09T12:00:00Z');
+  write('app.js', script, day1); write('site.css', sheet, day1); write('page.html', '<!doctype html><title>x</title>' + ' '.repeat(2000), day1);
+  const site = createServer({root: dir, rules: readHeaderRules(), log: {error: () => {}}});
+  await new Promise(resolve => site.listen(0, '127.0.0.1', resolve));
+  const at = `http://127.0.0.1:${site.address().port}`, get = (target, headers = {}, method = 'GET') => raw(target, {headers, method, at});
+  try {
+    const first = await get('/app.js', {'accept-encoding': 'br'});
+    assert.equal(first.headers.etag, tag(script), 'the ETag is a hash of what is served');
+    assert.equal(first.headers['last-modified'], day1.toUTCString());
+    for (const encoding of ['gzip', 'identity']) assert.equal((await get('/app.js', {'accept-encoding': encoding})).headers.etag, first.headers.etag, `one weak ETag for the br, gzip and plain answers (${encoding}); Vary tells them apart`);
+    assert.equal(first.headers.vary, 'Accept-Encoding');
+    const css = await get('/site.css');
+    assert.equal(css.headers.etag, tag(minifyCss(sheet), '-m'), 'a stylesheet: the hash of the minified text, with its own "-m"');
+
+    // A deploy that changes nothing: same ETag; a browser revalidating with both validators gets a 304.
+    for (const name of ['app.js', 'site.css', 'page.html']) deploy(name, day2);
+    const moved = await get('/app.js', {'accept-encoding': 'br'});
+    assert.equal(moved.headers.etag, first.headers.etag, 'same content, new date: same ETag');
+    assert.equal(moved.headers['last-modified'], day2.toUTCString(), 'Last-Modified follows the file');
+    assert.equal((await get('/site.css')).headers.etag, css.headers.etag, 'the stylesheet too');
+    const revisit = await get('/app.js', {'if-none-match': first.headers.etag, 'if-modified-since': day1.toUTCString(), 'accept-encoding': 'br'});
+    assert.equal(revisit.status, 304, 'If-None-Match matches: 304, even with an older If-Modified-Since');
+    assert.equal(revisit.body.length, 0);
+    assert.equal(revisit.headers.etag, first.headers.etag); assert.equal(revisit.headers.vary, 'Accept-Encoding', 'the 304 keeps Vary (RFC 9110 §15.4.5)');
+    assert.equal(revisit.headers['cache-control'], 'public, max-age=0, must-revalidate');
+    assert.equal(revisit.headers['content-type'], undefined, 'no representation metadata on the 304');
+    const page = await get('/page.html');
+    assert.equal((await get('/page.html', {'if-none-match': page.headers.etag})).headers['content-security-policy'], page.headers['content-security-policy'], "a page's 304 keeps its security headers (the browser updates the cached ones)");
+    assert.equal((await get('/app.js', {'if-none-match': first.headers.etag}, 'HEAD')).status, 304, 'HEAD: 304');
+    assert.equal((await get('/app.js?v=7', {'if-none-match': first.headers.etag})).headers['cache-control'], 'public, max-age=31536000, immutable', 'a 304 with ?v= keeps the immutable cache');
+
+    // If-None-Match: weak comparison, lists and "*"; when it is there, If-Modified-Since is ignored.
+    for (const value of [first.headers.etag.slice(2), `W/"outro", ${first.headers.etag}`, '*']) assert.equal((await get('/app.js', {'if-none-match': value})).status, 304, `If-None-Match: ${value}`);
+    const other = await get('/app.js', {'if-none-match': 'W/"outro"', 'if-modified-since': day3.toUTCString()});
+    assert.equal(other.status, 200, 'an ETag that does not match: 200, whatever If-Modified-Since says');
+    assert.equal(other.body.toString(), script);
+    // Without If-None-Match, If-Modified-Since on its own (a client that keeps only the date).
+    assert.equal((await get('/app.js', {'if-modified-since': day2.toUTCString()})).status, 304, 'not modified since');
+    assert.equal((await get('/app.js', {'if-modified-since': day1.toUTCString()})).status, 200, 'modified since: the new date');
+    assert.equal((await get('/app.js', {'if-modified-since': 'ontem'})).status, 200, 'an invalid date is ignored');
+    assert.equal((await get('/app.js', {'if-modified-since': day3.toUTCString()})).status, 200, 'a later date (a rollback put back an older file): 200, never a 304 that keeps the newer one');
+
+    // New content (same size, new date): new ETag, and the old one gets the new file.
+    write('app.js', script.replace('vitrine', 'Vitrine'), day3);
+    const changed = await get('/app.js', {'if-none-match': first.headers.etag});
+    assert.equal(changed.status, 200, 'changed content: no 304');
+    assert.notEqual(changed.headers.etag, first.headers.etag);
+    assert.equal(changed.headers.etag, tag(script.replace('vitrine', 'Vitrine')));
+    assert.match(changed.body.toString(), /"Vitrine"/);
+  } finally { site.close(); fs.rmSync(dir, {recursive: true, force: true}); }
+}
+
 // Like the Hostinger runner: the entry file is loaded with require(), not executed. It must still start listening
 // (a `require.main === module` guard made the first upload answer 503 for every request).
 {
@@ -248,4 +337,4 @@ try {
   }
 }
 
-console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag/304, br/gzip, HEAD) and /api routes with the vercel.json headers, keeps every address but the shop\'s domain out of search results, moves www to the domain without www (301/308), and blocks traversal, dot-files and api/_lib.');
+console.log('PASS: server.cjs starts when loaded with require() (like the Hostinger runner) and serves pages, assets (cache, ETag by content that survives a deploy, 304 with If-None-Match before If-Modified-Since, br/gzip, HEAD) and /api routes with the vercel.json headers (the document-only ones on documents only), keeps every address but the shop\'s domain out of search results, moves www to the domain without www (301/308), and blocks traversal, dot-files and api/_lib.');

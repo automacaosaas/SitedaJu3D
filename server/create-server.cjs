@@ -8,6 +8,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
+const crypto = require('node:crypto');
 const {isProduction, canonicalHost, indexableHosts, requestHost} = require('../api/_lib/runtime');
 const {minifyCss} = require('./minify-css.cjs');
 
@@ -33,6 +34,14 @@ const COMPRESSED_CACHE_LIMIT = 64 * 1024 * 1024;
 const SYNC_LIMIT = 256 * 1024;
 const QUICK = 6;
 const best = ext => ext === '.glb' ? 6 : 11;   // Meshopt models gain almost nothing above 6, at many times the time
+// Headers only a document acts on (2026-10-08, PageSpeed): the Content-Security-Policy, X-Frame-Options and
+// Permissions-Policy belong to the page (and to a worker, which the site does not have), never to the scripts,
+// stylesheets, images, fonts and models it loads, where the browser ignores them; on each of those they were ~1.1 KB of
+// headers for nothing. Pages, the 404 page, the SVG (a document when opened on its own), XML and every /api answer
+// keep them. nosniff, HSTS and Referrer-Policy stay everywhere: nosniff is checked on the scripts and stylesheets
+// themselves, HSTS is read from any HTTPS answer, and a module's or stylesheet's own Referrer-Policy rules what it imports.
+const DOCUMENT_ONLY = new Set(['content-security-policy', 'x-frame-options', 'permissions-policy']);
+const SUBRESOURCE = /\.(?:m?js|css|webp|png|jpe?g|ico|woff2|glb)$/i;
 
 // vercel.json `headers` → [{pattern, headers}]. Sources are plain "/prefix/(.*)" patterns (checked by tests/headers.mjs),
 // which are also valid regular expressions.
@@ -100,6 +109,19 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     if (!minified.has(key)) minified.set(key, Buffer.from(minifyCss(fs.readFileSync(file, 'utf8'))));
     return minified.get(key);
   }
+  // The ETag comes from what is served (2026-10-08, PageSpeed): a hash of the file (of the minified text, for a stylesheet),
+  // worked out once per version (mtime and size) and kept. A deploy gives every file the commit's time (git archive), so a
+  // validator made of size and date changed even when nothing did and returning visitors downloaded everything again; this
+  // one changes only with the content. Weak, and the same for the br, gzip and plain answers of a file (Vary:
+  // Accept-Encoding tells them apart): they carry the same text, not the same bytes. A stylesheet keeps "-m" (minified).
+  const validators = new Map();
+  function validator(file, stat, ext) {
+    const version = `${stat.mtimeMs}|${stat.size}`, known = validators.get(file);
+    if (known?.version === version) return known.etag;
+    const etag = `W/"${crypto.createHash('sha256').update(contents(file, stat, ext)).digest('base64url').slice(0, 16)}${ext === '.css' ? '-m' : ''}"`;
+    validators.set(file, {version, etag});
+    return etag;
+  }
   const zipOptions = (encoding, raw, quality, ext) => encoding === 'br'
     ? {params: {[zlib.constants.BROTLI_PARAM_QUALITY]: quality, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length, [zlib.constants.BROTLI_PARAM_MODE]: ext === '.glb' ? zlib.constants.BROTLI_MODE_GENERIC : zlib.constants.BROTLI_MODE_TEXT}}
     : {level: quality >= 9 ? 9 : quality};
@@ -150,7 +172,9 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     for (const file of files) {
       let stat;
       try { stat = fs.statSync(file); } catch { continue; }
-      if (stat.size > 1024) await compressLater(file, stat, path.extname(file).toLowerCase(), 'br');
+      const ext = path.extname(file).toLowerCase();
+      try { validator(file, stat, ext); } catch { continue; }   // the ETag ready before the first visit
+      if (stat.size > 1024) await compressLater(file, stat, ext, 'br');
     }
     return files.length;
   }
@@ -180,20 +204,27 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
       return res.end(req.method === 'HEAD' ? undefined : 'Página não encontrada.');
     }
     const {file, stat} = found, ext = path.extname(file).toLowerCase();
-    // a stylesheet is served minified: its own validator, never confused with the file as it was served before
-    const etag = `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}${ext === '.css' ? '-m' : ''}"`;
-    res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
+    const etag = validator(file, stat, ext), modified = Math.floor(stat.mtimeMs / 1000) * 1000;
     res.setHeader('ETag', etag);
-    res.setHeader('Last-Modified', stat.mtime.toUTCString());
     // A file asked for with ?v= (the fonts, the 3D models, the gallery views…) changes address whenever it changes: a year
     // in the cache, never revalidated. Pages and the same files without ?v= keep the rules above.
     if (ext !== '.html' && VERSIONED.test(search)) res.setHeader('Cache-Control', IMMUTABLE);
     if (!res.hasHeader('Cache-Control')) res.setHeader('Cache-Control', DEFAULT_CACHE);
-    if (String(req.headers['if-none-match'] || '').split(/\s*,\s*/).includes(etag)) { res.statusCode = 304; return res.end(); }
+    if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');   // also on a 304 (RFC 9110 §15.4.5)
+    // RFC 9110 §13.2.2: If-None-Match first (weak comparison, "*" too); If-Modified-Since only without it. A browser sends
+    // both, and after a deploy only the ETag still matches (the date is the new commit's), so the ETag decides. The date
+    // alone counts only when it is the file's own (as nginx's "if_modified_since exact"): a rollback (deploy.sh --rollback)
+    // puts back files with an older date, and "not modified since" a later one would keep the newer file in that cache.
+    const ifNoneMatch = req.headers['if-none-match'];
+    const fresh = ifNoneMatch !== undefined
+      ? ifNoneMatch.trim() === '*' || ifNoneMatch.split(',').some(tag => tag.trim().replace(/^W\//, '') === etag.slice(2))
+      : modified === Date.parse(req.headers['if-modified-since'] || '');
+    if (fresh) { res.statusCode = 304; return res.end(); }   // no Content-Type or Last-Modified: the cache keeps its own
+    res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
+    res.setHeader('Last-Modified', stat.mtime.toUTCString());
 
     const accepts = String(req.headers['accept-encoding'] || '');
     const encoding = COMPRESSIBLE.has(ext) && stat.size > 1024 ? (/\bbr\b/.test(accepts) ? 'br' : /\bgzip\b/.test(accepts) ? 'gzip' : null) : null;
-    if (COMPRESSIBLE.has(ext)) res.setHeader('Vary', 'Accept-Encoding');
     const body = encoding ? encoded(file, stat, ext, encoding) : null;
     if (body) {
       res.setHeader('Content-Encoding', encoding);
@@ -213,7 +244,8 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
   const server = http.createServer(async (req, res) => {
     let pathname, search;
     try { ({pathname, search} = new URL(req.url, 'http://localhost')); } catch { res.statusCode = 400; return res.end(); }
-    for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) res.setHeader(key, value);
+    const subresource = SUBRESOURCE.test(pathname);
+    for (const rule of rules) if (rule.pattern.test(pathname)) for (const {key, value} of rule.headers) if (!subresource || !DOCUMENT_ONLY.has(key.toLowerCase())) res.setHeader(key, value);
     if (!searchHosts.has(requestHost(req))) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     // Same path and query on the domain, with the headers above: 301 for GET/HEAD, 308 (method and body kept) for the rest.
     // Kept by the browser only: a CDN in front must not hand it to other hosts (X-Forwarded-Host can be forged).

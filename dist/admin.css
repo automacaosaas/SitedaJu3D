@@ -260,6 +260,7 @@ dialog.admin-confirm textarea{width:100%;min-height:64px;padding:10px;border:1px
 .cash-table tbody tr:last-child td{border-bottom:0}
 .cash-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .cash-table tr.is-in .num{color:var(--g-fg)}.cash-table tr.is-out .num{color:var(--r-fg)}.cash-table tr.is-adjust .num{color:var(--muted)}
+.cash-table tr.is-test .num{color:var(--muted);text-decoration:line-through}
 .cash-table .c-date{white-space:nowrap;color:var(--muted)}
 .cash-table .c-desc strong{display:block;font-weight:650}
 .cash-table small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}

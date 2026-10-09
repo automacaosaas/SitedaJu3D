@@ -37,7 +37,7 @@ for (const date of ['2026-02-28', '2026-10-04', '2028-02-29']) {
 // ── the balance summed by the store is the same as the one of the movements ──
 {
   const store = createMemoryStore(), at = iso => new Date(iso);
-  const order = async (reference, status, paidAt, extra = {}) => store.orders.create({id: crypto.randomUUID(), reference, source: 'test', status, totalCents: 10000 + reference.length, paidAt, refundState: null, items: [{productId: 'p', title: 'Peça', quantity: 2, unitCents: 5000, selection: {}}], buyer: {name: 'Maria Cliente', email: 'maria@x.com'}, ...extra});
+  const order = async (reference, status, paidAt, extra = {}) => store.orders.create({id: crypto.randomUUID(), reference, source: 'live', status, totalCents: 10000 + reference.length, paidAt, refundState: null, items: [{productId: 'p', title: 'Peça', quantity: 2, unitCents: 5000, selection: {}}], buyer: {name: 'Maria Cliente', email: 'maria@x.com'}, ...extra});
   await order('JU-1', 'pendente', at('2026-10-04T13:00:00Z'));
   await order('JU-22', 'concluido', at('2026-10-05T02:59:59Z'));                                         // 23:59 in Brasília: still the 4th
   await order('JU-333', 'pendente', at('2026-10-05T03:00:00Z'));                                         // already the 5th
@@ -46,6 +46,8 @@ for (const date of ['2026-02-28', '2026-10-04', '2028-02-29']) {
   await order('JU-666666', 'recusado', at('2026-10-01T12:00:00Z'), {refundState: 'failed'});
   await order('JU-7', 'aguardando_pagamento', null);
   await order('JU-88', 'cancelado', at('2026-10-01T12:00:00Z'));
+  await order('JU-T9', 'pendente', at('2026-10-04T14:00:00Z'), {source: 'test'});                             // Mercado Pago's test mode
+  await order('JU-T99', 'recusado', at('2026-10-01T12:00:00Z'), {source: 'test', refundState: 'refunded', refundedAt: at('2026-10-03T12:00:00Z')});
   await store.cashEntries.create({id: crypto.randomUUID(), kind: 'saida', category: 'frete', description: 'Correios', amountCents: 2800, occurredOn: '2026-10-04'});
   await store.cashEntries.create({id: crypto.randomUUID(), kind: 'entrada', category: 'outros', description: 'Futuro', amountCents: 999, occurredOn: '2026-10-06'});
   await store.cashEntries.create({id: crypto.randomUUID(), kind: 'entrada', category: 'ajuste', description: 'Ajuste de saldo', amountCents: 50000, occurredOn: '2026-09-30'});
@@ -54,21 +56,24 @@ for (const date of ['2026-02-28', '2026-10-04', '2028-02-29']) {
   await store.bills.create({id: 'b2', description: 'Aluguel', amountCents: 80000, dueOn: '2026-10-06'});
 
   const cashOrders = await store.orders.listForCash({statuses: PAID});
-  assert.deepEqual(cashOrders.map(o => o.reference).sort(), ['JU-1', 'JU-22', 'JU-333', 'JU-4444', 'JU-55555', 'JU-666666'], 'only paid orders');
+  assert.deepEqual(cashOrders.map(o => o.reference).sort(), ['JU-1', 'JU-22', 'JU-333', 'JU-4444', 'JU-55555', 'JU-666666', 'JU-T9', 'JU-T99'], 'only paid orders');
   assert.deepEqual(cashOrders[0].items, [{title: 'Peça', quantity: 2}], 'only the pieces it shows');
   assert(!/maria/i.test(JSON.stringify(cashOrders)), 'nothing about the buyer is loaded');
   const list = movements({orders: cashOrders, entries: await store.cashEntries.list(), bills: await store.bills.list()});
+  assert.deepEqual(list.filter(m => m.test).map(m => m.description).sort(), ['Estorno do pedido JU-T99', 'Pedido JU-T9', 'Pedido JU-T99'], 'the test orders are listed, marked');
   for (const date of ['2026-09-30', '2026-10-01', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06']) {
     assert.equal(await store.cashBalance({statuses: PAID, refundStates: MONEY_BACK, before: dayEnd(date), until: date}), balance(list, date), `balance of ${date}`);
+    assert.equal(balance(list, date), balance(list.filter(m => !m.test), date), `${date}: the test orders are no money`);
   }
+  assert.equal(balance(list, '2026-10-04') - balance(list, '2026-10-03'), 10000 + 'JU-1'.length + 10000 + 'JU-22'.length - 2800, 'the 4th: two real sales and the Correios, not the test sale');
 }
 
 // ── movements: paid orders, refunds, entries and paid bills ───────────
 {
-  const order = (reference, extra = {}) => ({id: crypto.randomUUID(), reference, source: 'test', status: 'pendente', totalCents: 14445, paidAt: new Date('2026-10-04T13:00:00Z'), refundState: null, items: [{title: 'Borboletoscópio', quantity: 1}], buyer: {name: 'Maria Cliente', email: 'maria@x.com'}, ...extra});
+  const order = (reference, extra = {}) => ({id: crypto.randomUUID(), reference, source: 'live', status: 'pendente', totalCents: 14445, paidAt: new Date('2026-10-04T13:00:00Z'), refundState: null, items: [{title: 'Borboletoscópio', quantity: 1}], buyer: {name: 'Maria Cliente', email: 'maria@x.com'}, ...extra});
   const list = movements({
     orders: [
-      order('JU-A'),
+      order('JU-A', {source: 'test'}),
       order('JU-B', {status: 'recusado', refundState: 'refunded', refundedAt: new Date('2026-10-05T12:00:00Z')}),
       order('JU-C', {status: 'recusado', refundState: 'failed'}),
       order('JU-D', {source: 'live', paidAt: new Date('2026-10-02T02:30:00Z')}),
@@ -97,8 +102,9 @@ for (const date of ['2026-02-28', '2026-10-04', '2028-02-29']) {
   assert.equal(list.find(m => m.description === 'Pedido JU-A').detail, '1× Borboletoscópio');
   assert(!/maria/i.test(JSON.stringify(list)), 'nothing about the buyer leaves the server');
   assert.deepEqual(list.filter(m => m.removable).map(m => m.id).sort(), ['e1', 'e2'], 'only entries typed by hand can be removed');
-  // Everything up to today; the refund dated tomorrow does not count yet.
-  const money = 5 * 14445 + 100000, out = 14445 + 2800 + 31000;
+  // Everything up to today; the refund dated tomorrow does not count yet. JU-A, paid in Mercado Pago's test mode, is in the
+  // list (above) but no money: 4 real sales.
+  const money = 4 * 14445 + 100000, out = 14445 + 2800 + 31000;
   assert.equal(balance(list, '2026-10-04'), money - out);
   assert.equal(balance(list, '2026-10-05'), money - out - 14445);
 }
@@ -126,7 +132,7 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal((await call(h.cash, {origin: 'https://evil.example', cookie, body: {action: 'add-bill'}})).statusCode, 403, 'changes only from the site itself');
 
   const shipTo = {recipient: 'Ana', cep: '30140071', street: 'Rua da Bahia', number: '1', district: 'Centro', city: 'Belo Horizonte', state: 'MG', complement: ''};
-  const base = {customerId: null, source: 'test', method: 'pix', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Ana', email: 'ana@example.com', company: null}, shipTo, notes: '', lang: 'pt-BR', items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {}}]};
+  const base = {customerId: null, source: 'live', method: 'pix', subtotalCents: 12900, shippingCents: 1800, totalCents: 14700, buyer: {name: 'Ana', email: 'ana@example.com', company: null}, shipTo, notes: '', lang: 'pt-BR', items: [{productId: 'borboletoscopio', title: 'Borboletoscópio', quantity: 1, unitCents: 12900, selection: {}}]};
   await store.orders.create({...base, id: crypto.randomUUID(), reference: 'JU-CAIXA00001', status: 'pendente', paidAt: new Date(clock)});
   await store.orders.create({...base, id: crypto.randomUUID(), reference: 'JU-CAIXA00002', status: 'aguardando_pagamento', paidAt: null});
   assert.deepEqual((await get()).json().cash.movements.map(m => m.description), ['Pedido JU-CAIXA00001'], 'a paid order arrives by itself; an unpaid one does not');
@@ -193,6 +199,17 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal((await post({action: 'remove-bill', id: bill.id})).json().cash.bills.length, 0);
   assert.equal((await post({action: 'remove-bill', id: bill.id})).statusCode, 404);
 
+  // A purchase paid in Mercado Pago's test mode (the tests before the launch): listed as a sale with its label, but no money —
+  // not in the balance, not in the month, and not in what the balance Ju types is compared with.
+  const real = (await get()).json().cash;
+  await store.orders.create({...base, source: 'test', id: crypto.randomUUID(), reference: 'JU-CAIXA00003', status: 'pendente', paidAt: new Date(clock)});
+  const withTest = (await get()).json().cash;
+  assert(withTest.movements.some(m => m.description === 'Pedido JU-CAIXA00003' && m.test === true && m.type === 'entrada' && m.category === 'venda'), 'the test order is listed, marked');
+  assert.equal(withTest.balanceCents, real.balanceCents, 'not in the balance');
+  assert.deepEqual(helpers.monthSummary(withTest.movements, '2026-10', '2026-10-04'), helpers.monthSummary(real.movements, '2026-10', '2026-10-04'), 'not in the month');
+  const sameBalance = (await post({action: 'adjust-balance', balanceCents: withTest.balanceCents})).json().cash;
+  assert.equal(sameBalance.movements.filter(m => m.category === 'ajuste').length, real.movements.filter(m => m.category === 'ajuste').length, 'typing the balance shown adds no adjustment: the store leaves the test order out too');
+
   const audit = await store.adminAudit.list(100), actions = audit.map(a => a.action);
   for (const action of ['cash_entry_add', 'cash_entry_remove', 'bill_add', 'bill_paid', 'bill_unpaid', 'bill_lock', 'bill_unlock', 'bill_remove', 'cash_adjust']) assert(actions.includes(action), `audit: ${action}`);
   assert(audit.find(a => a.action === 'bill_add').detail.includes('Fornecedor PLA'), 'the audit says what changed');
@@ -228,6 +245,14 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.equal(helpers.filterMovements(list, {month: '2026-10', query: 'materiais'}).length, 2, 'search by category');
   assert.equal(helpers.filterMovements([m('2026-10-01', 'saida', 1, 'outros', 'Manutenção')], {month: '2026-10', query: 'manutencao'}).length, 1, 'accents do not matter');
   assert.deepEqual(helpers.listTotals(list), {inCents: 19700, outCents: 52700});
+  // An order paid in Mercado Pago's test mode, and its refund: in the list (under Entradas and Saídas too), out of every total.
+  const withTest = [...list, {...m('2026-10-04', 'entrada', 14700, 'venda', 'Pedido JU-TESTE'), test: true}, {...m('2026-10-04', 'saida', 14700, 'estorno', 'Estorno do pedido JU-TESTE'), test: true}];
+  assert.deepEqual(helpers.monthSummary(withTest, '2026-10', '2026-10-04'), helpers.monthSummary(list, '2026-10', '2026-10-04'), 'a test order is out of the month');
+  assert.deepEqual(helpers.dailySeries(withTest, 2026, 9), days, 'out of the chart by day');
+  assert.deepEqual(helpers.monthlySeries(withTest, 2026), months, 'and by month');
+  assert.deepEqual(helpers.filterMovements(withTest, {month: '2026-10', type: 'entrada'}).map(x => x.description), ['Pedido JU-1', 'Futuro', 'Pedido JU-TESTE'], 'but listed, under Entradas too');
+  assert.deepEqual(helpers.filterMovements(withTest, {month: '2026-10', type: 'saida'}).map(x => x.description).at(-1), 'Estorno do pedido JU-TESTE');
+  assert.deepEqual(helpers.listTotals(helpers.filterMovements(withTest, {month: '2026-10'})), helpers.listTotals(helpers.filterMovements(list, {month: '2026-10'})), 'and out of the list totals');
 
   const bills = [{id: '1', description: 'A', amountCents: 1, dueDate: '2026-10-06', paidDate: null}, {id: '2', description: 'B', amountCents: 1, dueDate: '2026-10-01', paidDate: null},
     {id: '3', description: 'C', amountCents: 1, dueDate: '2026-10-02', paidDate: '2026-10-03'}, {id: '4', description: 'D', amountCents: 1, dueDate: '2026-10-04', paidDate: null}, {id: '5', description: 'E', amountCents: 1, dueDate: '2026-10-30', paidDate: null}];
@@ -257,6 +282,9 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.match(cash, /\[\['geral', 'Visão geral'\], \['movimentacoes', 'Movimentações'\], \['contas', 'Contas a pagar'\]\]/, 'three tabs');
   // Movimentações: 10 lines, then "Ver mais" adds 10; the totals are of the whole month.
   assert.match(cash, /const PAGE = 10;/);
+  assert.match(cash, /m\.test \? ' · pedido de teste, fora do saldo e dos totais' : ''/, 'a test order says it is out of the balance');
+  assert.match(cash, /<tr class="is-\$\{kind\}\$\{m\.test \? ' is-test' : ''\}">/);
+  assert.match(read('dist/admin.css'), /\.cash-table tr\.is-test \.num\{color:var\(--muted\);text-decoration:line-through\}/, 'and its value is struck through');
   assert.match(cash, /shown = rows\.slice\(0, list\.limit\), rest = rows\.length - shown\.length;/);
   assert.match(cash, /case 'more': list\.limit \+= PAGE;/);
   assert.match(cash, /data-cash="more">Ver mais/);
@@ -268,4 +296,4 @@ const jar = res => String(res.headers['set-cookie'] || '').split(';')[0];
   assert.match(read('dist/icons.js'), /unlock: '/);
 }
 
-console.log('PASS: cash — orders become money in on the day they were paid (Brasília) and refunds money out; entries, paid bills and balance adjustments; the endpoint only for a signed-in admin, validated and audited; month totals, chart series, search, bills and the value field.');
+console.log('PASS: cash — orders become money in on the day they were paid (Brasília) and refunds money out (test-mode orders listed, out of the balance and totals); entries, paid bills and balance adjustments; the endpoint only for a signed-in admin, validated and audited; month totals, chart series, search, bills and the value field.');

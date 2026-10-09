@@ -99,7 +99,7 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       rig: q('.demo-rig'), tilt: q('.demo-tilt'), turn: q('.demo-turn'), float: q('.demo-float'), drop: q('.demo-drop'), back: q('.demo-back'),
       cast: q('.demo-cast'), castImage: q('.demo-cast-image'), tool: q('.demo-tool'), toolImage: q('.demo-tool img'),
       sleeve: q('.demo-sleeve'), shade: q('.demo-shade'), cover: q('.demo-cover'), sheen: q('.demo-sheen i'), head: q('.demo-head'), headImage: q('.demo-head img'),
-      frames: q('.demo-frames'), hint: controls.querySelector('.demo-hint'), ready: null, giro: null};
+      frames: q('.demo-frames'), hint: controls.querySelector('.demo-hint'), ready: null, images: [], failed: false, giro: null};
   }
 
   // Monta as camadas do produto e decodifica as imagens antes do clique (o equipamento nunca chega atrasado).
@@ -147,10 +147,24 @@ export function createHeroDemo({region, shell, entries, slots, bgLayers, status,
       dom.cta.href = soon ? `#produto/${key}/3d` : fixed ? `#produto/${key}` : `#produto/${key}/personalizar`;
       dom.callouts.innerHTML = callouts.map(item => ['wide', 'compact'].filter(layout => item[layout]).map(layout => callout(item, layout, item[layout])).join('')).join('');
       setupTurn(config.turn || null);
-      const images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
-      dom.ready = Promise.all(images.map(img => imageReady(img, 6500))).then(results => results.every(Boolean));
-    }
+      dom.images = [dom.cover, dom.toolImage, ...(layers.back ? [dom.back] : []), ...(config.head ? [dom.headImage] : [])];
+      check();
+    } else if (dom.failed) check();
     return dom.ready;
+  }
+  // Um "não" (o equipamento passou dos 6,5 s numa rede lenta) não fica guardado: o próximo prepare, o do clique em "Ver encaixado",
+  // confere de novo; as imagens que já chegaram respondem na hora (antes, o 1º toque dava erro e só o 2º abria) e a que falhou de
+  // verdade (a rede caiu) é pedida outra vez, junto com as sombras feitas do mesmo arquivo (drop e shade da frente, a do equipamento
+  // na parede): sem elas, a peça abria sem sombra. O limite é o mesmo: a vitrine fica travada enquanto o clique espera, e não mais
+  // que antes.
+  function check() {
+    for (const img of [...dom.images, dom.drop, dom.shade, dom.castImage]) if (img.complete && !img.naturalWidth && img.getAttribute('src')) img.src = img.getAttribute('src');
+    const ready = dom.ready = Promise.all(dom.images.map(img => imageReady(img, 6500))).then(results => {
+      const ok = results.every(Boolean);
+      if (dom.ready === ready) dom.failed = !ok;
+      return ok;
+    });
+    dom.failed = false;
   }
 
   // ── o giro da cabeça (turn): os quadros numa grade de `cols` colunas (src), na caixa [x, y, largura, altura] da foto (frações); a

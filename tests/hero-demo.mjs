@@ -71,6 +71,27 @@ assert.ok(!/borboletosc|dinossaurosc|aviaosc|retinosc/i.test(demo + timeline), '
 // a folha da demonstração chega depois da primeira pintura (late-css.js; tests/pagespeed.mjs) e a abertura espera por ela
 assert.ok(html.includes('<link rel="stylesheet" href="hero-demo.css" media="print" data-late-css><noscript><link rel="stylesheet" href="hero-demo.css"></noscript>'));
 assert.ok(demo.includes("import {lateCss} from './late-css.js';") && demo.includes('const [loaded] = await Promise.all([ready, lateCss]);'), 'a demonstração só aparece com o estilo dela');
+// 2026-10-08: um preparo que deu "não" (o equipamento passou dos 6,5 s numa rede lenta) não fica guardado: o clique confere de novo,
+// e com as imagens já chegadas o 1º toque em "Ver encaixado" abre (antes, só o 2º)
+assert.ok(/\} else if \(dom\.failed\) check\(\);/.test(demo), 'a demonstração lenta abre no 1º toque: o prepare do clique confere de novo');
+{
+  // a check() de verdade (o código dela, com uma imageReady que responde quando o teste manda)
+  const body = demo.match(/\n  function check\(\) \{[^]*?\n  \}\r?\n/)[0], answers = [];
+  const {check, set} = new Function('imageReady', `let dom; ${body}; return {check, set: value => { dom = value; }};`)((img, limit) => new Promise(resolve => answers.push({limit, resolve})));
+  const image = state => ({complete: state !== 'a caminho', naturalWidth: state === 'chegou' ? 400 : 0, asked: 0, getAttribute: () => 'assets/x.webp', set src(value) { this.asked++; }});
+  const [cover, tool, back, drop, shade, cast] = ['falhou', 'chegou', 'a caminho', 'falhou', 'falhou', 'chegou'].map(image);
+  const dom = {images: [cover, tool, back], drop, shade, castImage: cast, ready: null, failed: true};
+  set(dom); check();
+  assert.equal(dom.failed, false, 'conferindo de novo: o "não" antigo não vale mais');
+  assert.deepEqual([cover, drop, shade].map(img => img.asked), [1, 1, 1], 'a que falhou de verdade é pedida de novo, com as sombras feitas do mesmo arquivo (sem elas, a peça abria sem sombra)');
+  assert.deepEqual([tool, back, cast].map(img => img.asked), [0, 0, 0], 'a que já chegou ou ainda está a caminho não é pedida de novo');
+  assert.ok(answers.length === 3 && answers.every(answer => answer.limit === 6500), 'e o clique não espera (com a vitrine travada) mais que antes');
+  const first = dom.ready; check(); const second = dom.ready;
+  answers.slice(0, 3).forEach(answer => answer.resolve(false));
+  assert.equal(await first, false); assert.equal(dom.failed, false, 'a resposta de uma conferência já trocada (outra peça, outro toque) não manda');
+  answers.slice(3).forEach((answer, i) => answer.resolve(i < 2));
+  assert.equal(await second, false); assert.equal(dom.failed, true, 'a mais nova manda: "não" fica guardado para o próximo toque conferir');
+}
 assert.ok(carousel.includes("import {createHeroDemo} from './hero-demo.js';"));
 assert.ok(/if \(locked \|\| !e\.isPrimary/.test(carousel) && /if \(locked \|\| gesture/.test(carousel) && /if \(!locked && \(e\.key === 'ArrowLeft'/.test(carousel), 'arraste, setas e teclado travados durante a demonstração');
 assert.ok(/performance\.now\(\) < suppressUntil[\s\S]{0,420}demo\.open\(index\)/.test(carousel), 'um arraste nunca abre a demonstração (o filtro de clique vem antes)');

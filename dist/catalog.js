@@ -4,7 +4,7 @@ import {PRODUCTS, SOON, PRODUCT_CATEGORIES, FAMILIES, ALIASES, color, defaults, 
 import {COMMERCE, money, pixPrice} from './commerce-config.js';
 import {readCart, writeCart, putItem} from './cart-store.js';
 import {icon} from './icons.js';
-import {imageReady} from './loading-ui.js';
+import {revealImage} from './loading-ui.js';
 import {journeyColors, withAlpha} from './hero-motion.js';
 
 // As novidades (SOON, products.js) entram no fim da coleção: foto, nome, selo "Em breve" e "Ver encaixado", sem preço nem carrinho.
@@ -86,12 +86,15 @@ class ProductCarousel {
     this.cards = [...this.track.children];
     this.cards.forEach(card => {
       const img = card.querySelector('img');
-      // Near the screen, the photo is asked for (srcset: the size this screen needs, cardSources); one that fails says so.
-      const begin = async () => {
+      // Near the screen, the photo is asked for (srcset: the size this screen needs, cardSources); one that fails says so. One
+      // that takes longer than 12 s is not unavailable: it shows up when it arrives (loading-ui.js › revealImage).
+      const begin = () => {
         img.loading = 'eager';
-        if (await imageReady(img)) return;
-        img.hidden = true;
-        img.parentElement.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>');
+        const art = img.parentElement;
+        revealImage(img, {
+          onReady: () => { img.hidden = false; art.querySelector('.image-unavailable')?.remove(); },
+          onFail: () => { img.hidden = true; if (!art.querySelector('.image-unavailable')) art.insertAdjacentHTML('beforeend', '<span class="image-unavailable">Imagem indisponível</span>'); }
+        });
       };
       if ('IntersectionObserver' in window) {
         const observer = new IntersectionObserver(entries => {if(entries.some(entry => entry.isIntersecting)){observer.disconnect();begin();}}, {rootMargin:'240px'});

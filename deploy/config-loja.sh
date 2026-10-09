@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Grava no .env do servidor o primeiro acesso do Painel da Júlia e o frete dos Correios, sem abrir o arquivo à mão
-# (08/10/2026). Rodar como root:  sudo bash /srv/juimprime/current/deploy/config-loja.sh
-# Pergunta cada valor (a senha do painel e o código de acesso dos Correios não aparecem na tela nem ficam no histórico;
-# Enter mantém o que já está), guarda uma cópia do .env de antes, troca só as linhas pedidas, reinicia o site e mostra o
-# que o /api/health enxerga ("admin" e "shipping", nunca um valor). Onde achar cada dado: ADMIN-SETUP.md e FRETE-SETUP.md.
+# Grava no .env do servidor o primeiro acesso do Painel da Júlia, o frete dos Correios e o aplicativo do Bling (nota
+# fiscal), sem abrir o arquivo à mão (08/10/2026). Rodar como root:  sudo bash /srv/juimprime/current/deploy/config-loja.sh
+# Pergunta cada valor (a senha do painel, o código de acesso dos Correios e o Client Secret do Bling não aparecem na tela
+# nem ficam no histórico; Enter mantém o que já está), guarda uma cópia do .env de antes, troca só as linhas pedidas,
+# reinicia o site e mostra o que o /api/health enxerga ("admin", "shipping", "nfe", "bling" e "queue", nunca um valor).
+# Onde achar cada dado: ADMIN-SETUP.md, FRETE-SETUP.md e NFE-SETUP.md.
 # Testar no computador (sem root, sem reiniciar nada): JU_TEST=1 JU_ENV_FILE=<um .env de teste> bash deploy/config-loja.sh
 set -euo pipefail
 
@@ -22,12 +23,14 @@ as_app() { if [ -n "$TESTING" ]; then "$@"; else runuser -u "$APP_USER" -- "$@";
 load() { ENV_TEXT=$(as_app cat -- "$ENV_FILE") || { echo "Não consegui ler $ENV_FILE como $APP_USER."; exit 1; }; }
 load
 
-# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, e, com o nome
-# repetido, fica com a ÚLTIMA linha.
+# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, tira as aspas em volta
+# do valor (NFE_ENVIRONMENT="producao" é producao) e, com o nome repetido, fica com a ÚLTIMA linha.
 current() {
-  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"
+  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$" quoted="^\"([^\"\\\\]*)\"$|^'([^']*)'$"
   while IFS= read -r line; do if [[ "$line" =~ $re ]]; then value=${BASH_REMATCH[1]}; fi; done <<<"$ENV_TEXT"
-  printf '%s' "${value%"${value##*[![:space:]]}"}"
+  value=${value%"${value##*[![:space:]]}"}
+  if [[ "$value" =~ $quoted ]]; then value=${BASH_REMATCH[1]}${BASH_REMATCH[2]}; fi
+  printf '%s' "$value"
 }
 # Números escritos com pontos, traços, barras ou espaços (01310-100, 99.1234.5678): o site lê só os dígitos (digits() em
 # api/_lib/correios.js), então só os dígitos vão para o .env. No usuário, só um CPF (11) ou CNPJ (14) assim vira números.
@@ -85,9 +88,17 @@ ask_password() {
   done
 }
 
-read -r -p "O que configurar? 1 = Painel da Júlia (primeiro acesso), 2 = Frete dos Correios, 3 = os dois [3]: " choice
+# Enter escolhe tudo, como antes da opção do Bling (o "3 = os dois" de antes virou o 4); em cada parte, Enter mantém o
+# que já está certo.
+read -r -p "O que configurar? 1 = Painel da Júlia (primeiro acesso), 2 = Frete dos Correios, 3 = Nota fiscal (Bling), 4 = tudo [4]: " choice
 choice=${choice//[[:space:]]/}
-case "${choice:-3}" in 1) panel=1; ship='' ;; 2) panel=''; ship=1 ;; 3) panel=1; ship=1 ;; *) echo "Responda 1, 2 ou 3."; exit 1 ;; esac
+case "${choice:-4}" in
+  1) panel=1; ship=''; nfe='' ;;
+  2) panel=''; ship=1; nfe='' ;;
+  3) panel=''; ship=''; nfe=1 ;;
+  4) panel=1; ship=1; nfe=1 ;;
+  *) echo "Responda 1, 2, 3 ou 4."; exit 1 ;;
+esac
 
 if [ -n "$panel" ] && [ -z "$TESTING" ]; then
   body=$(curl -fsS -m 5 "$HEALTH" 2>/dev/null || true)
@@ -97,7 +108,7 @@ if [ -n "$panel" ] && [ -z "$TESTING" ]; then
     read -r -p "Continuar mesmo assim? (s/N): " sure
     if [[ "${sure,,}" != s* ]]; then
       panel=''; echo "O painel fica como está."
-      [ -n "$ship" ] || { echo "Nada foi alterado."; exit 0; }
+      [ -n "$ship$nfe" ] || { echo "Nada foi alterado."; exit 0; }
     fi
   elif [ -z "$body" ]; then
     echo "(Não consegui ler o /api/health agora; sigo assim mesmo.)"
@@ -127,7 +138,62 @@ if [ -n "$ship" ]; then
     "O CEP tem 8 números (12345-678); confira e digite de novo."
 fi
 
-[ ${#NEW[@]} -gt 0 ] || { echo "Nada foi alterado (os valores ficaram como estavam)."; exit 0; }
+# Bling (NFE-SETUP.md): o aplicativo do site no Bling dá o Client ID e o Client Secret (texto opaco: letras e números, sem
+# tamanho fixo); a conta só se conecta depois, pelo painel, com o link de redirecionamento igual a SITE_URL/admin.html
+# (api/_lib/bling.js). NFE_ENVIRONMENT vazio = homologação; "producao" (essa palavra exata, api/_lib/fiscal.js) = notas de
+# verdade.
+bling_steps() {
+  echo "Para conectar a conta da empresa:"
+  echo "  1. No Bling (Central de Extensões → Área do Integrador → o aplicativo do site), o Link de redirecionamento tem de ser"
+  echo "     exatamente $DOMAIN/admin.html (sem www e sem barra no fim). Se o aplicativo era o do site de teste, o site de teste"
+  echo "     deixa de conectar: é o roteiro do lançamento."
+  echo "  2. Painel da Júlia ($DOMAIN/admin.html) → cartão \"Nota fiscal · Bling\" → Conectar ao Bling → entrar com a conta da"
+  echo "     empresa e permitir. O painel volta mostrando \"Bling conectado\" e as naturezas de operação."
+  echo "  3. Confira: curl -s $HEALTH | grep -o '\"bling\":\"[a-z_]*\"'  → \"bling\":\"connected\"."
+}
+# No 4 (o Enter, que antes era só painel e frete), um Bling ainda sem aplicativo não prende ninguém: sem o Client ID e o
+# Client Secret à mão, a nota fiscal fica para a opção 3 e o que foi respondido acima é gravado.
+if [ -n "$nfe" ] && [ "${choice:-4}" = 4 ] && { [ -z "$(current BLING_CLIENT_ID)" ] || [ -z "$(current BLING_CLIENT_SECRET)" ]; }; then
+  read -r -p "Nota fiscal (Bling): já tem o Client ID e o Client Secret do aplicativo do site no Bling? (s/N): " sure
+  [[ "${sure,,}" == s* ]] || { nfe=''; echo "A nota fiscal fica para depois: rode de novo, opção 3 (NFE-SETUP.md)."; }
+fi
+if [ -n "$nfe" ]; then
+  echo "== Nota fiscal (Bling): o aplicativo do site no Bling (o passo a passo está em NFE-SETUP.md)"
+  [ "$(current NFE_PROVIDER)" = bling ] || NEW[NFE_PROVIDER]=bling
+  ask BLING_CLIENT_ID "Client ID do aplicativo (Bling → Central de Extensões → Área do Integrador → o aplicativo)" 0 '^[A-Za-z0-9._-]{16,128}$' texto \
+    "O Client ID tem letras e números (pelo menos 16); copie de novo do Bling e cole."
+  ask BLING_CLIENT_SECRET "Client Secret do aplicativo (não aparece na tela)" 1 '^[A-Za-z0-9._-]{16,200}$' texto \
+    "O Client Secret tem letras e números (pelo menos 16); copie de novo do Bling e cole."
+  # O link que o site manda ao Bling sai de SITE_URL: no servidor da loja, sempre o domínio (config-pagamentos.sh grava o mesmo).
+  site=$(current SITE_URL)
+  if [ "${site%/}" != "$DOMAIN" ]; then NEW[SITE_URL]=$DOMAIN; echo "  SITE_URL estava \"$site\": fica $DOMAIN (o link que o site manda ao Bling é SITE_URL/admin.html)."; fi
+  was_env=$(current NFE_ENVIRONMENT); default=1; [ "$was_env" != producao ] || default=2
+  while :; do
+    read -r -p "Ambiente das notas: 1 = homologação (testes, sem valor fiscal), 2 = produção (notas de verdade) [$default = o atual]: " where
+    where=${where//[[:space:]]/}
+    case "${where:-$default}" in 1|2) break ;; *) echo "  Responda 1 ou 2." ;; esac
+  done
+  target=''
+  if [ "${where:-$default}" = 2 ]; then
+    target=producao
+    if [ "$was_env" != producao ]; then
+      echo "  Produção emite notas com valor fiscal. Só vale com a contadora de acordo e o Bling já em produção (\"1 - Produção\""
+      echo "  e a série 1 seguindo na nota nº 11; NFE-SETUP.md, passo 5)."
+      read -r -p "  A contadora está de acordo e o Bling já está em produção? (s/N): " sure
+      [[ "${sure,,}" == s* ]] || { target=$was_env; echo "  O ambiente das notas fica como estava (homologação)."; }
+    fi
+  elif [ "$was_env" = producao ]; then
+    echo "  As notas voltam para homologação (sem valor fiscal)."
+  fi
+  [ "$target" = "$was_env" ] || NEW[NFE_ENVIRONMENT]=$target
+fi
+
+if [ ${#NEW[@]} -eq 0 ]; then
+  echo "Nada foi alterado (os valores ficaram como estavam)."
+  [ -z "$nfe" ] || bling_steps
+  exit 0
+fi
+newapp=''; [ -z "${NEW[BLING_CLIENT_ID]+x}" ] || [ "${NEW[BLING_CLIENT_ID]}" = "$(current BLING_CLIENT_ID)" ] || newapp=1
 
 # Troca só as linhas pedidas, com comandos internos do bash (os valores nunca passam pela linha de comando de outro
 # programa): o valor novo entra na primeira linha do nome, as repetidas saem (o systemd ficaria com a última) e o nome que
@@ -162,7 +228,8 @@ for i in $(seq 1 30); do body=$(curl -fsS -m 5 "$HEALTH" 2>/dev/null || true); g
 grep -q '"ok":true' <<<"$body" || { echo "O site não respondeu: journalctl -u juimprime -n 40"; exit 1; }
 [ -z "$panel" ] || grep -o '"admin":"[a-z]*"' <<<"$body" || true
 [ -z "$ship" ] || grep -o '"shipping":"[a-z]*"' <<<"$body" || true
-state() { grep -o "\"$1\":\"[a-z]*\"" <<<"$body" | cut -d'"' -f4 || true; }
+[ -z "$nfe" ] || grep -o '"nfe":"[a-z]*"\|"fiscal":"[a-z]*"\|"bling":"[a-z_]*"\|"queue":{[^}]*}' <<<"$body" || true
+state() { grep -o "\"$1\":\"[a-z_]*\"" <<<"$body" | cut -d'"' -f4 || true; }
 if [ -n "$panel" ]; then
   case "$(state admin)" in
     bootstrap) echo "Painel pronto: a Júlia já pode abrir $DOMAIN/admin.html, entrar com esse e-mail e senha e ler o QR Code no app autenticador." ;;
@@ -179,4 +246,22 @@ if [ -n "$ship" ]; then
     pending) echo "Os dados dos Correios estão gravados, mas falta dado da loja em api/_lib/shipping-config.js (caixas, prazos ou serviços): me chame." ;;
     *) echo "Frete real desligado: algum dado dos Correios ficou vazio. Rode de novo, opção 2." ;;
   esac
+fi
+if [ -n "$nfe" ]; then
+  case "$(state nfe)" in
+    live) echo "Notas fiscais de verdade (produção)." ;;
+    test) echo "Notas fiscais em homologação (sem valor fiscal)."
+      [ "$target" != producao ] || echo "ATENÇÃO: NFE_ENVIRONMENT=producao só vale com APP_ENV=production: rode config-pagamentos.sh, opção 1 (ela grava APP_ENV)." ;;
+    *) echo "A nota fiscal ficou desligada: confira NFE_PROVIDER=bling no .env e me chame." ;;
+  esac
+  [ "$(state fiscal)" != pending ] || echo "Faltam dados fiscais em api/_lib/fiscal.js (o pedido mostra quais): nenhuma nota sai até completar. Me chame."
+  case "$(state bling)" in
+    connected) echo "O Bling já está conectado."
+      [ -z "$newapp" ] || echo "Como o Client ID mudou, no painel: Desconectar o Bling e Conectar de novo (a autorização era do aplicativo de antes)." ;;
+    disconnected) echo "Aplicativo do Bling gravado; falta conectar a conta."; bling_steps ;;
+    paused|unstable) echo "O Bling está conectado, mas com a emissão pausada ou instável: veja o cartão \"Nota fiscal · Bling\" no painel (BLING-RESILIENCIA.md)." ;;
+    not_configured) echo "Faltou o Client ID ou o Client Secret: rode de novo, opção 3." ;;
+    *) echo "Não consegui ler a conexão com o Bling (\"bling\":\"$(state bling)\"): confira o \"db\" em curl -s $HEALTH e me chame." ;;
+  esac
+  [ "$(state nfe)" = off ] || grep -q '"worker":true' <<<"$body" || echo "A fila das notas não está rodando (\"queue\" sem \"worker\":true): journalctl -u juimprime -n 40 | grep fila, e me chame."
 fi

@@ -42,7 +42,7 @@ function setupSiteHeader(host) {
 
 function setupMobileDrawer() {
   if (!document.querySelector('.menu-toggle') || document.querySelector('#mobile-drawer')) return;
-  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju.webp" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav>${drawerExtras()}</aside></div>`);
+  document.body.insertAdjacentHTML('beforeend', `<div class="mobile-drawer-layer" hidden><aside class="mobile-drawer" id="mobile-drawer" aria-label="Menu principal" aria-modal="true" role="dialog" tabindex="-1"><div class="drawer-top"><img src="assets/logo-ju-224.webp" srcset="assets/logo-ju-224.webp 2x, assets/logo-ju.webp 3x" width="92" height="92" alt="Ju, imprime pra mim"><button type="button" class="drawer-close" aria-label="Fechar menu">×</button></div><nav class="drawer-links" aria-label="Navegação móvel">${primaryNav()}</nav>${drawerExtras()}</aside></div>`);
   const layer = document.querySelector('.mobile-drawer-layer'), drawer = layer.querySelector('.mobile-drawer');
   let opener = null, closingTimer = null, openingFrame = null;
   const headerToggles = () => [...document.querySelectorAll('.menu-toggle')];

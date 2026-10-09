@@ -1,9 +1,12 @@
 // Tiny static server for the airplane/monkey render pages: /vendor → the site's vendored three.js, /stl → the airplane STL folder, everything else → this folder.
+// /vendor and /assets come from the dist/ of the copy this file is in (a worktree renders its own models). RENDER_PORT (default 8851)
+// lets a second copy serve at the same time; runpage.cjs reads the same variable.
 const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = path.join(__dirname, '..', '..', 'dist').replace(/\\/g, '/'), PORT = Number(process.env.RENDER_PORT) || 8851;
 const ROOTS = [
-  ['/vendor/', 'C:/Users/LUIZ/OneDrive/Apps/siteju3d/dist/vendor/'],
+  ['/vendor/', DIST + '/vendor/'],
   ['/stl/', 'C:/Users/LUIZ/Documents/modelos_ju3d/Airplane Oftalmology1/airplane 21 08 2026/STL/'],
-  ['/assets/', 'C:/Users/LUIZ/OneDrive/Apps/siteju3d/dist/assets/'],
+  ['/assets/', DIST + '/assets/'],
   ['/photos/', 'C:/Users/LUIZ/OneDrive/ANIMAÇÃO_JU3D/'],
   ['/', __dirname + '/']
 ];
@@ -19,4 +22,4 @@ http.createServer((req, res) => {
     return;
   }
   res.writeHead(404); res.end('not found');
-}).listen(8851, '127.0.0.1', () => console.log('serving on 8851'));
+}).listen(PORT, '127.0.0.1', () => console.log('serving on ' + PORT, DIST));

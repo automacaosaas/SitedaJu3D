@@ -18,7 +18,11 @@ const ASSETS={
   // do unicórnio refeitas (tools/modelo-novidades)
   // (07/10/2026: as cores seguem o relevo — as manchas, os olhos, as narinas e o sorriso da girafa; as orelhas, as mãos, a crina, o
   // chifre e a faixa da base do unicórnio; o arco-íris em três faixas, roxo, lavanda e dourado; tools/modelo-novidades/pintura.md)
-  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-5',import.meta.url),
+  // (08/10/2026: a girafa com o pescoço, as pintas, a faixa sob a cabeça, os olhos e a pele do rosto refeitos lisos, com as normais da
+  // própria superfície, e a pele em volta do focinho sem os fiapos claros — o zoom da galeria sem riscos, emendas nem bordas tortas;
+  // tools/modelo-novidades/pintura/pintura.md, passo 9; na revisão, o creme do focinho com as normais da forma também na borda: de
+  // lado e a 45° a borda de trás do focinho saía salpicada de claro)
+  girafoscopio:new URL('./assets/models/girafoscopio.glb?v=rodin10-7',import.meta.url),
   unicornioscopio:new URL('./assets/models/unicornioscopio.glb?v=rodin11-2',import.meta.url)
 };
 // The file each piece loads (tests read the same one).

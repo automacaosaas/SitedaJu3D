@@ -81,7 +81,9 @@ const {cartSummary} = await site('cart-view.js');
   assert.match(checkout, /money\(totals\(items, barShipping \?\? 0\)\.total[ )]/, 'the mobile bar adds the real delivery, never the example fee');
   assert.match(checkout, /bar\.innerHTML = mobileBar\(purchaseItems\(\)\)/, 'and follows the delivery when it is quoted or changed');
   assert.doesNotMatch(checkout, /money\(totals\(items\)\.total\)/);
-  assert.match(checkout, /await Promise\.all\(\[refreshSession\(\), loadPaymentConfig\(\), loadShippingConfig\(\)\]\)/, 'one round trip before the cart shows');
+  assert.match(checkout, /await Promise\.all\(\[refreshSession\(\), loadPaymentConfig\(\), loadShippingConfig\(\), pixOffered\(\)\]\)/, 'one round trip before the cart shows (the Pix check goes with it)');
+  // No Pix on the Mercado Pago account (09/10/2026): with an answer and no bank transfer, the checkout opens on the card and does not offer Pix.
+  assert(checkout.includes("let payMethod = live.mode === 'off' || pixAvailable ? 'pix' : 'card';") && checkout.includes("live.mode === 'off' || pixAvailable ? option('pix', pix,") && checkout.includes("d.methods.some(m => m?.type === 'bank_transfer' || m?.id === 'pix')"), 'Pix only where the account takes it');
   assert.match(checkout, /onBinChange: bin => showInstallments\(mp, bin\)/); assert.match(checkout, /mp\.getInstallments\(\{amount:/);
   assert.match(checkout, /id="installments-info"/);
   assert.match(checkout, /sessionStorage\.setItem\(CEP_KEY/, 'the CEP typed in the cart goes on to the delivery step');
