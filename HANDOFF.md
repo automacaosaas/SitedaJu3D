@@ -173,10 +173,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   `sitemap.xml` e `robots.txt` (`tools/build-product-pages.cjs`); prévia de link e dados para buscadores (`tools/sync-meta.cjs`).
 - **Paleta de cores nova, com acabamentos no 3D (08/10/2026):** 26 cores em três grupos (`PALETTE_GROUPS` em `products.js`): 17
   foscas, 4 com brilho (Branco pérola, Prata, Dourado, Bronze) e 5 multicor de seda (Arco-íris e as duais rosa e azul, dourado e
-  laranja, dourado e roxo, azul e verde). As cores foram medidas nas fotos que a Ju mandou; o Azul BIC é o Pantone 2728 C (#00249c) e o
-  Rosa-bebê é um rosa pastel (#ffc5d3), os dois sem foto de referência. Os ids das que trocaram de nome ficaram (`moss` = Verde-oliva,
+  laranja, dourado e roxo, azul e verde). As cores foram medidas nas fotos que a Ju mandou; o Azul BIC e o Rosa-bebê são só nomes novos do
+  Azul-royal (#183c99, o azul da vitrine do avião) e do Rosa Ju (#ee8eaa), com os mesmos tons (09/10/2026: "só troquei o nome"). Os ids das que trocaram de nome ficaram (`moss` = Verde-oliva,
   `blue` = Azul BIC, `pink` = Rosa-bebê): carrinhos, links de combinação e pedidos salvos continuam valendo. O corpo do Dinossauroscópio
-  passou a abrir em Verde-oliva e o do avião em Azul BIC no 3D, mas as fotos dos dois ainda são das cores antigas. No 3D
+  passou a abrir em Verde-oliva no 3D (a foto dele ainda é do verde antigo); o avião abre no azul da vitrine. No 3D
   (`asset-models.js`), as partes que se escolhem viram `MeshPhysicalMaterial` (no fosco desenham igual a antes); `finish` dá o acabamento:
   seda e metal refletem um estúdio feito na hora (`viewer.js › studio`, só quando aparece uma cor com brilho), o arco-íris muda com a
   altura da parte (de baixo para cima, como a peça sai da impressora), a dual é um degradê das duas cores do pé ao topo (a mais clara
