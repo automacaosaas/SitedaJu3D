@@ -24,8 +24,10 @@ No painel do Mercado Pago: **Suas integrações** → a aplicação **Checkout T
 
 **Onde colar:**
 
-- **Servidor próprio:** `sudo nano /srv/juimprime/shared/.env`, uma linha `NOME=valor` por variável (comentário só em
-  linha própria: um `#` depois do valor vira parte do valor). Salvar e rodar `sudo systemctl restart juimprime.service`.
+- **Servidor próprio:** `sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh` (pergunta cada valor e reinicia
+  sozinho; `SERVIDOR-SETUP.md`). À mão: `sudo nano /srv/juimprime/shared/.env`, uma linha `NOME=valor` por variável
+  (comentário só em linha própria: um `#` depois do valor vira parte do valor). Salvar e rodar
+  `sudo systemctl restart juimprime.service`.
 - **Hostinger (site de teste):** hPanel → o site → **Variáveis de ambiente**. Salvar republica o app. A Hostinger não
   lê arquivo `.env`.
 
@@ -170,23 +172,36 @@ No site:
 
 ## 5. Ligar a produção
 
-No `.env` do servidor de produção (`/srv/juimprime/shared/.env`):
+No servidor, pelo terminal (SSH), com as credenciais **de produção** abertas no painel do Mercado Pago (Suas integrações
+→ a aplicação → Credenciais de produção; e Webhooks → Modo de produção para a assinatura):
 
 ```
-APP_ENV=production
-SITE_URL=https://juimprimepramim.com.br
-MP_PUBLIC_KEY=<public key de produção>
-MP_ACCESS_TOKEN=<access token de produção>
-MP_WEBHOOK_SECRET=<assinatura do webhook de produção>
-MP_MODE=live
+sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh
 ```
 
-(Os `<…>` são só os lugares: cole os valores você mesmo, sem os sinais.) Depois:
-`sudo systemctl restart juimprime.service` e confira o `/api/health` da etapa 2 (`"payments":"live"`).
+1. **O que configurar:** `1` (Mercado Pago).
+2. **Modo:** `2` (produção). Enter mantém o modo de agora: para trocar, digite o 2.
+3. Ele mostra o que o site enxerga agora (frete, e-mail, nota fiscal, painel e quantas parcelas sem juros a conta dá) e
+   avisa o que não está pronto. Com algum **ATENÇÃO**, responda `n`, resolva e rode de novo. Tudo certo: `s` para
+   "vendas de verdade".
+4. Cole a **Public Key**, o **Access Token** e a **assinatura secreta do webhook** de produção (as duas últimas não
+   aparecem na tela). Como o modo mudou, Enter não mantém as de teste, e colar de novo a de teste é recusado ("essa é a
+   credencial do outro modo"). A assinatura do webhook pode ser a mesma do teste: se for, ele pergunta se é essa mesma
+   que o painel mostra.
+5. E-mail da Júlia e chave do Resend: Enter mantém. "Verified no Resend?": `s`.
+
+Ele grava `MP_MODE=live`, `APP_ENV=production` e `SITE_URL=https://juimprimepramim.com.br`, guarda o `.env` de antes em
+`/var/backups/juimprime/`, reinicia o site e mostra o `/api/health`: tem que aparecer `"payments":"live"`, os três do
+`"mp"` como `true` e `"interestFree":3` (etapa 2). Para trocar só a chave do Resend depois, é a opção `2` (não mexe no
+Mercado Pago).
+
+Sem o script, à mão: no `.env` do servidor (`/srv/juimprime/shared/.env`), `APP_ENV=production`,
+`SITE_URL=https://juimprimepramim.com.br`, `MP_PUBLIC_KEY`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` de produção e
+`MP_MODE=live`; depois `sudo systemctl restart juimprime.service`.
 
 **Ensaio opcional, recomendado:** antes do `live`, use `MP_MODE=test` com as credenciais **de teste** no domínio de
 produção. A faixa diz "AMBIENTE DE TESTE" e nenhum dinheiro se move, mas o webhook já passa pelo domínio real e pelo
-HTTPS. Repita um `APRO` e um Pix; depois troque para as credenciais de produção e `MP_MODE=live`.
+HTTPS (`config-pagamentos.sh`, opção 1, modo 1). Repita um `APRO` e um Pix; depois rode de novo com o modo 2.
 
 ## 6. Compra real de valor baixo, e o estorno
 

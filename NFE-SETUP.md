@@ -56,8 +56,8 @@ Bling → **Central de Extensões → Área do Integrador → Criar aplicativo**
   - site de teste: `https://wheat-llama-936569.hostingersite.com/admin.html`;
   - loja: `https://juimprimepramim.com.br/admin.html`.
 - Escopos: **Notas fiscais eletrônicas (NF-e)**, **Naturezas de operação** e **Formas de pagamento**.
-- Ao salvar, o Bling mostra o **Client ID** e o **Client Secret**. Eles vão direto para a Hostinger (tabela abaixo),
-  nunca por WhatsApp nem por e-mail.
+- Ao salvar, o Bling mostra o **Client ID** e o **Client Secret**. Eles vão direto para o servidor da loja (ou para a
+  Hostinger, no site de teste), nunca por WhatsApp nem por e-mail.
 
 | Nome | Valor | Secreta |
 |---|---|---|
@@ -65,6 +65,20 @@ Bling → **Central de Extensões → Área do Integrador → Criar aplicativo**
 | `BLING_CLIENT_ID` | o Client ID do aplicativo | não |
 | `BLING_CLIENT_SECRET` | o Client Secret do aplicativo | **sim** |
 | `NFE_ENVIRONMENT` | `producao` só na loja, no lançamento | não |
+
+**Servidor da loja:** no terminal (SSH), `sudo bash /srv/juimprime/current/deploy/config-loja.sh` → **3** (Nota fiscal ·
+Bling). Ele pede o Client ID, o Client Secret (não aparece na tela) e o ambiente: **1** = homologação (deixa
+`NFE_ENVIRONMENT` vazio) ou **2** = produção (grava `producao`, só depois de confirmar que a contadora está de acordo e
+que o Bling já está em produção). Grava também `NFE_PROVIDER=bling`, deixa `SITE_URL=https://juimprimepramim.com.br`,
+reinicia o site e mostra `"nfe"`, `"bling"` e `"queue"` do `/api/health`, com os passos para conectar:
+
+1. No Bling, no aplicativo do site, o **Link de redirecionamento** exatamente `https://juimprimepramim.com.br/admin.html`
+   (sem `www` e sem barra no fim; é o mesmo que o cartão do painel mostra).
+2. Painel da Júlia → cartão **Nota fiscal · Bling** → **Conectar ao Bling** (passo 3 abaixo).
+3. `"bling":"connected"` no `/api/health`.
+
+Rodar de novo com Enter em tudo não muda nada e só mostra esses passos. Trocar o aplicativo (Client ID novo) pede
+desconectar e conectar de novo no painel.
 
 ### 3. Conectar a conta (pelo Painel da Ju)
 
@@ -101,8 +115,9 @@ cada nota que envia:
 
 Roteiro:
 1. **Testes:** Bling em homologação, site de teste conectado. Concluir pedidos de teste e o contador conferir XML e DANFE.
-2. **Lançamento:** desconectar o site de teste, colocar o Bling em produção, conectar a loja e pôr
-   `NFE_ENVIRONMENT=producao` na Hostinger da loja.
+2. **Lançamento:** desconectar o site de teste, colocar o Bling em produção, trocar o link de redirecionamento do
+   aplicativo para `https://juimprimepramim.com.br/admin.html`, rodar `config-loja.sh` → 3 → ambiente **2** no servidor
+   da loja (`NFE_ENVIRONMENT=producao`) e conectar a loja pelo painel.
 
 ### Como o site conversa com o Bling
 

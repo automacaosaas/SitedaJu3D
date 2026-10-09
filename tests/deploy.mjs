@@ -123,11 +123,26 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
 }
 
 // config-pagamentos.sh (08/10/2026): the owner pastes the Mercado Pago and Resend keys into prompts (secret ones without
-// echo), only those lines of the .env change (by bash builtins: no value on a command line), a copy of
-// the old .env stays beside it, and a test key can never stay in live mode.
+// echo), only those lines of the .env change (by bash builtins: no value on a command line), a copy of the old .env stays
+// beside it. The prefix does not tell a test key from a live one (Mercado Pago's test keys may start with APP_USR- too), so
+// what keeps one mode's credentials out of the other is the mode switch itself (09/10/2026, the readiness audit: choosing
+// production and pressing Enter kept the TEST credentials with MP_MODE=live, and running it only for the Resend key went
+// back to test with the production credentials): a first menu (1 = Mercado Pago, 2 = only the e-mail, Mercado Pago
+// untouched), the current MP_MODE as the default, and, when the mode changes, the three credentials pasted again (the same
+// Public Key or Access Token as before is the other mode's and refused; the webhook signature may be one per application,
+// so the same one only after a yes). Before production, what the local /api/health shows and a "vendas de verdade" yes.
 {
+  const at = text => { const i = payments.indexOf(text); assert(i > 0, `config-pagamentos.sh has: ${text}`); return i; };
   assert(payments.includes('read -r -s -p "$label: " value') && payments.includes('ask MP_ACCESS_TOKEN') && payments.includes('ask RESEND_API_KEY') && /ask MP_ACCESS_TOKEN "[^"]*" 1 /.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 /.test(payments), 'secret keys are read without echo');
-  assert(payments.includes("1) mode=test; label='de TESTE'") && payments.includes("prefix='(TEST-|APP_USR-)'") && payments.includes('[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }') && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'the prefix does not tell test from live (Mercado Pago test keys may start with APP_USR- too): MP_MODE does, after a confirmation');
+  assert(payments.includes("prefix='(TEST-|APP_USR-)'") && payments.includes('[[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }') && payments.includes('[[ -n "$had" && "$had" =~ $re ]] || had='), 'the prefix does not tell test from live: MP_MODE does, after a confirmation');
+  assert(payments.includes('case "${part:-1}" in 1|2) ;; *) echo "Responda 1 ou 2."; exit 1 ;; esac') && at('if [ "${part:-1}" = 1 ]; then') < at('NEW[MP_MODE]=$mode') && at('NEW[MP_MODE]=$mode') < at('\nfi\n\necho "== E-mail da loja (Resend)"'), 'option 2 never reaches the Mercado Pago lines');
+  assert(payments.includes('was=$(current MP_MODE); case "$was" in test|live) ;; *) was=\'\' ;; esac') && payments.includes('default=1; [ "$was" != live ] || default=2') && payments.includes('case "${choice:-$default}" in') && payments.includes('[ "$mode" = "$was" ] || changed=1'), 'Enter on the mode keeps the current one');
+  assert(/ask MP_PUBLIC_KEY "[^"]*" 0 "[^"]*" recusa\n/.test(payments) && /ask MP_ACCESS_TOKEN "[^"]*" 1 "[^"]*" recusa\n/.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 '[^']*' confere\n/.test(payments), 'the three credentials follow the mode');
+  assert(payments.includes(`if [ -n "$cred" ] && [ -n "$changed" ]; then had='';`) && payments.includes('if [ "$cred" = recusa ] && [ -n "$was" ]; then') && payments.includes('Essa é a credencial do outro modo') && payments.includes(`[ "$mode" = live ] && [[ "$value" == TEST-* ]]`), 'a changed mode: no Enter, the other mode\'s key refused, TEST- never live');
+  assert(payments.includes('HEALTH=http://127.0.0.1:3000/api/health') && payments.includes('else curl -fsS -m 10 "$HEALTH"') && !/curl[^\n]*\s-H\s/.test(payments) && payments.includes('cat -- "${JU_HEALTH_FILE:-/dev/null}"') && payments.includes('health() { if [ -n "$TESTING" ]; then'), 'the local health (no Host header); a file only in the test');
+  for (const name of ['shipping', 'mail', 'sender', 'nfe', 'admin', 'interestFree']) assert(payments.includes(`$(field ${name})`), `the summary shows ${name}`);
+  assert(payments.includes('[ "$shipping" = correios ] || echo "  ATENÇÃO: o frete não está nos Correios'), 'a warning when the shipping is not the Correios');
+  assert(at('if [ "$mode" = live ]; then') < at('body=$(health)') && at('body=$(health)') < at('VENDAS DE VERDADE') && at('VENDAS DE VERDADE') < at('ask MP_PUBLIC_KEY') && at('ask MP_PUBLIC_KEY') < at('\nload\n[ -n "$TESTING" ] || install'), 'the summary and the yes before anything is asked or written');
   assert(payments.includes('NEW[APP_ENV]=production') && payments.includes('NEW[SITE_URL]=$DOMAIN') && payments.includes('systemctl restart juimprime.service'), 'production on the shop domain, then the restart');
 }
 
@@ -161,9 +176,25 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
   assert(shop.includes('unset NEW out ENV_TEXT') && shop.includes('[ "$fixed" = "$had" ] || NEW[$var]=$fixed; return 0;'), 'the values leave memory once written; Enter keeps the cleaned form of the current value');
   assert(shop.includes('[ -z "$TESTING" ] || exit 0\n\necho "== Reiniciando o site"\nsystemctl restart juimprime.service') && shop.includes(`[ -z "$panel" ] || grep -o '"admin":"[a-z]*"' <<<"$body" || true\n[ -z "$ship" ] || grep -o '"shipping":"[a-z]*"' <<<"$body" || true`) && shop.includes('[ -n "$TESTING" ] || [ "$(id -u)" -eq 0 ]'), 'root, then the restart and what /api/health says about the part that was set up');
   assert(shop.includes('mas os Correios só conferem na primeira cotação') && !shop.includes('Frete real ligado'), '"correios" only means the data is complete: the owner is told to quote once, and what a refusal does to the checkout');
-  const names = [...shop.matchAll(/^\s*ask ([A-Z][A-Z0-9_]+) /gm)].map(m => m[1]).concat('ADMIN_PASSWORD').sort();
-  assert.deepEqual(names, ['ADMIN_EMAIL', 'ADMIN_PASSWORD', 'CORREIOS_CARD', 'CORREIOS_CODE', 'CORREIOS_CONTRACT', 'CORREIOS_DR', 'CORREIOS_USER', 'SHIP_FROM_CEP']);
+  const names = [...shop.matchAll(/^\s*ask ([A-Z][A-Z0-9_]+) /gm)].map(m => m[1]).concat('ADMIN_PASSWORD', 'NFE_PROVIDER', 'NFE_ENVIRONMENT').sort();
+  assert.deepEqual(names, ['ADMIN_EMAIL', 'ADMIN_PASSWORD', 'BLING_CLIENT_ID', 'BLING_CLIENT_SECRET', 'CORREIOS_CARD', 'CORREIOS_CODE', 'CORREIOS_CONTRACT', 'CORREIOS_DR', 'CORREIOS_USER', 'NFE_ENVIRONMENT', 'NFE_PROVIDER', 'SHIP_FROM_CEP']);
   for (const name of names) assert(listed.has(name) && read.has(name), `${name}: in the .env the setup writes and read by the code`);
+  // The Bling part (09/10/2026, "validar na bling, para colocar o url certo no aplicativo"): 3 in the menu, everything
+  // moved to 4 and stays the default (Enter used to mean both parts). The app's Client ID visible and its Client Secret
+  // without echo, both opaque (letters and digits, no fixed length); NFE_PROVIDER=bling; the environment empty
+  // (homologação) or "producao", the exact word api/_lib/fiscal.js reads, only after a yes about the accountant; SITE_URL
+  // the shop's domain, since the link the site hands to Bling is SITE_URL/admin.html. At the end: nfe, bling and queue
+  // from the health and the steps to connect.
+  assert(shop.includes('3 = Nota fiscal (Bling), 4 = tudo [4]: " choice') && shop.includes('case "${choice:-4}" in') && shop.includes('4) panel=1; ship=1; nfe=1 ;;') && shop.includes('*) echo "Responda 1, 2, 3 ou 4."; exit 1 ;;'), 'the menu: 3 = Bling, 4 (Enter) = everything');
+  assert(/ask BLING_CLIENT_ID "[^"]*" 0 '\^\[A-Za-z0-9\._-\]\{16,128\}\$' texto/.test(shop) && /ask BLING_CLIENT_SECRET "[^"]*" 1 '\^\[A-Za-z0-9\._-\]\{16,200\}\$' texto/.test(shop), 'the Client ID visible, the Client Secret without echo (bash allows no bound above 255 in a regex)');
+  assert(shop.includes('[ "$(current NFE_PROVIDER)" = bling ] || NEW[NFE_PROVIDER]=bling') && shop.includes('target=producao') && shop.includes("target=''") && shop.includes('[ "$target" = "$was_env" ] || NEW[NFE_ENVIRONMENT]=$target') && shop.includes('A contadora está de acordo e o Bling já está em produção? (s/N)'), 'homologação (empty) or producao, production only after a yes');
+  assert(shop.includes('if [ "${site%/}" != "$DOMAIN" ]; then NEW[SITE_URL]=$DOMAIN;') && shop.includes('exatamente $DOMAIN/admin.html') && shop.includes('\\"Nota fiscal · Bling\\" → Conectar ao Bling') && shop.includes("DOMAIN=https://juimprimepramim.com.br\n"), 'the redirect link the owner types in Bling, and the path in the panel');
+  assert(shop.includes(`[ -z "$nfe" ] || grep -o '"nfe":"[a-z]*"\\|"fiscal":"[a-z]*"\\|"bling":"[a-z_]*"\\|"queue":{[^}]*}' <<<"$body" || true`) && shop.includes('state() { grep -o "\\"$1\\":\\"[a-z_]*\\""'), 'nfe, fiscal, bling and queue from the health (not_configured has a _)');
+  assert(shop.includes('disconnected) echo "Aplicativo do Bling gravado; falta conectar a conta."; bling_steps ;;') && shop.includes(`[ "$(state nfe)" = off ] || grep -q '"worker":true' <<<"$body" ||`), 'disconnected: the steps; the queue checked');
+  const {blingSettings} = require('../api/_lib/bling.js'), {nfeSettings} = require('../api/_lib/fiscal.js');
+  assert.equal(blingSettings({APP_ENV: 'production', SITE_URL: 'https://juimprimepramim.com.br'}).redirectUri, 'https://juimprimepramim.com.br/admin.html', 'the link the site hands to Bling is the one the script tells the owner to type');
+  assert.equal(nfeSettings({APP_ENV: 'production', NFE_PROVIDER: 'bling', NFE_ENVIRONMENT: 'producao'}).mode, 'live'); assert.equal(nfeSettings({APP_ENV: 'production', NFE_PROVIDER: 'bling', NFE_ENVIRONMENT: ''}).mode, 'test');
+  assert(raw('dist/admin.js').includes('id="admin-bling-title" tabindex="-1">Nota fiscal · Bling</h2>') && raw('dist/admin.js').includes('data-action="bling-connect">Conectar ao Bling</button>'), 'the card and the button the steps name');
 }
 
 // …and run for real (JU_TEST=1: no root, no runuser, no restart) on a temporary .env, with the answers on stdin. Only where a
@@ -182,33 +213,40 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
   const effective = () => { const out = {}; for (const line of text().split('\n')) { const m = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line); if (m) out[m[1]] = m[2]; } return out; };
   const leftovers = () => fs.readdirSync(dir).filter(name => name !== '.env' && !name.startsWith('env.antes-'));
   try {
-    const before = '# comentário\nAPP_ENV=preview\nDB_PASSWORD=nao-mexer\nADMIN_EMAIL=\nADMIN_PASSWORD=curta\nCORREIOS_USER=\nCORREIOS_CODE=\nCORREIOS_CONTRACT=\nCORREIOS_CARD=\nSHIP_FROM_CEP=\nMP_MODE=test\n';
+    const before = '# comentário\nAPP_ENV=preview\nSITE_URL=https://juimprimepramim.com.br\nDB_PASSWORD=nao-mexer\nADMIN_EMAIL=\nADMIN_PASSWORD=curta\nCORREIOS_USER=\nCORREIOS_CODE=\nCORREIOS_CONTRACT=\nCORREIOS_CARD=\nSHIP_FROM_CEP=\nNFE_PROVIDER=\nBLING_CLIENT_ID=\nBLING_CLIENT_SECRET=\nNFE_ENVIRONMENT=\nMP_MODE=test\n';
     fs.writeFileSync(envFile, before);
     const probe = spawnSync('bash', ['-c', '[ "${BASH_VERSINFO[0]}" -ge 4 ] && [ -r "$1" ] && [ -w "$2" ]', 'probe', script, envFile], {encoding: 'utf8', env, timeout: 10000});
     if (probe.error || probe.status !== 0) console.log('config-loja.sh: sem um bash 4 que abra esta pasta aqui; o teste de comportamento ficou de fora (os estáticos valem).');
     else {
       const password = 'Senha-Boa-2026!', code = 'CWS-codigo_teste.0123456789abcdef';
-      // both parts: a bad e-mail and one with the arrow keys in it, then a short password, quotes, a backslash, a space and a
-      // different confirmation before the right one; a CPF with dots missing a digit, a short access code, a CNPJ as the card,
-      // a DR in letters, a 7-digit CEP and 00000-000 before the right ones
-      const first = run(['3', 'ju sem arroba', 'julia@gmial\x1b[D\x1b[Dail.com', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
-        '123.456.789-0', '123.456.789-01', 'curto', code, '99.1234.5678', '67.771.044/0001-96', '0074512345', 'SE/SPM', '72', '1310-100', '00000-000', '01310-100']);
+      const blingId = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b', blingSecret = 'f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9';
+      // every part (4): a bad e-mail and one with the arrow keys in it, then a short password, quotes, a backslash, a space and
+      // a different confirmation before the right one; a CPF with dots missing a digit, a short access code, a CNPJ as the
+      // card, a DR in letters, a 7-digit CEP and 00000-000 before the right ones; a short Client ID and a Client Secret with a
+      // space before the right ones, and Enter on the environment (homologação, as it was)
+      const first = run(['4', 'ju sem arroba', 'julia@gmial\x1b[D\x1b[Dail.com', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
+        '123.456.789-0', '123.456.789-01', 'curto', code, '99.1234.5678', '67.771.044/0001-96', '0074512345', 'SE/SPM', '72', '1310-100', '00000-000', '01310-100',
+        'a1b2c3d4', blingId, `${blingSecret.slice(0, 20)} ${blingSecret.slice(20)}`, blingSecret, '']);
       const out = first.stdout + first.stderr;
       assert.equal(first.status, 0, out);
-      for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'CPF tem 11 números e CNPJ 14', 'Código com formato inesperado', 'O cartão de postagem tem 10 números', 'A DR é só o número', 'O CEP tem 8 números']) assert(out.includes(message), `says: ${message}`);
+      for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'CPF tem 11 números e CNPJ 14', 'Código com formato inesperado', 'O cartão de postagem tem 10 números', 'A DR é só o número', 'O CEP tem 8 números', 'O Client ID tem letras e números', 'O Client Secret tem letras e números']) assert(out.includes(message), `says: ${message}`);
       assert.equal(out.split('E-mail com formato inesperado').length, 3, 'the e-mail with ESC [ D in it is refused too');
       assert.equal(out.split('O CEP tem 8 números').length, 3, '00000-000 is no CEP');
-      assert(!out.includes(password) && !out.includes(code) && !out.includes('Outra-Senha'), 'never prints the password or the access code');
+      assert(!out.includes(password) && !out.includes(code) && !out.includes('Outra-Senha') && !out.includes(blingSecret.slice(20)), 'never prints the password, the access code or the Client Secret');
       const after = values();
-      assert.deepEqual(after, {APP_ENV: 'preview', DB_PASSWORD: 'nao-mexer', ADMIN_EMAIL: 'julia@example.com', ADMIN_PASSWORD: password, CORREIOS_USER: '12345678901', CORREIOS_CODE: code, CORREIOS_CONTRACT: '9912345678', CORREIOS_CARD: '0074512345', SHIP_FROM_CEP: '01310100', MP_MODE: 'test', CORREIOS_DR: '72'});
+      assert.deepEqual(after, {APP_ENV: 'preview', SITE_URL: 'https://juimprimepramim.com.br', DB_PASSWORD: 'nao-mexer', ADMIN_EMAIL: 'julia@example.com', ADMIN_PASSWORD: password, CORREIOS_USER: '12345678901', CORREIOS_CODE: code, CORREIOS_CONTRACT: '9912345678', CORREIOS_CARD: '0074512345', SHIP_FROM_CEP: '01310100',
+        NFE_PROVIDER: 'bling', BLING_CLIENT_ID: blingId, BLING_CLIENT_SECRET: blingSecret, NFE_ENVIRONMENT: '', MP_MODE: 'test', CORREIOS_DR: '72'});
       assert(text().startsWith('# comentário\nAPP_ENV=preview\n') && text().endsWith('\nMP_MODE=test\nCORREIOS_DR=72\n'), 'the other lines stay where they were; a missing name goes at the end');
       assert.deepEqual(copies(), [before], 'the copy of before');
       assert.deepEqual(leftovers(), [], 'no temporary file left beside the .env');
       if (process.platform !== 'win32') assert.equal(fs.statSync(envFile).mode & 0o777, 0o600, 'only the owner reads it');
       assert(require('../api/_lib/admin-auth.js').settings(after).bootstrap && require('../api/_lib/correios.js').settings(after).ready, 'what the code reads: the first admin can be created, the Correios are ready');
-      // Enter on every question keeps everything (nine answers: the kept password asks for no confirmation) and writes nothing
-      const kept = run(Array(9).fill(''));
+      assert(require('../api/_lib/bling.js').blingSettings(after).configured && require('../api/_lib/fiscal.js').nfeSettings(after).provider === 'bling', '…and the Bling app is set up');
+      // Enter on every question keeps everything (twelve answers: the menu, the kept password asks for no confirmation, six for
+      // the Correios, three for Bling) and writes nothing; it still shows how to connect Bling
+      const kept = run(Array(12).fill(''));
       assert.equal(kept.status, 0, kept.stdout + kept.stderr); assert.match(kept.stdout, /Nada foi alterado/);
+      assert(kept.stdout.includes('exatamente https://juimprimepramim.com.br/admin.html') && kept.stdout.includes('"Nota fiscal · Bling" → Conectar ao Bling'), 'the steps to connect Bling');
       assert.deepEqual(values(), after); assert.equal(copies().length, 1);
       // only the shipping part: the CEP changes, the rest is kept
       const cep = run(['2', '', '', '', '', '', '04538-133']);
@@ -219,13 +257,13 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       const saved = text(), refused = run(['1', '', '']);
       assert.notEqual(refused.status, 0); assert.match(refused.stdout, /A senha precisa ter de 12 a 128 caracteres\./); assert.equal(text(), saved);
       const wrong = run(['9']);
-      assert.equal(wrong.status, 1); assert.match(wrong.stdout, /Responda 1, 2 ou 3\./);
+      assert.equal(wrong.status, 1); assert.match(wrong.stdout, /Responda 1, 2, 3 ou 4\./);
       // a name repeated by hand at the end (with spaces around it): Enter offers the value the site uses (the last one), a
       // new value replaces every line of that name, and Enter keeps a user saved with dots in its clean form
       const messy = `ADMIN_EMAIL=\nADMIN_PASSWORD=\nCORREIOS_USER=67.771.044/0001-96\nCORREIOS_CODE=${code}\nCORREIOS_CONTRACT=9912345678\nCORREIOS_CARD=0074512345\nCORREIOS_DR=72\nSHIP_FROM_CEP=01310100\n  ADMIN_EMAIL = velho@x.com\nADMIN_PASSWORD=Senha-Velha-2025!\n`;
       fs.writeFileSync(envFile, messy);
-      const both = run(['3', '', 'Senha-Nova-2026!', 'Senha-Nova-2026!', '', '', '', '', '', '']);
-      assert.equal(both.status, 0, both.stdout + both.stderr);
+      const panelOnly = run(['1', '', 'Senha-Nova-2026!', 'Senha-Nova-2026!']), shipOnly = run(['2', '', '', '', '', '', '']);
+      assert.equal(panelOnly.status, 0, panelOnly.stdout + panelOnly.stderr); assert.equal(shipOnly.status, 0, shipOnly.stdout + shipOnly.stderr);
       assert.equal(text(), `ADMIN_EMAIL=\nADMIN_PASSWORD=Senha-Nova-2026!\nCORREIOS_USER=67771044000196\nCORREIOS_CODE=${code}\nCORREIOS_CONTRACT=9912345678\nCORREIOS_CARD=0074512345\nCORREIOS_DR=72\nSHIP_FROM_CEP=01310100\n  ADMIN_EMAIL = velho@x.com\n`);
       assert.equal(effective().ADMIN_EMAIL, 'velho@x.com'); assert.equal(effective().ADMIN_PASSWORD, 'Senha-Nova-2026!', 'the new password is the one in effect');
       const email = run(['1', 'julia@example.com', '']);
@@ -233,12 +271,82 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       assert(text().startsWith('ADMIN_EMAIL=julia@example.com\nADMIN_PASSWORD=Senha-Nova-2026!\n') && !text().includes('velho'), 'the repeated line goes');
       assert.equal(effective().ADMIN_EMAIL, 'julia@example.com');
       assert.deepEqual(leftovers(), []);
+      // Bling alone: an ID with a space and a secret with a quote refused, a SITE_URL with www replaced by the domain (the link
+      // the site hands to Bling), production declined (homologação stays), then accepted; Enter keeps it, 1 goes back
+      const {blingSettings} = require('../api/_lib/bling.js'), {nfeSettings} = require('../api/_lib/fiscal.js');
+      fs.writeFileSync(envFile, 'APP_ENV=production\nSITE_URL=https://www.juimprimepramim.com.br\nNFE_PROVIDER=\nBLING_CLIENT_ID=\nBLING_CLIENT_SECRET=\nNFE_ENVIRONMENT=\n');
+      const app = run(['3', 'a1b2 c3d4e5f6a7b8c9d0', blingId, `${blingSecret}'`, blingSecret, '7', '2', 'n']);
+      assert.equal(app.status, 0, app.stdout + app.stderr);
+      for (const message of ['O Client ID tem letras e números', 'O Client Secret tem letras e números', 'Responda 1 ou 2.', 'SITE_URL estava "https://www.juimprimepramim.com.br"', 'Só vale com a contadora de acordo', 'O ambiente das notas fica como estava (homologação).']) assert(app.stdout.includes(message), `Bling: says ${message}`);
+      assert(!app.stdout.includes(blingSecret) && !app.stderr.includes(blingSecret), 'never prints the Client Secret');
+      assert.deepEqual(values(), {APP_ENV: 'production', SITE_URL: 'https://juimprimepramim.com.br', NFE_PROVIDER: 'bling', BLING_CLIENT_ID: blingId, BLING_CLIENT_SECRET: blingSecret, NFE_ENVIRONMENT: ''});
+      assert.equal(blingSettings(values()).redirectUri, 'https://juimprimepramim.com.br/admin.html'); assert.equal(nfeSettings(values()).mode, 'test', 'homologação');
+      const live = run(['3', '', '', '2', 's']);
+      assert.equal(live.status, 0, live.stdout + live.stderr); assert.equal(values().NFE_ENVIRONMENT, 'producao'); assert.equal(nfeSettings(values()).mode, 'live', 'real notes');
+      const stay = run(['3', '', '', '']);
+      assert.equal(stay.status, 0, stay.stdout + stay.stderr); assert.match(stay.stdout, /Nada foi alterado/); assert.equal(values().NFE_ENVIRONMENT, 'producao', 'Enter keeps the current environment');
+      const back = run(['3', '', '', '1']);
+      assert.equal(back.status, 0, back.stdout + back.stderr); assert.match(back.stdout, /As notas voltam para homologação/); assert.equal(values().NFE_ENVIRONMENT, '');
+      assert.deepEqual(leftovers(), []);
+
       // config-pagamentos.sh writes the same way: a mode left at the end by hand ("live") never outlives the one chosen
+      const payScript = slash(path.join(root, 'deploy/config-pagamentos.sh')), healthFile = slash(path.join(os.tmpdir(), `ju-health-${process.pid}.json`));
+      const pay = (lines, health = null) => {
+        if (health) fs.writeFileSync(healthFile, JSON.stringify(health));
+        try { const r = spawnSync('bash', [payScript], {input: lines.map(line => `${line}\n`).join(''), encoding: 'utf8', env: {...env, JU_HEALTH_FILE: health ? healthFile : ''}, timeout: 30000}); return {...r, out: r.stdout + r.stderr}; }
+        finally { fs.rmSync(healthFile, {force: true}); }
+      };
       fs.writeFileSync(envFile, 'APP_ENV=preview\nMP_PUBLIC_KEY=\nMP_ACCESS_TOKEN=\nMP_WEBHOOK_SECRET=\nMP_MODE=\nORDER_NOTIFY_EMAIL=\nRESEND_API_KEY=\nMP_MODE = live\n');
-      const pay = spawnSync('bash', [slash(path.join(root, 'deploy/config-pagamentos.sh'))], {input: ['1', 's', 'APP_USR-12345678-1234-1234-1234-123456789012', 'APP_USR-1234567890123456-100000-abcdefabcdefabcdefabcdef-123456789', 'abcdef0123456789abcdef0123456789', 'ju@example.com', 're_abcdefghijklmnop', 'n', ''].join('\n'), encoding: 'utf8', env, timeout: 30000});
-      assert.equal(pay.status, 0, pay.stdout + pay.stderr);
+      const fromHand = pay(['1', '1', 's', 'APP_USR-12345678-1234-1234-1234-123456789012', 'APP_USR-1234567890123456-100000-abcdefabcdefabcdefabcdef-123456789', 'abcdef0123456789abcdef0123456789', 'ju@example.com', 're_abcdefghijklmnop', 'n']);
+      assert.equal(fromHand.status, 0, fromHand.out);
       assert.equal(effective().MP_MODE, 'test'); assert(!text().includes('live'), 'config-pagamentos.sh: the repeated line goes');
       assert.equal(effective().ORDER_NOTIFY_EMAIL, 'ju@example.com'); assert.deepEqual(leftovers(), []);
+
+      // The switch to production (09/10/2026). From test, with the health showing the shipping still "pending": the summary
+      // and its warnings come first, and a "no" writes nothing.
+      const mp = require('../api/_lib/mercadopago.js');
+      const TEST = {pk: 'APP_USR-11111111-1111-1111-1111-111111111111', token: 'APP_USR-1111111111111111-100000-aaaaaaaaaaaaaaaaaaaaaaaa-111111111', hook: 'abcdef0123456789abcdef0123456789'};
+      const LIVE = {pk: 'APP_USR-22222222-2222-2222-2222-222222222222', token: 'APP_USR-2222222222222222-100000-bbbbbbbbbbbbbbbbbbbbbbbb-222222222'};
+      const testEnv = `APP_ENV=production\nSITE_URL=https://juimprimepramim.com.br\nMP_MODE=test\nMP_PUBLIC_KEY=${TEST.pk}\nMP_ACCESS_TOKEN=${TEST.token}\nMP_WEBHOOK_SECRET=${TEST.hook}\nORDER_NOTIFY_EMAIL=ju@example.com\nRESEND_API_KEY=re_abcdefghijklmnop\nMAIL_FROM=Ju imprime pra mim <pedidos@juimprimepramim.com.br>\n`;
+      const health = {ok: true, mail: 'resend', secret: true, key: true, sender: 'custom', payments: 'test', paymentsBlocked: false, interestFree: 3, mp: {token: true, publicKey: true, webhookSecret: true}, orderMail: true, admin: 'ready', shipping: 'pending', nfe: 'test', bling: 'connected'};
+      fs.writeFileSync(envFile, testEnv);
+      const copiesBefore = copies().length, saidNo = pay(['1', '2', 'n'], health);
+      assert.equal(saidNo.status, 1, saidNo.out); assert.match(saidNo.out, /Nada foi alterado/); assert.equal(text(), testEnv); assert.equal(copies().length, copiesBefore);
+      for (const message of ['Frete: pending · E-mail: resend (remetente custom) · Nota fiscal: test · Painel: ready', 'Parcelas sem juros que o Mercado Pago dá hoje (com as credenciais de agora): 3', 'ATENÇÃO: o frete não está nos Correios ("shipping":"pending")', 'Nota fiscal em homologação']) assert(saidNo.out.includes(message), `before production, says: ${message}`);
+      assert(!saidNo.out.includes('o e-mail da loja não está pronto') && !saidNo.out.includes('Painel da Júlia ainda não tem'), 'no warning about what is ready');
+      const noHealth = pay(['1', '2', 'n']);
+      assert.equal(noHealth.status, 1); assert.match(noHealth.out, /Não consegui ler o \/api\/health agora/);
+      // "yes": Enter on the menu (1), then Enter keeps no credential, the test ones (the same as saved) are refused, a TEST-
+      // key is never production; the webhook signature may be the same one (one per application): only after a yes
+      const toLive = pay(['', '2', 's', '', TEST.pk, 'TEST-12345678-1234-1234-1234-123456789012', LIVE.pk, TEST.token, LIVE.token, TEST.hook, 'n', TEST.hook, 's', '', '', 's'], health);
+      assert.equal(toLive.status, 0, toLive.out);
+      assert(toLive.out.includes('Cole o valor (aqui o Enter não mantém nada).') && toLive.out.includes('Credencial que começa com TEST- é sempre de teste') && toLive.out.includes('Então cole a do modo de produção.'), toLive.out);
+      assert.equal(toLive.out.split('Essa é a credencial do outro modo (a de teste, que já estava gravada)').length, 3, 'the test Public Key and Access Token refused');
+      assert(![TEST.token, LIVE.token, TEST.hook].some(secret => toLive.out.includes(secret)), 'never prints a secret');
+      const liveValues = {...Object.fromEntries(testEnv.trim().split('\n').map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)])), MP_MODE: 'live', MP_PUBLIC_KEY: LIVE.pk, MP_ACCESS_TOKEN: LIVE.token};
+      assert.deepEqual(values(), liveValues);
+      assert.equal(mp.settings(values()).mode, 'live', 'what the code reads: live payments');
+      // in production, Enter on the menu and on the mode keeps production (the default is the current mode), and Enter keeps
+      // every credential (the mode did not change)
+      const stays = pay(['', '', 's', '', '', '', '', '', 'n'], {...health, payments: 'live', shipping: 'correios', interestFree: 0});
+      assert.equal(stays.status, 0, stays.out); assert.deepEqual(values(), liveValues);
+      assert(!stays.out.includes('ATENÇÃO: o frete'), 'no shipping warning with the Correios on');
+      assert(stays.out.includes('ATENÇÃO: o Mercado Pago dá 0 parcela(s) sem juros') && !saidNo.out.includes('parcela(s) sem juros:'), '"3x sem juros" needs the account to give 3');
+      // only the e-mail: the Mercado Pago lines are never asked nor changed
+      const mailOnly = pay(['2', '', 're_novachave0123456789', 'n']);
+      assert.equal(mailOnly.status, 0, mailOnly.out); assert(!mailOnly.out.includes('== Mercado Pago'));
+      assert.deepEqual(values(), {...liveValues, RESEND_API_KEY: 're_novachave0123456789'});
+      // back to test: the production keys refused, the signature again only after a yes
+      const toTest = pay(['1', '1', 's', LIVE.pk, TEST.pk, LIVE.token, TEST.token, TEST.hook, 's', '', '', 'n']);
+      assert.equal(toTest.status, 0, toTest.out);
+      assert(toTest.out.includes('A loja volta ao modo de TESTE') && toTest.out.split('Essa é a credencial do outro modo (a de produção, que já estava gravada)').length === 3, toTest.out);
+      assert.deepEqual(values(), {...liveValues, MP_MODE: 'test', MP_PUBLIC_KEY: TEST.pk, MP_ACCESS_TOKEN: TEST.token, RESEND_API_KEY: 're_novachave0123456789'});
+      // a mode never chosen (MP_MODE empty): the saved keys are not kept by Enter, and the same ones only after a yes
+      fs.writeFileSync(envFile, testEnv.replace('MP_MODE=test', 'MP_MODE='));
+      const unknown = pay(['1', '1', 's', '', TEST.pk, 's', TEST.token, 's', TEST.hook, 's', '', '', 'n']);
+      assert.equal(unknown.status, 0, unknown.out); assert(!unknown.out.includes('Essa é a credencial do outro modo'));
+      assert.equal(values().MP_MODE, 'test'); assert.equal(values().MP_ACCESS_TOKEN, TEST.token);
+      assert.deepEqual(leftovers(), []);
     }
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
