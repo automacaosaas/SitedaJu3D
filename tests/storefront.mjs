@@ -23,11 +23,11 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // the novelty (SOON): photo, name, "Em breve" and "Ver encaixado", which opens its demonstration in the showcase; no price, cart or page
   assert.equal(soonCards.length, Object.keys(SOON).length, 'one card per novelty, after the products');
   for (const card of soonCards) {
-    const id = /data-product-id="([a-z]+)"/.exec(card)?.[1], demo = `index.html#produto/${id}/encaixe`;
+    const id = /data-product-id="([a-z]+)"/.exec(card)?.[1], demo = `./#produto/${id}/encaixe`;
     assert(id && SOON[id], `novelty card for a known novelty: ${id}`);
     assert(card.includes(`<h2><a href="${demo}">${SOON[id].title}</a></h2>`) && card.includes(`<p class="product-grid-sub">${SOON[id].subtitle}</p>`), `${id}: name and subtitle`);
     assert(card.includes('<span class="product-soon">Em breve</span>') && card.includes(`<a class="product-customize product-see-fit" href="${demo}">`) && card.includes('<span>Ver encaixado</span>'), `${id}: "Em breve" and "Ver encaixado"`);
-    assert(card.includes(`<a class="product-see-3d" href="index.html#produto/${id}/3d">`) && card.includes('<span>Ver em 3D</span>'), `${id}: "Ver em 3D" opens the piece to turn around`);
+    assert(card.includes(`<a class="product-see-3d" href="./#produto/${id}/3d">`) && card.includes('<span>Ver em 3D</span>'), `${id}: "Ver em 3D" opens the piece to turn around`);
     assert(!/R\$|no Pix|data-add-product|personalizar|\.html"/.test(card.replace(/index\.html#/g, '#')), `${id}: no price, cart, customization or page of its own`);
     for (const name of [`card-${id}.webp`, `card-preview-${id}.webp`]) assert(fs.existsSync(path.join(root, 'dist/assets', name)), name);
   }
@@ -46,10 +46,10 @@ const html = string => string.replace(/ /g, '&nbsp;');
     assert.deepEqual(swatches, expected, `${id}: the dots show the default colors`);
     assert(card.includes(`<strong>${money(COMMERCE.prices[id])}</strong>`), `${id}: price`);
     assert(card.includes(`${money(pixPrice(COMMERCE.prices[id]))} no Pix`), `${id}: Pix price`);
-    assert(card.includes(`<h2><a href="${id}.html">${PRODUCTS[id].title}</a></h2>`), `${id}: the name links to the product's own page`);
+    assert(card.includes(`<h2><a href="${id}">${PRODUCTS[id].title}</a></h2>`), `${id}: the name links to the product's own page`);
     assert(card.includes(`${icon('clock')}<span><span class="sr-only">Produção em </span>${COMMERCE.productionLabel}</span>`), `${id}: the clock and the production time on the card (audit B5; 2026-10-05: no "Feito sob encomenda")`);
     assert.doesNotMatch(card, /Preço ilustrativo/, `${id}: no "Preço ilustrativo" (2026-10-05)`);
-    assert(PRODUCTS[id].parts.length ? card.includes(`href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`) : card.includes(`<a class="product-customize" href="${id}.html">Ver a peça</a>`) && !card.includes('personalizar'), `${id}: customize (a lamp: its page, nothing to customize)`);
+    assert(PRODUCTS[id].parts.length ? card.includes(`href="./#produto/${id}/personalizar">Personalizar o meu</a>`) : card.includes(`<a class="product-customize" href="${id}">Ver a peça</a>`) && !card.includes('personalizar'), `${id}: customize (a lamp: its page, nothing to customize)`);
     assert(card.includes(`data-add-product="${id}"`), `${id}: quick add (mini-cart)`);
   }
   // the card art of the dinosaur is the moss-green default (the old one was sky blue); every card image exists
@@ -66,7 +66,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(page, /<p class="cart-selection-note">3 peças<\/p>/);
   assert.match(page, /<button type="button" class="primary cart-checkout" data-action="checkout" >/, 'checkout is enabled with pieces in the cart');
   assert.doesNotMatch(page, /cart-back/, 'no floating back button over the title');
-  assert.match(page, /<a class="collection-link cart-continue" href="produtos\.html" data-action="return">← Continuar escolhendo<\/a>/, '"Continuar escolhendo" goes back to where the person was');
+  assert.match(page, /<a class="collection-link cart-continue" href="produtos" data-action="return">← Continuar escolhendo<\/a>/, '"Continuar escolhendo" goes back to where the person was');
   assert.equal((page.match(/data-action="remove"/g) || []).length, 2, 'the trash can stays on each piece');
   // 2026-10-05: the cart turns on the card before the mini-cart rises; the free-shipping bar rises when a piece goes in
   assert.match(read('dist/catalog.js'), /await new Promise\(done => setTimeout\(done, reduceMotion\(\) \? 0 : 600\)\); openMiniCart\(/);
@@ -79,10 +79,10 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // policies, and the payment methods Mercado Pago takes in the shop (Termos: Pix, credit and debit card)
   assert.doesNotMatch(page, /cart-reassurance|accepted-methods|Compra segura/);
   assert(page.indexOf('</aside>') < page.indexOf('<div class="cart-more">'), 'the extras come after the order summary');
-  assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio.html', 'macacoscopio.html', 'girafoscopio.html', 'unicornioscopio.html'], 'recommends only what is not in the cart (the lamps too, on sale since 07/10/2026)');
+  assert.deepEqual([...page.matchAll(/<a class="cart-rec" href="([^"]+)"/g)].map(m => m[1]), ['dinossauroscopio', 'macacoscopio', 'girafoscopio', 'unicornioscopio'], 'recommends only what is not in the cart (the lamps too, on sale since 07/10/2026)');
   // 2026-10-06: small cards (photo, name, price) side by side in a carousel; after the pieces, the novelties ("Em breve");
   // "Ver todas" next to the title; the next arrow carries the countdown ring of the autoplay
-  assert.deepEqual([...page.matchAll(/<a class="cart-rec is-soon" href="([^"]+)"/g)].map(m => m[1]), Object.keys(SOON).map(id => `index.html#produto/${id}/3d`), 'then the novelties, to see in 3D');
+  assert.deepEqual([...page.matchAll(/<a class="cart-rec is-soon" href="([^"]+)"/g)].map(m => m[1]), Object.keys(SOON).map(id => `./#produto/${id}/3d`), 'then the novelties, to see in 3D');
   assert.match(page, /<span class="cart-rec-name">Dinossauroscópio<\/span><span class="cart-rec-price">R\$\s?265,00<\/span><\/a>/, 'only the photo, the name and the price');
   assert.match(page, /<span class="cart-rec-name">GiraffeLamp<\/span><span class="cart-rec-price">R\$\s?90,00<\/span>/, 'a lamp at R$ 90');
   assert.doesNotMatch(page, /cart-rec-sub/, 'no subtitle');
@@ -90,7 +90,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   // view (two on phones, --rec-k), "Ver mais +" closing the row, and the pause / previous / next buttons away from the cards
   assert.equal((page.match(/class="cart-rec-slide"/g) || []).length, 4 + Object.keys(SOON).length, 'every suggestion once, no clones');
   assert.doesNotMatch(page, /is-clone|aria-hidden="true"><a class="cart-rec/, 'no hidden copies in the row');
-  assert.match(page, /<\/ul><\/div><a class="cart-rec-more" href="produtos\.html" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true">[^]*?<span class="cart-rec-more-label">Ver mais<\/span><\/a>/, '"Ver mais +" at the end of the row');
+  assert.match(page, /<\/ul><\/div><a class="cart-rec-more" href="produtos" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true">[^]*?<span class="cart-rec-more-label">Ver mais<\/span><\/a>/, '"Ver mais +" at the end of the row');
   assert.match(page, /<div class="cart-rec-controls" hidden><button type="button" class="cart-rec-toggle" data-rec-play aria-label="Pausar a troca automática"[^>]*><span class="cart-rec-dot" aria-hidden="true">[^]*?data-rec-step="-1"[^]*?data-rec-step="1"/, 'pause (the small dot with the ring), previous and next, before the cards');
   const cartView = read('dist/cart-view.js'), cartCss = read('dist/cart-page.css');
   // 2026-10-08, second round (the owner: "uma bolinha menor, com esse tempo maior... quando a pessoa põe o dedo por cima, escrola, essa
@@ -132,7 +132,7 @@ const html = string => string.replace(/ /g, '&nbsp;');
   assert.match(read('dist/checkout.js'), /wireSummaryLink\(main\);/);
   assert.match(read('dist/cart-page.css'), /\.cart-order-summary\.is-spotlight \{ animation: summary-spot/);
   assert.deepEqual([...page.matchAll(/<li><svg[^]*?<a href="([^"]+)"><strong>([^<]+)<\/strong>/g)].map(m => [m[1], m[2]]),
-    [['envio.html#frete', 'Entrega e frete.'], ['termos.html#precos', 'Formas de pagamento.'], ['envio.html#prazo', 'Feito sob encomenda.'], ['trocas.html', 'Trocas e devoluções.']]);
+    [['envio#frete', 'Entrega e frete.'], ['termos#precos', 'Formas de pagamento.'], ['envio#prazo', 'Feito sob encomenda.'], ['trocas', 'Trocas e devoluções.']]);
   assert.match(page, /começa depois da confirmação do pagamento\./);
   // without the account's list (payments off): Pix, the credit cards and the Caixa virtual debit card, in three groups
   assert.deepEqual([...page.matchAll(/<li class="pay-mark" title="([^"]+)">/g)].map(m => m[1]), ['Pix', 'Visa', 'Mastercard', 'Elo', 'American Express', 'Hipercard', 'Cartão de débito virtual Caixa']);
@@ -268,8 +268,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
 {
   const shell = read('dist/site-shell.js');
   assert.match(shell, /<nav class="drawer-links" aria-label="Navegação móvel">\$\{primaryNav\(\)\}<\/nav>\$\{drawerExtras\(\)\}<\/aside>/);
-  assert.match(shell, /<a href="\$\{id\}\.html"><img src="assets\/card-preview-\$\{id\}\.webp" alt="" width="56" height="56" loading="lazy"/, 'the pieces with thumbnails, to their own pages');
-  assert.match(shell, /<a href="conta\.html#pedidos">/, '"Meus pedidos"');
+  assert.match(shell, /<a href="\$\{id\}"><img src="assets\/card-preview-\$\{id\}\.webp" alt="" width="56" height="56" loading="lazy"/, 'the pieces with thumbnails, to their own pages');
+  assert.match(shell, /<a href="conta#pedidos">/, '"Meus pedidos"');
   assert.match(shell, /\/\^\\d\{12,13\}\$\/\.test\(CONTACT\.whatsapp\) \? `<a href="https:\/\/wa\.me\/\$\{CONTACT\.whatsapp\}"/, '"Fale com a Ju" only once the WhatsApp number is set (api/_lib/legal.js)');
   assert.match(shell, /<p class="drawer-signature">feito com carinho, pela Ju\.<\/p>/, 'the signature at the foot');
 }
@@ -292,7 +292,8 @@ const html = string => string.replace(/ /g, '&nbsp;');
   const listed = [...read('dist/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
   assert(listed.length >= 14 && listed.every(url => url.startsWith(`${COMPANY.website}/`)), 'the sitemap lists the domain addresses');
   for (const url of listed) {
-    const page = read(`dist/${url.slice(COMPANY.website.length + 1) || 'index.html'}`);
+    // o endereço limpo (/produtos) é o arquivo produtos.html; a home, index.html
+    const page = read(`dist/${url.slice(COMPANY.website.length + 1) || 'index'}.html`);
     assert.deepEqual([...page.matchAll(/<link rel="canonical" href="([^"]+)">/g)].map(m => m[1]), [url], `${url}: one canonical link, to itself`);
     assert.doesNotMatch(page, /<meta name="robots" content="noindex/, `${url}: listed, so indexable`);
   }

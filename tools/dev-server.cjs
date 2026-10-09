@@ -212,6 +212,11 @@ async function main() {
         res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({modo: mode || 'normal', vezes: times}));
       }
       if (url.pathname === '/__outbox/latest') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify(latest)); }
+      // Endereços limpos, como server/create-server.cjs: /contato.html (e /contato/, /index) vai para /contato com 301
+      const name = (/^\/([a-z0-9-]+)(?:\.html?|\/)$/.exec(url.pathname.toLowerCase()) || /^\/(index)$/.exec(url.pathname.toLowerCase()) || [])[1];
+      if (name && !['admin', 'email-preview', '404'].includes(name) && !/^google[0-9a-f]{8,}$/.test(name) && fs.existsSync(path.join(ROOT, `${name}.html`))) {
+        res.statusCode = 301; res.setHeader('Location', (name === 'index' ? '/' : `/${name}`) + url.search); return res.end();
+      }
       let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
       if (!file.startsWith(ROOT)) { res.statusCode = 403; return res.end('Forbidden'); }
       if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
@@ -239,7 +244,7 @@ async function main() {
     const socialOn = require('../api/_lib/social').enabled(env);
     console.log(`Entrar com Google / Apple: ${fakeSocial ? 'SIMULADOS (tela de teste em /__fake-oauth)' : [socialOn.google && 'Google', socialOn.apple && 'Apple'].filter(Boolean).join(' e ') || 'desligados (sem credenciais)'}`);
     console.log(`\nSite + API em http://localhost:${PORT}  (e-mails: ${real ? 'enviados de verdade pelo Resend' : 'gravados em ' + outboxDir})`);
-    if (real) console.log(`Abra http://localhost:${PORT}/conta.html, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
+    if (real) console.log(`Abra http://localhost:${PORT}/conta, crie uma conta e use o MESMO e-mail da sua conta do Resend.\nSem domínio verificado, o Resend só entrega para esse e-mail. Cada disparo aparece aqui embaixo.\nParar: Ctrl+C.\n`);
   });
 }
 main();

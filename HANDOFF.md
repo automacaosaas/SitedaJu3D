@@ -192,6 +192,12 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   andam dentro do grupo à vista. As bolinhas de cor de todo o site usam `paint(c)` (o
   degradê das cores com brilho e multicor); `tests/asset-models.mjs` confere os acabamentos. A cópia do servidor
   (`api/_lib/catalog.js › COLORS`) tem as mesmas cores, na mesma ordem, em PT, EN e ES.
+- **Endereços limpos e Google (09/10/2026):** as páginas respondem sem `.html` (`/contato`, `/produtos`, `/borboletoscopio`; a home
+  em `/`), e o endereço antigo vai para o limpo com 301, a busca junto (`server/create-server.cjs › cleanPath`, o mesmo em
+  `tools/dev-server.cjs`). Links do site, canônico, `og:url`, sitemap e links dos e-mails já usam o limpo. Ficam com `.html` o painel
+  (`/admin.html`: o retorno do Bling está registrado nesse endereço), a prévia de e-mails, a 404 e o arquivo de verificação do Google.
+  Link novo no código: escreva `produtos`, `conta#pedidos`, `./#produto/<peça>` (a home), nunca `.html`. No `robots.txt`, a conta vai
+  como `/conta$`, `/conta?` e `/conta.html` (um `/conta` sozinho tiraria `/contato` do Google). Indexação: **`GOOGLE-SEARCH-CONSOLE.md`**.
 - **Tema escuro e "Seu cantinho" renovado (09/10/2026):** dois padrões visuais, o claro exatamente como era e o escuro desenhado à parte.
   - **Quem escolhe:** `journey.js` (o script síncrono do `<head>`) põe `data-theme="light|dark"` no `<html>` antes da primeira pintura:
     a escolha da pessoa (`localStorage` `ju.scheme`: `light`, `dark`; sem nada = Automático, o do aparelho) e acompanha o aparelho e

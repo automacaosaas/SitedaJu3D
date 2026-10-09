@@ -53,13 +53,13 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
 {
   const page = read('dist/escolha.html');
   assert.match(page, /<title>Escolha o seu · Ju, imprime pra mim\?<\/title>/);
-  assert.match(page, /<link rel="canonical" href="[^"]+\/escolha\.html">/);
+  assert.match(page, /<link rel="canonical" href="[^"]+\/escolha">/);
   assert.match(page, /<link rel="stylesheet" href="escolha\.css">/);
   assert.match(page, /<h1>Escolha o seu<\/h1>/);
   assert(page.includes(`<div class="choose-banners">${chooseBanners()}</div>`), 'escolha.html em dia: node tools/build-product-pages.cjs');
-  assert.deepEqual([...page.matchAll(/<a class="choose-banner" href="([^"]+)"/g)].map(m => m[1]), ['produtos.html?encaixe=retinoscopio', 'produtos.html?encaixe=regua', 'produtos.html?encaixe=lampada']);
+  assert.deepEqual([...page.matchAll(/<a class="choose-banner" href="([^"]+)"/g)].map(m => m[1]), ['produtos?encaixe=retinoscopio', 'produtos?encaixe=regua', 'produtos?encaixe=lampada']);
   assert.match(page, /<span class="choose-art" data-count="2">/, 'o retinoscópio mostra as duas peças');
-  assert.match(read('dist/sitemap.xml'), /\/escolha\.html<\/loc>/);
+  assert.match(read('dist/sitemap.xml'), /\/escolha<\/loc>/);
 }
 
 // ── Produtos ?encaixe=: só as peças da família, na ordem dela ──
@@ -72,7 +72,7 @@ assert.deepEqual(families(), ['retinoscopio', 'regua', 'lampada']);
   const catalog = read('dist/catalog.js');
   assert.match(catalog, /new URLSearchParams\(location\.search\)\.get\('encaixe'\)/);
   assert.match(catalog, /Object\.hasOwn\(FAMILIES, id\)/, 'só aceita famílias conhecidas');
-  assert.match(catalog, /<a class="catalog-family-other" href="escolha\.html">/);
+  assert.match(catalog, /<a class="catalog-family-other" href="escolha">/);
 }
 
 // ── Nossa coleção: só o card do centro na cor exclusiva da sua peça; os laterais no tom da página; a peça sai do card ──

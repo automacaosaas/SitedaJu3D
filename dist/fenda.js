@@ -26,7 +26,7 @@ const smooth = () => (reduced.matches ? 'auto' : 'smooth');
 
 // ── direto para a compra (a peça ou o kit), como o "Comprar agora" da janela da peça ──
 function buyNow(lines, status) {
-  try { sessionStorage.setItem(DIRECT_KEY, JSON.stringify(lines)); location.assign('comprar-agora.html'); }
+  try { sessionStorage.setItem(DIRECT_KEY, JSON.stringify(lines)); location.assign('comprar-agora'); }
   catch { if (status) status.textContent = translate('Não foi possível preparar a compra. Verifique o armazenamento do navegador.'); }
 }
 
@@ -94,7 +94,7 @@ kitBuy?.addEventListener('click', () => {
 let stageKey = () => document.querySelector('[data-nv-key]')?.dataset.nvKey;
 for (const button of tierButtons) button.addEventListener('click', () => {
   const key = stageKey(); units = Number(button.dataset.nvTier);
-  if (!kit) return void (location.href = `${key}.html`);
+  if (!kit) return void (location.href = `${key}`);
   kit.set(kitPreset(key, units)); kitTouched = true;
   // o kit inteiro à vista, com "Comprar agora": no meio da tela se couber, senão com a compra no pé dela
   const panel = document.getElementById('nv-kit');

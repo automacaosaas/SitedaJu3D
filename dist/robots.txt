@@ -1,9 +1,11 @@
 User-agent: *
-Disallow: /admin.html
+Disallow: /admin
 Disallow: /api/
-Disallow: /checkout.html
-Disallow: /comprar-agora.html
+Disallow: /checkout
+Disallow: /comprar-agora
+Disallow: /conta$
+Disallow: /conta?
 Disallow: /conta.html
-Disallow: /email-preview.html
+Disallow: /email-preview
 
 Sitemap: https://juimprimepramim.com.br/sitemap.xml

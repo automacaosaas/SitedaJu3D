@@ -89,7 +89,7 @@ assert.doesNotMatch(card({status: 'enviado'}), / hidden>/);
 setFilter('todos');
 
 // ── no orders yet, and the orders of the demonstration (payments off) ──
-assert(noOrders.includes('<h3>Você ainda não fez nenhum pedido.</h3><p>Que tal dar uma olhada nas nossas coleções?</p><a class="primary account-submit" href="produtos.html">Ver as coleções'));
+assert(noOrders.includes('<h3>Você ainda não fez nenhum pedido.</h3><p>Que tal dar uma olhada nas nossas coleções?</p><a class="primary account-submit" href="produtos">Ver as coleções'));
 html = demoCard({id: 'DEMO-AB12CD34', total: 12900, items: [{title: 'Borboletoscópio', quantity: 1}]});
 assert(html.includes('#AB12CD') && html.includes('Pagamento simulado · nenhuma cobrança') && html.includes('R$ 129,00'));
 

@@ -64,7 +64,7 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
       sessionStorage.setItem(DIRECT_KEY, JSON.stringify(putItem([], getProduct(), getSelection(), capture())));
       edit = null;
       try { sessionStorage.removeItem(EDIT_KEY); } catch {}
-      location.assign('comprar-agora.html');
+      location.assign('comprar-agora');
     } catch { status.textContent = 'Não foi possível preparar a compra. Verifique o armazenamento do navegador.'; busy = false; buy.disabled = false; }
   });
   const clearEdit = () => { edit = null; status.textContent = ''; try { sessionStorage.removeItem(EDIT_KEY); } catch {} refresh(); };
@@ -72,7 +72,7 @@ export function setupCartBridge({getProduct, getSelection, capture, restore}) {
   dialog.addEventListener('close', () => {
     const returnToCart = !!edit;
     clearEdit();
-    if (returnToCart) location.replace('checkout.html');
+    if (returnToCart) location.replace('checkout');
   });
   window.addEventListener('pageshow', () => { busy = false; button.disabled = buy.disabled = false; refresh(); });
   new MutationObserver(() => {status.textContent='';refresh();}).observe(dialog, {attributes:true,attributeFilter:['data-mode']});

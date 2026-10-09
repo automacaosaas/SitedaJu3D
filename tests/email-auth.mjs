@@ -48,7 +48,7 @@ const ENV = {SITE_URL: SITE, AUTH_SECRET: SECRET, RESEND_API_KEY: 're_test_key_1
 // ── template ──────────────────────────────────────────────────────────
 {
   const url = verificationUrl({siteUrl: SITE + '/', token: 'a.b-c_d', code: '123456'});
-  assert.equal(url, `${SITE}/conta.html#verificar?c=a.b-c_d&k=123456`, 'code travels in the fragment');
+  assert.equal(url, `${SITE}/conta#verificar?c=a.b-c_d&k=123456`, 'code travels in the fragment');
   const subjects = new Set();
   for (const lang of ['pt-BR', 'en', 'es']) for (const purpose of ['signup', 'access', 'reset']) {
     const mail = renderVerificationEmail({lang, purpose, name: 'Maria', code: '482916', url, siteUrl: SITE});
@@ -111,7 +111,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert.equal(mail.init.headers.Authorization, 'Bearer re_test_key_123');
   assert.match(mail.init.headers['Idempotency-Key'], /^code-[0-9a-f-]{36}$/, 'a retried request never sends a second e-mail');
   const code = codeFrom(mail.body.html);
-  assert(mail.body.html.includes('conta.html#verificar?c=') && mail.body.html.includes(encodeURIComponent(data.challenge)), 'the button opens the site with the code reference');
+  assert(mail.body.html.includes('conta#verificar?c=') && mail.body.html.includes(encodeURIComponent(data.challenge)), 'the button opens the site with the code reference');
   assert(mail.body.text.includes(code), 'plain-text version carries the code');
   assert(!reply.body.includes(code), 'the code only travels by e-mail');
   const ok = await call(checker, {body: {challenge: data.challenge, code}});
@@ -224,7 +224,7 @@ const codeFrom = html => html.match(/class="code"[^>]*>(\d{6})</)[1];
   assert(/createBusyDialog/.test(account) && !/openProgress/.test(account), 'one loading UI: the shared busy dialog');
   assert(/\[providers\] = await Promise\.all\(\[loadProviders\(\), refreshSession\(\)\]\);\n(?:.*\n)*?route\(\);\n?$/.test(account), 'the page asks the server who is signed in (and which sign-in buttons exist) before choosing a screen');
   assert(/identificationForm\(/.test(account) && /saveProfile\(data\)/.test(account), '"Meus dados" uses the shared identification form');
-  assert(/checkout: 'checkout\.html#identificacao'/.test(account), 'signing in from the checkout returns to identification');
+  assert(/checkout: 'checkout#identificacao'/.test(account), 'signing in from the checkout returns to identification');
   assert(!/de teste(…|!)/.test(account), 'no "test account" wording in the real flow');
   const service = fs.readFileSync(path.join(root, 'dist/auth-service.js'), 'utf8');
   assert(/AUTH_MODE = 'server'/.test(service) && !/createDemoAuth|passwordHash|crypto\.subtle/.test(service), 'no password handling in the browser');

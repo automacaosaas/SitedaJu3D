@@ -127,7 +127,7 @@ try {
   fs.writeFileSync(sheet, '.c {  color: blue; }');
   fs.utimesSync(sheet, new Date(), new Date(Date.now() + 5000));
   assert.equal((await get('/site.css')).body.toString(), '.c{color: blue;}');
-  const page = await get('/page.html');
+  const page = await get('/page');   // o endereço limpo (o com ".html" vai para ele com 301)
   assert.equal(page.body.length, 2000 + '<!doctype html><title>x</title>'.length, 'pages are served as they are');
 } finally { server.close(); fs.rmSync(dir, {recursive: true, force: true}); }
 

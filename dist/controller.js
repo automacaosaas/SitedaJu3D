@@ -252,7 +252,7 @@ $('.purchase-actions').addEventListener('click',e=>{
   if(!lines.length){$('#product-installments').textContent='';status.textContent='Escolha pelo menos uma peça.';return;}
   if(buying)return;buying=true;setTimeout(()=>{buying=false;},900);
   if(b.id==='add-to-cart'){addKit(lines).catch(error=>{status.textContent=error.message;});return;}
-  try{sessionStorage.setItem(DIRECT_KEY,JSON.stringify(putItems([],lines)));location.assign('comprar-agora.html');}
+  try{sessionStorage.setItem(DIRECT_KEY,JSON.stringify(putItems([],lines)));location.assign('comprar-agora');}
   catch{status.textContent='Não foi possível preparar a compra. Verifique o armazenamento do navegador.';}
 },true);
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));

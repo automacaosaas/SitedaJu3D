@@ -106,7 +106,7 @@ assert.match(ui, /@media \(prefers-reduced-motion: reduce\) \{ \.scheme-thumb, \
 
 // ── "Seu cantinho" renovado ───────────────────────────────────────────
 assert.match(account, /<nav class="profile-hub" aria-label="Sua conta">/, 'os atalhos num nav com nome');
-for (const target of ['data-screen="orders"', 'data-screen="details"', 'href="checkout.html"', 'href="produtos.html"']) assert(account.includes(`class="profile-tile" \${attrs}`) && account.includes(target), `atalho ${target}`);
+for (const target of ['data-screen="orders"', 'data-screen="details"', 'href="checkout"', 'href="produtos"']) assert(account.includes(`class="profile-tile" \${attrs}`) && account.includes(target), `atalho ${target}`);
 assert.match(account, /<button class="profile-signout" id="signout" type="button">/);
 assert.match(read('account.css'), /\.profile-hub \{ display:grid; grid-template-columns:repeat\(auto-fit, minmax\(min\(100%, 210px\), 1fr\)\);/, 'dois por linha onde cabe, um embaixo do outro no celular');
 const {translate} = await import(path.join(dist, 'i18n-core.js'));

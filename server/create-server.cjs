@@ -42,6 +42,8 @@ const best = ext => ext === '.glb' ? 6 : 11;   // Meshopt models gain almost not
 // themselves, HSTS is read from any HTTPS answer, and a module's or stylesheet's own Referrer-Policy rules what it imports.
 const DOCUMENT_ONLY = new Set(['content-security-policy', 'x-frame-options', 'permissions-policy']);
 const SUBRESOURCE = /\.(?:m?js|css|webp|png|jpe?g|ico|woff2|glb)$/i;
+// as páginas que continuam com ".html" no endereço (cleanPath): o painel da Ju, a prévia de e-mails e a página de erro
+const KEEP_HTML = new Set(['admin', 'email-preview', '404']);
 
 // vercel.json `headers` → [{pattern, headers}]. Sources are plain "/prefix/(.*)" patterns (checked by tests/headers.mjs),
 // which are also valid regular expressions.
@@ -179,8 +181,27 @@ function createServer({root = path.join(PROJECT, 'dist'), apiDir = path.join(PRO
     return files.length;
   }
 
+  // Endereços limpos (09/10/2026): as páginas respondem sem o ".html" (/contato, /produtos; a home em /), e os links do site já
+  // usam esse endereço. O antigo — de um link salvo, de um e-mail já enviado, do Google — vai para o limpo com 301 e a mesma
+  // busca (o fragmento, como #pedidos, o navegador mantém sozinho); o Google passa a guardar o limpo. Também /contato/ e /index.
+  // Ficam como estão o painel da Ju (o Bling devolve o login em /admin.html, o endereço registrado lá), a prévia de e-mails e a 404.
+  function cleanPath(pathname) {
+    const lower = pathname.toLowerCase();
+    const name = (/^\/([a-z0-9-]+)(?:\.html?|\/)$/.exec(lower) || /^\/(index)$/.exec(lower) || [])[1];
+    // o arquivo de verificação do Google Search Console (google<código>.html, se um dia for usado no lugar do DNS): o Google o lê
+    // exatamente nesse endereço, sem seguir redirecionamento
+    if (!name || KEEP_HTML.has(name) || /^google[0-9a-f]{8,}$/.test(name)) return null;
+    if (name === 'index') return '/';
+    return resolveFile(`/${name}.html`) ? `/${name}` : null;
+  }
+
   function serveStatic(req, res, pathname, search = '') {
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.statusCode = 405; res.setHeader('Allow', 'GET, HEAD'); return res.end(); }
+    const clean = cleanPath(pathname);
+    if (clean && clean !== pathname) {
+      res.statusCode = 301; res.setHeader('Location', clean + search); res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.end();
+    }
     // A page address typed with capitals (ADMIN.HTML, Produtos.html, 08/10/2026): every page is lowercase on disk, and the
     // Linux server would answer 404, so it moves to the lowercase address when that page exists. Only page addresses (some
     // vendor files have capitals in their names).

@@ -33,16 +33,30 @@ try {
   assert.equal(home.headers['cache-control'], 'public, max-age=0, must-revalidate', 'pages always revalidate');
   assert.equal(home.headers['x-powered-by'], undefined);
   assert.equal(home.headers['x-robots-tag'], 'noindex, nofollow', 'test deployments stay out of search results');
-  assert.equal((await raw('/produtos.html')).status, 200);
+  // Endereços limpos (09/10/2026): /produtos é a página; o endereço com ".html" (e /produtos/, /index) vai para o limpo com 301 e a
+  // mesma busca; o painel da Ju (o retorno do Bling é registrado em /admin.html), a prévia de e-mails e a 404 ficam como estão.
+  assert.equal((await raw('/produtos')).status, 200);
+  for (const [path, to] of [['/produtos.html', '/produtos'], ['/produtos.html?encaixe=retinoscopio', '/produtos?encaixe=retinoscopio'], ['/contato/', '/contato'], ['/fenda/', '/fenda'], ['/fenda.htm', '/fenda'], ['/index.html', '/'], ['/index', '/'], ['/Contato.HTML', '/contato']]) {
+    const moved = await raw(path);
+    assert.equal(moved.status, 301, `limpo: ${path}`); assert.equal(moved.headers.location, to, path); assert.equal(moved.body.length, 0);
+  }
+  for (const path of ['/admin.html', '/email-preview.html']) assert.equal((await raw(path)).status, 200, `${path} fica com ".html"`);
+  assert.equal((await raw('/pasta/contato.html')).status, 404, 'só as páginas da raiz');
+  // a verificação do Google Search Console por arquivo: lida exatamente em /google<código>.html, sem redirecionamento
+  {
+    const proof = new URL('../dist/google0123456789abcdef.html', import.meta.url);
+    fs.writeFileSync(proof, 'google-site-verification: google0123456789abcdef.html');
+    try { assert.equal((await raw('/google0123456789abcdef.html')).status, 200, 'o arquivo do Google fica onde está'); } finally { fs.rmSync(proof); }
+  }
   // Short links: /fenda (printed on the flyer) is fenda.html; only names without an extension, never a folder path nor the 404 page.
   const short = await raw('/fenda', {headers: {'accept-encoding': 'identity'}});
   assert.equal(short.status, 200);
   assert.match(short.headers['content-type'], /^text\/html/);
   assert.match(short.body.toString(), /<section class="nv-stage"/);
-  for (const path of ['/fenda/', '/fenda.htm', '/404']) assert.equal((await raw(path)).status, 404, path);
+  for (const path of ['/404', '/assets/', '/nao-existe/']) assert.equal((await raw(path)).status, 404, path);
   // A page typed with capitals moves to the lowercase page, query kept (08/10/2026: ADMIN.HTML gave 404 on the server);
   // a vendor file with capitals in its name is served as it is, and a page that does not exist still gets the 404.
-  for (const [path, to] of [['/ADMIN.HTML', '/admin.html'], ['/Produtos.html?x=1', '/produtos.html?x=1']]) {
+  for (const [path, to] of [['/ADMIN.HTML', '/admin.html'], ['/Produtos.html?x=1', '/produtos?x=1']]) {
     const moved = await raw(path);
     assert.equal(moved.status, 301, `capitals: ${path}`); assert.equal(moved.headers.location, to); assert.equal(moved.body.length, 0);
   }
@@ -63,7 +77,7 @@ try {
   // With ?v= the address changes with the file: a year, never revalidated (2026-10-07). Pages never.
   for (const path of ['/assets/logo-ju.webp?v=2', '/carousel.js?v=abc123', '/theme.css?x=1&v=9'])
     assert.equal((await raw(path)).headers['cache-control'], 'public, max-age=31536000, immutable', `versioned: ${path}`);
-  assert.equal((await raw('/index.html?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
+  assert.equal((await raw('/?v=2')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'a page with ?v= still revalidates');
   assert.equal((await raw('/carousel.js?view=1')).headers['cache-control'], 'public, max-age=0, must-revalidate', 'only a real v= parameter');
   assert.equal((await raw('/nao-existe.js?v=1')).headers['cache-control'], 'no-store', 'a missing file is never cached');
   // A big file (a 3D model, three.js) is never compressed while a request waits (2026-10-08): the first answer goes out as it
@@ -129,7 +143,7 @@ try {
     assert.equal(res.headers['cache-control'], 'no-store');
     const html = res.body.toString().replace(/\r\n/g, '\n');   // a Windows checkout has CRLF in dist/ (core.autocrlf)
     assert.match(html, /<h1 id="not-found-title">Ops! Essa página sumiu no meio das impressões 3D\.<\/h1>/, path);
-    assert.match(html, /<a class="primary" href="index\.html">Ir para a vitrine/); assert.match(html, /<a class="not-found-secondary" href="produtos\.html">Ver a coleção de produtos<\/a>/);
+    assert.match(html, /<a class="primary" href="\.\/">Ir para a vitrine/); assert.match(html, /<a class="not-found-secondary" href="produtos">Ver a coleção de produtos<\/a>/);
     assert.match(html, /<base href="\/">\n  <meta name="robots" content="noindex">\n  <script src="journey\.js"><\/script>/, 'every link resolves from the site root, before the first script');
   }
   for (const path of ['/nao-existe.js', '/assets/nao-existe.webp']) {
@@ -202,13 +216,13 @@ try {
   // www → the domain without www, in the Node server itself (2026-10-08): one session cookie, one cart and one origin for the
   // forms. Same path and query, the same security headers, no body; GET/HEAD 301, any other method 308 (keeps the body).
   const at = `http://127.0.0.1:${live.address().port}`, www = {host: 'www.juimprimepramim.com.br'};
-  const page = await raw('/produtos.html?cor=rosa&utm_source=insta', {headers: www, at});
+  const page = await raw('/produtos?cor=rosa&utm_source=insta', {headers: www, at});
   assert.equal(page.status, 301);
-  assert.equal(page.headers.location, 'https://juimprimepramim.com.br/produtos.html?cor=rosa&utm_source=insta', 'path and query string intact');
+  assert.equal(page.headers.location, 'https://juimprimepramim.com.br/produtos?cor=rosa&utm_source=insta', 'path and query string intact');
   assert.equal(page.body.length, 0, 'no body');
   assert.match(page.headers['content-security-policy'] || '', /default-src 'self'/, 'the redirect carries the vercel.json headers');
   assert.equal(page.headers['x-frame-options'], 'SAMEORIGIN'); assert.match(page.headers['strict-transport-security'] || '', /max-age=/);
-  for (const path of ['/produtos.html', '/assets/logo-ju.webp?v=2'])
+  for (const path of ['/produtos', '/assets/logo-ju.webp?v=2'])
     assert.equal((await raw(path, {headers: www, at})).headers['cache-control'], 'private, max-age=86400', `${path}: kept by the browser, never by a shared cache`);
   const headWww = await raw('/', {method: 'HEAD', headers: www, at});
   assert.equal(headWww.status, 301); assert.equal(headWww.headers.location, 'https://juimprimepramim.com.br/'); assert.equal(headWww.body.length, 0);
@@ -227,7 +241,7 @@ try {
   }
   assert.equal((await raw('/api/payments/status?ref=x', {headers: www, at})).status, 301, 'the other payment routes still move');
   for (const headers of [{host: 'WWW.JuImprimePraMim.com.br.:443'}, {host: '127.0.0.1', 'x-forwarded-host': 'www.juimprimepramim.com.br, outro.com'}])
-    assert.equal((await raw('/conta.html?x=1', {headers, at})).headers.location, 'https://juimprimepramim.com.br/conta.html?x=1', `moved: ${JSON.stringify(headers)}`);
+    assert.equal((await raw('/conta?x=1', {headers, at})).headers.location, 'https://juimprimepramim.com.br/conta?x=1', `moved: ${JSON.stringify(headers)}`);
   for (const host of ['juimprimepramim.com.br', '127.0.0.1', `127.0.0.1:${live.address().port}`, 'localhost:3000', 'wheat-llama-936569.hostingersite.com', 'www.juimprimepramim.com.br.evil.com', 'www.outro-site.com.br']) {
     const stays = await raw('/?x=1', {headers: {host}, at});
     assert.equal(stays.status, 200, `not moved: ${host}`); assert.equal(stays.headers.location, undefined);
@@ -284,8 +298,8 @@ try {
     assert.equal(revisit.headers.etag, first.headers.etag); assert.equal(revisit.headers.vary, 'Accept-Encoding', 'the 304 keeps Vary (RFC 9110 §15.4.5)');
     assert.equal(revisit.headers['cache-control'], 'public, max-age=0, must-revalidate');
     assert.equal(revisit.headers['content-type'], undefined, 'no representation metadata on the 304');
-    const page = await get('/page.html');
-    assert.equal((await get('/page.html', {'if-none-match': page.headers.etag})).headers['content-security-policy'], page.headers['content-security-policy'], "a page's 304 keeps its security headers (the browser updates the cached ones)");
+    const page = await get('/page');
+    assert.equal((await get('/page', {'if-none-match': page.headers.etag})).headers['content-security-policy'], page.headers['content-security-policy'], "a page's 304 keeps its security headers (the browser updates the cached ones)");
     assert.equal((await get('/app.js', {'if-none-match': first.headers.etag}, 'HEAD')).status, 304, 'HEAD: 304');
     assert.equal((await get('/app.js?v=7', {'if-none-match': first.headers.etag})).headers['cache-control'], 'public, max-age=31536000, immutable', 'a 304 with ?v= keeps the immutable cache');
 

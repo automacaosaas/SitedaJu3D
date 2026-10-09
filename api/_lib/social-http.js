@@ -13,9 +13,9 @@ const MAX_FORM = 16 * 1024;
 const KNOWN = ['social_unavailable', 'social_cancelled', 'social_expired', 'social_failed', 'social_email_unverified', 'accounts_unavailable', 'too_many_requests'];
 const AFTER = {...social.NEXT};
 const accountNext = next => ['checkout', 'comprar-agora'].includes(next) ? `?next=${next}` : '';
-const errorPage = (code, next = '') => `/conta.html${accountNext(next)}#entrar?erro=${code}`;
+const errorPage = (code, next = '') => `/conta${accountNext(next)}#entrar?erro=${code}`;
 // Where to go once signed in: what the person was doing, or the welcome of a new account, or the account.
-const destination = (next, created) => AFTER[next] || (created ? '/conta.html#bem-vindo' : '/conta.html');
+const destination = (next, created) => AFTER[next] || (created ? '/conta#bem-vindo' : '/conta');
 
 function redirect(res, status, location, cookies) {
   res.statusCode = status;

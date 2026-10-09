@@ -30,7 +30,7 @@ const {translate} = await site('i18n-core.js');
   assert.match(html, /data-kit-add="dinossauroscopio"/); assert.match(html, /data-kit-add="aviaoscopia"/);
   assert.doesNotMatch(html, /data-kit-add="borboletoscopio"/, 'the piece just added is not offered in its own kit');
   assert.doesNotMatch(html, /mini-cart-add-count/, 'no count on a kit piece that is not in the cart');
-  assert.match(html, /<a class="primary" href="checkout\.html" data-mini-cart-go>Ver carrinho/);
+  assert.match(html, /<a class="primary" href="checkout" data-mini-cart-go>Ver carrinho/);
   assert.match(html, /data-mini-close>Continuar escolhendo<\/button>/);
   assert.match(html, /aria-label="Fechar o carrinho"/);
 

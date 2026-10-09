@@ -54,7 +54,7 @@ export function miniCartBody({cart, itemId, itemIds = null, original = false, fr
     + `<div class="mini-cart-scroll">${added}`
     + `<dl class="mini-cart-total" id="mini-cart-total"><div><dt>${pieces(units)} no carrinho</dt><dd>${money(amount.subtotal)}</dd></div><div class="mini-cart-pix"><dt>No Pix</dt><dd>${money(pix)}</dd></div></dl>`
     + `${freeShippingBar(freeShipping, amount.subtotal)}${kitList}</div>`
-    + `<div class="mini-cart-actions"><a class="primary" href="checkout.html" data-mini-cart-go>Ver carrinho ${icon('arrow')}</a><button type="button" class="mini-cart-continue" data-mini-close>Continuar escolhendo</button></div>`;
+    + `<div class="mini-cart-actions"><a class="primary" href="checkout" data-mini-cart-go>Ver carrinho ${icon('arrow')}</a><button type="button" class="mini-cart-continue" data-mini-close>Continuar escolhendo</button></div>`;
 }
 // riseFrom: the subtotal before the piece just added, so the free-shipping bar rises from there (kept until the bar shows,
 // which can be a moment later, when the shipping rule arrives from the server).

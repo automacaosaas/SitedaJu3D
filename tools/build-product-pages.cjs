@@ -20,8 +20,10 @@ const DIST = path.join(__dirname, '..', 'dist');
 const esc = value => String(value ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const nbsp = text => text.replace(/ /g, '&nbsp;');
 // Pages search engines may list (Sobre stays out while it is empty; account and checkout steps are private).
-const LISTED = ['', 'produtos.html', 'escolha.html', 'fenda.html', '{products}', 'contato.html', 'envio.html', 'termos.html', 'privacidade.html', 'trocas.html'];
-const PRIVATE = ['/admin.html', '/api/', '/checkout.html', '/comprar-agora.html', '/conta.html', '/email-preview.html'];
+// Endereços limpos (09/10/2026): o servidor abre /produtos como produtos.html e leva o antigo, com ".html", ao limpo (301).
+const LISTED = ['', 'produtos', 'escolha', 'fenda', '{products}', 'contato', 'envio', 'termos', 'privacidade', 'trocas'];
+// "/conta" sozinho pegaria também /contato (a regra do robots.txt é pelo começo do endereço): a conta vai exata ($), com busca e com ".html"
+const PRIVATE = ['/admin', '/api/', '/checkout', '/comprar-agora', '/conta$', '/conta?', '/conta.html', '/email-preview'];
 
 async function site() {
   const load = file => import(pathToFileURL(path.join(DIST, file)).href);
@@ -39,7 +41,7 @@ function page(id, data, base) {
   // "entre em contato" na descrição: link para o e-mail da Ju (contact-link.js)
   const [before, phrase, after] = splitContact(product.description);
   const description = phrase ? `${esc(before)}<a class="contact-mail" href="${esc(contactMail(`Dúvida sobre o ${product.title}`))}">${phrase}</a>${esc(after)}` : esc(product.description);
-  const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}.html`;
+  const category = PRODUCT_CATEGORIES[product.category]?.label || product.category, url = `${siteBase()}/${id}`;
   const lines = base.replace(/\r\n/g, '\n');
   const head = lines.slice(lines.indexOf('<head>\n') + 7, lines.indexOf('  <!-- og -->'))
     .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(`${product.title}: ${product.subtitle.toLowerCase()} impressa em 3D, ${fixed ? 'nas cores da peça' : 'nas cores que você escolher'}. ${product.description}`)}">`)
@@ -67,7 +69,7 @@ function page(id, data, base) {
   const style = `--pl-accent:${theme.accentColor};--pl-ink:${theme.textColor};--pl-muted:${theme.mutedColor};--pl-stops:${theme.bannerStops}`;
   const fact = (name, title, note, text) => `<details class="pl-acc"><summary>${icon(name)}<span><strong>${title}</strong><small>${note}</small></span><i class="pl-acc-mark" aria-hidden="true"></i></summary><div class="pl-acc-body"><p>${text}</p></div></details>`;
   const main = `<main class="pl-main" id="conteudo">
-      <nav class="pl-crumbs" aria-label="Você está em"><a href="produtos.html">Produtos</a><span aria-hidden="true">/</span><span aria-current="page">${esc(product.title)}</span></nav>
+      <nav class="pl-crumbs" aria-label="Você está em"><a href="produtos">Produtos</a><span aria-hidden="true">/</span><span aria-current="page">${esc(product.title)}</span></nav>
       <article class="pl" style="${style}" data-pl="${id}">
         <div class="pl-stage">
           <div class="pl-art${hasGallery(id) ? ' is-real' : ''}" data-pl-stage data-view="photo">${hasGallery(id) ? `<img class="pl-photo" src="${esc(staticViews(id)[0].src)}" alt="${esc(product.title)} — ${esc(staticViews(id)[0].name)}" width="1200" height="1500" fetchpriority="high">` : `<img class="pl-photo" src="assets/${esc(product.catalogImage || product.image)}"${data.artSrcset(product.catalogImage || product.image) ? ` srcset="${esc(data.artSrcset(product.catalogImage || product.image))}" sizes="${esc(data.PHOTO_SIZES)}"` : ''} alt="${esc(product.title)} nas cores originais" width="1254" height="1254" fetchpriority="high">`}<div class="pl-3d" data-pl-viewer hidden></div><p class="pl-status" data-pl-status role="status" hidden></p><ul class="pl-dots" data-pl-dots aria-label="Cores originais">${dots}</ul></div>
@@ -84,12 +86,12 @@ ${hasGallery(id) ? `
           <p class="pl-offer">Levando 2, o segundo sai por ${nbsp(money(COMMERCE.extraPrices[id]))}</p>` : kitOffer(id) ? `
           <p class="pl-offer">${esc(kitOffer(id))}</p>` : ''}
           ${fixed ? `<div class="pl-actions is-single"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar ao carrinho</span></button></div>${kitOffer(id) ? `
-          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">escolha os seus</span></div><div data-pl-kit-body></div></section>` : ''}` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="index.html#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
+          <section class="pl-kit" data-pl-kit aria-labelledby="pl-kit-title" hidden><div class="pl-kit-head"><h2 id="pl-kit-title">Monte seu kit</h2><span class="pl-kit-mix">escolha os seus</span></div><div data-pl-kit-body></div></section>` : ''}` : `<div class="pl-actions"><button type="button" class="pl-add" data-add-product="${id}">${icon('cart')}<span>Adicionar nas cores originais</span></button><a class="pl-customize" href="./#produto/${id}/personalizar" data-pl-customize>${icon('palette')}<span>Personalizar o meu</span></a></div>
           <div class="pl-custom" id="pl-custom" data-pl-custom hidden></div>`}
           <div class="pl-facts">
-            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, `Cada peça é impressa depois do pedido, ${fixed ? 'nas cores dela' : 'nas cores escolhidas'}. A produção começa depois da confirmação do pagamento. <a href="envio.html#prazo">Ver envio e prazos</a>`)}
-            ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho. <a href="envio.html#frete">Ver envio e prazos</a>')}
-            ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas.html">Ver a política</a>')}
+            ${fact('clock', 'Feito sob encomenda', `Produção em ${esc(COMMERCE.productionLabel)}`, `Cada peça é impressa depois do pedido, ${fixed ? 'nas cores dela' : 'nas cores escolhidas'}. A produção começa depois da confirmação do pagamento. <a href="envio#prazo">Ver envio e prazos</a>`)}
+            ${fact('truck', 'Envio para todo o Brasil', 'Frete calculado pelo CEP', 'Enviamos pelos Correios. O frete e o prazo de entrega saem pelo CEP, já no carrinho. <a href="envio#frete">Ver envio e prazos</a>')}
+            ${fact('returns', 'Trocas e Devoluções', 'Desistência em até 7 dias', 'Você pode desistir em até 7 dias depois de receber. <a href="trocas">Ver a política</a>')}
           </div>
           <section class="pl-about"><h2>Sobre a peça</h2><p class="pl-desc">${description}</p><p class="pl-note"><span>${fixed ? 'Cores da peça' : 'Cores originais'}:</span> ${colors}.</p>${product.fixed ? `<p class="pl-note"><span>Observação:</span> ${esc(product.fixed)}</p>` : ''}</section>
         </div>
@@ -104,7 +106,7 @@ ${hasGallery(id) ? `
 // Escolha o seu: um banner por família de encaixe, cada um abrindo a
 // página Produtos só com as peças daquele equipamento (produtos.html?encaixe=<família>). Head, header e footer de produtos.html.
 function choosePage(data, base) {
-  const url = `${siteBase()}/escolha.html`, title = `Escolha o seu · ${SITE}`;
+  const url = `${siteBase()}/escolha`, title = `Escolha o seu · ${SITE}`;
   const description = 'Comece pelo equipamento da sua consulta: retinoscópio, régua de esquiascopia ou lâmpada de fenda. Peças impressas em 3D.';
   const head = base.slice(base.indexOf('<head>\n') + 7, base.indexOf('  <!-- og -->'))
     .replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(description)}">`)
@@ -129,7 +131,7 @@ function choosePage(data, base) {
 const FENDA = 'lampada';
 function fendaPage(data, base) {
   // o endereço da página (canônico, sitemap, prévia) e o curto, do flyer e da mensagem do WhatsApp (o servidor abre /fenda como fenda.html)
-  const {COMMERCE, pixPercent, kitOffer, installmentLabel, icon, FAMILIES} = data, url = `${siteBase()}/fenda.html`, short = `${siteBase()}/fenda`, first = FAMILIES[FENDA].items[0];
+  const {COMMERCE, pixPercent, kitOffer, installmentLabel, icon, FAMILIES} = data, url = `${siteBase()}/fenda`, short = `${siteBase()}/fenda`, first = FAMILIES[FENDA].items[0];
   const title = `Novidade: encaixe para lâmpada de fenda · ${SITE}`;
   const description = 'MonkeyLamp, GiraffeLamp e UnicornLamp: capas impressas em 3D que se encaixam na lâmpada de fenda portátil. ' + kitOffer(first) + '.';
   const head = base.slice(base.indexOf('<head>\n') + 7, base.indexOf('  <!-- og -->'))
@@ -143,7 +145,7 @@ function fendaPage(data, base) {
   const share = `https://wa.me/?text=${encodeURIComponent(`Olha que fofura: capas impressas em 3D para a lâmpada de fenda portátil, da Ju, imprime pra mim? Conheça: ${short}`)}`;
   // "Voltar" no alto: sem JavaScript, a home no banner da novidade; com ele, a página de onde a pessoa veio, na mesma altura (fenda.js)
   const main = `<main class="nv-main" id="conteudo">
-      <a class="nv-return" href="index.html#novidade" data-nv-return>${icon('arrow')}<span>Voltar</span></a>
+      <a class="nv-return" href="./#novidade" data-nv-return>${icon('arrow')}<span>Voltar</span></a>
       ${data.noveltyStage(FENDA)}
       ${data.noveltyOffers(FENDA, {foot: `<a class="nv-share" href="${esc(share)}" target="_blank" rel="noopener" data-nv-share>${icon('whatsapp')}<span>Enviar para um colega pelo WhatsApp</span></a>`})}
       <section class="nv-foot" aria-label="Como funciona">
@@ -159,7 +161,7 @@ function fendaPage(data, base) {
 // O banner da novidade na home, entre <!-- novidade --> e <!-- /novidade --> (fenda-stage.js › noveltyBanner).
 const withBanner = (html, data) => html.replace(/(<!-- novidade -->)[^]*?(<!-- \/novidade -->)/, (all, open, close) => open + data.noveltyBanner(FENDA) + close);
 
-const sitemap = ids => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${LISTED.flatMap(entry => entry === '{products}' ? ids.map(id => `${id}.html`) : [entry])
+const sitemap = ids => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${LISTED.flatMap(entry => entry === '{products}' ? ids.map(id => id) : [entry])
   .map(entry => `  <url><loc>${esc(`${siteBase()}/${entry}`)}</loc></url>`).join('\n')}\n</urlset>\n`;
 const robots = () => `User-agent: *\n${PRIVATE.map(p => `Disallow: ${p}`).join('\n')}\n\nSitemap: ${siteBase()}/sitemap.xml\n`;
 

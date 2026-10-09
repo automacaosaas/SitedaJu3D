@@ -79,7 +79,7 @@ const countCustomers = async emails => (await Promise.all(emails.map(e => store.
   const realApple = await call(routes.startRoute('apple').create({env: prodEnv}), {url: '/api/auth/apple/start'});
   assert.match(realApple.headers.location, /^https:\/\/appleid\.apple\.com\/auth\/authorize\?/);
   const off = await call(routes.startRoute('google').create({env: {SITE_URL: SITE, APP_ENV: 'preview'}}), {url: '/api/auth/google/start?next=checkout'});
-  assert.equal(off.headers.location, '/conta.html?next=checkout#entrar?erro=social_unavailable', 'a provider without credentials explains itself');
+  assert.equal(off.headers.location, '/conta?next=checkout#entrar?erro=social_unavailable', 'a provider without credentials explains itself');
 }
 
 // ── Google: a new account, then the same one ──
@@ -87,7 +87,7 @@ store = createMemoryStore();
 {
   const first = await signIn('google', {email: 'Ana.Souza@Exemplo.test', firstName: 'Ana', lastName: 'Souza', picture: 'https://lh3.googleusercontent.com/a/foto-da-ana=s96-c'});
   assert.equal(first.result.status, 303);
-  assert.equal(first.result.headers.location, '/conta.html#bem-vindo', 'a new account is welcomed and asked for what is missing');
+  assert.equal(first.result.headers.location, '/conta#bem-vindo', 'a new account is welcomed and asked for what is missing');
   assert.match(first.session, /^__Host-ju_session=[\w-]{43}; Path=\/; HttpOnly; Secure; SameSite=Lax; Expires=/, 'the same session cookie as the e-mailed code');
   assert.match(cookieValue(first.result.headers['set-cookie'], social.STATE_COOKIE), /Max-Age=0/, 'the state cookie is spent');
   const ana = await store.customers.findByEmail('ana.souza@exemplo.test');
@@ -103,7 +103,7 @@ store = createMemoryStore();
   assert.equal((await createAccounts({store, env: ENV}).authenticate(token)).id, ana.id, 'the session works like any other');
 
   const again = await signIn('google', {email: 'ana.souza@exemplo.test', firstName: 'Ana', lastName: 'Souza'});
-  assert.equal(again.result.headers.location, '/conta.html', 'next time, straight to the account');
+  assert.equal(again.result.headers.location, '/conta', 'next time, straight to the account');
   assert.equal((await createAccounts({store, env: ENV}).authenticate(again.session.split(';')[0].split('=')[1])).id, ana.id, 'the same account');
   assert.equal((await store.identities.listByCustomer(ana.id)).length, 1, 'no second identity');
   // Found by Google's id even with another e-mail on the Google account now.
@@ -125,7 +125,7 @@ store = createMemoryStore();
   assert.ok(challenge && user);
   const bia = await store.customers.findByEmail('bia@exemplo.test');
   const viaGoogle = await signIn('google', {email: 'bia@exemplo.test', firstName: 'Beatriz', lastName: 'Lima'});
-  assert.equal(viaGoogle.result.headers.location, '/conta.html', 'an existing account: no welcome');
+  assert.equal(viaGoogle.result.headers.location, '/conta', 'an existing account: no welcome');
   assert.equal(await countCustomers(['bia@exemplo.test']), 1, 'one account, never a duplicate');
   assert.equal((await createAccounts({store, env: ENV}).authenticate(viaGoogle.session.split(';')[0].split('=')[1])).id, bia.id, 'signed in to the existing account');
   const linked = await store.customers.findById(bia.id);
@@ -135,18 +135,18 @@ store = createMemoryStore();
   assert.deepEqual((await store.identities.listByCustomer(bia.id)).map(i => i.provider), ['google', 'apple']);
   // An e-mail Google did not verify is never linked nor used.
   const unverified = await signIn('google', {email: 'bia@exemplo.test', verified: false, subject: 'outra-conta-google'});
-  assert.equal(unverified.result.headers.location, '/conta.html#entrar?erro=social_email_unverified');
+  assert.equal(unverified.result.headers.location, '/conta#entrar?erro=social_email_unverified');
   assert.equal(unverified.session, undefined, 'no session');
   assert.equal(await store.identities.find('google', 'outra-conta-google'), null);
   const fresh = await signIn('google', {email: 'ninguem@exemplo.test', verified: false});
-  assert.equal(fresh.result.headers.location, '/conta.html#entrar?erro=social_email_unverified');
+  assert.equal(fresh.result.headers.location, '/conta#entrar?erro=social_email_unverified');
   assert.equal(await store.customers.findByEmail('ninguem@exemplo.test'), null);
 }
 
 // ── Apple: form_post, the name only the first time, "Ocultar meu e-mail" ──
 {
   const hidden = await signIn('apple', {email: 'caio@exemplo.test', firstName: 'Caio', lastName: 'Prado', hideEmail: true});
-  assert.equal(hidden.result.status, 303); assert.equal(hidden.result.headers.location, '/conta.html#bem-vindo');
+  assert.equal(hidden.result.status, 303); assert.equal(hidden.result.headers.location, '/conta#bem-vindo');
   const relay = fake.relayOf('caio@exemplo.test');
   assert.match(relay, /@privaterelay\.appleid\.com$/);
   const caio = await store.customers.findByEmail(relay);
@@ -156,7 +156,7 @@ store = createMemoryStore();
   const [identity] = await store.identities.listByCustomer(caio.id);
   assert.equal(identity.privateEmail, true); assert.equal(identity.email, relay);
   const second = await signIn('apple', {email: 'caio@exemplo.test', hideEmail: true, firstTime: false});
-  assert.equal(second.result.headers.location, '/conta.html', 'no name the second time, still the same account');
+  assert.equal(second.result.headers.location, '/conta', 'no name the second time, still the same account');
   assert.equal((await createAccounts({store, env: ENV}).authenticate(second.session.split(';')[0].split('=')[1])).id, caio.id);
   assert.equal((await store.customers.findById(caio.id)).displayName, 'Caio Prado', 'the name is kept');
   // The real address of a hidden e-mail never matches another account: a new one (the person chose to hide it).
@@ -166,13 +166,13 @@ store = createMemoryStore();
 // ── where to go next ──
 {
   const toCheckout = await signIn('google', {email: 'dani@exemplo.test', firstName: 'Dani', lastName: 'Reis'}, {next: 'checkout'});
-  assert.equal(toCheckout.result.headers.location, '/checkout.html#identificacao', 'back to the checkout, which asks for CPF and phone');
+  assert.equal(toCheckout.result.headers.location, '/checkout#identificacao', 'back to the checkout, which asks for CPF and phone');
   const toBuyNow = await signIn('apple', {email: 'dani@exemplo.test'}, {next: 'comprar-agora'});
-  assert.equal(toBuyNow.result.headers.location, '/comprar-agora.html#identificacao');
+  assert.equal(toBuyNow.result.headers.location, '/comprar-agora#identificacao');
   const toOrders = await signIn('google', {email: 'dani@exemplo.test'}, {next: 'pedidos'});
-  assert.equal(toOrders.result.headers.location, '/conta.html#pedidos');
+  assert.equal(toOrders.result.headers.location, '/conta#pedidos');
   const odd = await signIn('google', {email: 'dani@exemplo.test'}, {next: 'https://golpe.example/'});
-  assert.equal(odd.result.headers.location, '/conta.html', 'only the known destinations, never an address from the link');
+  assert.equal(odd.result.headers.location, '/conta', 'only the known destinations, never an address from the link');
 }
 
 // ── what is refused ──
@@ -180,7 +180,7 @@ store = createMemoryStore();
   const expect = async (label, run, code, next = '') => {
     const {result} = await run();
     assert.equal(result.status, 303, label);
-    assert.equal(result.headers.location, `/conta.html${['checkout', 'comprar-agora'].includes(next) ? `?next=${next}` : ''}#entrar?erro=${code}`, label);
+    assert.equal(result.headers.location, `/conta${['checkout', 'comprar-agora'].includes(next) ? `?next=${next}` : ''}#entrar?erro=${code}`, label);
     assert.equal(cookieValue(result.headers['set-cookie'], '__Host-ju_session'), undefined, `${label}: no session`);
   };
   const person = {email: 'eva@exemplo.test'};
@@ -208,7 +208,7 @@ store = createMemoryStore();
   const first = await signIn('google', person, {tamper: ({cookie, params}) => { replay = {cookie, params}; return {cookie, params}; }});
   assert.equal(first.result.status, 303);
   const again = await call(routes.callbackRoute('google').create({env: ENV, store, fetchImpl: fake.fetchImpl}), {url: `/api/auth/google/callback?${new URLSearchParams(replay.params)}`, cookie: replay.cookie});
-  assert.equal(again.headers.location, '/conta.html#entrar?erro=social_failed', 'the code was already used');
+  assert.equal(again.headers.location, '/conta#entrar?erro=social_failed', 'the code was already used');
   // The wrong PKCE verifier (someone else's code): refused by Google.
   await expect('a code from another start', async () => {
     const a = await call(routes.startRoute('google').create({env: ENV}), {url: '/api/auth/google/start'});
@@ -274,7 +274,7 @@ store = createMemoryStore();
   assert.deepEqual(await store.identities.listByCustomer(ana.id), []);
   assert.equal(await store.identities.find('google', fake.subjectOf('google', 'ana.souza@exemplo.test')), null);
   const back = await signIn('google', {email: 'ana.souza@exemplo.test', firstName: 'Ana', lastName: 'Souza'});
-  assert.equal(back.result.headers.location, '/conta.html#bem-vindo', 'coming back after deleting is a new account');
+  assert.equal(back.result.headers.location, '/conta#bem-vindo', 'coming back after deleting is a new account');
 }
 
 // ── the page: buttons, welcome, messages, fonts, security policy, translations ──

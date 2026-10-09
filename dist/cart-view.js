@@ -72,8 +72,8 @@ export function cartSummary(chosen, {realShipping = false, productionLabel = '',
 const PLAY_ICONS = '<span class="cart-rec-dot" aria-hidden="true"><span><i></i></span><span><i></i></span></span><svg class="cart-rec-pause" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.7 2.7v4.6M6.3 2.7v4.6"/></svg><svg class="cart-rec-play" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.8 2.5v5l4-2.5z"/></svg>';
 function recommendations(cart) {
   const inCart = new Set(cart.map(item => item.productId));
-  const items = [...Object.keys(PRODUCTS).filter(id => !inCart.has(id)).map(id => ({id, href: `${id}.html`, title: PRODUCTS[id].title, price: money(COMMERCE.prices[id])})),
-    ...Object.keys(SOON).map(id => ({id, href: `index.html#produto/${id}/3d`, title: SOON[id].title}))];
+  const items = [...Object.keys(PRODUCTS).filter(id => !inCart.has(id)).map(id => ({id, href: `${id}`, title: PRODUCTS[id].title, price: money(COMMERCE.prices[id])})),
+    ...Object.keys(SOON).map(id => ({id, href: `./#produto/${id}/3d`, title: SOON[id].title}))];
   if (!items.length) return '';
   const arrow = step => `<button type="button" class="cart-rec-arrow ${step < 0 ? 'is-prev' : 'is-next'}" data-rec-step="${step}" aria-controls="cart-rec-track" aria-label="${step < 0 ? 'Peças anteriores' : 'Mais peças'}">${icon('arrow')}</button>`;
   const card = ({id, href, title, price}, index) => {
@@ -84,7 +84,7 @@ function recommendations(cart) {
     + `<div class="cart-rec-rail is-static" data-count="${Math.min(items.length, 3)}" role="region" aria-roledescription="carrossel" aria-labelledby="cart-recs-title">`
     + `<div class="cart-rec-controls" hidden><button type="button" class="cart-rec-toggle" data-rec-play aria-label="Pausar a troca automática" title="Pausar a troca automática">${PLAY_ICONS}</button>${arrow(-1)}${arrow(1)}</div>`
     + `<div class="cart-rec-viewport"><ul class="cart-rec-track" id="cart-rec-track" data-rec-track>${items.map(card).join('')}</ul></div>`
-    + `<a class="cart-rec-more" href="produtos.html" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></span><span class="cart-rec-more-label">Ver mais</span></a>`
+    + `<a class="cart-rec-more" href="produtos" aria-label="Ver mais peças"><span class="cart-rec-more-plus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></span><span class="cart-rec-more-label">Ver mais</span></a>`
     + `</div><p class="sr-only" data-rec-live aria-live="polite" aria-atomic="true"></p></section>`;
 }
 
@@ -379,10 +379,10 @@ export function paymentBlock(methods) {
 function purchaseInfo(methods) {
   const row = (name, href, title, text) => `<li>${icon(name)}<a href="${href}"><strong>${title}</strong> <span>${text}</span></a></li>`;
   return `<section class="cart-info" aria-label="Informações da compra"><ul class="cart-info-list">${[
-    row('truck', 'envio.html#frete', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
-    row('card', 'termos.html#precos', 'Formas de pagamento.', 'Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.'),
-    row('clock', 'envio.html#prazo', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
-    row('returns', 'trocas.html', 'Trocas e devoluções.', 'Você pode desistir em até 7 dias depois de receber.')].join('')}</ul>
+    row('truck', 'envio#frete', 'Entrega e frete.', 'Enviamos pelos Correios para todo o Brasil; o frete e o prazo saem pelo CEP.'),
+    row('card', 'termos#precos', 'Formas de pagamento.', 'Pix com 5% de desconto ou cartão de crédito e débito, pelo Mercado Pago.'),
+    row('clock', 'envio#prazo', 'Feito sob encomenda.', `A produção leva ${esc(COMMERCE.productionLabel)} e começa depois da confirmação do pagamento.`),
+    row('returns', 'trocas', 'Trocas e devoluções.', 'Você pode desistir em até 7 dias depois de receber.')].join('')}</ul>
     ${paymentBlock(methods)}</section>`;
 }
 const extras = (cart, options = {}) => `<div class="cart-more">${recommendations(cart)}${purchaseInfo(options.payMethods)}</div>`;
@@ -391,8 +391,8 @@ const extras = (cart, options = {}) => `<div class="cart-more">${recommendations
 export function renderCart(cart, options = {}) {
   const chosen = cart;
   const introduction = `<div class="shop-heading cart-heading"><p class="eyebrow">SUAS ESCOLHAS</p><h1 tabindex="-1">Seu carrinho. <span class="cart-heart" aria-hidden="true">♡</span></h1><p>Confira seus produtos antes de continuar.</p></div>`;
-  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos.html">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart, options)}`;
+  if (!cart.length) return `<div class="cart-empty-layout"><div id="cart-steps-slot"></div>${introduction}<section class="empty-cart"><span aria-hidden="true">♡</span><h2>Seu carrinho espera um pouco de cor.</h2><p>Escolha uma peça e crie a sua combinação.</p><a class="primary shop-primary" href="produtos">Explorar os produtos ${icon('arrow')}</a></section></div>${extras(cart, options)}`;
   return `<div class="cart-layout"><section class="cart-main-column" aria-label="Produtos no carrinho"><div id="cart-steps-slot"></div>${introduction}
-    <div class="cart-products">${cart.map(item => itemCard(item, cart)).join('')}</div><a class="collection-link cart-continue" href="produtos.html" data-action="return">← Continuar escolhendo</a>
+    <div class="cart-products">${cart.map(item => itemCard(item, cart)).join('')}</div><a class="collection-link cart-continue" href="produtos" data-action="return">← Continuar escolhendo</a>
     </section>${cartSummary(chosen, options)}</div>${extras(cart, options)}`;
 }

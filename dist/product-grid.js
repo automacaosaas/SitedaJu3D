@@ -14,28 +14,28 @@ export function productGridCard(id) {
   // a peça de cores fixas (as lâmpadas): as cores dela; nada para personalizar — o link leva à página da peça
   const colors = fixed ? product.colors : product.parts.map(part => color(selection[part.id]));
   return `<article class="product-grid-card" data-product-id="${id}">`
-    + `<div class="product-grid-art"><a href="${id}.html" tabindex="-1" aria-hidden="true"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></a>`
+    + `<div class="product-grid-art"><a href="${id}" tabindex="-1" aria-hidden="true"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></a>`
     + `<button type="button" class="product-cart" data-add-product="${id}" aria-label="Adicionar ${product.title} ao carrinho${fixed ? '' : ' nas cores originais'}" title="${fixed ? 'Adicionar ao carrinho' : 'Adicionar nas cores originais'}">${icon('cart')}</button></div>`
     + `<div class="product-grid-copy"><p class="product-grid-category">${category(product.category).label}</p>`
-    + `<h2><a href="${id}.html">${product.title}</a></h2><p class="product-grid-sub">${product.subtitle}</p>`
+    + `<h2><a href="${id}">${product.title}</a></h2><p class="product-grid-sub">${product.subtitle}</p>`
     + `<p class="product-grid-colors"><span class="sr-only">${fixed ? 'Cores' : 'Cores originais'}: ${colors.map(c => c.name).join(', ')}</span><span class="product-swatches" aria-hidden="true">${colors.map(c => `<i style="--swatch:${paint(c)}" title="${c.name}"></i>`).join('')}</span></p>`
     + `<p class="product-grid-price"><strong>${money(price)}</strong><span class="product-grid-pix">${money(pixPrice(price))} no Pix</span></p>`
     + `<p class="product-grid-made">${icon('clock')}<span><span class="sr-only">Produção em </span>${COMMERCE.productionLabel}</span></p>`
     + `<p class="product-grid-note" role="status"></p>`
-    + (fixed ? `<a class="product-customize" href="${id}.html">Ver a peça</a>` : `<a class="product-customize" href="index.html#produto/${id}/personalizar">Personalizar o meu</a>`) + '</div></article>';
+    + (fixed ? `<a class="product-customize" href="${id}">Ver a peça</a>` : `<a class="product-customize" href="./#produto/${id}/personalizar">Personalizar o meu</a>`) + '</div></article>';
 }
 
 // A novidade sem venda (SOON, products.js): foto, nome, selo "Em breve" e "Ver encaixado", que abre a demonstração no banner
 // da vitrine (index.html#produto/<peça>/encaixe). Sem preço, carrinho, personalização nem página própria.
 export function soonGridCard(id) {
-  const product = SOON[id], href = `index.html#produto/${id}/encaixe`;
+  const product = SOON[id], href = `./#produto/${id}/encaixe`;
   return `<article class="product-grid-card is-soon" data-product-id="${id}">`
     + `<div class="product-grid-art"><a href="${href}" tabindex="-1" aria-hidden="true"><img src="assets/card-${id}.webp" alt="" width="768" height="768" loading="lazy" decoding="async"></a><span class="product-soon">Em breve</span></div>`
     + `<div class="product-grid-copy"><p class="product-grid-category">${category(product.category).label}</p>`
     + `<h2><a href="${href}">${product.title}</a></h2><p class="product-grid-sub">${product.subtitle}</p>`
     + `<p class="product-grid-colors"><span class="sr-only">Cores originais: ${product.colors.map(c => c.name).join(', ')}</span><span class="product-swatches" aria-hidden="true">${product.colors.map(c => `<i style="--swatch:${paint(c)}" title="${c.name}"></i>`).join('')}</span></p>`
     + `<p class="product-grid-soon-note">Novidade · em breve</p>`
-    + `<a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="index.html#produto/${id}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></article>`;
+    + `<a class="product-customize product-see-fit" href="${href}">${icon('play')}<span>Ver encaixado</span></a><a class="product-see-3d" href="./#produto/${id}/3d">${icon('cube')}<span>Ver em 3D</span></a></div></article>`;
 }
 
 // family: só as peças de uma família de encaixe (FAMILIES, products.js), na ordem dela — a página Produtos aberta por um

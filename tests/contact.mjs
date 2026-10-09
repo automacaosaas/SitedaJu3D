@@ -124,7 +124,7 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   for (const name of ['name', 'email', 'phone', 'subject', 'message', 'website']) assert.match(page, new RegExp(`name="${name}"`), name);
   assert.deepEqual([...page.matchAll(/<option value="([a-z]+)">/g)].map(m => m[1]), Object.keys(SUBJECTS));
   assert.match(page, /<div class="contact-trap" aria-hidden="true"><label>Não preencha este campo<input name="website" tabindex="-1" autocomplete="off"><\/label><\/div>/);
-  assert.match(page, /<a href="privacidade\.html">Política de Privacidade<\/a>/);
+  assert.match(page, /<a href="privacidade">Política de Privacidade<\/a>/);
   assert.match(script, /fetch\('\/api\/contact\/send'/);
   assert.match(page, /<h2>Mensagem enviada com sucesso!<\/h2>\n\s*<p>Responderemos em breve\.<\/p>/);
   // 08/10/2026 (usabilidade 9): a problem with a field shows right under it and is tied to it; the field's own hint stays
@@ -146,7 +146,7 @@ function setup(env = ENV, answer = [200, {id: 'em_1'}]) {
   assert(faq.includes(`a produção leva de ${COMMERCE.productionLabel}`), 'production time = commerce-config.js');
   assert(faq.includes('você acompanha a localização e o status do pacote diretamente em Meus pedidos, atualizados automaticamente pelos Correios'), 'tracking: automatic, in Meus pedidos');
   assert.doesNotMatch(faq, /enviamos o código de rastreio dos Correios/, 'no promise of a code sent by hand');
-  for (const id of ['faq-prazo', 'faq-frete']) assert.match(faq, new RegExp(`<details class="faq-item" id="${id}">[^]*?<a href="envio\\.html">Ver Envio e prazos →</a>[^]*?</details>`), `${id}: links to Envio e prazos`);
+  for (const id of ['faq-prazo', 'faq-frete']) assert.match(faq, new RegExp(`<details class="faq-item" id="${id}">[^]*?<a href="envio">Ver Envio e prazos →</a>[^]*?</details>`), `${id}: links to Envio e prazos`);
   assert(faq.includes(`Pix, com ${pixPercent}% de desconto nas peças`), 'Pix discount = the server rule');
   assert(faq.includes(`a partir de ${money(shipping.freeShipping.fromCents).replace(/ /g, ' ')} em peças, o envio por PAC é grátis`), 'free shipping = shipping-config.js');
   assert(read('dist/trocas.html').includes('desistir em até 7 dias corridos') && faq.includes('desistir da compra em até 7 dias corridos'), 'returns as in the policy');

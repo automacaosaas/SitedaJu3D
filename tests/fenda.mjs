@@ -31,12 +31,12 @@ for (const [i, key] of items.entries()) {
   assert(page.includes(`data-nv-item="${i}" data-nv-key="${key}"`), `${key}: on the stage`);
   assert(page.includes(`data-nv-layer="${i}"`), `${key}: its own background layer (the home's gradient and silhouettes)`);
   assert(new RegExp(`<h2 class="nv-name">${p.title}</h2>`).test(page), `${key}: the big name`);
-  assert(page.includes(`<a class="nv-more" href="${key}.html" data-nv-more`), `${key}: "Ver detalhes" (the piece's page without JavaScript)`);
+  assert(page.includes(`<a class="nv-more" href="${key}" data-nv-more`), `${key}: "Ver detalhes" (the piece's page without JavaScript)`);
   assert.equal((page.match(new RegExp(`data-nv-buy="${key}"`, 'g')) || []).length, 2, `${key}: "Comprar" under the name and "Comprar agora" in the details, straight to the purchase`);
   assert(page.includes(`data-add-product="${key}" aria-label="Adicionar ${p.title} ao carrinho"`), `${key}: "Adicionar ao carrinho" (catalog.js)`);
   assert(page.includes(money(price).replace(/ /g, '&nbsp;')) && page.includes(`${money(pixPrice(price)).replace(/ /g, '&nbsp;')} no Pix`), `${key}: price and Pix price`);
   for (const c of p.colors) assert(page.includes(`<li style="--swatch:${c.hex}"><i aria-hidden="true"></i><span>${c.name}</span></li>`), `${key}: color tab ${c.name}`);
-  assert(page.includes(`href="index.html#produto/${key}/encaixe"`) && page.includes(`<a href="${key}.html">`), `${key}: see it fitted, see its page`);
+  assert(page.includes(`href="./#produto/${key}/encaixe"`) && page.includes(`<a href="${key}">`), `${key}: see it fitted, see its page`);
 }
 assert.equal((page.match(/class="fit-figure nv-fig"/g) || []).length, items.length, 'each piece fitted on the whole lamp (escolha.js › fitFigure)');
 assert(/--fig-h:[\d.]+/.test(page), 'the figure keeps the whole lamp in proportion (fenda-stage.js › figureHeight)');
@@ -52,7 +52,7 @@ assert(/let units = Number\(document\.querySelector\('\.nv-tier\.is-best \[data-
 assert(page.includes('class="nv-tier is-best"') && page.includes('--tier-stops:'), 'each card in its piece colors, the best one marked');
 assert(page.includes('<div data-nv-kit></div>') && js.includes("import {mountKit, kitPreset} from './kit-builder.js';"), '"Monte seu kit" below the cards');
 assert(page.includes('data-nv-kit-buy hidden') && page.includes('data-nv-kit-fallback'), 'the kit goes straight to the purchase; without JavaScript, links to the pieces');
-assert(js.includes("sessionStorage.setItem(DIRECT_KEY, JSON.stringify(lines)); location.assign('comprar-agora.html');"), '"Comprar" goes to the purchase like the piece page\'s "Comprar agora"');
+assert(js.includes("sessionStorage.setItem(DIRECT_KEY, JSON.stringify(lines)); location.assign('comprar-agora');"), '"Comprar" goes to the purchase like the piece page\'s "Comprar agora"');
 assert(/data-nv-reveal/.test(page) && js.includes('IntersectionObserver'), 'offers come in on scroll');
 assert(!/nv-ju|Falar com a Ju/.test(page + js), 'no "talk to Ju": the price is on the page, the page leads to the purchase');
 assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one heading for the page');
@@ -60,13 +60,13 @@ assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one heading for the page')
 // A página: as folhas do site e o script dela, endereço curto, prévia de link própria, no sitemap.
 for (const sheet of ['carousel.css', 'escolha.css', 'product-landing.css', 'fenda.css']) assert(page.includes(`<link rel="stylesheet" href="${sheet}">`), sheet);
 assert(page.includes('<script type="module" src="fenda.js"></script>'));
-assert(page.includes(`<link rel="canonical" href="${BASE}/fenda.html">`) && page.includes(`<meta property="og:url" content="${BASE}/fenda.html">`), 'its address');
+assert(page.includes(`<link rel="canonical" href="${BASE}/fenda">`) && page.includes(`<meta property="og:url" content="${BASE}/fenda">`), 'its address');
 assert(page.includes(`<meta property="og:image" content="${BASE}/assets/og-fenda.jpg">`) && fs.existsSync(path.join(root, 'dist/assets/og-fenda.jpg')), 'link preview image');
-assert(read('dist/sitemap.xml').includes(`<loc>${BASE}/fenda.html</loc>`), 'listed for search engines');
+assert(read('dist/sitemap.xml').includes(`<loc>${BASE}/fenda</loc>`), 'listed for search engines');
 assert(page.includes(kitOffer(items[0])), 'the kit offer below the stage');
 assert(page.indexOf('class="nv-share"') > page.indexOf('data-nv-kit-buy') && page.indexOf('class="nv-share"') < page.indexOf('class="nv-foot"'), 'the WhatsApp invite, discreet, under the kit\'s buy row');
 assert(js.includes("actions.className = 'nv-kit-actions'") && js.includes('actions.append(kitBuy, add)'), '"Comprar agora" and the smaller cart button on one row');
-assert(page.includes('<a class="nv-return" href="index.html#novidade" data-nv-return>') && page.indexOf('data-nv-return') < page.indexOf('<section class="nv-stage"'), '"Voltar" above the stage: back to the home banner');
+assert(page.includes('<a class="nv-return" href="./#novidade" data-nv-return>') && page.indexOf('data-nv-return') < page.indexOf('<section class="nv-stage"'), '"Voltar" above the stage: back to the home banner');
 assert(js.includes('history.back()') && js.includes("import {localDestination} from './shopping-navigation.js';"), '"Voltar" returns to the page the person came from, at the same height');
 assert(read('dist/catalog.js').includes("sessionStorage.setItem('ju:nvb-return'") && js.includes("sessionStorage.setItem('ju:restore-shopping'"), 'from the home band: the height it saved comes back the way the cart\'s return does (shopping-navigation.js)');
 const share = new URL(page.match(/<a class="nv-share" href="([^"]+)"/)[1].replace(/&amp;/g, '&'));
@@ -85,9 +85,9 @@ assert(/prefers-reduced-motion: reduce/.test(css));
 // O banner da home, entre a vitrine e "Nossa coleção", gravado como fenda-stage.js o desenha.
 assert(home.includes(`<!-- novidade -->${noveltyBanner('lampada')}<!-- /novidade -->`), 'home banner (run node tools/build-product-pages.cjs)');
 assert(home.indexOf('<!-- novidade -->') < home.indexOf('class="catalog catalog-home"'), 'between the showcase and the collection');
-assert(home.includes('<section class="nvb" id="novidade"') && (home.match(/class="nvb-pick/g) || []).length === Math.min(3, items.length), 'the three pieces; index.html#novidade comes back here');
-for (const key of items.slice(0, 3)) assert(home.includes(`<a href="fenda.html#${key}">`), `${key}: opens the showcase on it`);
-assert(home.includes('<a class="nvb-cta" href="fenda.html#ofertas">') && /<li class="is-best"><b>3<\/b>/.test(home), 'the best tier marked and the invite straight to the offers');
+assert(home.includes('<section class="nvb" id="novidade"') && (home.match(/class="nvb-pick/g) || []).length === Math.min(3, items.length), 'the three pieces; ./#novidade comes back here');
+for (const key of items.slice(0, 3)) assert(home.includes(`<a href="fenda#${key}">`), `${key}: opens the showcase on it`);
+assert(home.includes('<a class="nvb-cta" href="fenda#ofertas">') && /<li class="is-best"><b>3<\/b>/.test(home), 'the best tier marked and the invite straight to the offers');
 assert(/--nvb-a:#[0-9a-f]{6};--nvb-b:#[0-9a-f]{6};--nvb-c:#[0-9a-f]{6}/.test(home), 'the band blends the three pieces\' palettes');
 assert(/\.nvb::before\{[^}]*mask-image:linear-gradient\(to bottom,transparent/.test(read('dist/catalog.css')), 'the band fades into the showcase above and the collection below');
 assert.equal((home.match(/data-nvb-reveal/g) || []).length, 3 + Math.min(3, items.length) + 1, 'badge, title, text, the pieces and the tiers come in on scroll');

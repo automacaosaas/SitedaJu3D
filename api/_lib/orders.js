@@ -247,7 +247,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
     if (!DECIDED.includes(order.status)) return false;
     const mail = config(env), data = summary(order);
     if (!mailReady(mail) || !data.customer.email) return false;
-    const message = renderDecisionEmail({summary: data, status: order.status, refund: order.refundState, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta.html#pedidos`});
+    const message = renderDecisionEmail({summary: data, status: order.status, refund: order.refundState, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta#pedidos`});
     const decided = order.decidedAt ? new Date(order.decidedAt).getTime() : 0;
     try {
       await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${order.status}-${order.id}-${decided}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind: order.status, reference: order.reference}))});
@@ -260,7 +260,7 @@ function createOrders({store, env = process.env, now = () => Date.now()}) {
   async function notifyTracking(order, kind, {fetchImpl = globalThis.fetch, outbox, test = order.source !== 'live'} = {}) {
     const mail = config(env), data = summary(order);
     if (kind !== 'saiu' || !mailReady(mail) || !data.customer.email) return false;
-    const message = renderDecisionEmail({summary: data, status: kind, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta.html#pedidos`});
+    const message = renderDecisionEmail({summary: data, status: kind, lang: order.lang, test, assetUrl: mail.assetUrl, ordersUrl: `${mail.siteUrl}/conta#pedidos`});
     const shipped = order.shippedAt ? new Date(order.shippedAt).getTime() : 0;
     try {
       await sendMail({settings: mail, to: data.customer.email, subject: message.subject, html: message.html, text: message.text, idempotencyKey: `order-${kind}-${order.id}-${shipped}`, fetchImpl, outbox: outbox && (m => outbox({...m, kind, reference: order.reference}))});

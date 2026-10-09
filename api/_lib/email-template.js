@@ -55,7 +55,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;
 // The link opens the verification screen with the code already filled in. It travels in the URL fragment, which
 // browsers never send to a server or forward in a Referer header. Account deletion opens its own screen (#excluir).
 function verificationUrl({siteUrl, token, code, route = 'verificar'}) {
-  return `${siteUrl.replace(/\/+$/, '')}/conta.html#${route}?c=${encodeURIComponent(token)}&k=${encodeURIComponent(code)}`;
+  return `${siteUrl.replace(/\/+$/, '')}/conta#${route}?c=${encodeURIComponent(token)}&k=${encodeURIComponent(code)}`;
 }
 
 function renderVerificationEmail({lang = 'pt-BR', purpose = 'signup', name = '', code, url, siteUrl, assetUrl = siteUrl, expiryMinutes = 10, year = new Date().getFullYear()}) {

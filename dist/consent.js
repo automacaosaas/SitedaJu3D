@@ -61,7 +61,7 @@ function noticeHtml(list, current) {
   const toggles = list.map(c => `<label class="consent-option"><input type="checkbox" name="${c.id}"${current?.[c.id] ? ' checked' : ''}><span><strong>${esc(c.title)}</strong><small>${esc(c.text)}</small></span></label>`).join('');
   return `<div class="consent-card">
     <p class="consent-title" id="consent-title">Sua privacidade</p>
-    <p class="consent-text">Usamos o essencial para o site funcionar e, com a sua permissão, cookies de análise e de anúncios para entender as visitas e melhorar a loja. Você escolhe. <a href="privacidade.html#cookies">Política de Privacidade</a></p>
+    <p class="consent-text">Usamos o essencial para o site funcionar e, com a sua permissão, cookies de análise e de anúncios para entender as visitas e melhorar a loja. Você escolhe. <a href="privacidade#cookies">Política de Privacidade</a></p>
     <form class="consent-options" data-consent-form hidden>
       <label class="consent-option is-fixed"><input type="checkbox" checked disabled><span><strong>Essenciais</strong><small>Carrinho, login, idioma e esta escolha. Sempre ativos.</small></span></label>
       ${toggles}

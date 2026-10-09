@@ -34,14 +34,14 @@ const internal = new Set(['admin.html', 'email-preview.html']);
 for (const name of pages().filter(n => !internal.has(n))) {
   const html = read('dist/' + name), block = html.match(/<div class="footer-legal">[\s\S]*?<\/div>/)?.[0] || '';
   assert(block, `${name}: footer legal block`);
-  for (const href of ['termos.html', 'privacidade.html', 'trocas.html']) assert(block.includes(`href="${href}"`), `${name}: footer links to ${href}`);
+  for (const href of ['termos', 'privacidade', 'trocas']) assert(block.includes(`href="${href}"`), `${name}: footer links to ${href}`);
   for (const field of ['legalName', 'cnpj', 'address', 'email']) assert(block.includes(`data-company="${field}"`), `${name}: footer shows ${field}`);
   assert(block.includes('translate="no"'), `${name}: the store details are never translated`);
 }
 
 // ── the documents ─────────────────────────────────────────────────────
 const docs = {
-  'termos.html': ['Termos de Uso', 'Código de Defesa do Consumidor', 'maiores de 18 anos', 'Cada CPF pode ter uma conta', 'Propriedade intelectual', 'foro do domicílio do consumidor', 'href="trocas.html"', 'href="privacidade.html"', 'Excluir minha conta'],
+  'termos.html': ['Termos de Uso', 'Código de Defesa do Consumidor', 'maiores de 18 anos', 'Cada CPF pode ter uma conta', 'Propriedade intelectual', 'foro do domicílio do consumidor', 'href="trocas"', 'href="privacidade"', 'Excluir minha conta'],
   'privacidade.html': ['Política de Privacidade', 'Lei nº 13.709/2018', 'art. 7º', 'Mercado Pago', 'Resend', 'servidor dedicado à loja, no Brasil', 'cópia diária do banco de dados é apagada em até 120 dias', 'Bling (emissor de nota fiscal)', 'e o Backblaze, que guarda as cópias de segurança', 'já chegam criptografadas', 'Correios', 'Cálculo do frete', 'ViaCEP', 'BrasilAPI', 'art. 33', '5 anos', '6 meses', 'art. 18', 'Excluir minha conta', 'ANPD', 'art. 48', 'Cookies', 'não usamos cookies de publicidade', 'só serão carregadas depois do seu consentimento', 'Preferências de cookies', 'não recebemos nem guardamos o número', 'Mensagens de atendimento:</strong> as mensagens do formulário de contato ficam guardadas por 12 meses', 'spam), por 30 dias', 'o número de WhatsApp que informar'],
   'trocas.html': ['Trocas e Devoluções', 'até 7 dias', 'art. 49', 'inclusive o frete', '90 dias', 'art. 26', '30 dias', 'art. 18', 'Decreto nº 7.962/2013', 'Pix', 'Cartão de crédito', 'Direito de arrependimento: 7 dias', 'href="#arrependimento">Como desistir']
 };
@@ -63,7 +63,7 @@ assert(/html\[lang="pt-BR"\] \.legal-language \{ display: none; \}/.test(read('d
 // ── agreement: sign-up notice, checkout box, what the browser sends ───
 const account = read('dist/account.js'), checkout = read('dist/checkout.js'), drawer = read('dist/account-drawer.js');
 assert(/<p class="auth-terms">Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade\.<\/p>/.test(account), 'sign-up says that creating the account is agreeing');
-assert(/<a href="termos\.html" target="_blank" rel="noopener">Termos de Uso<\/a>/.test(account), 'sign-up links open in a new tab (the account page may be inside the drawer)');
+assert(/<a href="termos" target="_blank" rel="noopener">Termos de Uso<\/a>/.test(account), 'sign-up links open in a new tab (the account page may be inside the drawer)');
 assert(/<input type="checkbox" name="terms" required /.test(checkout), 'checkout: the agreement box is required');
 assert(/acceptTerms: draft\.terms === 'on'/.test(checkout), 'checkout: the agreement goes to the server with the payment');
 assert(/target="_blank" rel="noopener">Trocas e Devoluções<\/a>/.test(checkout), 'checkout: documents open in a new tab, the order in progress stays');

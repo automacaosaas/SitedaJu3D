@@ -85,11 +85,12 @@
     const link = event.target.closest('a[href]');
     if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.download || (link.target && link.target !== '_self')) return;
     const url = new URL(link.href, location.href);
-    if (url.origin !== location.origin || !url.pathname.endsWith('.html') || (url.pathname === location.pathname && url.search === location.search)) return;
-    if (embedded && !url.pathname.endsWith('/conta.html')) {
+    // uma página da loja: / ou /nome, com ou sem ".html" (endereços limpos desde 09/10/2026)
+    if (url.origin !== location.origin || !/^\/(?:[a-z0-9-]+(?:\.html)?)?$/.test(url.pathname) || (url.pathname === location.pathname && url.search === location.search)) return;
+    if (embedded && !/\/conta(?:\.html)?$/.test(url.pathname)) {
       event.preventDefault(); parent.postMessage({type:'ju:account-navigate', url:url.href}, location.origin); return;
     }
-    if (url.pathname.endsWith('/conta.html') && matchMedia('(min-width: 901px)').matches && !embedded && window.openJuAccount) {
+    if (/\/conta(?:\.html)?$/.test(url.pathname) && matchMedia('(min-width: 901px)').matches && !embedded && window.openJuAccount) {
       event.preventDefault(); window.openJuAccount(url); return;
     }
     // The destination reveals once its header is ready.

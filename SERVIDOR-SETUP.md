@@ -258,7 +258,8 @@ vem do `SITE_URL` (quando é um nome público) ou, na falta, do `COMPANY.website
 - `curl -s https://juimprimepramim.com.br/api/health` mostra `"indexable":true` (e `false` pelo endereço temporário).
 
 Depois, no Google Search Console: propriedade de domínio (registro TXT no Registro.br), enviar
-`https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL".
+`https://juimprimepramim.com.br/sitemap.xml` e pedir a indexação da home em "Inspeção de URL". Passo a passo completo, com o que
+acompanhar depois: **`GOOGLE-SEARCH-CONSOLE.md`**.
 
 ## Página "voltamos já" e registros de acesso
 

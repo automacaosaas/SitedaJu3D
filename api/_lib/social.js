@@ -17,7 +17,7 @@ const b64 = value => Buffer.from(typeof value === 'string' ? value : JSON.string
 const STATE_TTL = 10 * 60 * 1000;
 const SKEW = 2 * 60 * 1000;
 // Where the browser lands afterwards: the checkout (it asks for CPF and phone itself), "Meus pedidos", or the account.
-const NEXT = {checkout: '/checkout.html#identificacao', 'comprar-agora': '/comprar-agora.html#identificacao', pedidos: '/conta.html#pedidos'};
+const NEXT = {checkout: '/checkout#identificacao', 'comprar-agora': '/comprar-agora#identificacao', pedidos: '/conta#pedidos'};
 const nextKey = value => Object.hasOwn(NEXT, value) ? value : '';
 
 const PROVIDERS = {

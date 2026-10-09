@@ -34,7 +34,7 @@ assert(js.includes("dialog.addEventListener('keydown',e=>{if(e.key==='Escape'&&s
 assert(js.includes('for(const el of dialog.children)el.inert=el!==sheet;') && js.includes('for(const el of dialog.children)el.inert=false;') && js.includes("sheet.classList.add('is-leaving');sheetTimer=setTimeout(") && css.includes('.pdp-sheet.is-leaving { transition-duration: .24s;'), 'o painel segura o foco e sai deslizando');
 assert(js.includes("['ArrowLeft','ArrowRight','Home','End']"));
 // Sem dados inventados: trocas apontam para a política real; nada de "a confirmar".
-assert(dialog.includes('href="trocas.html"') && !/a confirmar|compatível com/i.test(dialog));
+assert(dialog.includes('href="trocas"') && !/a confirmar|compatível com/i.test(dialog));
 // Toque e movimento.
 assert(/#product-dialog \.swatch \{ width: 44px; height: 44px;/.test(css), 'cores com 44 px de área de toque');
 assert(/\.pdp-sheet-tabs button \{ min-height: 44px;/.test(css) && /\.pdp-sheet-close \{ width: 44px; height: 44px;/.test(css));

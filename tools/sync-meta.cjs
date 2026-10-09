@@ -67,7 +67,8 @@ function organization() {
 
 function block(name) {
   const page = PAGES[name];
-  return tags({url: `${base()}/${page.url ?? name}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null, canonical: Boolean(page.canonical)});
+  // o endereço limpo, sem ".html" (09/10/2026; o servidor leva o antigo ao limpo com 301)
+  return tags({url: `${base()}/${page.url ?? name.replace(/\.html$/, '')}`, title: page.title, description: page.description, jsonLd: name === 'index.html' ? organization() : null, canonical: Boolean(page.canonical)});
 }
 
 function sync(html, name) {

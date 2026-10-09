@@ -23,7 +23,7 @@ const cardArt = Object.freeze({
 const CARD_SIZES = '212px';
 const cardSources = (preview, full) => preview === full ? `src="assets/${full}"` : `src="assets/${full}" srcset="assets/${preview} 384w, assets/${full} 768w" sizes="${CARD_SIZES}"`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const productHref = id => `${document.body.classList.contains('products-page') ? 'index.html' : ''}#produto/${id}`;
+const productHref = id => `${document.body.classList.contains('products-page') ? './' : ''}#produto/${id}`;
 // "Ver encaixado": a vitrine vai para a peça e abre a demonstração (carousel.js, #produto/<peça>/encaixe).
 const demoHref = id => `${productHref(id)}/encaixe`;
 
@@ -224,7 +224,7 @@ function familyBar(grid, id) {
   if (!id) return;
   const bar = document.createElement('div');
   bar.className = 'catalog-family';
-  bar.innerHTML = `<p class="catalog-family-chip"><span>${FAMILIES[id].label}</span><a href="produtos.html" aria-label="Ver todas as peças"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></a></p><a class="catalog-family-other" href="escolha.html"><span>Outros encaixes</span>${icon('arrow')}</a>`;
+  bar.innerHTML = `<p class="catalog-family-chip"><span>${FAMILIES[id].label}</span><a href="produtos" aria-label="Ver todas as peças"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></a></p><a class="catalog-family-other" href="escolha"><span>Outros encaixes</span>${icon('arrow')}</a>`;
   grid.before(bar);
 }
 for (const host of document.querySelectorAll('[data-product-grid]')) { const html = productGrid(host.dataset.category, fitFamily); if (host.innerHTML.trim() !== html) host.innerHTML = html; familyBar(host, fitFamily); }
@@ -248,7 +248,7 @@ for (const tabs of document.querySelectorAll('[data-catalog-tabs]')) {
     for (const part of parts) if (part.getBoundingClientRect().top > innerHeight) { part.classList.add('is-pending'); seen.observe(part); }
   }
   // indo para a vitrine, a home guarda a altura: o "Voltar" de lá traz a pessoa de volta exatamente aqui (fenda.js)
-  for (const link of document.querySelectorAll('.nvb a[href^="fenda.html"]')) link.addEventListener('click', () => {
+  for (const link of document.querySelectorAll('.nvb a[href^="fenda"]')) link.addEventListener('click', () => {
     try { sessionStorage.setItem('ju:nvb-return', JSON.stringify({url: location.pathname + location.search, y: scrollY, time: Date.now()})); } catch {}
   });
 }

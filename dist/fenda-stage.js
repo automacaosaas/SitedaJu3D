@@ -52,13 +52,13 @@ export function noveltyStage(family) {
       + `<div class="nv-buy"><p class="nv-price-line"><strong>${nbsp(money(price))}</strong><span class="nv-pix">${nbsp(money(pixPrice(price)))} no Pix</span></p>`
       + `<div class="nv-ctas">${buy(key, 'Comprar')}</div></div>`
       // sem JavaScript, "Ver detalhes" é o link da página da peça; com ele, abre os detalhes aqui mesmo (fenda.js)
-      + `<a class="nv-more" href="${key}.html" data-nv-more aria-controls="nv-detail" aria-expanded="false">Ver detalhes</a></div>`; }).join('');
+      + `<a class="nv-more" href="${key}" data-nv-more aria-controls="nv-detail" aria-expanded="false">Ver detalhes</a></div>`; }).join('');
   const tops = items.map((key, i) => { const p = PRODUCTS[key], price = COMMERCE.prices[key];
     return `<div class="nv-detail-top" data-nv-top="${i}"${i ? ' hidden' : ''}><div class="nv-price"><strong>${nbsp(money(price))}</strong><span class="nv-pix">${nbsp(money(pixPrice(price)))} no Pix</span><small>ou ${esc(installmentLabel(price))} sem juros no cartão</small></div>`
       + `<ul class="nv-tabs" aria-label="Cores da peça">${(p.colors || []).map(c => `<li style="--swatch:${c.hex}"><i aria-hidden="true"></i><span>${esc(c.name)}</span></li>`).join('')}</ul>`
       + `<p class="nv-desc">${esc(p.description)}</p>`
       + `<div class="nv-ctas">${buy(key, 'Comprar agora')}</div>`
-      + `<p class="nv-links"><a href="#ofertas" data-nv-offers>${icon('bag')}<span>${esc(kitOffer(key))}</span></a><a href="${key}.html">${icon('eye')}<span>Ver a peça</span></a><a href="index.html#produto/${key}/encaixe">${icon('play')}<span>Ver encaixado</span></a></p></div>`; }).join('');
+      + `<p class="nv-links"><a href="#ofertas" data-nv-offers>${icon('bag')}<span>${esc(kitOffer(key))}</span></a><a href="${key}">${icon('eye')}<span>Ver a peça</span></a><a href="./#produto/${key}/encaixe">${icon('play')}<span>Ver encaixado</span></a></p></div>`; }).join('');
   return `<section class="nv-stage" data-nv aria-roledescription="carrossel" aria-label="Novidades: encaixe para ${esc(tool.toLowerCase())}" style="${css(tone(first))};--fig-h:${height}">
         <div class="nv-bg" aria-hidden="true">${layers}</div>
         <div class="nv-head">
@@ -109,7 +109,7 @@ export function noveltyOffers(family, {foot = ''} = {}) {
           <div class="pl-kit-head"><h3>Monte seu kit</h3><span class="pl-kit-mix">escolha os seus</span></div>
           <div data-nv-kit></div>
           <button type="button" class="nv-kit-buy" data-nv-kit-buy hidden>${icon('bag')}<span>Comprar agora</span></button>
-          <p class="nv-kit-fallback" data-nv-kit-fallback>${items.map(key => `<a href="${key}.html">${esc(PRODUCTS[key].title)}</a>`).join('')}</p>${foot}
+          <p class="nv-kit-fallback" data-nv-kit-fallback>${items.map(key => `<a href="${key}">${esc(PRODUCTS[key].title)}</a>`).join('')}</p>${foot}
         </div>
       </section>`;
 }
@@ -125,7 +125,7 @@ export function noveltyBanner(family) {
   // a primeira peça da família no meio (o macaco, a primeira a chegar), as duas seguintes dos lados; o do meio sobe primeiro
   const middle = items[0], order = [items[1], middle, items[2]].filter(Boolean), tiers = kitTiers(middle), stops = order.map(mid);
   const turn = key => key === middle ? 3 : 4;
-  const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" data-nvb-reveal style="--i:${turn(key)};--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda.html#${key}">`
+  const art = order.map(key => `<li class="nvb-pick${key === middle ? ' is-main' : ''}" data-nvb-reveal style="--i:${turn(key)};--pick-glow:${mid(key)};--pick-accent:${showcase(key).theme.accentColor}"><a href="fenda#${key}">`
     + `<img src="assets/${esc(artSmall(PRODUCTS[key].catalogImage))}" alt="" width="768" height="768" loading="lazy" decoding="async" draggable="false"><span>${esc(PRODUCTS[key].title)}</span></a></li>`).join('');
   const ladder = tiers.map((t, i) => `<li${i === tiers.length - 1 ? ' class="is-best"' : ''}><b>${t.units}</b><span>por ${nbsp(short(t.cents))}</span></li>`).join('');
   return `<section class="nvb" id="novidade" aria-labelledby="nvb-title" style="--nvb-a:${stops[0]};--nvb-b:${stops[1]};--nvb-c:${stops[2] || stops[1]};${css(tone(middle))}">`
@@ -135,5 +135,5 @@ export function noveltyBanner(family) {
     + `<ul class="nvb-art">${art}</ul>`
     + `<div class="nvb-offer" data-nvb-reveal style="--i:1"><ul class="nvb-tiers">${ladder}</ul>`
     + `<p class="nvb-note">Escolha os seus · ${pixPercent}% off no Pix</p>`
-    + `<a class="nvb-cta" href="fenda.html#ofertas"><span>Escolher os meus</span>${icon('arrow')}</a></div></section>`;
+    + `<a class="nvb-cta" href="fenda#ofertas"><span>Escolher os meus</span>${icon('arrow')}</a></div></section>`;
 }

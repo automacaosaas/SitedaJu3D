@@ -26,7 +26,7 @@ const BASE = COMPANY.website.replace(/\/+$/, '');
 for (const [id, product] of Object.entries(PRODUCTS)) {
   const page = read(`dist/${id}.html`), price = COMMERCE.prices[id];
   assert.match(page, new RegExp(`<title>${product.title} · ${product.subtitle} \\| Ju, imprime pra mim\\?</title>`), `${id}: a title search engines can show`);
-  assert(page.includes(`<link rel="canonical" href="${BASE}/${id}.html">`), `${id}: canonical address`);
+  assert(page.includes(`<link rel="canonical" href="${BASE}/${id}">`), `${id}: canonical address`);
   assert(page.includes(`<h1>${product.title}</h1>`), `${id}: the name as the page heading`);
   assert(page.includes(`<strong>${money(price).replace(/ /g, '&nbsp;')}</strong><span class="pl-pix">${money(pixPrice(price)).replace(/ /g, '&nbsp;')} no Pix</span>`), `${id}: price and Pix price`);
   for (const part of product.parts) assert(page.includes(`${part.name}: <strong>${color(defaults(id)[part.id]).name}</strong>`), `${id}: original color of ${part.id}`);
@@ -42,7 +42,7 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   if (fixed) {
     for (const c of product.colors) assert(page.includes(`<li><span class="pl-dot is-fixed" role="img" title="${c.name}" aria-label="${c.name}"><i style="--chip:${c.hex}" aria-hidden="true"></i></span></li>`), `${id}: the dot of ${c.name}`);
     assert(page.includes('nas cores dela. A produção começa'), `${id}: printed in its own colours`);
-  } else assert(page.includes(`href="index.html#produto/${id}/personalizar"`), `${id}: "Personalizar o meu" opens the configurator`);
+  } else assert(page.includes(`href="./#produto/${id}/personalizar"`), `${id}: "Personalizar o meu" opens the configurator`);
   assert(page.includes(`<button type="button" class="pl-add" data-add-product="${id}">`), `${id}: add in the original colors (mini-cart)`);
   assert(page.includes(`Produção em ${COMMERCE.productionLabel}`), `${id}: production time`);
   // hierarchy asked for on 2026-10-04: the piece, the category once (a badge above the name), name, price, colors, add
@@ -68,7 +68,7 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   }
   for (const part of product.parts) { const c = color(defaults(id)[part.id]).name; assert(page.includes(`<button type="button" class="pl-dot" data-pl-part="${part.id}" aria-controls="pl-custom" title="${part.name}: ${c}" aria-label="${part.name}: ${c}">`), `${id}: the dot of ${part.id} opens the picker`); }
   assert.deepEqual([...page.matchAll(/<details class="pl-acc"><summary><svg[^]*?<strong>([^<]+)<\/strong>/g)].map(m => m[1]), ['Feito sob encomenda', 'Envio para todo o Brasil', 'Trocas e Devoluções']);
-  assert.match(page, /Desistência em até 7 dias[^]*<a href="trocas\.html">Ver a política<\/a>/);
+  assert.match(page, /Desistência em até 7 dias[^]*<a href="trocas">Ver a política<\/a>/);
   if (!fixed) assert.match(page, /<div class="pl-custom" id="pl-custom" data-pl-custom hidden><\/div>/);
   assert.match(page, /<div class="pl-views" role="group" aria-label="Ver a peça" data-pl-views hidden>/, 'the photo / 3D switch only shows with the script');
   // the 3D model needs three.js by name: the home's import map (its hash is in the security policy) before any module
@@ -83,7 +83,7 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
   assert.equal(data['@type'], 'Product'); assert.equal(data.name, product.title); assert.equal(data.sku, id);
   assert.equal(data.offers.price, (price / 100).toFixed(2)); assert.equal(data.offers.priceCurrency, 'BRL');
   assert.equal(data.offers.availability, 'https://schema.org/MadeToOrder', 'made to order');
-  assert.equal(data.offers.url, `${BASE}/${id}.html`);
+  assert.equal(data.offers.url, `${BASE}/${id}`);
   // the same head, header and footer as the catalog (security policy, company data, scripts)
   const catalog = read('dist/produtos.html');
   assert(page.includes(/<meta http-equiv="Content-Security-Policy" content="[^"]+">/.exec(catalog)[0]), `${id}: same security policy`);
@@ -139,11 +139,14 @@ for (const [id, product] of Object.entries(PRODUCTS)) {
 // ── sitemap, robots and the home's organization data ──────────────────
 {
   const sitemap = read('dist/sitemap.xml'), robots = read('dist/robots.txt');
-  for (const page of ['', 'produtos.html', ...Object.keys(PRODUCTS).map(id => `${id}.html`), 'termos.html', 'privacidade.html', 'trocas.html'])
+  // endereços limpos (09/10/2026): o sitemap leva /produtos, /borboletoscopio…, sem ".html"
+  for (const page of ['', 'produtos', ...Object.keys(PRODUCTS), 'termos', 'privacidade', 'trocas'])
     assert(sitemap.includes(`<loc>${BASE}/${page}</loc>`), `sitemap lists /${page}`);
-  for (const hidden of ['sobre.html', 'checkout.html', 'conta.html', 'admin.html']) assert(!sitemap.includes(hidden), `sitemap leaves out ${hidden}`);
-  assert(sitemap.includes('/contato.html</loc>'), 'the contact page (with content now) is listed');
-  for (const blocked of ['/admin.html', '/api/', '/checkout.html', '/conta.html']) assert(robots.includes(`Disallow: ${blocked}`), `robots keeps ${blocked} out`);
+  for (const hidden of ['/sobre<', '/checkout<', '/conta<', '/admin', '.html']) assert(!sitemap.includes(hidden), `sitemap leaves out ${hidden}`);
+  assert(sitemap.includes('/contato</loc>'), 'the contact page (with content now) is listed');
+  for (const blocked of ['/admin', '/api/', '/checkout', '/comprar-agora', '/conta$', '/conta?', '/conta.html']) assert(robots.includes(`Disallow: ${blocked}\n`), `robots keeps ${blocked} out`);
+  // "/conta" sem o $ tiraria também /contato do Google (a regra vale pelo começo do endereço)
+  assert(!robots.includes('Disallow: /conta\n') && !robots.includes('Disallow: /contato'), 'the contact page stays searchable');
   assert(robots.includes(`Sitemap: ${BASE}/sitemap.xml`));
   const home = JSON.parse(/<script type="application\/ld\+json">([^<]*)<\/script>/.exec(read('dist/index.html'))[1]);
   assert.equal(home['@type'], 'Organization'); assert.equal(home.legalName, COMPANY.legalName);

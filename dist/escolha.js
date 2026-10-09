@@ -48,7 +48,7 @@ const tone = key => { const {theme} = showcase(key); return `--fit-accent:${them
 export function chooseBanners() {
   return families().map(id => {
     const family = FAMILIES[id], items = familyItems(id);
-    return `<a class="choose-banner" href="produtos.html?encaixe=${id}" data-family="${id}" style="${tone(items[0])}"><i class="fit-wash" aria-hidden="true"></i>`
+    return `<a class="choose-banner" href="produtos?encaixe=${id}" data-family="${id}" style="${tone(items[0])}"><i class="fit-wash" aria-hidden="true"></i>`
       + `<span class="choose-art" data-count="${Math.min(items.length, 2)}">${items.slice(0, 2).map(key => fitFigure(key, {lazy: false})).join('')}</span>`
       + `<span class="choose-copy"><span class="choose-kicker">Encaixe para</span><span class="choose-title">${esc(family.tool)}</span>`
       + `<span class="choose-pieces">${items.map(key => `<span>${esc(piece(key).title)}${piece(key).soon ? ' <em>Em breve</em>' : ''}</span>`).join('')}</span>`

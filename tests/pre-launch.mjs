@@ -36,17 +36,17 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
   // Everyone who sees a delivery fact can open the page: product pages, cart, checkout, questions and every footer.
   for (const id of Object.keys(COMMERCE.prices)) {
     const product = read(`dist/${id}.html`);
-    assert(product.includes('<a href="envio.html#prazo">Ver envio e prazos</a>') && product.includes('<a href="envio.html#frete">Ver envio e prazos</a>'), `${id}.html links to Envio e prazos`);
+    assert(product.includes('<a href="envio#prazo">Ver envio e prazos</a>') && product.includes('<a href="envio#frete">Ver envio e prazos</a>'), `${id}.html links to Envio e prazos`);
   }
-  assert.match(read('dist/cart-view.js'), /row\('truck', 'envio\.html#frete', 'Entrega e frete\.'/);
-  assert.match(read('dist/checkout.js'), /<p class="ship-title"><strong>Como quer receber\?<\/strong><a href="envio\.html" target="_blank" rel="noopener">Prazos e frete<\/a><\/p>/);
-  assert.equal((read('dist/contato.html').match(/<a href="envio\.html">Ver Envio e prazos →<\/a>/g) || []).length, 2, 'two questions link to it');
+  assert.match(read('dist/cart-view.js'), /row\('truck', 'envio#frete', 'Entrega e frete\.'/);
+  assert.match(read('dist/checkout.js'), /<p class="ship-title"><strong>Como quer receber\?<\/strong><a href="envio" target="_blank" rel="noopener">Prazos e frete<\/a><\/p>/);
+  assert.equal((read('dist/contato.html').match(/<a href="envio">Ver Envio e prazos →<\/a>/g) || []).length, 2, 'two questions link to it');
   for (const name of pages.filter(name => !['admin.html', 'email-preview.html'].includes(name))) {
     const html = read('dist/' + name);
-    if (html.includes('<div class="footer-legal">')) assert(html.includes('<a href="trocas.html">Trocas e Devoluções</a><a href="envio.html">Envio e prazos</a></nav>'), `${name}: footer links to Envio e prazos`);
+    if (html.includes('<div class="footer-legal">')) assert(html.includes('<a href="trocas">Trocas e Devoluções</a><a href="envio">Envio e prazos</a></nav>'), `${name}: footer links to Envio e prazos`);
   }
-  assert.match(read('dist/sitemap.xml'), /<loc>https:\/\/juimprimepramim\.com\.br\/envio\.html<\/loc>/, 'search engines find it');
-  assert.match(page, /<meta property="og:url" content="https:\/\/juimprimepramim\.com\.br\/envio\.html">/, 'and a link preview');
+  assert.match(read('dist/sitemap.xml'), /<loc>https:\/\/juimprimepramim\.com\.br\/envio<\/loc>/, 'search engines find it');
+  assert.match(page, /<meta property="og:url" content="https:\/\/juimprimepramim\.com\.br\/envio">/, 'and a link preview');
 }
 
 // ── Q2: the 404 page ──────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const pages = fs.readdirSync(path.join(root, 'dist')).filter(name => name.endsWi
   const page = read('dist/404.html');
   assert.match(page, /<head>\n  <meta charset="utf-8">\n  <meta http-equiv="Content-Security-Policy" content="[^"]+">\n  <base href="\/">\n  <meta name="robots" content="noindex">\n/, 'root links first (after the charset, 2026-10-07), never indexed');
   assert.match(page, /<p class="eyebrow">ERRO 404<\/p>/);
-  assert.match(page, /<a class="primary" href="index\.html">Ir para a vitrine <span aria-hidden="true">→<\/span><\/a><a class="not-found-secondary" href="produtos\.html">Ver a coleção de produtos<\/a>/, 'the showcase and the collection');
+  assert.match(page, /<a class="primary" href="\.\/">Ir para a vitrine <span aria-hidden="true">→<\/span><\/a><a class="not-found-secondary" href="produtos">Ver a coleção de produtos<\/a>/, 'the showcase and the collection');
   assert.match(page, /<header class="header">[^]*<nav class="shop-nav" data-shop-nav/, 'the header of the site (menu, cart, account)');
   assert.match(page, /<footer class="site-footer">/, 'and its footer');
   assert.doesNotMatch(read('dist/sitemap.xml'), /404/, 'not in the sitemap');

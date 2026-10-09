@@ -3,7 +3,7 @@ const RETURN_KEY = 'ju:shopping-return';
 export function localDestination(raw, base) {
   try {
     const url = new URL(raw, base), origin = new URL(base).origin;
-    if (url.origin !== origin || !/\/(?:$|(?:index|produtos|sobre|contato|conta)\.html$)/.test(url.pathname)) return null;
+    if (url.origin !== origin || !/^\/(?:(?:index|produtos|sobre|contato|conta)(?:\.html)?)?$/.test(url.pathname)) return null;
     return url.pathname + url.search + url.hash;
   } catch { return null; }
 }
@@ -26,7 +26,7 @@ export function returnFromCart() {
   } else if (referrer && history.length > 1) {
     history.back(); return;
   }
-  location.assign(safe || 'produtos.html');
+  location.assign(safe || 'produtos');
 }
 
 let navigating = false;
@@ -46,13 +46,13 @@ export async function goToCart({replace = false, saved = false} = {}) {
   notice.hidden = false;
   notice.classList.add('is-visible');
   await new Promise(resolve => setTimeout(resolve, matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 700));
-  location[replace ? 'replace' : 'assign']('checkout.html');
+  location[replace ? 'replace' : 'assign']('checkout');
 }
 
 if (typeof window !== 'undefined') {
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href]');
-    if (link && /(?:^|\/)checkout\.html(?:[?#]|$)/.test(link.getAttribute('href'))) rememberShoppingLocation();
+    if (link && /(?:^|\/)checkout(?:\.html)?(?:[?#]|$)/.test(link.getAttribute('href'))) rememberShoppingLocation();
   }, {capture:true});
   window.addEventListener('pageshow', () => {
     navigating = false;
