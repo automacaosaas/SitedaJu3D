@@ -179,9 +179,12 @@ function tube(m, fl, K, names, ring, t) {
 // mean measured top), scale (× the measured ellipse)}. The old bumps sink into the surface around them (the quadric of each contour,
 // blended out between flatten[0] and flatten[1] of the foot); then two domes with the mean axes, the mean height, the angle mirrored,
 // at the mean height (y) and symmetric about the pair's centre: z += h·(1 − ρ²)^profile. Returns the ellipses (local units) and the
-// moved vertices (their normals must be rebuilt).
+// moved vertices (their normals must be rebuilt). maxFoot (08/10/2026): each ray's foot at most that many times the fitted ellipse's
+// radius there — the left nostril's ray at 110° ran off into the coat toward the eye (0.13 for 0.07 around it), and the sinking and the
+// re-netting reached the skin under the left eye, rebuilt just before: a dent there, the light patch at the base of the eye.
 function domes(m, label, names, d) {
   const fr = P2.frame(m), dets = d.targets.map(t => contour(m, label, names, {...t, shape: 'ellipse'})), P = m.P, moved = new Set(), dz = (d.depth ?? .02) / fr.s;
+  if (d.maxFoot) for (const det of dets) { const e = det.ell; det.R = det.R.map((r, j) => { const th = j * Math.PI / 180, c = Math.cos(th - e.ang), s = Math.sin(th - e.ang); return Math.min(r, d.maxFoot / Math.hypot(c / e.a, s / e.b) / det.res); }); }
   const [f0, f1] = d.flatten ?? [1.06, 1.5], sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (const det of dets) {
     const [cx, cy] = det.centre, res = det.res;
@@ -259,4 +262,4 @@ function smoothRegion(m, r, keepDist, ring) {
   return {moved: inner, fitted: rows.length};
 }
 
-module.exports = {contour, line, override, applyVertices, onlyClaimed, tube, domes, rebuildNormals, smoothRegion};
+module.exports = {contour, line, override, applyVertices, onlyClaimed, tube, domes, rebuildNormals, smoothRegion, fit};

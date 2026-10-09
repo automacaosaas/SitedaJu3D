@@ -17,6 +17,57 @@ function vertexNormals(m) {
   return vn;
 }
 
+// normals from the geometry (08/10/2026; what lamp-glb.html computed in the browser): per vertex the sum of the area-weighted normals
+// of its faces, normalized, then `passes` rounds of averaging with the neighbours (the noise of the dense mesh goes, the shape stays)
+function geometricNormals(m, ring, passes = 4) {
+  const P = m.P, acc = new Float64Array(m.nv * 3);
+  for (let f = 0; f < m.nf; f++) {
+    const a = m.F[f * 3] * 3, b = m.F[f * 3 + 1] * 3, c = m.F[f * 3 + 2] * 3, ux = P[c] - P[b], uy = P[c + 1] - P[b + 1], uz = P[c + 2] - P[b + 2], vx = P[a] - P[b], vy = P[a + 1] - P[b + 1], vz = P[a + 2] - P[b + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; for (const v of [a, b, c]) { acc[v] += nx; acc[v + 1] += ny; acc[v + 2] += nz; }
+  }
+  let n = new Float64Array(m.nv * 3); const unit = (dst, src) => { for (let v = 0; v < m.nv; v++) { const l = Math.hypot(src[v * 3], src[v * 3 + 1], src[v * 3 + 2]) || 1; dst[v * 3] = src[v * 3] / l; dst[v * 3 + 1] = src[v * 3 + 1] / l; dst[v * 3 + 2] = src[v * 3 + 2] / l; } };
+  unit(n, acc);
+  for (let it = 0; it < passes; it++) { const s = Float64Array.from(n); for (let v = 0; v < m.nv; v++) for (const u of ring[v]) { s[v * 3] += n[u * 3]; s[v * 3 + 1] += n[u * 3 + 1]; s[v * 3 + 2] += n[u * 3 + 2]; } unit(n, s); }
+  return Float32Array.from(n);
+}
+
+// a surface's own normal at any point, averaged over a fixed distance (08/10/2026, the foot of the giraffe's muzzle): the area-weighted
+// normals of the allowed faces within `radius` (render units; weight (1 − d/r)²; twice and four times as far where nothing is that
+// close), each face sampled on a grid of sub-triangles fine enough for its size, so a long triangle counts along all its length. Used
+// where a crease is not resolved by the mesh: the long Rodin triangles fanning out of the muzzle's foot joined the coat to the muzzle's
+// wall, and the coat's part of them (after the paint cut) carried the wall's tilted normal far into the coat — light wedges all around
+// the muzzle in the close-up. spec: {s (render units per local unit), faceOk(f), radius, box ([x0, y0, z0, x1, y1, z1], local: only the
+// faces that reach it)} → at(x, y, z) (local) → [nx, ny, nz] or null
+function metricField(m, {s, faceOk, radius, box}) {
+  const P = m.P, R = radius / s, lo = box.slice(0, 3).map(v => v - 4 * R), hi = box.slice(3).map(v => v + 4 * R);
+  const key = (i, j, k) => (i + 1024) + (j + 1024) * 4096 + (k + 1024) * 16777216, grid = new Map();
+  const put = (x, y, z, nx, ny, nz, w) => { const k = key(Math.floor((x - lo[0]) / R), Math.floor((y - lo[1]) / R), Math.floor((z - lo[2]) / R)); let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(x, y, z, nx, ny, nz, w); };
+  for (let f = 0; f < m.nf; f++) {
+    const a = m.F[f * 3] * 3, b = m.F[f * 3 + 1] * 3, c = m.F[f * 3 + 2] * 3;
+    if (Math.max(P[a], P[b], P[c]) < lo[0] || Math.min(P[a], P[b], P[c]) > hi[0] || Math.max(P[a + 1], P[b + 1], P[c + 1]) < lo[1] || Math.min(P[a + 1], P[b + 1], P[c + 1]) > hi[1] || Math.max(P[a + 2], P[b + 2], P[c + 2]) < lo[2] || Math.min(P[a + 2], P[b + 2], P[c + 2]) > hi[2] || !faceOk(f)) continue;
+    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; if (!(Math.hypot(nx, ny, nz) > 0)) continue;
+    const edge = Math.max(Math.hypot(ux, uy, uz), Math.hypot(vx, vy, vz), Math.hypot(P[c] - P[b], P[c + 1] - P[b + 1], P[c + 2] - P[b + 2])), n = Math.max(1, Math.min(32, Math.ceil(edge / (R * .4)))), w = 1 / (n * n);
+    // the n² sub-triangles' centres (up: (i + ⅓, j + ⅓)/n; down: (i + ⅔, j + ⅔)/n), each with its share of the face (the unnormalized
+    // cross product carries the area)
+    for (let i = 0; i < n; i++) for (let j = 0; i + j < n; j++) for (const d of i + j < n - 1 ? [1 / 3, 2 / 3] : [1 / 3]) {
+      const p = (i + d) / n, q = (j + d) / n; put(P[a] + p * ux + q * vx, P[a + 1] + p * uy + q * vy, P[a + 2] + p * uz + q * vz, nx, ny, nz, w);
+    }
+  }
+  return (x, y, z) => {
+    const i0 = Math.floor((x - lo[0]) / R), j0 = Math.floor((y - lo[1]) / R), k0 = Math.floor((z - lo[2]) / R);
+    for (const g of [1, 2, 4]) {
+      let ax = 0, ay = 0, az = 0; const Rg = R * g;
+      for (let i = i0 - g; i <= i0 + g; i++) for (let j = j0 - g; j <= j0 + g; j++) for (let k = k0 - g; k <= k0 + g; k++) {
+        const l = grid.get(key(i, j, k)); if (!l) continue;
+        for (let t = 0; t < l.length; t += 7) { const d = Math.hypot(l[t] - x, l[t + 1] - y, l[t + 2] - z); if (d >= Rg) continue; const wt = l[t + 6] * (1 - d / Rg) ** 2; ax += l[t + 3] * wt; ay += l[t + 4] * wt; az += l[t + 5] * wt; }
+      }
+      const len = Math.hypot(ax, ay, az); if (len > 0) return [ax / len, ay / len, az / len];
+    }
+    return null;
+  };
+}
+
 // fields[k][v]; `iterations` of Laplacian smoothing (weight .5); `keep` = labels whose field is not smoothed (thin features keep their
 // width: their field is sharpened instead by `gain`)
 function fields(m, label, ring, K, iterations, opt = {}) {
@@ -50,13 +101,16 @@ function clipPoly(poly, g) { // poly: [{b:[3], g:value}]; keep g >= 0
 // ref (exact.cjs): {overrides, target, maxDepth} — a triangle that a detail's border may cross (override.crosses) and is bigger than
 // `target` is split into 4^depth smaller ones (flat: the shape does not change), each corner getting the fields interpolated and then
 // the details' exact values; the border then follows the detail's smooth outline instead of one straight cut per big triangle
-function build(m, label, fl, vn, K, ref = null) {
+// vnBy[k] (optional): the corner normals the vertices of colour k interpolate, in place of vn (lamp-fix.cjs ownNormals: each side of a
+// crease the mesh does not resolve shades with its own surface)
+function build(m, label, fl, vn, K, ref = null, vnBy = null) {
   const geo = Array.from({length: K}, () => ({pos: [], nor: [], idx: [], map: new Map()}));
-  const P = m.P;
+  const P = m.P, vn0 = vn;
   const addVert = (k, b, vs) => {
     const x = b[0] * P[vs[0] * 3] + b[1] * P[vs[1] * 3] + b[2] * P[vs[2] * 3], y = b[0] * P[vs[0] * 3 + 1] + b[1] * P[vs[1] * 3 + 1] + b[2] * P[vs[2] * 3 + 1], z = b[0] * P[vs[0] * 3 + 2] + b[1] * P[vs[1] * 3 + 2] + b[2] * P[vs[2] * 3 + 2];
     const key = `${Math.round(x * 2e6)},${Math.round(y * 2e6)},${Math.round(z * 2e6)}`, G = geo[k];
     let i = G.map.get(key); if (i !== undefined) return i;
+    const vn = vnBy?.[k] || vn0;
     let nx = b[0] * vn[vs[0] * 3] + b[1] * vn[vs[1] * 3] + b[2] * vn[vs[2] * 3], ny = b[0] * vn[vs[0] * 3 + 1] + b[1] * vn[vs[1] * 3 + 1] + b[2] * vn[vs[2] * 3 + 1], nz = b[0] * vn[vs[0] * 3 + 2] + b[1] * vn[vs[1] * 3 + 2] + b[2] * vn[vs[2] * 3 + 2]; const l = Math.hypot(nx, ny, nz) || 1;
     i = G.pos.length / 3; G.map.set(key, i); G.pos.push(x, y, z); G.nor.push(nx / l, ny / l, nz / l); return i;
   };
@@ -88,7 +142,8 @@ function build(m, label, fl, vn, K, ref = null) {
           const b = [(n - i - j) / n, i / n, j / n], vec = new Float64Array(K);
           for (let k = 0; k < K; k++) vec[k] = b[0] * fl[k][vs[0]] + b[1] * fl[k][vs[1]] + b[2] * fl[k][vs[2]];
           const x = b[0] * p[0][0] + b[1] * p[1][0] + b[2] * p[2][0], y = b[0] * p[0][1] + b[1] * p[1][1] + b[2] * p[2][1], z = b[0] * p[0][2] + b[1] * p[1][2] + b[2] * p[2][2];
-          const nx = b[0] * vn[vs[0] * 3] + b[1] * vn[vs[1] * 3] + b[2] * vn[vs[2] * 3], ny = b[0] * vn[vs[0] * 3 + 1] + b[1] * vn[vs[1] * 3 + 1] + b[2] * vn[vs[2] * 3 + 1], nz = b[0] * vn[vs[0] * 3 + 2] + b[1] * vn[vs[1] * 3 + 2] + b[2] * vn[vs[2] * 3 + 2];
+          // (the details' 'facing' reads ref.facingNormals when given: the paint does not move when only the shading normals change)
+          const fn = ref.facingNormals || vn, nx = b[0] * fn[vs[0] * 3] + b[1] * fn[vs[1] * 3] + b[2] * fn[vs[2] * 3], ny = b[0] * fn[vs[0] * 3 + 1] + b[1] * fn[vs[1] * 3 + 1] + b[2] * fn[vs[2] * 3 + 1], nz = b[0] * fn[vs[0] * 3 + 2] + b[1] * fn[vs[1] * 3 + 2] + b[2] * fn[vs[2] * 3 + 2];
           for (const ov of ref.overrides) ov.apply(vec, x, y, z, nz / (Math.hypot(nx, ny, nz) || 1));
           c = {b, vec}; cache.set(key, c); return c;
         };
@@ -132,4 +187,4 @@ async function writeGeo(m, geo, file, {extra = [], compress = true} = {}) {
   return fs.statSync(file).size;
 }
 
-module.exports = {vertexNormals, fields, build, writeGeo};
+module.exports = {vertexNormals, geometricNormals, metricField, fields, build, writeGeo};
