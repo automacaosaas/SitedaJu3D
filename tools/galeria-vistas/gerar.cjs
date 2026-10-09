@@ -18,6 +18,7 @@ const server = http.createServer((req, res) => {
   const file = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, {'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': fs.statSync(file).size, 'Cache-Control': 'no-store'});
+  if (req.method === 'HEAD') { res.end(); return; }
   fs.createReadStream(file).pipe(res);
 }).listen(0, '127.0.0.1', async () => {
   const {port} = server.address();

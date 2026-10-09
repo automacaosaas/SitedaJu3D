@@ -3,7 +3,7 @@
 import {PRODUCTS, SOON, PRODUCT_CATEGORIES, ALIASES, showcase, artSrcset, HERO_SIZES, fixedColors} from './products.js';
 import {scenery} from './hero-scenery.js';
 import {imageReady} from './loading-ui.js';
-import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, sceneryScroll, SCENERY_EDGE} from './hero-motion.js';
+import {EASE, cubicBezier, clamp, mod, wrapDistance, pose, textPose, layerMix, mixColor, withAlpha, swipeTarget, settleDuration, journeyColors, sceneryVars, sceneryShift, sceneryScroll, SCENERY_EDGE, darkBand} from './hero-motion.js';
 import {createHeroDemo} from './hero-demo.js';
 import {COMMERCE, money} from './commerce-config.js';
 import {icon} from './icons.js';
@@ -53,7 +53,7 @@ function init() {
   const lookVars = (theme, look) => Object.entries(sceneryVars(theme, look)).map(([name, value]) => `${name}:${value}`).join(';');
   // Só a camada da peça de abertura entra na pintura; as outras nascem fora dela (.is-off) até a vez delas.
   bgHost.innerHTML = entries.map(({theme, look}, i) => `<div class="hero-layer${i === initial ? '' : ' is-off'}" style="--stops:${theme.bannerStops};${lookVars(theme, look)}">${scenery(look, i)}</div>`).join('');
-  shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="background:${theme.headerBackground}"></div>`).join('');
+  shell.querySelector('[data-hero-band]').innerHTML = entries.map(({theme}) => `<div class="hero-layer" style="--band:${theme.headerBackground};--band-dark:${darkBand(theme)}"></div>`).join('');
   region.querySelector('[data-hero-copy]').innerHTML = entries.map(({product, category, theme, price, soon}) =>
     `<div class="copy" style="${themeVars(theme)}"><p class="copy-category">${category}</p><h2 class="copy-name">${product.title}</h2><p class="copy-sub">${product.subtitle}</p>${price ? `<p class="copy-price"><strong>${money(price)}</strong><span class="copy-pix">5% off no Pix</span></p>` : soon ? '<p class="copy-price"><span class="palette-soon">Novidade · em breve</span></p>' : ''}</div>`).join('');
   // Banner limpo: uma ação principal (abre o configurador do produto ativo) e, nas peças com demonstração,

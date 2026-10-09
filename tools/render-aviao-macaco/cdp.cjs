@@ -4,7 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+// o Chrome do PC do Luiz; em outra máquina, CHROME=<caminho do Chrome ou Chromium> (como root, ele roda sem o sandbox)
+const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function withBrowser(fn, {port = 9333, webgl = false} = {}) {
@@ -12,7 +13,7 @@ async function withBrowser(fn, {port = 9333, webgl = false} = {}) {
   const proc = spawn(CHROME, [
     '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
     '--no-first-run', '--no-default-browser-check', ...(webgl ? (process.env.RENDER_GPU ? ['--use-angle=' + process.env.RENDER_GPU, '--ignore-gpu-blocklist', '--enable-gpu-rasterization'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']) : ['--disable-gpu']), '--hide-scrollbars',
-    '--force-device-scale-factor=1', '--disable-features=Translate', 'about:blank'
+    '--force-device-scale-factor=1', '--disable-features=Translate', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'
   ], {stdio: 'ignore'});
   try {
     let version;

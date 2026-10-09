@@ -8,7 +8,11 @@
     "aviaoscopia-3-vistas.webp": {"arquivo": "ampliadas/aviaoscopia-3-vistas-x4.webp", "fator": 4},
     "unicornioscopio-lado.webp": {"arquivo": "ampliadas/unicornioscopio-lado-x4.webp", "fator": 4, "encolher": 0.5},
     "unicornioscopio-costas.webp": {"arquivo": "ampliadas/unicornioscopio-costas-x4.webp", "fator": 4, "encolher": 0.5},
-    "unicornioscopio-rosto.webp": {"arquivo": "ampliadas/unicornioscopio-rosto-x4.webp", "fator": 4, "encolher": 0.5}
+    "unicornioscopio-rosto.webp": {"arquivo": "ampliadas/unicornioscopio-rosto-x4.webp", "fator": 4, "encolher": 0.5},
+    "macacoscopio-frente.webp": {"arquivo": "ampliadas/macacoscopio-frente-x4.webp", "fator": 4},
+    "macacoscopio-lado.webp": {"arquivo": "ampliadas/macacoscopio-lado-x4.webp", "fator": 4},
+    "macacoscopio-costas.webp": {"arquivo": "ampliadas/macacoscopio-costas-x4.webp", "fator": 4},
+    "macacoscopio-rosto.webp": {"arquivo": "ampliadas/macacoscopio-rosto-x4.webp", "fator": 4}
   },
   "borboletoscopio": {
     "cores": [
@@ -138,5 +142,12 @@
     "lado": {"fonte": "unicornioscopio-lado.webp", "recorte": [212, 100, 612, 1260], "fundo": "recortar", "chao": 1321, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
     "costas": {"fonte": "unicornioscopio-costas.webp", "recorte": [150, 60, 724, 1374], "fundo": "recortar", "chao": 1393, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
     "detalhe": {"fonte": "unicornioscopio-rosto.webp", "recorte": [0, 0, 1024, 1280], "fundo": "recortar", "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4, "detalhe": true}
+  },
+  "macacoscopio": {
+    "_fontes": "Fotos do macaco que o dono mandou em 09/10/2026 (render em fundo preto, 1086x1448): frente, lado, costas e o rosto de perto, que é o detalhe (o zoom). Ampliadas 4x pelo Real-ESRGAN (_ampliadas; só o recorte usado, rodado na CPU) para o rosto de perto sair nítido como o zoom das outras peças. O chão segue a curva da base em perspectiva (o ponto mais escuro, onde a peça encosta no reflexo). O corte entra um pouco na peça (encolher) para não ficar o fio escuro do fundo; \"cobertura\" com limiar baixo deixa sólidas as sombras marrons que encostam no preto (o sulco entre a cabeça e o corpo, visto de lado). Nas costas, o chão sobe e segue a borda curva da parede de dentro: entre as pernas da capa, o que se vê pela abertura é o chão, não a peça.",
+    "frente": {"fonte": "macacoscopio-frente.webp", "recorte": [170, 60, 746, 1290], "fundo": "recortar", "chao": [[170, 1290], [318, 1290], [326, 1297], [340, 1305], [400, 1316], [540, 1324], [700, 1314], [745, 1305], [758, 1298], [766, 1290], [916, 1290]], "matte": "cobertura", "limiar": 16, "cor_fundo": "#000000", "encolher": 0.8},
+    "lado": {"fonte": "macacoscopio-lado.webp", "recorte": [270, 60, 590, 1265], "fundo": "recortar", "chao": [[270, 1268], [348, 1268], [356, 1275], [370, 1282], [420, 1290], [540, 1295], [680, 1286], [720, 1276], [728, 1270], [736, 1264], [860, 1264]], "matte": "cobertura", "limiar": 16, "cor_fundo": "#000000", "encolher": 0.8},
+    "costas": {"fonte": "macacoscopio-costas.webp", "recorte": [150, 55, 780, 1320], "fundo": "recortar", "chao": [[150, 1316], [318, 1316], [326, 1321], [340, 1333], [428, 1341], [432, 1236], [480, 1228], [540, 1222], [600, 1228], [648, 1236], [652, 1340], [745, 1328], [756, 1316], [764, 1310], [930, 1310]], "matte": "cobertura", "limiar": 16, "cor_fundo": "#000000", "encolher": 0.8},
+    "detalhe": {"fonte": "macacoscopio-rosto.webp", "recorte": [0, 40, 1086, 1358], "fundo": "recortar", "matte": "cobertura", "limiar": 16, "cor_fundo": "#000000", "encolher": 0.8, "detalhe": true}
   }
 }

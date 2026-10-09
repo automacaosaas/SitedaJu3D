@@ -4,17 +4,17 @@
 .id-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px 14px; }
 .id-field { display:grid; gap:6px; min-width:0; }
 .id-field.id-wide { grid-column:1 / -1; }
-.id-field > span { font-size:13px; font-weight:650; color:var(--ink, #282326); }
-.id-field input { width:100%; min-height:48px; border:1px solid rgba(101, 54, 73, .22); border-radius:999px; padding:0 18px; font:inherit; font-size:16px; color:var(--ink, #282326); background:#fff; }
-.id-field input::placeholder { color:#a39aa0; }
+.id-field > span { font-size:13px; font-weight:650; color:var(--ink, var(--fg, #282326)); }
+.id-field input { width:100%; min-height:48px; border:1px solid var(--border, rgba(101, 54, 73, .22)); border-radius:999px; padding:0 18px; font:inherit; font-size:16px; color:var(--ink, var(--fg, #282326)); background:var(--surface, #fff); }
+.id-field input::placeholder { color:var(--fg-2, #a39aa0); }
 .id-field input:focus-visible { outline:2px solid var(--rose, #b64c68); outline-offset:2px; border-color:transparent; }
-.id-field input[readonly], .id-field input:disabled { background:var(--bg, #fff7f5); color:var(--muted, #7b7076); }
+.id-field input[readonly], .id-field input:disabled { background:var(--bg, #fff7f5); color:var(--muted, var(--fg-2, #7b7076)); }
 .id-field input[aria-invalid="true"] { border-color:#98364e; box-shadow:0 0 0 3px rgba(152, 54, 78, .12); }
-.id-saved p { margin:0; min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 4px 0 16px; border:1px dashed rgba(101, 54, 73, .3); border-radius:999px; }
+.id-saved p { margin:0; min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 4px 0 16px; border:1px dashed var(--border, rgba(101, 54, 73, .3)); border-radius:999px; }
 .id-saved strong { font-weight:600; white-space:nowrap; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .id-saved button { flex:none; padding:0 10px; }
-.id-saved button, .id-company summary { font:inherit; color:var(--ink, #282326); background:none; border:0; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; cursor:pointer; min-height:44px; padding:0 12px; }
-.id-note { margin:0; font-size:13px; line-height:1.45; color:var(--muted, #7b7076); }
+.id-saved button, .id-company summary { font:inherit; color:var(--ink, var(--fg, #282326)); background:none; border:0; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; cursor:pointer; min-height:44px; padding:0 12px; }
+.id-note { margin:0; font-size:13px; line-height:1.45; color:var(--muted, var(--fg-2, #7b7076)); }
 .id-company summary { width:max-content; max-width:100%; display:flex; align-items:center; gap:8px; padding:0; list-style:none; }
 .id-company summary::-webkit-details-marker { display:none; }
 .id-company summary::after { content:"⌄"; font-size:14px; transition:transform .2s ease; }
@@ -22,13 +22,13 @@
 .id-company[open] summary { margin-bottom:10px; }
 .id-company .id-note { margin-top:10px; }
 /* "Remover dados de pessoa jurídica": a quiet link under the company fields; the note after it says what happens on confirm. */
-.id-remove-company { display:inline-flex; align-items:center; min-height:44px; margin-top:6px; padding:0; border:0; background:none; font:inherit; font-size:14px; color:#98364e; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; cursor:pointer; }
+.id-remove-company { display:inline-flex; align-items:center; min-height:44px; margin-top:6px; padding:0; border:0; background:none; font:inherit; font-size:14px; color:color-mix(in oklab, #98364e, #fff var(--lift, 0%)); text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; cursor:pointer; }
 .id-remove-company[hidden], .id-company-removed[hidden] { display:none; }
-.id-company-removed { color:#1f6b47; }
+.id-company-removed { color:color-mix(in oklab, #1f6b47, #fff var(--lift, 0%)); }
 .id-check { display:flex; align-items:center; gap:12px; min-height:44px; font-size:15px; line-height:1.4; cursor:pointer; }
 .id-check input { width:20px; height:20px; flex:none; margin:0; accent-color:var(--rose, #b64c68); }
 .id-exempt { align-self:end; }
-.id-error { margin:0; color:#98364e; font-size:14px; font-weight:600; }
+.id-error { margin:0; color:color-mix(in oklab, #98364e, #fff var(--lift, 0%)); font-size:14px; font-weight:600; }
 .id-error:empty { display:none; }
 .id-submit { width:100%; min-height:52px; justify-content:center; gap:10px; }
 .identification-panel { display:grid; gap:18px; align-content:start; }

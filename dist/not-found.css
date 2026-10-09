@@ -12,6 +12,6 @@
 .not-found-actions { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; justify-content: center; margin-top: 30px; }
 .not-found .not-found-actions .primary { margin-top: 0; width: auto; max-width: none; gap: 16px; padding-inline: 22px; }
 .not-found-secondary { color: var(--rose); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
-.not-found-help { margin: 26px 0 0; font-size: 13px; color: var(--muted); }
+.not-found-help { margin: 26px 0 0; font-size: 13px; color: var(--fg-2, var(--muted)); }
 .not-found-help a { color: var(--rose); text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .nf-filament { animation: none; } }

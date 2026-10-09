@@ -5,11 +5,11 @@
    Cores do produto ativo (--theme-*, journey.js). Carregado depois de theme.css e mobile-modal.css. */
 #product-dialog {
   --pd-accent: var(--theme-accent, #25664c); --pd-strong: var(--theme-accent-strong, #1e523d); --pd-text: var(--theme-text, #10281e);
-  --pd-muted: var(--theme-muted, #356650); --pd-wash: var(--theme-wash, #e5f5ec); --pd-soft: var(--theme-soft, #cfe1d8);
+  --pd-muted: var(--theme-muted, #356650); --pd-wash: var(--wash, var(--theme-wash, #e5f5ec)); --pd-soft: var(--soft, var(--theme-soft, #cfe1d8));
   --pd-line: color-mix(in srgb, var(--pd-accent) 16%, #ece7e9); --pd-tint: color-mix(in srgb, var(--pd-wash) 72%, #fff);
   --pd-ease: cubic-bezier(.22, 1, .36, 1); --pd-stage: color-mix(in srgb, var(--pd-wash) 45%, #f3f1f0);
   width: min(1160px, calc(100vw - 48px)); max-width: none; height: min(860px, calc(100dvh - 40px)); max-height: none;
-  padding: 0; border: 0; border-radius: 28px; color: var(--ink); background: #fff;
+  padding: 0; border: 0; border-radius: 28px; color: var(--ink); background: var(--surface, #fff);
   box-shadow: 0 40px 120px #14231b38, 0 0 0 1px #ffffffc0; overflow: hidden; overflow: clip;
 }
 #product-dialog[open] {
@@ -40,18 +40,18 @@
 
 /* ── Topo ─────────────────────────────────────────────────────────────────────── */
 .pdp-head { grid-column: 1 / -1; grid-row: 1; position: relative; z-index: 4; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 12px; padding: 16px 22px 14px; background: var(--pd-tint); border-bottom: 1px solid color-mix(in srgb, var(--pd-accent) 10%, transparent); }
-#product-dialog .close, .pdp-info { position: static; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid color-mix(in srgb, var(--pd-accent) 18%, #fff); border-radius: 50%; background: #fff; color: var(--pd-text); box-shadow: 0 2px 10px #14231b12; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .2s, border-color .2s; }
+#product-dialog .close, .pdp-info { position: static; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid color-mix(in srgb, var(--pd-accent) 18%, var(--border, #fff)); border-radius: 50%; background: var(--surface, #fff); color: var(--fg, var(--pd-text)); box-shadow: 0 2px 10px #14231b12; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .2s, border-color .2s; }
 #product-dialog .close svg, .pdp-info .icon { width: 20px; height: 20px; }
-#product-dialog .close:hover, .pdp-info:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); box-shadow: 0 6px 16px #14231b1f; }
+#product-dialog .close:hover, .pdp-info:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--pd-accent) 45%, var(--border, #fff)); box-shadow: 0 6px 16px #14231b1f; }
 #product-dialog .close:focus-visible, .pdp-info:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 .pdp-heading { min-width: 0; text-align: center; }
-#product-dialog .pdp-heading .eyebrow { margin: 0 0 3px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--pd-accent); }
-#product-dialog .pdp-heading h2 { margin: 0; font: 500 clamp(24px, 2.3vw, 31px) / 1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.4px; color: var(--pd-text); overflow-wrap: anywhere; }
-#product-dialog .pdp-heading .detail-subtitle { margin: 3px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--pd-muted); }
+#product-dialog .pdp-heading .eyebrow { margin: 0 0 3px; font-size: 12px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); }
+#product-dialog .pdp-heading h2 { margin: 0; font: 500 clamp(24px, 2.3vw, 31px) / 1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.4px; color: var(--fg, var(--pd-text)); overflow-wrap: anywhere; }
+#product-dialog .pdp-heading .detail-subtitle { margin: 3px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--fg-2, var(--pd-muted)); }
 
 /* ── A peça ───────────────────────────────────────────────────────────────────── */
 #product-dialog .detail-visual { grid-column: 1; grid-row: 2 / 4; position: relative; min-height: 0; height: auto; display: block; overflow: hidden; border-radius: 0;
-  background: radial-gradient(120% 90% at 50% 42%, #fff 0, color-mix(in srgb, var(--pd-wash) 38%, #fff) 48%, var(--pd-tint) 100%); }
+  background: radial-gradient(120% 90% at 50% 42%, var(--surface-soft, #fff) 0, color-mix(in srgb, var(--pd-wash) 38%, var(--surface-soft, #fff)) 48%, var(--pd-tint) 100%); }
 /* Galeria de fotos (aba Foto, gallery.js), como nas lojas grandes: no computador, as miniaturas numa coluna à esquerda e a foto
    escolhida grande; no celular, a foto ocupa a largura toda e muda arrastando de lado. As fotos vêm recortadas e prontas sobre o branco
    puro (07/10/2026: "FUNDO BRANCO nas imagens"), com uma sombra leve no chão, num painel branco com um fio em volta (a foto e o painel
@@ -61,12 +61,12 @@
 /* as miniaturas começam no alto, junto com a foto grande (visual 17) */
 .gallery-rail { display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .gallery-rail::-webkit-scrollbar { display: none; }
-.gallery-rail button { flex: none; width: 64px; height: 80px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
+.gallery-rail button { flex: none; width: 64px; height: 80px; padding: 0; border: 0; border-radius: 12px; background: var(--thumb-bg, #fff); box-shadow: inset 0 0 0 1px var(--pd-line); opacity: .7; cursor: pointer; overflow: hidden; transition: opacity .2s, box-shadow .2s; }
 .gallery-rail button:hover, .gallery-rail button[aria-current=true] { opacity: 1; }
 .gallery-rail button[aria-current=true] { box-shadow: inset 0 0 0 2px var(--pd-text); }
 .gallery-rail button:focus-visible, .gallery-arrows button:focus-visible, .gallery-dots button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .gallery img { display: block; width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; filter: none; mix-blend-mode: normal; -webkit-mask-image: none; mask-image: none; -webkit-user-drag: none; user-select: none; }
-.gallery-main { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--pd-line); border-radius: 22px; background: #fff; box-shadow: 0 10px 30px #14231b0d; overflow: hidden; }
+.gallery-main { position: relative; min-width: 0; min-height: 0; border: 1px solid var(--pd-line); border-radius: 22px; background: var(--gallery-bg, #fff); box-shadow: 0 10px 30px #14231b0d; overflow: hidden; }
 .gallery-slide.is-zoom { padding: 0; }
 #product-dialog .gallery :is(.gallery-slide, .gallery-rail button).is-zoom img { object-fit: cover; object-position: 50% 0; }
 /* Painel mais largo que alto (celular, tablet, notebook de tela baixa: 07/10/2026, "muito aproximada, não mostra a imagem inteira"): a
@@ -80,7 +80,7 @@
 .gallery-track:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -3px; border-radius: 22px; }
 .gallery-slide { flex: 0 0 100%; min-width: 0; height: 100%; padding: 3%; scroll-snap-align: center; scroll-snap-stop: always; }
 .gallery-arrows { position: absolute; right: 14px; bottom: 14px; display: flex; gap: 8px; }
-.gallery-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: var(--pd-text); box-shadow: 0 2px 10px #14231b1a; cursor: pointer; transition: opacity .2s, transform .2s var(--pd-ease); }
+.gallery-arrows button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--surface, #fff); color: var(--fg, var(--pd-text)); box-shadow: 0 2px 10px #14231b1a; cursor: pointer; transition: opacity .2s, transform .2s var(--pd-ease); }
 .gallery-arrows button:hover:not(:disabled) { transform: translateY(-1px); }
 .gallery-arrows button:disabled { opacity: .35; box-shadow: none; cursor: default; }
 .gallery-arrows svg { width: 18px; height: 18px; }
@@ -90,20 +90,20 @@
 /* o 3D usa quase toda a área (os botões ficam numa coluna à esquerda, por cima) */
 #product-dialog #viewer-host { inset: 70px 12px 40px; }
 /* Foto | 3D, as ferramentas do 3D e o Surpreenda-me: todos com 44 px de toque (usabilidade 11) */
-#product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 2px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffd9; box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
-#product-dialog .view-tabs button { min-height: 44px; min-width: 52px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--pd-muted); transition: background .2s, color .2s; }
+#product-dialog .view-tabs { top: 18px; left: 18px; transform: none; padding: 2px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, var(--border, #fff)); background: rgb(var(--glass-rgb, 255 255 255) / 0.851); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
+#product-dialog .view-tabs button { min-height: 44px; min-width: 52px; padding: 0 15px; border-radius: 999px; font-size: 13px; font-weight: 550; color: var(--fg-2, var(--pd-muted)); transition: background .2s, color .2s; }
 #product-dialog .view-tabs button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 #product-dialog .view-tabs button[aria-pressed=true] { background: var(--pd-accent); color: #fff; box-shadow: 0 3px 10px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
 /* botões do 3D (girar, aproximar, afastar, início) em pé, no canto esquerdo */
 /* a barra do 3D do lado direito da peça (o Foto | 3D fica à esquerda) */
-#product-dialog .viewer-tools { top: 50%; bottom: auto; right: 14px; left: auto; transform: translateY(-50%); flex-direction: column; align-items: stretch; border-radius: 24px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); background: #ffffffe6; box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
-#product-dialog .viewer-tools button { min-height: 44px; min-width: 44px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--pd-text); }
+#product-dialog .viewer-tools { top: 50%; bottom: auto; right: 14px; left: auto; transform: translateY(-50%); flex-direction: column; align-items: stretch; border-radius: 24px; padding: 4px; gap: 2px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, var(--border, #fff)); background: rgb(var(--glass-rgb, 255 255 255) / 0.902); box-shadow: 0 4px 16px #14231b12; backdrop-filter: blur(6px); }
+#product-dialog .viewer-tools button { min-height: 44px; min-width: 44px; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--fg, var(--pd-text)); }
 #product-dialog .viewer-tools button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -2px; }
 #product-dialog .viewer-tools > span { width: 22px; height: 1px; margin: 2px auto; }
-#product-dialog .viewer-tools button:hover, #product-dialog .viewer-tools button[aria-pressed=true] { background: var(--pd-tint); color: var(--pd-accent); }
-#product-dialog .view-note { bottom: 16px; font-size: 12px; color: var(--pd-muted); }
-#product-dialog .viewer-message { color: var(--pd-muted); }
-#product-dialog .pdp-preview { position: absolute; top: 25px; right: 18px; left: auto; z-index: 3; display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, #fff); border-radius: 999px; background: #ffffffd9; font-size: 12px; color: var(--pd-muted); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
+#product-dialog .viewer-tools button:hover, #product-dialog .viewer-tools button[aria-pressed=true] { background: var(--pd-tint); color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); }
+#product-dialog .view-note { bottom: 16px; font-size: 12px; color: var(--fg-2, var(--pd-muted)); }
+#product-dialog .viewer-message { color: var(--fg-2, var(--pd-muted)); }
+#product-dialog .pdp-preview { position: absolute; top: 25px; right: 18px; left: auto; z-index: 3; display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pd-accent) 14%, var(--border, #fff)); border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.851); font-size: 12px; color: var(--fg-2, var(--pd-muted)); box-shadow: 0 2px 10px #14231b0f; backdrop-filter: blur(6px); }
 #pdp-preview-dots { display: flex; gap: 3px; }
 #pdp-preview-dots i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0002; }
 /* computador estreito: "Suas cores" fica só com as bolinhas, para o Surpreenda-me caber folgado no meio */
@@ -112,13 +112,13 @@
    a personalização"): uma pílula de vidro, só nas peças de personalizar. No computador e no tablet, no alto e no meio, entre o Foto | 3D
    e "Suas cores" (acima da foto e do 3D, nunca por cima da peça); no celular, embaixo à direita, na linha dos pontinhos da galeria (Foto)
    e da dica "Arraste para girar" (3D), longe das ferramentas do 3D, que ficam no alto. A estrelinha dá uma volta a cada sorteio. */
-#product-dialog .pdp-surprise { position: absolute; z-index: 3; top: 21px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin: 0; padding: 0 18px 0 15px; border: 1px solid color-mix(in srgb, var(--pd-accent) 20%, #fff); border-radius: 999px; background: #ffffffc7; -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 1px 0 #fff, 0 8px 22px -12px color-mix(in srgb, var(--pd-accent) 60%, transparent), 0 1px 3px #14231b0f; color: var(--pd-text); font: inherit; font-size: 13.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .25s ease, border-color .25s ease, background-color .25s ease; }
-#product-dialog .pdp-surprise span { display: inline-block; font-size: 15px; line-height: 1; color: var(--pd-accent); transition: transform .4s var(--pd-ease); }
+#product-dialog .pdp-surprise { position: absolute; z-index: 3; top: 21px; left: 50%; translate: -50% 0; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; margin: 0; padding: 0 18px 0 15px; border: 1px solid color-mix(in srgb, var(--pd-accent) 20%, var(--border, #fff)); border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.78); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); box-shadow: inset 0 1px 0 #fff, 0 8px 22px -12px color-mix(in srgb, var(--pd-accent) 60%, transparent), 0 1px 3px #14231b0f; color: var(--fg, var(--pd-text)); font: inherit; font-size: 13.5px; font-weight: 650; letter-spacing: .01em; white-space: nowrap; cursor: pointer; transition: transform .2s var(--pd-ease), box-shadow .25s ease, border-color .25s ease, background-color .25s ease; }
+#product-dialog .pdp-surprise span { display: inline-block; font-size: 15px; line-height: 1; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); transition: transform .4s var(--pd-ease); }
 #product-dialog .pdp-surprise:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 3px; }
 #product-dialog .pdp-surprise.is-sparkling span { animation: pdp-sparkle .6s cubic-bezier(.34, 1.56, .64, 1); }
 @keyframes pdp-sparkle { 45% { transform: rotate(200deg) scale(1.45); } 100% { transform: rotate(360deg); } }
 @media (hover: hover) {
-  #product-dialog .pdp-surprise:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); background-color: #fffffff2; box-shadow: inset 0 1px 0 #fff, 0 12px 26px -12px color-mix(in srgb, var(--pd-accent) 70%, transparent), 0 1px 3px #14231b14; transform: translateY(-1px); }
+  #product-dialog .pdp-surprise:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, var(--border, #fff)); background-color: rgb(var(--glass-rgb, 255 255 255) / 0.949); box-shadow: inset 0 1px 0 #fff, 0 12px 26px -12px color-mix(in srgb, var(--pd-accent) 70%, transparent), 0 1px 3px #14231b14; transform: translateY(-1px); }
   #product-dialog .pdp-surprise:hover span { transform: rotate(72deg) scale(1.15); }
 }
 /* afunda ao toque (depois do hover, para valer também com o mouse em cima) */
@@ -129,18 +129,18 @@
 #product-dialog:is([data-fixed], [data-mode=preview]) .pdp-surprise { display: none; }
 
 /* ── "Dê o seu toque." ────────────────────────────────────────────────────────── */
-#product-dialog .detail-copy { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 26px 32px 32px; overflow-y: auto; overscroll-behavior: contain; background: #fff; }
+#product-dialog .detail-copy { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 18px; min-height: 0; padding: 26px 32px 32px; overflow-y: auto; overscroll-behavior: contain; background: var(--surface, #fff); }
 /* o que rola por baixo da barra de compra se dissolve nela, em vez de ser cortado ao meio (visual 17); a folga de baixo é maior que o
    esmaecimento, então no fim da rolagem nada fica apagado */
 #product-dialog .detail-copy { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }
 .pdp-colors { display: grid; gap: 14px; padding: 0; border: 0; background: none; }
 .pdp-colors-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.pdp-colors-head h3 { margin: 0; font: 500 clamp(22px, 2vw, 26px) / 1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.3px; color: var(--pd-text); }
-#selected-color { font-size: 13px; color: var(--pd-muted); text-align: right; }
+.pdp-colors-head h3 { margin: 0; font: 500 clamp(22px, 2vw, 26px) / 1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.3px; color: var(--fg, var(--pd-text)); }
+#selected-color { font-size: 13px; color: var(--fg-2, var(--pd-muted)); text-align: right; }
 #product-dialog #part-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; background: none; }
-#product-dialog #part-tabs button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13.5px; color: var(--pd-text); box-shadow: none; transition: border-color .2s, background .2s, box-shadow .2s; }
-#product-dialog #part-tabs button:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, #fff); }
-#product-dialog #part-tabs button[aria-pressed=true] { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 55%, #fff); color: var(--pd-text); font-weight: 650; box-shadow: inset 0 0 0 1px var(--pd-accent); }
+#product-dialog #part-tabs button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: var(--surface, #fff); font-size: 13.5px; color: var(--fg, var(--pd-text)); box-shadow: none; transition: border-color .2s, background .2s, box-shadow .2s; }
+#product-dialog #part-tabs button:hover { border-color: color-mix(in srgb, var(--pd-accent) 45%, var(--border, #fff)); }
+#product-dialog #part-tabs button[aria-pressed=true] { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 55%, var(--surface, #fff)); color: var(--fg, var(--pd-text)); font-weight: 650; box-shadow: inset 0 0 0 1px var(--pd-accent); }
 #product-dialog .part-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; flex: none; transition: background .25s; }
 /* as cores na largura toda (o Surpreenda-me foi para a área da peça) */
 #product-dialog #palette { position: relative; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -4px; }
@@ -156,9 +156,9 @@
    guardada, o painel não pula ao trocar de aba); nas com brilho e nas multicor, a bolinha com o nome ao lado. As cores com brilho e as
    multicor trazem o degradê do filamento na bolinha (--swatch) e um reflexo que passa por ela ao chegar perto. */
 #product-dialog .palette-groups { display: inline-flex; justify-self: start; gap: 2px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--pd-wash) 55%, #f1edef); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-line) 70%, transparent); }
-#product-dialog .palette-groups button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 15px; border: 0; border-radius: 999px; background: transparent; color: var(--pd-muted); font: 600 13px/1 'DM Sans', 'DM Sans Fallback', sans-serif; white-space: nowrap; cursor: pointer; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
-#product-dialog .palette-groups button:hover { color: var(--pd-text); }
-#product-dialog .palette-groups button[aria-pressed=true] { background: #fff; color: var(--pd-text); box-shadow: 0 1px 2px rgba(40, 28, 34, .12), 0 3px 10px -4px rgba(40, 28, 34, .18); }
+#product-dialog .palette-groups button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 15px; border: 0; border-radius: 999px; background: transparent; color: var(--fg-2, var(--pd-muted)); font: 600 13px/1 'DM Sans', 'DM Sans Fallback', sans-serif; white-space: nowrap; cursor: pointer; transition: background-color .2s ease, color .2s ease, box-shadow .2s ease; }
+#product-dialog .palette-groups button:hover { color: var(--fg, var(--pd-text)); }
+#product-dialog .palette-groups button[aria-pressed=true] { background: var(--surface, #fff); color: var(--fg, var(--pd-text)); box-shadow: 0 1px 2px rgba(40, 28, 34, .12), 0 3px 10px -4px rgba(40, 28, 34, .18); }
 #product-dialog .palette-groups button:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 1px; }
 #product-dialog .palette-groups i { flex: none; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(40, 28, 34, .18); }
 #product-dialog #palette { min-height: 92px; align-content: flex-start; }
@@ -168,69 +168,69 @@
 #product-dialog #palette[data-group="shine"] .swatch[data-group="shine"], #product-dialog #palette[data-group="special"] .swatch[data-group="special"] { display: inline-flex; flex-direction: row; align-items: center; gap: 9px; width: auto; height: 44px; padding: 0 15px 0 6px; border-radius: 999px; }
 #product-dialog #palette:not([data-group="solid"]) { gap: 6px 4px; }
 #product-dialog #palette:not([data-group="solid"]) .swatch i { flex: none; width: 32px; height: 32px; }
-#product-dialog .swatch-name { display: none; font-size: 13px; font-weight: 600; color: var(--pd-text); white-space: nowrap; }
+#product-dialog .swatch-name { display: none; font-size: 13px; font-weight: 600; color: var(--fg, var(--pd-text)); white-space: nowrap; }
 #product-dialog #palette:not([data-group="solid"]) .swatch-name { display: inline; }
-#product-dialog #palette:not([data-group="solid"]) .swatch:hover { background: color-mix(in srgb, var(--pd-wash) 45%, #fff); }
-#product-dialog #palette:not([data-group="solid"]) .swatch[aria-checked=true] { background: color-mix(in srgb, var(--pd-wash) 55%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-accent) 35%, transparent); }
+#product-dialog #palette:not([data-group="solid"]) .swatch:hover { background: color-mix(in srgb, var(--pd-wash) 45%, var(--surface, #fff)); }
+#product-dialog #palette:not([data-group="solid"]) .swatch[aria-checked=true] { background: color-mix(in srgb, var(--pd-wash) 55%, var(--surface, #fff)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pd-accent) 35%, transparent); }
 /* O aviso de uma cor escolhida (products.js › notice: o arco-íris varia com o rolo de filamento): embaixo das cores, numa pílula com a
    borda no degradê do arco-íris; a altura abre devagar (grade de 0fr a 1fr) e o painel não pula de uma vez. Fechado, não ocupa nada
    (a margem negativa desfaz o espaço da grade). */
 #product-dialog .palette-notice { display: grid; grid-template-rows: 0fr; margin-top: -14px; opacity: 0; transition: grid-template-rows .35s var(--pd-ease), margin-top .35s var(--pd-ease), opacity .3s ease; }
 #product-dialog .palette-notice.is-on { grid-template-rows: 1fr; margin-top: 0; opacity: 1; }
 #product-dialog .palette-notice > div { min-height: 0; overflow: hidden; }
-#product-dialog .palette-notice p { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 9px 13px 9px 11px; border: 1px solid transparent; border-radius: 14px; background: linear-gradient(var(--pd-notice-bg, #fff), var(--pd-notice-bg, #fff)) padding-box, linear-gradient(100deg, #fd7ab0, #b689d1, #7b96e2, #75cacf, #6cb089) border-box; font-size: 12.5px; line-height: 1.45; color: var(--pd-text); }
-#product-dialog .palette-notice .icon { flex: none; width: 17px; height: 17px; margin-top: 1px; color: #8f7bd1; }
+#product-dialog .palette-notice p { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 9px 13px 9px 11px; border: 1px solid transparent; border-radius: 14px; background: linear-gradient(var(--pd-notice-bg, var(--surface-soft, #fff)), var(--pd-notice-bg, var(--surface-soft, #fff))) padding-box, linear-gradient(100deg, #fd7ab0, #b689d1, #7b96e2, #75cacf, #6cb089) border-box; font-size: 12.5px; line-height: 1.45; color: var(--fg, var(--pd-text)); }
+#product-dialog .palette-notice .icon { flex: none; width: 17px; height: 17px; margin-top: 1px; color: color-mix(in oklab, #8f7bd1, #fff var(--lift, 0%)); }
 #product-dialog .swatch[data-finish] i { position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
 #product-dialog .swatch[data-finish] i::before { content: ''; position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,.55) 50%, transparent 60%); translate: -60% 0; transition: translate .6s var(--pd-ease); pointer-events: none; }
 #product-dialog .swatch[data-finish]:hover i::before, #product-dialog .swatch[data-finish][aria-checked=true] i::before { translate: 60% 0; }
 #product-dialog .swatch[data-finish][aria-checked=true] i { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--pd-accent); }
 @keyframes pd-pick { 40% { transform: scale(1.16); } }
-#product-dialog .part-hint { margin: -6px 0 0; font-size: 12.5px; color: var(--pd-muted); }
+#product-dialog .part-hint { margin: -6px 0 0; font-size: 12.5px; color: var(--fg-2, var(--pd-muted)); }
 
 /* Combinações prontas e o link das cores, recolhidos */
 .pdp-more { border-top: 1px solid var(--pd-line); border-bottom: 1px solid var(--pd-line); }
-.pdp-more summary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 13px; font-weight: 600; color: var(--pd-muted); cursor: pointer; list-style: none; }
+.pdp-more summary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 13px; font-weight: 600; color: var(--fg-2, var(--pd-muted)); cursor: pointer; list-style: none; }
 .pdp-more summary::-webkit-details-marker { display: none; }
 .pdp-more summary::after { content: ''; width: 7px; height: 7px; margin-top: -4px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); transition: transform .25s var(--pd-ease), margin .25s; }
 .pdp-more[open] summary::after { margin-top: 4px; transform: rotate(-135deg); }
-.pdp-more summary:hover { color: var(--pd-accent); }
+.pdp-more summary:hover { color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); }
 .pdp-more summary:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: -2px; border-radius: 8px; }
 .pdp-more-body { display: grid; gap: 4px; padding: 0 0 14px; }
 .pdp-more[open] .pdp-more-body { animation: pd-rise .3s var(--pd-ease) both; }
 .pdp-presets { display: flex; flex-wrap: wrap; gap: 6px; }
-.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13px; color: var(--pd-text); transition: border-color .2s, transform .2s var(--pd-ease); }
+.pdp-presets button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--pd-line); border-radius: 999px; background: var(--surface, #fff); font-size: 13px; color: var(--fg, var(--pd-text)); transition: border-color .2s, transform .2s var(--pd-ease); }
 .pdp-presets button:hover { border-color: var(--pd-accent); transform: translateY(-1px); }
-.preset-dots { display: inline-flex; color: var(--pd-accent); }
-.preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid #fff; }
+.preset-dots { display: inline-flex; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); }
+.preset-dots i { width: 11px; height: 11px; margin-left: -3px; border-radius: 50%; border: 1px solid var(--border, #fff); }
 .preset-dots i:first-child { margin-left: 0; }
 /* Compartilhar estas cores (auditoria D3): um link que reabre a mesma combinação. */
-.pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; padding: 0 2px; border: 0; background: none; color: var(--pd-accent); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; justify-self: start; }
+.pdp-share { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; padding: 0 2px; border: 0; background: none; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; justify-self: start; }
 .pdp-share .icon { width: 18px; height: 18px; }
-.pdp-share-link { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--pd-line); border-radius: 10px; background: #fff; font: inherit; font-size: 12px; color: inherit; }
+.pdp-share-link { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--pd-line); border-radius: 10px; background: var(--surface, #fff); font: inherit; font-size: 12px; color: inherit; }
 .pdp-share:focus-visible { outline: 2px solid var(--pd-accent); outline-offset: 2px; }
 
 /* ── Barra de compra ──────────────────────────────────────────────────────────── */
-#product-dialog .modal-actions { grid-column: 2; grid-row: 3; position: relative; z-index: 2; display: grid; gap: 12px; padding: 16px 32px 22px; border-top: 1px solid var(--pd-line); background: #fff; box-shadow: 0 -16px 28px -22px #14231b40; }
+#product-dialog .modal-actions { grid-column: 2; grid-row: 3; position: relative; z-index: 2; display: grid; gap: 12px; padding: 16px 32px 22px; border-top: 1px solid var(--pd-line); background: var(--surface, #fff); box-shadow: 0 -16px 28px -22px #14231b40; }
 #product-dialog .pdp-price { display: grid; justify-items: start; gap: 3px; margin: 0; }
 .pdp-price p { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; }
-#product-dialog .pdp-price strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; color: var(--pd-text); font-variant-numeric: tabular-nums; }
-.pdp-pix { padding: 4px 11px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; }
+#product-dialog .pdp-price strong { font-size: 26px; font-weight: 700; letter-spacing: -.5px; color: var(--fg, var(--pd-text)); font-variant-numeric: tabular-nums; }
+.pdp-pix { padding: 4px 11px; border: 1px solid var(--border, #13864a40); border-radius: 999px; background: var(--tint, #e8f6ee); color: color-mix(in oklab, #0f6d3c, #fff var(--lift, 0%)); font-size: 12.5px; font-weight: 700; }
 /* o kit das lâmpadas com desconto: o preço cheio riscado ao lado do total (controller.js paintPrice; no celular, o desconto fica no kit) */
-#product-dialog .pdp-full { margin-left: -2px; font-size: 14px; font-weight: 500; color: var(--pd-muted); font-variant-numeric: tabular-nums; }
+#product-dialog .pdp-full { margin-left: -2px; font-size: 14px; font-weight: 500; color: var(--fg-2, var(--pd-muted)); font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) { #product-dialog .pdp-full { display: none; } }
 #product-dialog .modal-actions.is-compact .pdp-full { display: none; }
 #product-dialog .purchase-actions .primary[aria-disabled=true] { opacity: .5; box-shadow: none; cursor: not-allowed; }
-#product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--pd-muted); text-align: left; }
-#product-dialog .pdp-price .pdp-offer { display: block; margin-top: 2px; color: var(--pd-accent); font-weight: 650; }
+#product-dialog .pdp-price small { max-width: none; font-size: 12px; color: var(--fg-2, var(--pd-muted)); text-align: left; }
+#product-dialog .pdp-price .pdp-offer { display: block; margin-top: 2px; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); font-weight: 650; }
 #product-dialog .pdp-price .pdp-offer[hidden] { display: none; }
-#product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: #13864a; }
+#product-dialog .purchase-free-ship { margin: -6px 0 0; font-size: 12px; color: color-mix(in oklab, #13864a, #fff var(--lift, 0%)); }
 #product-dialog #purchase-panel { display: grid; gap: 8px; }
 #product-dialog .purchase-status:empty { display: none; }
 #product-dialog .purchase-actions { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 10px; }
 #product-dialog .purchase-actions .primary { justify-content: center; gap: 9px; min-height: 52px; padding: 0 16px; border-radius: 14px; font-size: 14.5px; font-weight: 650; transition: background .2s, border-color .2s, transform .2s var(--pd-ease), box-shadow .2s; }
 #product-dialog .purchase-actions .primary .icon { width: 19px; height: 19px; }
-#product-dialog #add-to-cart { border: 1.5px solid color-mix(in srgb, var(--pd-accent) 40%, #dcd6d8); background: #fff; color: var(--pd-text); }
-#product-dialog #add-to-cart:hover { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 45%, #fff); }
+#product-dialog #add-to-cart { border: 1.5px solid color-mix(in srgb, var(--pd-accent) 40%, var(--border, #dcd6d8)); background: var(--surface, #fff); color: var(--fg, var(--pd-text)); }
+#product-dialog #add-to-cart:hover { border-color: var(--pd-accent); background: color-mix(in srgb, var(--pd-wash) 45%, var(--surface, #fff)); }
 #product-dialog #buy-now { border: 1.5px solid var(--pd-accent); background: var(--pd-accent); color: #fff; box-shadow: 0 8px 20px color-mix(in srgb, var(--pd-accent) 30%, transparent); }
 #product-dialog #buy-now:hover { background: var(--pd-strong); border-color: var(--pd-strong); transform: translateY(-1px); }
 #product-dialog .purchase-actions .primary:active { transform: scale(.985); }
@@ -246,9 +246,9 @@
 #product-dialog[data-mode=preview] .pdp-sheet .pdp-more { display: none; }
 #product-dialog[data-mode=preview] .pdp-fixed { display: grid; gap: 12px; }
 .pdp-fixed-colors { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
-.pdp-fixed-color { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 10px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 13.5px; color: var(--pd-text); }
+.pdp-fixed-color { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 10px; border: 1px solid var(--pd-line); border-radius: 999px; background: var(--surface, #fff); font-size: 13.5px; color: var(--fg, var(--pd-text)); }
 .pdp-fixed-color i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; }
-.pdp-fixed-text { margin: 2px 0 0; font-size: 14.5px; line-height: 1.6; color: #5f525a; }
+.pdp-fixed-text { margin: 2px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--fg-2, #5f525a); }
 #product-dialog[data-mode=preview] .pdp-soon-bar { display: grid; gap: 3px; margin: 0; }
 /* Peça de cores fixas à venda (data-fixed: as lâmpadas): as cores dela no lugar das escolhas, com o preço e a compra de sempre */
 #product-dialog[data-fixed] :is(.pdp-colors, .pdp-preview) { display: none; }
@@ -257,30 +257,30 @@
 /* "Monte seu kit" (as lâmpadas, kit-builder.js; 07/10/2026): na área branca, logo depois de "Cores da peça", num cartão que nasce no
    tom da peça e clareia até o branco. O kit usa as cores da janela (--pd-*); a base do kit fica em mini-cart.css. */
 .pdp-kit { display: none; }
-#product-dialog[data-fixed] .pdp-kit { display: grid; gap: 14px; padding: 18px 18px 16px; border: 1px solid var(--pd-line); border-radius: 22px; background: linear-gradient(180deg, var(--pd-tint) 0%, #fff 62%); box-shadow: 0 16px 34px -28px color-mix(in srgb, var(--pd-accent) 70%, transparent); }
+#product-dialog[data-fixed] .pdp-kit { display: grid; gap: 14px; padding: 18px 18px 16px; border: 1px solid var(--pd-line); border-radius: 22px; background: linear-gradient(180deg, var(--pd-tint) 0%, var(--surface-soft, #fff) 62%); box-shadow: 0 16px 34px -28px color-mix(in srgb, var(--pd-accent) 70%, transparent); }
 #product-dialog[data-cart-edit] .pdp-kit { display: none; }
 .pdp-kit .pdp-colors-head { flex-wrap: wrap; align-items: center; row-gap: 6px; }
 .pdp-kit .pdp-colors-head h3 { white-space: nowrap; }
-.pdp-kit-mix { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em; color: var(--pd-accent); white-space: nowrap; }
+.pdp-kit-mix { display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px; border: 1px solid var(--pd-line); border-radius: 999px; background: var(--surface, #fff); font-size: 12px; font-weight: 650; letter-spacing: .02em; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); white-space: nowrap; }
 #product-dialog .kit { --kit-accent: var(--pd-accent); --kit-strong: var(--pd-strong); --kit-ink: var(--pd-text); --kit-muted: var(--pd-muted); --kit-line: var(--pd-line); --kit-tint: color-mix(in srgb, var(--pd-wash) 62%, #fff); }
-.pdp-soon-bar strong { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--pd-accent); }
-.pdp-soon-bar span { font-size: 13.5px; color: var(--pd-muted); }
+.pdp-soon-bar strong { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); }
+.pdp-soon-bar span { font-size: 13.5px; color: var(--fg-2, var(--pd-muted)); }
 
 /* ── Painel "Sobre a peça": ao lado no desktop, de baixo para cima no celular ── */
-.pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: min(460px, 46%); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: #fff; box-shadow: -18px 0 40px #14231b24; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
+.pdp-sheet { position: absolute; top: 0; right: 0; bottom: 0; z-index: 20; width: min(460px, 46%); display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; padding: 22px 28px; background: var(--surface, #fff); box-shadow: -18px 0 40px #14231b24; transform: translateX(100%); transition: transform .35s cubic-bezier(.22, 1, .36, 1); }
 .pdp-sheet.is-open { transform: none; }
 /* saindo (controller.js closeSheet): mais rápido que a entrada e acelerando, como quem sai do caminho */
 .pdp-sheet.is-leaving { transition-duration: .24s; transition-timing-function: cubic-bezier(.4, 0, 1, 1); }
 .pdp-sheet-head { display: flex; align-items: center; justify-content: space-between; }
-.pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--pd-text); }
-.pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--pd-line); border-radius: 50%; background: #fff; font-size: 24px; line-height: 1; }
+.pdp-sheet-head h3 { margin: 0; font: 500 22px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--fg, var(--pd-text)); }
+.pdp-sheet-close { width: 44px; height: 44px; border: 1px solid var(--pd-line); border-radius: 50%; background: var(--surface, #fff); font-size: 24px; line-height: 1; }
 .pdp-sheet-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--pd-line); overflow-x: auto; }
-.pdp-sheet-tabs button { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13px; color: var(--muted); white-space: nowrap; margin-bottom: -1px; }
+.pdp-sheet-tabs button { min-height: 44px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 13px; color: var(--fg-2, var(--muted)); white-space: nowrap; margin-bottom: -1px; }
 .pdp-sheet-tabs button[aria-selected=true] { border-bottom-color: var(--pd-accent); color: var(--ink); font-weight: 650; }
-.pdp-sheet-panel { overflow-y: auto; font-size: 14.5px; line-height: 1.65; color: #5f525a; }
+.pdp-sheet-panel { overflow-y: auto; font-size: 14.5px; line-height: 1.65; color: var(--fg-2, #5f525a); }
 .pdp-sheet-panel p { margin: 0 0 12px; }
-.pdp-sheet-panel a { color: var(--pd-accent); text-decoration: underline; text-underline-offset: 3px; }
-.pdp-ship { color: #13864a; }
+.pdp-sheet-panel a { color: color-mix(in oklab, var(--pd-accent), #fff var(--lift, 0%)); text-decoration: underline; text-underline-offset: 3px; }
+.pdp-ship { color: color-mix(in oklab, #13864a, #fff var(--lift, 0%)); }
 
 /* ── Tablet e celular: uma coluna — topo, peça, ateliê e a barra de compra ─────── */
 @media (max-width: 900px) {
@@ -292,7 +292,7 @@
   /* a vista de lado a lado, arrastando; os pontinhos embaixo dizem em qual se está */
   /* a área da peça continua a cor do topo e vai clareando até o branco do ateliê, sem troca brusca de cor (nas duas abas) */
   .pdp-head { border-bottom: 0; }
-  #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, #fff) 60%, #fff 100%); }
+  #product-dialog .detail-visual, #product-dialog[data-view=photo] .detail-visual { background: linear-gradient(180deg, var(--pd-tint) 0%, color-mix(in srgb, var(--pd-tint) 40%, var(--surface-soft, #fff)) 60%, var(--surface-soft, #fff) 100%); }
   /* o Foto | 3D e o Surpreenda-me numa linha acima do painel da foto (nunca por cima dela) */
   #product-dialog .view-tabs { top: 14px; left: 16px; }
   #product-dialog .pdp-surprise { top: 17px; }
@@ -305,7 +305,7 @@
   /* cada pontinho com 44 px de toque (o ponto continua pequeno) */
   .gallery-dots button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
   .gallery-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--pd-text) 28%, transparent); transition: width .25s var(--pd-ease), background .25s; }
-  .gallery-dots [aria-current=true] i { width: 18px; background: var(--pd-text); }
+  .gallery-dots [aria-current=true] i { width: 18px; background:  var(--fg, var(--pd-text)); }
   #product-dialog #viewer-host { inset: 70px 0 34px; }
   #product-dialog .viewer-tools { right: 10px; }
   #product-dialog .view-note { bottom: 10px; }
@@ -417,7 +417,7 @@
   #product-dialog[open], #product-dialog[open] *, .pdp-more summary::after { animation: none !important; transition: none !important; }
 }
 /* "entre em contato" na descrição (painel do (i)): abre o e-mail da Ju */
-#dialog-description .contact-mail { color: var(--pd-accent, var(--rose)); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+#dialog-description .contact-mail { color: color-mix(in oklab, var(--pd-accent, var(--rose)), #fff var(--lift, 0%)); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 
 /* O resumo da compra recolhe e abre (06/10/2026, pedido do Luiz: "a linha que a pessoa possa diminuir o resumo"; vale para o site
    todo). Uma alça no topo (puxar para baixo ou tocar) recolhe o resumo numa linha só: o preço, o carrinho (só o ícone; o nome continua
@@ -478,3 +478,17 @@
 @media (min-width: 901px) { #product-dialog .pdp-heading .eyebrow.is-badge { margin-bottom: 8px; padding: 6px 15px 6px 18px; font-size: 13.5px; letter-spacing: .24em; } }
 @media (prefers-reduced-motion: reduce) { #product-dialog .pdp-heading .eyebrow.is-badge::before { animation: none; } #product-dialog .pdp-heading .eyebrow.is-badge::after { animation: none; display: none; } }
 @media (forced-colors: active) { #product-dialog .pdp-heading .eyebrow.is-badge { background: none; box-shadow: none; outline: 0; border: 1px solid CanvasText; color: CanvasText; } #product-dialog .pdp-heading .eyebrow.is-badge::before, #product-dialog .pdp-heading .eyebrow.is-badge::after { display: none; } }
+
+/* ── Tema escuro (journey.css › tokens) ──────────────────────────────────────────────────────────────────────────────────────────
+   O ateliê no escuro: o topo e o palco da peça no tom escuro dela (--pd-tint, --pd-stage), as linhas de luz baixa, o controle dos tipos
+   de cor num vidro escuro (a aba escolhida sobe de tom) e o contorno claro nas bolinhas escuras (o preto não some no fundo). */
+:root[data-theme="dark"] #product-dialog {
+  --pd-line: rgb(255 255 255 / .1);
+  --pd-tint: color-mix(in oklab, var(--theme-accent) 16%, #1e191d);
+  --pd-stage: color-mix(in oklab, var(--theme-accent) 10%, #171316);
+  --pd-notice-bg: var(--surface);
+}
+:root[data-theme="dark"] #product-dialog .palette-groups { background: rgb(255 255 255 / .06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08); }
+:root[data-theme="dark"] #product-dialog .palette-groups button[aria-pressed=true] { background: var(--surface-2); box-shadow: 0 1px 2px rgb(0 0 0 / .4); }
+:root[data-theme="dark"] #product-dialog .swatch i { border-color: rgb(255 255 255 / .16); }
+:root[data-theme="dark"] #product-dialog .kit { --kit-tint: color-mix(in oklab, var(--pd-accent) 22%, var(--surface)); }

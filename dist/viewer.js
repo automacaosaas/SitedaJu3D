@@ -15,6 +15,8 @@ export class ProductViewer{
     const key=new T.DirectionalLight(0xfff4ee,2.5);key.position.set(-3,6,5);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-4;key.shadow.camera.right=4;key.shadow.camera.top=4;key.shadow.camera.bottom=-4;key.shadow.bias=-.0005;this.scene.add(key);
     const fill=new T.DirectionalLight(0xe7f1ff,1.5);fill.position.set(4,2,-3);this.scene.add(fill);
     this.pedestal=new T.Mesh(new T.CylinderGeometry(1.9,1.9,.24,80),new T.MeshStandardMaterial({color:'#fffafa',roughness:.72}));this.pedestal.position.y=-2.02;this.pedestal.receiveShadow=true;this.scene.add(this.pedestal);
+    // no tema escuro (journey.js › data-theme), a pilastra de cetim escuro, como a da vitrine; troca na hora quando o tema muda
+    this.scheme=()=>{this.pedestal.material.color.set(document.documentElement.dataset.theme==='dark'?'#2e282c':'#fffafa');this.render();};this.scheme();window.addEventListener('ju:scheme',this.scheme);
     this.controls=new OrbitControls(this.camera,canvas);this.controls.enablePan=false;this.controls.enableDamping=false;this.controls.minDistance=5;this.controls.maxDistance=13;this.controls.minPolarAngle=.4;this.controls.maxPolarAngle=Math.PI*.78;this.controls.rotateSpeed=.75;this.controls.autoRotateSpeed=1.4;
     this.controls.addEventListener('change',()=>this.render());
     this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(host);
@@ -94,5 +96,5 @@ export class ProductViewer{
     finally{this.renderer.setSize(this.width,this.height,false);this.render();}
   }
   hide(){this.loadVersion=(this.loadVersion||0)+1;this.loadController?.abort();this.active=false;this.stop();this.renderer.domElement.hidden=true;}
-  dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
+  dispose(){this.hide();this.observer.disconnect();document.removeEventListener('visibilitychange',this.visibility);window.removeEventListener('ju:scheme',this.scheme);this.controls.dispose();this.model?.dispose();this.pedestal.geometry.dispose();this.pedestal.material.dispose();this.environment?.dispose();this.renderer.dispose();this.renderer.domElement.remove();}
 }

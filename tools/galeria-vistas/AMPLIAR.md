@@ -22,6 +22,12 @@ medidas de `fotos.json` (recortes, chão, áreas) continuam em pixels da **origi
 5. `node tools/galeria-vistas/gerar.cjs <peça>`, subir `VIEWS_VERSION` em `dist/gallery.js`, `node tools/build-product-pages.cjs` e
    `node tools/sync-versions.cjs` (as vistas vão com um ano de cache; `tests/versioned-assets.mjs`).
 
+**Sem placa de vídeo (Linux, na nuvem):** o mesmo binário roda na CPU pelo driver Vulkan por software do Mesa (lavapipe:
+`apt install mesa-vulkan-drivers`, depois `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`). É lento (uns 75 s a cada
+50 mil pixels em 4 núcleos): amplie só o recorte usado da foto (o de `fotos.json` com uma margem), e devolva-o ao tamanho da
+original x4 (o resto preto, `ffmpeg … pad=`), para as medidas de `fotos.json` continuarem valendo. Com ffmpeg num laço de shell,
+use `-nostdin` (sem ele, o ffmpeg come a lista do laço). Assim foram feitas as do macaco (09/10/2026).
+
 Confira sempre o resultado de perto: o modelo não inventa peças, mas pode alisar detalhes muito pequenos (os números da régua
 do avião continuam, em relevo discreto).
 

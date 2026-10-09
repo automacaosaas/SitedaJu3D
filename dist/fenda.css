@@ -6,32 +6,32 @@
 .fenda-page { --nv-ease: cubic-bezier(.22, 1, .36, 1); --nv-green: #1f7a4d; }
 .nv-main { max-width: 1240px; margin: 14px auto 56px; }
 /* "Voltar", no alto: para onde a pessoa estava (fenda.js) */
-.nv-return { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 0 16px 0 11px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--panel, #fff) 72%, transparent); color: var(--ink); font-size: 14px; font-weight: 650; text-decoration: none; transition: background-color .2s ease, box-shadow .2s ease; }
+.nv-return { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; margin: 0 0 12px; padding: 0 16px 0 11px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--panel, var(--surface, #fff)) 72%, transparent); color: var(--ink); font-size: 14px; font-weight: 650; text-decoration: none; transition: background-color .2s ease, box-shadow .2s ease; }
 .nv-return .icon { width: 18px; height: 18px; transform: rotate(180deg); transition: transform .25s var(--nv-ease); }
 .nv-return:hover { background: var(--panel, #fff); box-shadow: 0 8px 20px -14px rgba(40, 30, 20, .5); }
 .nv-return:hover .icon { transform: rotate(180deg) translateX(3px); }
 .nv-return:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
 /* O palco: um cartão que começa arredondado e se desfaz embaixo, na página (--nv-fade: a altura da passagem; o fundo some, a compra não) */
-.nv-stage { --nv-fh: clamp(340px, 50vh, 450px); --nv-w: calc(var(--nv-fh) / var(--fig-h, 2.2)); --nv-top: 30px; --nv-fade: 190px; --scn-ped: calc(var(--nv-w) * 1.4); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 64px; border-radius: 32px 32px 0 0; overflow: hidden; color: var(--nv-ink); touch-action: pan-y; }
+.nv-stage { --nv-fh: clamp(340px, 50vh, 450px); --nv-w: calc(var(--nv-fh) / var(--fig-h, 2.2)); --nv-top: 30px; --nv-fade: 190px; --scn-ped: calc(var(--nv-w) * 1.4); --stage-top: var(--nv-top); --hero-h: 640px; position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding: var(--nv-top) 24px 64px; border-radius: 32px 32px 0 0; overflow: hidden; color: var(--fg, var(--nv-ink)); touch-action: pan-y; }
 .nv-stage :is(a, button):focus-visible { outline: 2px solid var(--nv-accent); outline-offset: 3px; }
 /* a peça é tocável mas fica fora do Tab (as setas e a lista fazem o mesmo): sem moldura de foco em volta dela */
 .nv-stage .nv-art:focus { outline: none; }
 
 /* O fundo: o degradê e as silhuetas de cada peça, trocados devagar (as mesmas camadas da vitrine da home) */
 .nv-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--nv-fade)), rgba(0, 0, 0, .55) calc(100% - var(--nv-fade) * .5), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - var(--nv-fade)), rgba(0, 0, 0, .55) calc(100% - var(--nv-fade) * .5), transparent); }
-.nv-layer { position: absolute; inset: 0; opacity: 0; visibility: hidden; background: radial-gradient(80% 72% at 50% 40%, var(--stops)); transition: opacity .9s var(--nv-ease), visibility 0s .9s; }
+.nv-layer { position: absolute; inset: 0; opacity: 0; visibility: hidden; background: var(--scrim, none), radial-gradient(80% 72% at 50% 40%, var(--stops)); transition: opacity .9s var(--nv-ease), visibility 0s .9s; }
 .nv-layer.is-on { opacity: 1; visibility: visible; transition: opacity .9s var(--nv-ease), visibility 0s; }
 .nv-layer .hero-scenery { height: 100%; }
 
 /* O selo, a família e a lista das peças, no canto */
 .nv-head { position: absolute; z-index: 3; top: 26px; left: 40px; display: grid; justify-items: start; gap: 4px; max-width: 28%; transition: opacity .35s ease; }
 .nv-badges { margin: 0 0 10px; }
-.nv-kicker { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .24em; text-transform: uppercase; color: var(--nv-accent); }
-.nv-title { margin: 0 0 8px; font: 500 clamp(24px, 2.1vw, 30px)/1.1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.01em; color: var(--nv-ink); text-wrap: balance; }
+.nv-kicker { margin: 0; font-size: 12px; font-weight: 650; letter-spacing: .24em; text-transform: uppercase; color: color-mix(in oklab, var(--nv-accent), #fff var(--lift, 0%)); }
+.nv-title { margin: 0 0 8px; font: 500 clamp(24px, 2.1vw, 30px)/1.1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.01em; color: var(--fg, var(--nv-ink)); text-wrap: balance; }
 .nv-list { list-style: none; display: grid; margin: 0; padding: 0; }
-.nv-list button { min-height: 34px; padding: 0; border: 0; background: none; font: 500 clamp(18px, 1.6vw, 22px)/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: color-mix(in srgb, var(--nv-ink) 36%, transparent); text-align: left; cursor: pointer; transition: color .3s ease; }
-.nv-list button:hover { color: color-mix(in srgb, var(--nv-ink) 66%, transparent); }
-.nv-list button[aria-current=true] { color: var(--nv-ink); }
+.nv-list button { min-height: 34px; padding: 0; border: 0; background: none; font: 500 clamp(18px, 1.6vw, 22px)/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: color-mix(in srgb, var(--fg, var(--nv-ink)) 36%, transparent); text-align: left; cursor: pointer; transition: color .3s ease; }
+.nv-list button:hover { color: color-mix(in srgb, var(--fg, var(--nv-ink)) 66%, transparent); }
+.nv-list button[aria-current=true] { color: var(--fg, var(--nv-ink)); }
 
 /* A peça do centro, na lâmpada inteira, e as vizinhas, nítidas (fenda.js escreve --slot e --k: a distância e 0/1) */
 .nv-focus { position: relative; z-index: 1; display: grid; align-self: start; align-content: start; justify-items: center; width: 100%; transition: transform .75s var(--nv-ease); }
@@ -45,20 +45,20 @@
 
 /* O nome grande, o preço e a compra */
 .nv-caption { display: grid; justify-items: center; gap: 4px; margin-top: 10px; text-align: center; }
-.nv-sub { margin: 0; font-size: 14px; color: var(--nv-muted); }
-.nv-name { margin: 0; font: 500 clamp(40px, 4.6vw, 62px)/1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--nv-ink); transition: font-size .6s var(--nv-ease); }
+.nv-sub { margin: 0; font-size: 14px; color: var(--fg-2, var(--nv-muted)); }
+.nv-name { margin: 0; font: 500 clamp(40px, 4.6vw, 62px)/1 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--fg, var(--nv-ink)); transition: font-size .6s var(--nv-ease); }
 .nv-buy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 18px; margin-top: 10px; }
 .nv-price-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 10px; margin: 0; }
 .nv-price-line strong { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .nv-pix { display: inline-flex; align-items: center; min-height: 26px; padding: 2px 11px; border-radius: 999px; background: var(--nv-green); color: #fff; font-size: 13px; font-weight: 650; white-space: nowrap; }
 .nv-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.nv-cta { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 22px; border: 1.5px solid color-mix(in srgb, var(--nv-accent) 40%, transparent); border-radius: 999px; background: rgba(255, 255, 255, .78); color: var(--nv-accent); font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
-.nv-cta:hover { background: #fff; transform: translateY(-1px); }
+.nv-cta { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 22px; border: 1.5px solid color-mix(in srgb, var(--nv-accent) 40%, transparent); border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.78); color: color-mix(in oklab, var(--nv-accent), #fff var(--lift, 0%)); font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: transform .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.nv-cta:hover { background: var(--surface, #fff); transform: translateY(-1px); }
 .nv-cta.is-main { border-color: var(--nv-accent); background: var(--nv-accent); color: #fff; box-shadow: 0 12px 26px -14px var(--nv-accent); }
 .nv-cta.is-main:hover { background: color-mix(in srgb, var(--nv-accent) 84%, #000); }
 .nv-cta:disabled { opacity: .7; cursor: wait; }
 .nv-cta .icon { width: 19px; height: 19px; }
-.nv-more { display: inline-flex; align-items: center; min-height: 40px; margin-top: 2px; color: var(--nv-ink); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; transition: opacity .3s ease; }
+.nv-more { display: inline-flex; align-items: center; min-height: 40px; margin-top: 2px; color: var(--fg, var(--nv-ink)); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; transition: opacity .3s ease; }
 
 /* as setas de vidro da home (.hero-arrow), na altura do nome; carousel.css as põe na grade no celular, aqui ficam sempre soltas */
 .nv-stage > .nv-arrow { position: absolute; grid-area: auto; top: calc(var(--stage-top) + var(--nv-fh) + 58px); translate: 0 -50%; margin: 0; }
@@ -72,7 +72,7 @@
 @keyframes nv-nudge { 40% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--nv-accent) 16%, transparent), 0 8px 24px -12px rgba(30, 50, 60, .28); } }
 @keyframes nv-nudge-chevron { 40% { translate: 4px 0; opacity: 1; } }
 .nv-arrow, .nv-back { transition: opacity .3s ease; }
-.nv-back { position: absolute; z-index: 4; top: 24px; left: 32px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 13px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgba(255, 255, 255, .6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--nv-ink); font-size: 14px; font-weight: 650; cursor: pointer; }
+.nv-back { position: absolute; z-index: 4; top: 24px; left: 32px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px 0 13px; border: 1px solid rgba(255, 255, 255, .6); border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: var(--fg, var(--nv-ink)); font-size: 14px; font-weight: 650; cursor: pointer; }
 .nv-back .icon { width: 18px; height: 18px; transform: rotate(180deg); }
 
 /* "Ver detalhes": a peça vai para a esquerda e entram à direita o preço em cima, as cores em aletas ao lado, a descrição e a compra */
@@ -81,16 +81,16 @@
 .nv-detail-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 14px 18px; }
 .nv-price { display: grid; gap: 4px; justify-items: start; }
 .nv-price strong { font-size: clamp(32px, 3vw, 40px); font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.nv-price small { font-size: 13px; color: var(--nv-muted); }
+.nv-price small { font-size: 13px; color: var(--fg-2, var(--nv-muted)); }
 .nv-tabs { list-style: none; display: grid; gap: 6px; margin: 0; padding: 0; }
-.nv-tabs li { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 3px 12px 3px 4px; border-radius: 999px; background: rgba(255, 255, 255, .72); box-shadow: 0 1px 3px color-mix(in srgb, var(--nv-ink) 16%, transparent); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.nv-tabs li { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 3px 12px 3px 4px; border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.72); box-shadow: 0 1px 3px color-mix(in srgb, var(--nv-ink) 16%, transparent); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .nv-tabs i { width: 24px; height: 24px; border-radius: 50%; background: var(--swatch); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 0 0 1px color-mix(in srgb, var(--nv-ink) 18%, transparent); }
 .nv-detail-top > :is(.nv-desc, .nv-ctas, .nv-links) { grid-column: 1 / -1; }
 .nv-detail .nv-ctas { justify-content: stretch; }
 .nv-detail .nv-cta { flex: 1 1 auto; white-space: nowrap; }
-.nv-desc { margin: 0; font-size: 15px; line-height: 1.6; color: var(--nv-muted); }
+.nv-desc { margin: 0; font-size: 15px; line-height: 1.6; color: var(--fg-2, var(--nv-muted)); }
 .nv-links { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; }
-.nv-links a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--nv-accent); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+.nv-links a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: color-mix(in oklab, var(--nv-accent), #fff var(--lift, 0%)); font-size: 14px; font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 .nv-links .icon { width: 18px; height: 18px; }
 @keyframes nv-in { from { opacity: 0; transform: translateX(24px); } }
 
@@ -107,11 +107,11 @@
 .nv-offers { margin-top: 8px; scroll-margin-top: 24px; }
 .nv-offers-head { max-width: 640px; margin: 0 auto 28px; text-align: center; }
 .nv-offers-head h2 { margin: 6px 0 10px; font: 500 clamp(32px, 3.4vw, 48px)/1.08 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; letter-spacing: -.02em; color: var(--ink); text-wrap: balance; }
-.nv-offers-head h2 em { color: var(--theme-accent, var(--rose)); }
-.nv-offers-head .nv-kicker { color: var(--theme-accent, var(--rose)); }
-.nv-offers-head > p:last-child { margin: 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+.nv-offers-head h2 em { color: var(--accent-fg, var(--theme-accent, var(--rose))); }
+.nv-offers-head .nv-kicker { color: var(--accent-fg, var(--theme-accent, var(--rose))); }
+.nv-offers-head > p:last-child { margin: 0; font-size: 15px; line-height: 1.6; color: var(--fg-2, var(--muted)); }
 .nv-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.nv-tier { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: 6px; padding: 18px 20px 20px; border-radius: 26px; background: radial-gradient(120% 92% at 50% 0%, var(--tier-stops)); color: var(--tier-ink); text-align: center; box-shadow: 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); transition: transform .3s var(--nv-ease), box-shadow .3s ease; }
+.nv-tier { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: start; gap: 6px; padding: 18px 20px 20px; border-radius: 26px; background: var(--scrim, none), radial-gradient(120% 92% at 50% 0%, var(--tier-stops)); color: var(--fg, var(--tier-ink)); text-align: center; box-shadow: 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); transition: transform .3s var(--nv-ease), box-shadow .3s ease; }
 .nv-tier:hover { transform: translateY(-4px); box-shadow: 0 26px 48px -30px color-mix(in srgb, var(--tier-ink) 80%, transparent); }
 .nv-tier.is-best { box-shadow: inset 0 0 0 2px var(--tier-accent), 0 18px 40px -30px color-mix(in srgb, var(--tier-ink) 70%, transparent); }
 /* o selo do mais vantajoso fica no meio da borda de cima, longe das peças */
@@ -124,8 +124,8 @@
 .nv-tier-n { margin: 0; font: 500 24px/1.15 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
 .nv-tier-price { display: flex; align-items: baseline; gap: 8px; margin: 0; }
 .nv-tier-price strong { font-size: 34px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.nv-tier-price span { font-size: 14px; font-weight: 600; color: color-mix(in srgb, var(--tier-ink) 70%, transparent); }
-.nv-tier-save { margin: 0 0 8px; padding: 3px 11px; border-radius: 999px; background: rgba(255, 255, 255, .7); color: var(--nv-green); font-size: 13px; font-weight: 700; }
+.nv-tier-price span { font-size: 14px; font-weight: 600; color: color-mix(in srgb, var(--fg, var(--tier-ink)) 70%, transparent); }
+.nv-tier-save { margin: 0 0 8px; padding: 3px 11px; border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.7); color: color-mix(in oklab, var(--nv-green), #fff var(--lift, 0%)); font-size: 13px; font-weight: 700; }
 .nv-tier-cta { width: 100%; min-height: 48px; margin-top: auto; border: 0; border-radius: 999px; background: var(--tier-accent); color: #fff; font: 650 14.5px 'DM Sans', 'DM Sans Fallback', sans-serif; cursor: pointer; transition: background-color .2s ease; }
 .nv-tier-cta:hover { background: color-mix(in srgb, var(--tier-accent) 84%, #000); }
 .nv-tier-cta:focus-visible { outline: 2px solid var(--tier-ink); outline-offset: 3px; }
@@ -136,7 +136,7 @@
 .nv-tier.is-picked { box-shadow: inset 0 0 0 2px var(--tier-accent), 0 24px 44px -30px color-mix(in srgb, var(--tier-ink) 80%, transparent); }
 .nv-tier.is-picked .nv-tier-pick { display: none; }
 .nv-tier.is-picked .nv-tier-on { display: inline-flex !important; }
-.nv-tier.is-picked .nv-tier-cta { background: rgba(255, 255, 255, .92); color: var(--tier-accent); box-shadow: inset 0 0 0 2px var(--tier-accent); }
+.nv-tier.is-picked .nv-tier-cta { background: rgb(var(--glass-rgb, 255 255 255) / 0.92); color: color-mix(in oklab, var(--tier-accent), #fff var(--lift, 0%)); box-shadow: inset 0 0 0 2px var(--tier-accent); }
 /* no celular, as setas e os pontos da fileira (fenda.js as mostra só quando ela corre de lado) */
 .nv-tiers-wrap { position: relative; }
 .nv-tiers-wrap > .nv-tiers-arrow { position: absolute; z-index: 2; top: 92px; grid-row: auto; align-self: auto; width: 44px; height: 44px; margin: 0; translate: 0 -50%; transition: opacity .25s ease, background-color .3s ease; }
@@ -147,14 +147,14 @@
 .nv-tiers-wrap[data-scrolls] .nv-tiers-dots { display: flex; }
 .nv-tiers-dots i { width: 7px; height: 7px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 18%, transparent); transition: width .3s var(--nv-ease), background-color .3s ease; }
 .nv-tiers-dots i.is-on { width: 22px; background: var(--theme-accent, var(--rose)); }
-.nv-kit-panel { display: grid; gap: 12px; max-width: 580px; margin: 26px auto 0; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent, var(--rose)) 16%, #ece7e9); border-radius: 26px; background: var(--panel, #fffcfb); box-shadow: 0 20px 44px -34px rgba(40, 30, 20, .5); scroll-margin-top: 90px; }
+.nv-kit-panel { display: grid; gap: 12px; max-width: 580px; margin: 26px auto 0; padding: 20px 20px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent, var(--rose)) 16%, var(--border, #ece7e9)); border-radius: 26px; background: var(--panel, #fffcfb); box-shadow: 0 20px 44px -34px rgba(40, 30, 20, .5); scroll-margin-top: 90px; }
 .nv-kit-panel .pl-kit-head h3 { margin: 0; font: 500 24px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; color: var(--ink); }
 .nv-kit-panel .kit { --kit-accent: var(--theme-accent, var(--rose)); --kit-strong: var(--theme-accent-strong, #9e3e59); --kit-tint: color-mix(in srgb, var(--theme-accent, var(--rose)) 7%, #fff); }
 /* "Comprar agora" e, ao lado, o botão menor do carrinho, na mesma linha logo abaixo do total (fenda.js põe os dois em .nv-kit-actions);
    o do carrinho mostra só o ícone, e o nome dele ("Adicionar o kit ao carrinho") fica para quem usa leitor de tela */
 .nv-kit-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 10px; }
-.nv-kit-panel .nv-kit-actions .kit-add { width: 58px; min-height: 52px; padding: 0; border: 1.5px solid var(--kit-accent); border-radius: 999px; background: #fff; color: var(--kit-accent); box-shadow: none; }
-.nv-kit-panel .nv-kit-actions .kit-add:hover:not(:disabled):not([aria-disabled=true]) { border-color: var(--kit-strong); background: var(--kit-tint); color: var(--kit-strong); }
+.nv-kit-panel .nv-kit-actions .kit-add { width: 58px; min-height: 52px; padding: 0; border: 1.5px solid var(--kit-accent); border-radius: 999px; background: var(--surface, #fff); color: color-mix(in oklab, var(--kit-accent), #fff var(--lift, 0%)); box-shadow: none; }
+.nv-kit-panel .nv-kit-actions .kit-add:hover:not(:disabled):not([aria-disabled=true]) { border-color: var(--kit-strong); background: var(--kit-tint); color: var(--fg, var(--kit-strong)); }
 .nv-kit-actions .kit-add .icon { width: 22px; height: 22px; }
 .nv-kit-actions .kit-add > span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .nv-kit-panel > .nv-share { justify-self: center; margin-top: -4px; }
@@ -163,7 +163,7 @@
 .nv-kit-buy[aria-disabled=true] { opacity: .6; cursor: not-allowed; }
 .nv-kit-buy .icon { width: 20px; height: 20px; }
 .nv-kit-fallback { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 0; }
-.nv-kit-fallback a { color: var(--theme-accent, var(--rose)); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+.nv-kit-fallback a { color: var(--accent-fg, var(--theme-accent, var(--rose))); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
 /* entram ao rolar (fenda.js põe .is-pending só com IntersectionObserver e sem movimento reduzido; sem ele, tudo já está à vista) */
 [data-nv-reveal].is-pending { opacity: 0; transform: translateY(28px); }
 [data-nv-reveal].is-in { opacity: 1; transform: none; transition: opacity .7s var(--nv-ease) calc(var(--i, 0) * 110ms), transform .7s var(--nv-ease) calc(var(--i, 0) * 110ms); }
@@ -171,10 +171,10 @@
 /* Embaixo: como a compra funciona e, discreto, o convite para um colega */
 .nv-foot { display: grid; justify-items: center; gap: 14px; margin-top: 40px; }
 .nv-facts { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 32px; margin: 0; padding: 0; }
-.nv-facts li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.nv-facts li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; color: var(--fg-2, var(--muted)); }
 .nv-facts strong { display: block; color: var(--ink); font-weight: 650; }
-.nv-facts .icon { width: 20px; height: 20px; flex: none; color: var(--theme-accent, var(--rose)); }
-.nv-share { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.nv-facts .icon { width: 20px; height: 20px; flex: none; color: var(--accent-fg, var(--theme-accent, var(--rose))); }
+.nv-share { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; color: var(--fg-2, var(--muted)); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
 .nv-share:hover { color: var(--nv-green); }
 .nv-share .icon { width: 17px; height: 17px; }
 
@@ -190,8 +190,8 @@
   .nv-badges { margin-bottom: 6px; }
   .nv-title { margin-bottom: 10px; font-size: 26px; }
   .nv-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
-  .nv-list button { min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, .62); font: 600 12.5px 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--nv-muted); }
-  .nv-list button[aria-current=true] { background: var(--nv-ink); color: #fff; }
+  .nv-list button { min-height: 38px; padding: 0 12px; border-radius: 999px; background: rgb(var(--glass-rgb, 255 255 255) / 0.62); font: 600 12.5px 'DM Sans', 'DM Sans Fallback', sans-serif; color: var(--fg-2, var(--nv-muted)); }
+  .nv-list button[aria-current=true] { background:  var(--fg, var(--nv-ink)); color: var(--on-ink, #fff); }
   /* no celular as três ficam à vista lado a lado (tocar numa das laterais, as pílulas acima e arrastar também trocam a peça); as setas
      ficam na altura do nome, dos dois lados dele, longe das peças */
   .nv-item { transform: translateX(calc(-50% + var(--slot, 0) * var(--nv-w) * .86)) scale(calc(1 - var(--k, 0) * .38)); }
@@ -223,3 +223,6 @@
   .nv-layer, .nv-focus, .nv-item, .nv-name, .nv-more, .nv-list button, .nv-head, .nv-arrow, .nv-back, .nv-cta, .nv-tier, .nv-return .icon, .nv-tiers-dots i, [data-nv-reveal].is-in { transition: none; }
   .nv-detail { animation: none; }
 }
+
+/* tema escuro (o claro fica como está): o tom de "escolhido" do kit sai da superfície escura */
+:root[data-theme="dark"] .nv-kit-panel .kit { --kit-tint: color-mix(in oklab, var(--theme-accent, var(--rose)) 22%, var(--surface)); }

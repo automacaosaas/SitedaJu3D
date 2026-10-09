@@ -7,7 +7,9 @@ const {pathToFileURL} = require('node:url');
 // direto no Node. Gestos, teclado, foco e transição são conferidos no navegador (ver HERO-BANNER-QA.md).
 const dist = file => path.join(__dirname, '../dist', file);
 const load = file => import(pathToFileURL(dist(file)).href);
-const read = file => fs.readFileSync(dist(file), 'utf8');
+// o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
+const {lightCss} = require('./lib/light-css.cjs');
+const read = file => { const text = fs.readFileSync(dist(file), 'utf8'); return file.endsWith('.css') ? lightCss(text) : text; };
 
 const channel = value => { const c = value / 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
 const luminance = hex => { const [r, g, b] = [1, 3, 5].map(i => channel(parseInt(hex.slice(i, i + 2), 16))); return .2126 * r + .7152 * g + .0722 * b; };
@@ -157,7 +159,8 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   const overlay = css.match(/\.hero-bg::after \{[^}]*\}/)[0];
   // Uma faixa de cor por tema cobre a página inteira; o véu na cor do site regula a intensidade:
   // 0% no fim do banner → sobe até um piso (nunca volta ao rosa cheio) → desce no rodapé (mais tema).
-  const veil = [...overlay.matchAll(/rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/g)];
+  // tema escuro (09/10/2026): a cor do véu é o token --veil-rgb, que só o escuro define; a reserva é a cor do site no claro
+  const veil = [...overlay.matchAll(/rgb\(var\(--veil-rgb, (\d+) (\d+) (\d+)\) \/ ([\d.]+)\)/g)];
   assert.ok(veil.length === 22 && veil.every(m => m[1] == r && m[2] == g && m[3] == b), 'o véu usa exatamente a cor de fundo do site (--bg)');
   const veilAlpha = veil.map(m => Number(m[4])), peak = veilAlpha.indexOf(Math.max(...veilAlpha));
   assert.equal(veilAlpha[0], 0, 'o véu começa transparente (emenda invisível com o banner)');
@@ -182,7 +185,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   // Só o que foi pedido chega ao catálogo, sempre com o prefixo .home (a página Produtos não muda).
   const catalogClasses = new Set(['.product-cart', '.product-carousel-dots', '.product-carousel-stage', '.product-customize', '.product-rail-actions', '.product-rail-active-details', '.product-rail-art', '.product-rail-bottom', '.product-rail-card', '.product-rail-category', '.product-rail-copy']);
   assert.ok([...new Set(css.match(/\.product-[a-z-]+/g))].every(name => catalogClasses.has(name)), 'o CSS só menciona partes permitidas do catálogo');
-  assert.ok(css.split('\n').filter(line => /\.product-/.test(line)).every(line => /^\s*(\.home |\/\*|@supports \([^)]*\) \{ \.home )/.test(line)), 'todo seletor do catálogo tem o prefixo .home');
+  assert.ok(css.split('\n').filter(line => /\.product-/.test(line)).every(line => /^\s*((:root\[data-theme="dark"\] )?\.home |\/\*|@supports \([^)]*\) \{ \.home )/.test(line)), 'todo seletor do catálogo tem o prefixo .home (no tema escuro, :root[data-theme="dark"] .home)');
   assert.ok(!/catalog-card|catalog-carousel/.test(css), 'sem seletores fora do escopo do catálogo');
   assert.ok(!/product-rail|product-customize/.test(js), 'o banner não mexe nos cards do catálogo (a ação principal abre o configurador)');
   assert.ok(/var\(--theme-accent, var\(--rose\)\)/.test(css) && /var\(--theme-text, var\(--ink\)\)/.test(css) && /var\(--theme-muted, var\(--muted\)\)/.test(css), 'sem JS, tudo mantém as cores originais do site');
@@ -214,7 +217,7 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
   assert.ok(/\.palette \{ display: flex; flex-direction: row; align-items: center; gap: 12px;/.test(css), 'no computador, as duas ações lado a lado');
   assert.ok(/\.palette-button \{[^}]*border-radius: 999px;/.test(css) && /\.hero-demo-button \{[^}]*min-height: 52px;[^}]*border-radius: 999px;[^}]*backdrop-filter: blur\(10px\)/.test(css), 'as duas em pílula, na mesma altura; "Ver encaixado" de vidro');
   assert.ok(css.includes('@keyframes palette-sheen') && /prefers-reduced-motion[\s\S]*\.palette-button::after \{ animation: none; display: none; \}/.test(css), 'o brilho que atravessa o botão (e sem ele com movimento reduzido)');
-  assert.ok(/\.hero-arrow \{[^}]*background: rgba\(255, 255, 255, \.5\); -webkit-backdrop-filter: blur\(10px\)/.test(css) && /\.hero-next:hover svg \{ translate: 3px 0; \}/.test(css), 'setas de vidro translúcido; no hover o chevron anda para onde aponta');
+  assert.ok(/\.hero-arrow \{[^}]*background: rgb\(var\(--glass-rgb, 255 255 255\) \/ 0\.5\); -webkit-backdrop-filter: blur\(10px\)/.test(css) && /\.hero-next:hover svg \{ translate: 3px 0; \}/.test(css), 'setas de vidro translúcido; no hover o chevron anda para onde aponta');
   assert.ok(!/data-go-card|goToCard|is-pulsing|chevron-nudge|cta-pulse|palette-dots/.test(js + css), 'sem a ida ao card, a seta pulsante nem as bolinhas');
   assert.ok(!/hero-cue|data-hero-cue|cue-ring|cue-bounce/.test(html + js + css), 'sem a seta separada');
   assert.ok(js.includes('${demo ? `<button class="hero-demo-button" type="button" data-demo-open>'), '"Ver encaixado" só nas peças com demonstração');
@@ -370,7 +373,10 @@ const stops = css => [...css.matchAll(/#[0-9a-f]{6}\b/gi)].map(m => m[0]);
     // cores: a cor da peça clareada nunca escurece o fundo; o lado da sombra (8% do texto) mantém os textos legíveis
     const vars = sceneryVars(theme, look), [, mid] = stops(theme.bannerStops);
     assert.ok(look.tints.length >= 1 && look.tints.every(c => /^#[0-9a-f]{6}$/i.test(c)), key + ': as cores da peça em #rrggbb');
-    assert.ok(Object.keys(vars).length === 12 && Object.values(vars).every(c => /^#[0-9a-f]{6}$/.test(c)), key + ': só cores opacas (nada translúcido escurecendo o fundo)');
+    // tema escuro (09/10/2026): mais uma, --stops-dark (o degradê do banner na noite da peça, que só o escuro usa)
+    const {'--stops-dark': night, ...day} = vars;
+    assert.ok(Object.keys(day).length === 12 && Object.values(day).every(c => /^#[0-9a-f]{6}$/.test(c)), key + ': só cores opacas (nada translúcido escurecendo o fundo)');
+    assert.match(night, /^#[0-9a-f]{6} 0%,#[0-9a-f]{6} 52%,#[0-9a-f]{6} 100%$/, key + ': o degradê do escuro em três paradas opacas');
     for (let k = 1; k <= 4; k++) {
       const t = vars[`--scn-t${k}`], h = vars[`--scn-h${k}`], s = vars[`--scn-s${k}`];
       assert.ok([t, h, s].every(c => /^#[0-9a-f]{6}$/.test(c)), `${key}: cor ${k} opaca`);

@@ -189,6 +189,24 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   andam dentro do grupo à vista. As bolinhas de cor de todo o site usam `paint(c)` (o
   degradê das cores com brilho e multicor); `tests/asset-models.mjs` confere os acabamentos. A cópia do servidor
   (`api/_lib/catalog.js › COLORS`) tem as mesmas cores, na mesma ordem, em PT, EN e ES.
+- **Tema escuro e "Seu cantinho" renovado (09/10/2026):** dois padrões visuais, o claro exatamente como era e o escuro desenhado à parte.
+  - **Quem escolhe:** `journey.js` (o script síncrono do `<head>`) põe `data-theme="light|dark"` no `<html>` antes da primeira pintura:
+    a escolha da pessoa (`localStorage` `ju.scheme`: `light`, `dark`; sem nada = Automático, o do aparelho) e acompanha o aparelho e
+    as outras abas. `window.juScheme.set()` grava e repinta; avisa com o evento `ju:scheme` (o pedestal do 3D, `viewer.js`, troca de cor).
+  - **Onde se escolhe:** "Aparência" (Automático · Claro · Escuro; `dist/scheme-picker.js`, rádios nativos) em "Seu cantinho"
+    (`conta.html`, seção Preferências) e no menu do perfil do topo de todas as páginas (versão compacta).
+  - **Como o escuro é feito:** só por tokens. Os componentes usam `var(--token, <cor do claro>)` e os tokens (`--surface`, `--fg`,
+    `--glass-rgb`, `--gallery-bg`…) só existem em `:root[data-theme="dark"]` (fim de `journey.css`); no claro vale a reserva, então
+    ele não mudou nenhum pixel (conferido por captura em 13 páginas × celular e computador). `python3 tools/tema-escuro/tokens.py`
+    faz essa troca nas folhas (idempotente; `--check` só confere). As cores que a página escreve no elemento (`style="--pl-ink"`) e o
+    que só o escuro precisa (o banner na noite da peça `--stops-dark`, o pedestal, as marcas de pagamento numa plaquinha clara, o kit)
+    ficam em regras `:root[data-theme="dark"] …` no fim de cada folha. Nenhuma regra do escuro filtra ou cobre foto de peça.
+  - **Fotos com fundo transparente:** as vistas da galeria (`dist/assets/vistas/`) agora são WebP com alfa; o quadro é pintado pela
+    página (branco no claro, `--gallery-bg` no escuro). O macaco ganhou as quatro vistas (frente, lado, costas e o rosto de perto).
+  - **Testes:** `tests/tema-escuro.mjs`; os testes de desenho do claro leem o CSS por `tests/lib/light-css.cjs` (os tokens caem na
+    reserva, as regras do escuro saem).
+  - **"Seu cantinho":** a pessoa (foto do Google ou a inicial num círculo no tom da página), quatro atalhos (Meus pedidos, Meus dados,
+    Carrinho, Coleções), Preferências (Aparência, novidades por e-mail, o endereço) e "Sair da conta".
 - **Vitrine de novidade das lâmpadas de fenda (08/10/2026):** `fenda.html` (endereço curto `/fenda`, que o servidor abre como
   `fenda.html`) e o banner "Novidade · Lâmpada de fenda" da home (entre a vitrine e "Nossa coleção", entre `<!-- novidade -->` e
   `<!-- /novidade -->` no `index.html`). Marcação em `dist/fenda-stage.js`, gravada por `node tools/build-product-pages.cjs`; movimento em

@@ -613,6 +613,19 @@ Novidades por e-mail: não autorizadas.|News by email: not authorized.|Novedades
 O endereço é informado na etapa de entrega.|The address is provided at the delivery step.|La dirección se indica en el paso de entrega.
 Voltar ao carrinho|Back to cart|Volver al carrito
 Sair da conta|Sign out|Cerrar sesión
+Coleções|Collections|Colecciones
+Peças em 3D para a consulta|3D pieces for the exam room|Piezas en 3D para la consulta
+Produção, envio e entrega|Production, shipping and delivery|Producción, envío y entrega
+Nota fiscal e entrega|Invoice and delivery|Factura y entrega
+Vazio por enquanto|Empty for now|Vacío por ahora
+Sua conta|Your account|Tu cuenta
+Preferências|Preferences|Preferencias
+Aparência|Appearance|Apariencia
+Automático|Automatic|Automático
+Auto|Auto|Auto
+Claro|Light|Claro
+Escuro|Dark|Oscuro
+Automático acompanha o tema do seu aparelho.|Automatic follows your device's theme.|Automático sigue el tema de tu dispositivo.
 Pedidos demonstrativos feitos nesta aba.|Demo orders placed in this tab.|Pedidos de demostración hechos en esta pestaña.
 Voltar à minha conta|Back to my account|Volver a mi cuenta
 Digite o código de teste abaixo para experimentar a confirmação do e-mail.|Enter the test code below to try the email confirmation.|Escribe el código de prueba de abajo para probar la confirmación del correo.

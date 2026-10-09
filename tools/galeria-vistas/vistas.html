@@ -12,9 +12,13 @@ const q=new URLSearchParams(location.search),keys=q.get('pecas')?.split(',')||[.
 // meio, com o pé a 8% da borda de baixo — todas as peças e vistas do mesmo tamanho, como numa loja.
 const FRAME=[1200,1500],MINI=[160,200],TALL=.8,WIDE=.88,BASE=.08;
 const image=async src=>{const img=new Image();img.src=src;await img.decode();return img;};
-// um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá
+// um quadro do vídeo no instante t (segundos); o vídeo vem inteiro para a memória antes, senão o quadro pedido pode não estar lá.
+// Se ao lado do vídeo houver o quadro já tirado em PNG (<vídeo>@<t>.png, pelo ffmpeg: ffmpeg -ss <t> -i <vídeo> -frames:v 1 <png>), vale
+// ele: é o mesmo quadro, sem perda, e funciona no Chromium sem o decodificador de H.264 (09/10/2026).
 const videos=new Map();
-const still=async(src,t)=>{if(!videos.has(src))videos.set(src,URL.createObjectURL(await (await fetch(src)).blob()));const v=document.createElement('video');v.muted=true;v.preload='auto';v.src=videos.get(src);
+const still=async(src,t)=>{const frame=await fetch(`${src}@${t}.png`,{method:'HEAD'}).catch(()=>null);
+  if(frame?.ok){const img=await image(`${src}@${t}.png`),c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);return c;}
+  if(!videos.has(src))videos.set(src,URL.createObjectURL(await (await fetch(src)).blob()));const v=document.createElement('video');v.muted=true;v.preload='auto';v.src=videos.get(src);
   await new Promise((resolve,reject)=>{v.onloadeddata=resolve;v.onerror=()=>reject(new Error(`vídeo ${src}`));});
   v.currentTime=t;await new Promise(resolve=>{v.onseeked=resolve;});
   const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c;};
@@ -220,10 +224,9 @@ function recolor(canvas,[x,y],rules,areas={}){
   g.putImageData(img,0,0);return canvas;}
 // "fundo": "transparente": uma imagem que já vem sem fundo (a foto da vitrine de uma novidade, render do 3D). Inteira: no quadro padrão;
 // detalhe: o recorte 4:5 dela, ampliado.
-// Fundo branco (07/10/2026: "FUNDO BRANCO nas imagens"): como nas lojas grandes, a foto sai pronta sobre o branco puro, com a sombra
-// leve no chão; a galeria e as miniaturas são brancas em volta, sem emenda. Sem transparência, o arquivo também fica menor.
-function onWhite(canvas){const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const g=context(c);
-  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(canvas,0,0);return c;}
+// Fundo transparente (09/10/2026, o tema escuro): a foto sai só com a peça e a sombra leve no chão (meio transparente); quem pinta o
+// fundo é a galeria, pelo tema — branco puro no claro, como nas lojas grandes (o visual de 07/10/2026, "FUNDO BRANCO nas imagens"), e
+// o escuro no tema escuro. A peça não muda: só o que está em volta dela.
 const encode=(canvas,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),'image/webp',quality));
 const asData=blob=>new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});
 window.results={};window.info={};
@@ -267,7 +270,7 @@ try{
         window.info[`${key}-${v.id}`]=`${spec.fonte}${spec.t==null?'':` @ ${spec.t} s`} · ${spec.fundo==='recortar'?'fundo recortado':`fundo ${bg}`}`;
       }else if(v.id==='frente'){big=ground(place(await image(`/dist/assets/${p.catalogImage}`)));window.info[`${key}-${v.id}`]='foto da vitrine';}
       else throw new Error(`${key}-${v.id}: falta a foto em design/vistas/fotos.json`);
-      const photo=onWhite(big);
+      const photo=big;
       window.results[`${key}-${v.id}.webp`]=await asData(await encode(photo,.93));
       window.results[`${key}-${v.id}-mini.webp`]=await asData(await encode(resample(photo,[0,0,...FRAME],...MINI),.88));
     }

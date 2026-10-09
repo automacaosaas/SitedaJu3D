@@ -1,5 +1,5 @@
 /* Mini-cart (mini-cart.js, audit E1): a drawer on the right on a computer, a sheet from the bottom on a phone. */
-.mini-cart { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(420px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-radius: 22px 0 0 22px; background: #fffcfb; color: var(--ink, #282326); box-shadow: -20px 0 60px #65364930; overflow: hidden; }
+.mini-cart { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(420px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0; border: 0; border-radius: 22px 0 0 22px; background: var(--surface, #fffcfb); color: var(--ink, var(--fg, #282326)); box-shadow: -20px 0 60px #65364930; overflow: hidden; }
 .mini-cart[open] { display: flex; flex-direction: column; animation: mini-cart-in .32s cubic-bezier(.22, 1, .36, 1); }
 .mini-cart::backdrop { background: #2a1c2240; }
 /* o fundo esmaece ao abrir, como já esmaecia ao fechar (movimento 12) */
@@ -14,49 +14,49 @@
 @keyframes mini-cart-down { to { transform: translateY(100%); } }
 @keyframes mini-cart-fade { to { opacity: 0; } }
 .mini-cart-body { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.mini-cart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 14px; border-bottom: 1px solid var(--line, #eadde1); }
-.mini-cart-check { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; font-weight: 650; color: #1f6b47; }
+.mini-cart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 14px; border-bottom: 1px solid var(--line, var(--border, #eadde1)); }
+.mini-cart-check { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; font-weight: 650; color: color-mix(in oklab, #1f6b47, #fff var(--lift, 0%)); }
 .mini-cart-check .icon { width: 24px; height: 24px; padding: 4px; border-radius: 50%; background: #e3f2ea; }
-.mini-cart-close { flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line, #eadde1); border-radius: 50%; background: #fff; color: inherit; font-size: 22px; line-height: 1; cursor: pointer; }
+.mini-cart-close { flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--line, var(--border, #eadde1)); border-radius: 50%; background: var(--surface, #fff); color: inherit; font-size: 22px; line-height: 1; cursor: pointer; }
 .mini-cart-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; }
-.mini-cart-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line, #eadde1); }
+.mini-cart-item { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line, var(--border, #eadde1)); }
 /* a miniatura no tom da própria peça (mini-cart.js --thumb-wash), não num rosa fixo */
 .mini-cart-item img { width: 96px; height: 96px; object-fit: contain; border-radius: 14px; background: var(--thumb-wash, #fbf0f1); }
 .mini-cart-item h3 { margin: 0 0 6px; font: 500 20px/1.2 'Playfair Display', 'Playfair Display Fallback', Georgia, serif; }
-.mini-cart-colors { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 3px; font-size: 12px; color: var(--muted, #71656c); }
+.mini-cart-colors { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 3px; font-size: 12px; color: var(--muted, var(--fg-2, #71656c)); }
 .mini-cart-colors li { display: flex; align-items: center; gap: 6px; }
-.mini-cart-colors i { width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; background: var(--chip); border: 1px solid #38232630; }
-.mini-cart-colors strong { color: var(--ink, #282326); font-weight: 500; }
+.mini-cart-colors i { width: 12px; height: 12px; flex-shrink: 0; border-radius: 50%; background: var(--chip); border: 1px solid var(--border, #38232630); }
+.mini-cart-colors strong { color: var(--ink, var(--fg, #282326)); font-weight: 500; }
 /* a peça nas cores dela (as lâmpadas): uma fileira de bolinhas, em vez de uma linha por cor (visual 16) */
 .mini-cart-colors.is-dots { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
 .mini-cart-colors.is-dots i { width: 14px; height: 14px; }
 .mini-cart-item p { margin: 0; font-size: 13px; }
-.mini-cart-item p span { color: var(--muted, #71656c); }
+.mini-cart-item p span { color: var(--muted, var(--fg-2, #71656c)); }
 .mini-cart-total { margin: 14px 0 4px; }
 .mini-cart-total div { display: flex; justify-content: space-between; gap: 12px; margin: 6px 0; font-size: 14px; }
 .mini-cart-total dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
-.mini-cart-pix dt, .mini-cart-pix dd { color: #1f6b47; }
-.mini-cart .free-ship { margin: 12px 0 4px; padding: 12px 14px; border: 1px solid #25664c24; border-radius: 12px; background: #f1f8f4; font-size: 12px; line-height: 1.45; color: #25463a; }
+.mini-cart-pix dt, .mini-cart-pix dd { color: color-mix(in oklab, #1f6b47, #fff var(--lift, 0%)); }
+.mini-cart .free-ship { margin: 12px 0 4px; padding: 12px 14px; border: 1px solid var(--border, #25664c24); border-radius: 12px; background: var(--surface, #f1f8f4); font-size: 12px; line-height: 1.45; color: var(--fg, #25463a); }
 .mini-cart .free-ship p { margin: 0 0 8px; }
 .mini-cart .free-ship strong { font-weight: 650; }
 .mini-cart .free-ship-track { display: block; height: 6px; border-radius: 99px; background: #25664c1f; overflow: hidden; }
 .mini-cart .free-ship-track i { display: block; height: 100%; width: calc(var(--free-ship) * 100%); border-radius: inherit; background: #2f7d5c; }
-.mini-cart-kit h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted, #71656c); }
+.mini-cart-kit h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted, var(--fg-2, #71656c)); }
 .mini-cart-kit ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.mini-cart-kit li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; border: 1px solid var(--line, #eadde1); border-radius: 14px; background: #fff; }
+.mini-cart-kit li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px 8px 8px; border: 1px solid var(--line, var(--border, #eadde1)); border-radius: 14px; background: var(--surface, #fff); }
 .mini-cart-kit img { width: 56px; height: 56px; object-fit: contain; border-radius: 12px; background: var(--thumb-wash, transparent); }
 .mini-cart-kit strong { display: block; font-size: 14px; font-weight: 600; }
-.mini-cart-kit small { font-size: 13px; color: var(--muted, #71656c); }
-.mini-cart-add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--rose, #b64c68); border-radius: 999px; background: #fff; color: var(--rose, #b64c68); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.mini-cart-kit small { font-size: 13px; color: var(--muted, var(--fg-2, #71656c)); }
+.mini-cart-add { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--rose, #b64c68); border-radius: 999px; background: var(--surface, #fff); color: var(--rose, color-mix(in oklab, #b64c68, #fff var(--lift, 0%))); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .mini-cart-add .icon { width: 16px; height: 16px; }
 /* adicionar pelo kit: o carrinho corre por dentro do botão (a trilha recorta só ele) e, quando volta, o selo com quantas
    peças daquela estão no carrinho aparece ou troca de número — nunca cortado pela borda */
 .mini-cart-add { position: relative; padding: 0; overflow: visible; }
 .mini-cart-add-track { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: inherit; overflow: hidden; }
 .mini-cart-add-cart { display: inline-grid; place-items: center; }
-.mini-cart-add-count { position: absolute; top: -9px; right: -7px; z-index: 1; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; overflow: hidden; border: 2px solid #fff; border-radius: 999px; background: var(--rose, #b64c68); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 3px 8px #b64c6840; }
+.mini-cart-add-count { position: absolute; top: -9px; right: -7px; z-index: 1; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; overflow: hidden; border: 2px solid var(--border, #fff); border-radius: 999px; background: var(--accent-bg, var(--rose, #b64c68)); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; box-shadow: 0 3px 8px #b64c6840; }
 .mini-cart-add-count span { display: block; }
-.mini-cart-add.is-adding { background: #fdf1f4; }
+.mini-cart-add.is-adding { background: var(--surface, #fdf1f4); }
 .mini-cart-add.is-adding .mini-cart-add-cart { animation: kit-cart-run .9s cubic-bezier(.65, 0, .35, 1); }
 .mini-cart-add.is-adding .mini-cart-add-label { animation: kit-label-fade .9s ease; }
 .mini-cart-add-count.is-new { animation: kit-count-in .5s cubic-bezier(.34, 1.56, .64, 1); }
@@ -67,11 +67,11 @@
 @keyframes kit-count-in { from { transform: scale(0); opacity: 0; } }
 @keyframes kit-count-bump { 40% { transform: scale(1.3); } }
 @keyframes kit-count-roll { from { transform: translateY(80%); opacity: 0; } }
-.mini-cart-add:hover { background: #fdf1f4; }
-.mini-cart-actions { display: grid; gap: 8px; padding: 14px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line, #eadde1); background: #fffcfb; }
+.mini-cart-add:hover { background: var(--surface, #fdf1f4); }
+.mini-cart-actions { display: grid; gap: 8px; padding: 14px 20px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line, var(--border, #eadde1)); background: var(--surface, #fffcfb); }
 .mini-cart-actions .primary { display: flex; justify-content: center; align-items: center; gap: 10px; min-height: 50px; text-decoration: none; }
 .mini-cart-actions .primary .icon { width: 18px; height: 18px; }
-.mini-cart-continue { min-height: 46px; border: 1px solid var(--line, #eadde1); border-radius: 999px; background: #fff; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+.mini-cart-continue { min-height: 46px; border: 1px solid var(--line, var(--border, #eadde1)); border-radius: 999px; background: var(--surface, #fff); color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
 .mini-cart :is(a, button):focus-visible { outline: 2px solid var(--rose, #b64c68); outline-offset: 3px; }
 @media (max-width: 600px) {
   .mini-cart { inset: auto 0 0 0; width: 100vw; height: auto; max-height: 88dvh; border-radius: 22px 22px 0 0; }
@@ -95,18 +95,18 @@
    Mora aqui porque este arquivo já vem nas duas páginas que o mostram (a home, na janela da peça, e a página de cada lâmpada), sem
    mais um pedido. As cores vêm de quem o hospeda (--kit-accent, --kit-strong, --kit-ink, --kit-muted, --kit-line, --kit-tint:
    product-page.css e product-landing.css); sem elas, as do site. ── */
-.kit { --kit-accent: var(--rose, #b64c68); --kit-strong: #9e3e59; --kit-ink: var(--ink, #282326); --kit-muted: var(--muted, #71656c); --kit-line: #ead9de; --kit-tint: #fdf3f5; --kit-ease: cubic-bezier(.22, 1, .36, 1); container-type: inline-size; display: grid; gap: 14px; min-width: 0; color: var(--kit-ink); }
+.kit { --kit-accent: var(--rose, #b64c68); --kit-strong: #9e3e59; --kit-ink: var(--ink, #282326); --kit-muted: var(--muted, #71656c); --kit-line: #ead9de; --kit-tint: #fdf3f5; --kit-ease: cubic-bezier(.22, 1, .36, 1); container-type: inline-size; display: grid; gap: 14px; min-width: 0; color: var(--fg, var(--kit-ink)); }
 .kit-tiers { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
-.kit-tier { position: relative; display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 66px; padding: 8px 6px; border: 1px solid var(--kit-line); border-radius: 16px; background: #fff; color: var(--kit-ink); font: inherit; line-height: 1.2; text-align: center; cursor: pointer; transition: border-color .2s ease, background-color .2s ease, box-shadow .25s var(--kit-ease), transform .2s var(--kit-ease); }
-.kit-tier-n { font-size: 12px; font-weight: 600; color: var(--kit-muted); }
+.kit-tier { position: relative; display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 66px; padding: 8px 6px; border: 1px solid var(--kit-line); border-radius: 16px; background: var(--surface, #fff); color: var(--fg, var(--kit-ink)); font: inherit; line-height: 1.2; text-align: center; cursor: pointer; transition: border-color .2s ease, background-color .2s ease, box-shadow .25s var(--kit-ease), transform .2s var(--kit-ease); }
+.kit-tier-n { font-size: 12px; font-weight: 600; color: var(--fg-2, var(--kit-muted)); }
 .kit-tier-price { font-size: 15.5px; font-weight: 700; letter-spacing: -.2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.kit-tier-each { font-size: 12px; color: var(--kit-muted); white-space: nowrap; }
+.kit-tier-each { font-size: 12px; color: var(--fg-2, var(--kit-muted)); white-space: nowrap; }
 .kit-tier[aria-pressed=true] { border-color: var(--kit-accent); background: var(--kit-tint); box-shadow: inset 0 0 0 1px var(--kit-accent), 0 6px 16px -10px var(--kit-accent); }
-.kit-tier[aria-pressed=true] .kit-tier-price { color: var(--kit-accent); }
+.kit-tier[aria-pressed=true] .kit-tier-price { color: color-mix(in oklab, var(--kit-accent), #fff var(--lift, 0%)); }
 .kit-rows { display: grid; margin: 0; padding: 0; list-style: none; }
 .kit-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 6px 0; }
 .kit-row + .kit-row { border-top: 1px solid var(--kit-line); }
-.kit-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: radial-gradient(circle at 50% 38%, #fff 0 45%, var(--kit-tint) 100%); box-shadow: inset 0 0 0 1px var(--kit-line); overflow: hidden; transition: opacity .25s ease; }
+.kit-art { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: radial-gradient(circle at 50% 38%, var(--surface-soft, #fff) 0 45%, var(--kit-tint) 100%); box-shadow: inset 0 0 0 1px var(--kit-line); overflow: hidden; transition: opacity .25s ease; }
 .kit-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .kit-name { display: grid; gap: 5px; min-width: 0; }
 .kit-name strong { font-size: 14.5px; font-weight: 650; line-height: 1.2; overflow-wrap: break-word; }
@@ -114,42 +114,42 @@
 .kit-dots i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px #0000002e; }
 /* peça fora do kit (0): a miniatura e os pontinhos esmaecem; o nome fica no tom mais calmo, ainda legível (contraste AA) */
 .kit-row:not(.is-on) :is(.kit-art, .kit-dots) { opacity: .5; }
-.kit-row:not(.is-on) .kit-name strong { color: var(--kit-muted); font-weight: 600; }
+.kit-row:not(.is-on) .kit-name strong { color: var(--fg-2, var(--kit-muted)); font-weight: 600; }
 .kit-dots, .kit-name strong { transition: opacity .25s ease, color .25s ease; }
 .kit-stepper { display: inline-flex; align-items: center; gap: 2px; }
-.kit-step { position: relative; display: block; width: 44px; height: 44px; padding: 0; border: 1px solid var(--kit-line); border-radius: 50%; background: #fff; color: var(--kit-ink); cursor: pointer; transition: border-color .2s ease, background-color .2s ease, transform .15s ease-out; }
+.kit-step { position: relative; display: block; width: 44px; height: 44px; padding: 0; border: 1px solid var(--kit-line); border-radius: 50%; background: var(--surface, #fff); color: var(--fg, var(--kit-ink)); cursor: pointer; transition: border-color .2s ease, background-color .2s ease, transform .15s ease-out; }
 .kit-step-mark, .kit-step-mark::after { position: absolute; left: 50%; top: 50%; width: 13px; height: 2px; margin: -1px 0 0 -6.5px; border-radius: 2px; background: currentColor; }
 .kit-step-mark::after { content: ''; left: 0; top: 0; margin: 0; transform: rotate(90deg); }
 .kit-step.is-minus .kit-step-mark::after { display: none; }
 .kit-step:active:not([aria-disabled=true]) { transform: scale(.92); }
-.kit-step[aria-disabled=true] { color: color-mix(in srgb, var(--kit-ink) 30%, #fff); border-color: color-mix(in srgb, var(--kit-line) 60%, #fff); cursor: default; }
+.kit-step[aria-disabled=true] { color: color-mix(in srgb, var(--kit-ink) 30%, #fff); border-color: color-mix(in srgb, var(--kit-line) 60%, var(--border, #fff)); cursor: default; }
 .kit-qty { min-width: 28px; font-size: 16px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 .kit-sum { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--kit-line); }
 .kit-total, .kit-deal, .kit-cart-note { margin: 0; }
 .kit-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
-.kit-total-label { font-size: 13px; font-weight: 650; color: var(--kit-muted); }
+.kit-total-label { font-size: 13px; font-weight: 650; color: var(--fg-2, var(--kit-muted)); }
 .kit-total-prices { display: inline-flex; align-items: baseline; gap: 8px; margin-left: auto; }
-.kit-total s { font-size: 13px; color: var(--kit-muted); font-variant-numeric: tabular-nums; }
+.kit-total s { font-size: 13px; color: var(--fg-2, var(--kit-muted)); font-variant-numeric: tabular-nums; }
 .kit-total strong { font-size: 22px; font-weight: 700; letter-spacing: -.4px; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .kit-deal { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.kit-saving { font-size: 13px; font-weight: 700; color: var(--kit-accent); }
+.kit-saving { font-size: 13px; font-weight: 700; color: color-mix(in oklab, var(--kit-accent), #fff var(--lift, 0%)); }
 /* na janela da peça o kit só escolhe (a barra de compra mostra o total): embaixo das linhas, quantas peças e quanto se economiza */
-.kit-count { font-size: 13px; font-weight: 650; color: var(--kit-muted); }
+.kit-count { font-size: 13px; font-weight: 650; color: var(--fg-2, var(--kit-muted)); }
 .kit.is-picker .kit-deal { justify-content: space-between; }
 .kit.is-picker .kit-saving { padding: 3px 11px; border-radius: 999px; background: var(--kit-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kit-accent) 22%, transparent); }
-.kit-pix { margin-left: auto; padding: 3px 10px; border: 1px solid #13864a40; border-radius: 999px; background: #e8f6ee; color: #0f6d3c; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
-.kit-cart-note { font-size: 12.5px; color: var(--kit-muted); }
-.kit-cart-note strong { color: var(--kit-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.kit-pix { margin-left: auto; padding: 3px 10px; border: 1px solid var(--border, #13864a40); border-radius: 999px; background: var(--tint, #e8f6ee); color: color-mix(in oklab, #0f6d3c, #fff var(--lift, 0%)); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.kit-cart-note { font-size: 12.5px; color: var(--fg-2, var(--kit-muted)); }
+.kit-cart-note strong { color: var(--fg, var(--kit-ink)); font-weight: 700; font-variant-numeric: tabular-nums; }
 .kit-add { display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 50px; padding: 0 18px; border: 1.5px solid var(--kit-accent); border-radius: 14px; background: var(--kit-accent); color: #fff; font: inherit; font-size: 14.5px; font-weight: 650; box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--kit-accent) 45%, transparent); cursor: pointer; transition: background-color .2s ease, border-color .2s ease, transform .2s var(--kit-ease), box-shadow .2s ease, opacity .2s ease; }
 .kit-add .icon { width: 19px; height: 19px; }
 .kit-add:active:not(:disabled):not([aria-disabled=true]) { transform: scale(.985); }
 /* sem nenhuma peça o botão continua no Tab (aria-disabled) e, tocado, diz por quê (usabilidade 14) */
 .kit-add:disabled, .kit-add[aria-disabled=true] { opacity: .45; box-shadow: none; cursor: not-allowed; }
-.kit-status { margin: -4px 0 0; font-size: 13px; color: #a12f3c; }
+.kit-status { margin: -4px 0 0; font-size: 13px; color: color-mix(in oklab, #a12f3c, #fff var(--lift, 0%)); }
 .kit-status:empty { display: none; }
 .kit :is(button):focus-visible { outline: 2px solid var(--kit-ink); outline-offset: 2px; }
 @media (hover: hover) {
-  .kit-tier:hover { border-color: color-mix(in srgb, var(--kit-accent) 55%, #fff); transform: translateY(-1px); }
+  .kit-tier:hover { border-color: color-mix(in srgb, var(--kit-accent) 55%, var(--border, #fff)); transform: translateY(-1px); }
   .kit-step:hover:not([aria-disabled=true]) { border-color: var(--kit-accent); background: var(--kit-tint); }
   .kit-add:hover:not(:disabled):not([aria-disabled=true]) { border-color: var(--kit-strong); background: var(--kit-strong); transform: translateY(-1px); }
 }
@@ -180,3 +180,10 @@
   .kit-tier-price { font-size: 13px; letter-spacing: -.3px; }
 }
 @media (prefers-reduced-motion: reduce) { .kit :is(.kit-tier, .kit-art, .kit-dots, .kit-name strong, .kit-step, .kit-add) { transition: none; } .kit-step:active:not([aria-disabled=true]), .kit-add:active:not(:disabled) { transform: none; } }
+
+/* tema escuro (o claro fica como está): as linhas e o tom de "escolhido" do kit saem da superfície escura, e o − apagado esmaece de verdade.
+   Quem hospeda o kit (janela, página da peça, fenda) repete as duas variáveis no próprio bloco escuro, por causa da especificidade. */
+:root[data-theme="dark"] .kit { --kit-line: rgb(255 255 255 / .1); --kit-tint: color-mix(in oklab, var(--kit-accent) 22%, var(--surface)); }
+:root[data-theme="dark"] .kit-step[aria-disabled=true] { color: rgb(255 255 255 / .26); border-color: rgb(255 255 255 / .06); }
+/* a miniatura do mini-carrinho: no escuro, o tom da peça bem baixo sobre a superfície (o quadradinho claro sumiria a peça no painel) */
+:root[data-theme="dark"] :is(.mini-cart-item, .mini-cart-kit) img { background: color-mix(in oklab, var(--thumb-wash, #fbf0f1) 16%, var(--surface-2)); }

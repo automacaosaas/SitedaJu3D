@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import {readFile, stat} from 'node:fs/promises';
+import lightCssModule from './lib/light-css.cjs';
+const {lightCss} = lightCssModule;
 
 // Galeria de fotos da aba Foto: miniaturas à esquerda e a foto grande no computador, arrastar de lado com pontinhos no celular.
 // No padrão de 4 por peça — frente, três quartos, costas e um detalhe de perto —, todas 4:5 e com a peça do mesmo tamanho. Desde
 // 05/10/2026 são renders do modelo 3D (tools/render-vistas: luz de estúdio, cores da vitrine), feitos fora do navegador de quem compra.
-const read = file => readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+// o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
+const read = async file => { const text = await readFile(new URL(`../${file}`, import.meta.url), 'utf8'); return file.endsWith('.css') ? lightCss(text) : text; };
 const [html, controller, gallery, viewer, css, generator, page, i18n, fotosJson, landingCss] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json', 'dist/product-landing.css'].map(read));
 const {STANDARD, GALLERY, VIEWS_VERSION, viewsOf, hasGallery, staticViews} = await import('../dist/gallery.js');
 const {translations} = await import('../dist/translations.js');
@@ -26,7 +29,9 @@ assert.deepEqual(STANDARD.map(([id]) => id), standardIds, 'o padrão: frente, tr
 // A girafa (07/10/2026): ainda sem peça impressa, as imagens do render que o dono mandou — de frente, de lado (no lugar da de três
 // quartos) e de costas, e o rosto de perto saindo da de frente.
 const photoPieces = ['aviaoscopia', 'borboletoscopio', 'dinossauroscopio'];
-assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio', 'unicornioscopio'], 'as três peças com fotos reais, a girafa e o unicórnio');
+assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio', 'macacoscopio', 'unicornioscopio'], 'as três peças com fotos reais, a girafa, o macaco e o unicórnio');
+// O macaco (09/10/2026): as quatro fotos que o dono mandou (render em fundo preto), recortadas — frente, lado, costas e o rosto de perto.
+assert.deepEqual(viewsOf('macacoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'o macaco: frente, lado, costas e o rosto de perto');
 assert.deepEqual(viewsOf('girafoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'a girafa: frente, lado, costas e o rosto de perto');
 // O unicórnio (07/10/2026: "te mandei as fotos do unicórnio, as restantes que estão faltando"): a frente é a foto da vitrine (o quadro 0
 // do giro em 3D); lado, costas e o rosto de perto são as fotos do dono, recortadas do fundo preto, com o roxo levado ao da peça.
@@ -39,13 +44,13 @@ for (const key of Object.keys(GALLERY)) {
   // A girafa (07/10/2026): renders do modelo 3D com a pintura corrigida (as imagens que o dono mandou tinham as manchas vazadas).
   const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : key === 'unicornioscopio' ? ['frente'] : key === 'dinossauroscopio' ? ['frente', 'detalhe'] : [];
   const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'dist/assets/product-unicornioscopio-cutout.webp' : key === 'dinossauroscopio' ? `design/vistas/dinossauroscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
-  const photo = id => key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : key === 'unicornioscopio' ? `unicornioscopio-${id === 'detalhe' ? 'rosto' : id}.webp` : `${key}-3-vistas.webp`;
+  const photo = id => key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : ['unicornioscopio', 'macacoscopio'].includes(key) ? `${key}-${id === 'detalhe' ? 'rosto' : id}.webp` : `${key}-3-vistas.webp`;
   assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === source(id)
     : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === photo(id)), `${key}: as fotos, recortadas`);
   assert(!/render/.test(JSON.stringify(specs)), `${key}: nada do render do visualizador do site`);
   assert.deepEqual(viewsOf(key).filter(v => v.zoom).map(v => v.id), ids.filter(id => fotos[key][id].detalhe), `${key}: as fotos de perto são as de zoom (enchem o quadro)`);
-  // no branco puro (07/10/2026: "FUNDO BRANCO nas imagens"), como nas lojas grandes: sem transparência
-  for (const id of ids) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${key}-${id}.webp`, import.meta.url))); assert(!(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10)), `${key}-${id}: no fundo branco (sem transparência)`); }
+  // com fundo transparente (09/10/2026, o tema escuro): só a peça e a sombra no chão; a galeria pinta o fundo pelo tema (branco no claro)
+  for (const id of ids) for (const file of [`${key}-${id}.webp`, `${key}-${id}-mini.webp`]) { const b = Buffer.from(await readFile(new URL(`../dist/assets/vistas/${file}`, import.meta.url))); assert(b.toString('latin1', 12, 16) === 'VP8X' && (b[20] & 0x10), `${file}: com transparência`); }
   if (photoPieces.includes(key)) assert.deepEqual(ids, standardIds, `${key}: as 4 fotos do padrão`);
   assert.deepEqual(Object.keys(fotos[key]).filter(id => !id.startsWith('_') && id !== 'cores'), ids, `${key}: fotos.json com as fotos da galeria, na ordem`);
   assert(/ de perto$/.test(viewsOf(key).at(-1).name) && fotos[key].detalhe.detalhe === true, `${key}: o detalhe de perto`);
@@ -53,7 +58,6 @@ for (const key of Object.keys(GALLERY)) {
   for (const v of viewsOf(key)) assert(translations[v.name], `${key}: "${v.name}" traduzido`);
   for (const id of ids) await stat(new URL(fotos[key][id].fundo === 'transparente' ? `../${fotos[key][id].fonte}` : `../design/vistas/${fotos[key][id].fonte}`, import.meta.url));
 }
-for (const key of ['macacoscopio']) assert(!hasGallery(key) && viewsOf(key).map(v => v.id).join() === 'frente', `${key}, sem fotos reais ainda: só a foto da vitrine`);
 assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() === 'frente', 'peça sem fotos nem modelo: só a foto da vitrine');
 // Nas cores da vitrine (07/10/2026: "preciso que as imagens estejam todas nas cores que ela é originalmente"): as fotos reais foram
 // feitas com peças de outras cores; cada regra de "cores" leva uma cor da foto para a da paleta (a borboleta, para o verde do render da
@@ -90,7 +94,7 @@ for (const [fonte, sr] of Object.entries(fotos._ampliadas)) { assert(sr.fator ==
 for (const key of Object.keys(GALLERY)) for (const id of viewsOf(key).map(v => v.id)) if (fotos[key][id].fundo === 'recortar' && fotos[key][id].t == null) assert(fotos._ampliadas[fotos[key][id].fonte], `${key}-${id}: da fonte ampliada`);
 assert(page.includes("const sr=spec.t==null?fotos._ampliadas?.[spec.fonte]:null") && page.includes('if(opts.encolher>0)') && page.includes('function fitted(L,C,h)') && page.includes("rule.contraste!=null?dL+(L-sL)*rule.contraste:L<=sL?L*dL/sL:dL+(L-sL)*(1-dL)/(1-sL)"), 'ampliadas, encolher, a curva da claridade e a cor dentro da tela');
 assert(page.includes('const we=w*(1-taken);') && page.includes('for(const poly of opts.manter||[])'), 'o peso que sobra passa para a regra seguinte; "manter" protege o creme claro do avião');
-assert(page.includes('function onWhite(canvas)') && page.includes('encode(photo,.93)') && page.includes('encode(resample(photo,[0,0,...FRAME],...MINI),.88)'), 'as fotos e as miniaturas saem no branco');
+assert(!page.includes('function onWhite(canvas)') && page.includes('const photo=big;') && page.includes('encode(photo,.93)') && page.includes('encode(resample(photo,[0,0,...FRAME],...MINI),.88)'), 'as fotos e as miniaturas saem com fundo transparente');
 // Uma foto (1200 x 1500) e uma miniatura (160 x 200) de cada vista: o mesmo quadro 4:5 em todas.
 let total = 0;
 for (const key of keys) for (const item of staticViews(key)) {

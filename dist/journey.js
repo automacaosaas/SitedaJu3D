@@ -1,6 +1,30 @@
 // Runs before styles: carry only validated theme colours across documents.
 (() => {
   const root = document.documentElement, key = 'ju:theme';
+  // Tema claro ou escuro (09/10/2026): a escolha da pessoa (o perfil: Automático, Claro ou Escuro, em localStorage 'ju.scheme') e, no
+  // automático, o do aparelho. Vai para o <html> antes da primeira pintura (data-theme="light" | "dark": nada pisca), com a cor da
+  // barra do navegador; o CSS só troca os tokens do tema (journey.css). Trocar no perfil vale na hora, nesta e nas outras abas.
+  const SCHEME = 'ju.scheme', BAR = {light: '#fff7f5', dark: '#151214'};
+  const system = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+  const mode = () => { try { const value = localStorage.getItem(SCHEME); return value === 'light' || value === 'dark' ? value : 'auto'; } catch { return 'auto'; } };
+  const paintScheme = () => {
+    const chosen = mode(), scheme = chosen === 'auto' ? (system?.matches ? 'dark' : 'light') : chosen;
+    root.dataset.theme = scheme;
+    const bar = typeof document.querySelector === 'function' && document.querySelector('meta[name="theme-color"]');
+    bar?.setAttribute?.('content', BAR[scheme]);
+    return scheme;
+  };
+  const schemeChanged = () => { paintScheme(); window.dispatchEvent?.(new Event('ju:scheme')); };
+  paintScheme();
+  system?.addEventListener?.('change', () => { if (mode() === 'auto') schemeChanged(); });
+  window.addEventListener?.('storage', event => { if (event.key === SCHEME) schemeChanged(); });
+  // a barra do navegador: a meta vem depois deste script no <head>
+  document.addEventListener?.('DOMContentLoaded', paintScheme, {once: true});
+  window.juScheme = {
+    mode,
+    current: () => root.dataset.theme,
+    set(next) { try { if (next === 'light' || next === 'dark') localStorage.setItem(SCHEME, next); else localStorage.removeItem(SCHEME); } catch {} schemeChanged(); return root.dataset.theme; }
+  };
   // The colours of the piece the showcase opens on, exactly as it computes them: nothing changes colour (and transitions) at load.
   // <entry-data> written by tools/sync-entry.cjs from products.js — do not edit by hand
   const defaults = {'--theme-text':'#10281e', '--theme-muted':'#356650', '--theme-accent':'#25664c', '--theme-wash':'#e4f5ec', '--theme-soft':'#cfddd8', '--theme-accent-strong':'#1e523d'};

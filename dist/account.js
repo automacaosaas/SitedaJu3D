@@ -5,6 +5,8 @@ import {mountLanguagePicker, getLanguage} from './i18n.js';
 import {PRODUCTS, SOON, color, paint} from './products.js';
 import {money} from './commerce-config.js';
 import {createBusyDialog} from './loading-ui.js';
+import {readCart} from './cart-store.js';
+import {schemePicker, wireSchemePicker} from './scheme-picker.js';
 const host = document.querySelector('#account-content'), feedback = document.querySelector('#account-feedback');
 mountLanguagePicker(document.querySelector('.account-tools'));
 const busyDialog = createBusyDialog();
@@ -110,6 +112,20 @@ function showCode() {
   // Only when the e-mail service could not send the code; a real e-mailed code is never shown on the page.
   document.querySelector('#demo-inbox').innerHTML = demoCode() ? `<div class="demo-code">Código de teste · não enviado<strong>${esc(demoCode())}</strong></div>` : '';
 }
+// "Seu cantinho": quem está na conta (a foto do Google, ou a inicial num círculo no tom da Ju), quatro atalhos (pedidos, dados,
+// carrinho e coleções; um embaixo do outro no celular), as preferências, com a Aparência (claro, escuro ou a do aparelho), e o sair.
+const tile = (tag, attrs, glyph, label, note) => `<${tag} class="profile-tile" ${attrs}><span class="profile-tile-icon">${icon(glyph)}</span><span class="profile-tile-text"><strong>${label}</strong><small>${note}</small></span>${icon('chevron')}</${tag}>`;
+function profileView(session) {
+  const pieces = readCart().reduce((sum, item) => sum + item.quantity, 0), initial = esc((session.name.trim()[0] || '♡').toUpperCase());
+  return `<div class="profile-summary"><span class="profile-portrait">${session.avatar ? `<img class="profile-avatar" src="${esc(session.avatar)}" alt="" width="64" height="64" referrerpolicy="no-referrer">` : `<span class="profile-initial" aria-hidden="true">${initial}</span>`}</span>`
+    + `<div class="profile-who"><strong>${esc(session.name)}</strong><p>${esc(session.email)}</p><span class="profile-verified">${icon('check')} E-mail confirmado</span></div></div>`
+    + `<nav class="profile-hub" aria-label="Sua conta">${tile('button', 'type="button" data-screen="orders"', 'bag', 'Meus pedidos', 'Produção, envio e entrega')}${tile('button', 'type="button" data-screen="details"', 'profile', 'Meus dados', 'Nota fiscal e entrega')}`
+    + `${tile('a', 'href="checkout.html"', 'cart', 'Carrinho', pieces ? `${pieces} ${pieces === 1 ? 'peça' : 'peças'} no carrinho` : 'Vazio por enquanto')}${tile('a', 'href="produtos.html"', 'cube', 'Coleções', 'Peças em 3D para a consulta')}</nav>`
+    + `<section class="profile-prefs" aria-labelledby="profile-prefs-title"><h3 id="profile-prefs-title">Preferências</h3>${schemePicker({hint: 'Automático acompanha o tema do seu aparelho.'})}`
+    + `<p class="profile-pref">${icon('mail')}<span>Novidades por e-mail: ${session.marketingOptIn ? 'você escolheu receber' : 'não autorizadas'}.</span></p><p class="profile-pref">${icon('truck')}<span>O endereço é informado na etapa de entrega.</span></p></section>`
+    + `<button class="profile-signout" id="signout" type="button">${icon('exit')}<span>Sair da conta</span></button>`;
+}
+wireSchemePicker(host);
 function render(focus = true) {
   const previousScreen = host.dataset.screen;
   clearInterval(countdown); feedback.textContent = notice; notice = ''; host.dataset.screen = screen;
@@ -127,7 +143,7 @@ function render(focus = true) {
   if (screen === 'password') host.innerHTML = title('BEM-VINDA DE VOLTA', 'Que bom ter<br>você por aqui.', 'Use a senha que criou no seu primeiro cadastro.') + stamp() + `<form id="password-form">${input('password', 'Sua senha', 'password', 'current-password', 'Digite sua senha')}<div class="auth-links"><button type="button" id="forgot-password">Esqueci minha senha</button></div>${submit('Entrar')}</form>` + action('Usar código de acesso', 'verify', 'auth-alternative') + previewNote;
   if (screen === 'signup') host.innerHTML = title('E-MAIL CONFIRMADO', 'Vamos nos<br>conhecer?', 'Só mais dois detalhes para criar seu cantinho.') + stamp() + `<form id="signup-form">${input('name', 'Como podemos chamar você?', 'text', 'name', 'Seu nome')}${input('password', 'Crie uma senha (opcional)', 'password', 'new-password', 'Pelo menos 8 caracteres', true)}<p class="auth-hint">Sem senha, você entra sempre com um código enviado para o seu e-mail.</p><label class="auth-optin"><input type="checkbox" name="marketing"><span>Quero receber novidades e ofertas da Ju por e-mail. <small>Opcional. Você pode mudar de ideia.</small></span></label><p class="auth-terms">Ao criar sua conta, você concorda com os Termos de Uso e declara ter lido a Política de Privacidade.</p><p class="auth-terms-links"><a href="termos.html" target="_blank" rel="noopener">Termos de Uso</a><a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a></p>${submit('Criar minha conta')}</form>` + previewNote;
   if (screen === 'reset') host.innerHTML = title('CÓDIGO CONFIRMADO', 'Um novo começo.', 'Escolha uma nova senha para acessar seu cantinho.') + `<form id="reset-form">${input('password', 'Nova senha', 'password', 'new-password', 'Pelo menos 8 caracteres')}${submit('Salvar nova senha')}</form>` + previewNote;
-  if (screen === 'profile') host.innerHTML = title('SEU CANTINHO', `Olá, ${esc(session.name.split(/\s+/)[0])}.`, 'Suas escolhas e seus próximos encantos, bem pertinho.') + `<div class="profile-summary">${session.avatar ? `<img class="profile-avatar" src="${esc(session.avatar)}" alt="" width="64" height="64" referrerpolicy="no-referrer">` : ''}<span>${icon('check')} E-mail confirmado</span><strong>${esc(session.name)}</strong><p>${esc(session.email)}</p><small>Novidades por e-mail: ${session.marketingOptIn ? 'você escolheu receber' : 'não autorizadas'}.</small><small>O endereço é informado na etapa de entrega.</small></div><a class="primary account-submit" href="produtos.html">Explorar os produtos ${icon('arrow')}</a><a class="auth-alternative" href="checkout.html">Voltar ao carrinho ${icon('cart')}</a>${action('Meus dados', 'details')}${action('Meus pedidos', 'orders')}<button class="back-auth signout" id="signout">Sair da conta</button>`;
+  if (screen === 'profile') host.innerHTML = title('SEU CANTINHO', `Olá, ${esc(session.name.split(/\s+/)[0])}.`, 'Suas escolhas e seus próximos encantos, bem pertinho.') + profileView(session);
   // After a first "Continuar com o Google / com a Apple": the account exists already; only what the shop still needs to sell
   // (usually CPF and phone, for the invoice and the order messages) is asked, and it can wait ("Agora não").
   if (screen === 'welcome') {

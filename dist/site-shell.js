@@ -1,5 +1,6 @@
 import './late-css.js';   // first: switches on the stylesheets the home loads late (index.html data-late-css)
 import {icon} from './icons.js';
+import {schemePicker, wireSchemePicker} from './scheme-picker.js';
 import {mountLanguagePicker, languageReady} from './i18n.js';
 import {readCart, CART_KEY} from './cart-store.js';
 import {getSession, refreshSession, signOut} from './auth-service.js';
@@ -110,7 +111,7 @@ export function refreshHeader() {
 }
 for (const host of document.querySelectorAll('[data-shop-nav]')) {
   setupSiteHeader(host);
-  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>${icon('profile')} <span>Entrar ou cadastrar</span></a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button></div></div>`;
+  host.innerHTML = `<a class="nav-products" href="produtos.html">Produtos</a><a class="header-icon" data-cart-link href="checkout.html" aria-label="Carrinho">${icon('cart')}<span class="cart-badge" data-cart-count hidden>0</span></a><div class="profile-nav"><button class="header-icon" type="button" aria-label="Meu perfil" aria-expanded="false" aria-controls="profile-menu">${icon('profile')}</button><div class="profile-menu" id="profile-menu" hidden><p class="profile-greeting"></p><a href="conta.html" data-account-link>${icon('profile')} <span>Entrar ou cadastrar</span></a><a href="conta.html#pedidos">${icon('bag')} Meus pedidos</a><button type="button" data-signout hidden>${icon('exit')} Sair</button>${schemePicker({compact: true})}</div></div>`;
   const picker = mountLanguagePicker(host, host.querySelector('[data-cart-link]'));
   const menuToggle = host.closest('.site-header')?.querySelector('.menu-toggle');
   if (picker && menuToggle) {
@@ -121,6 +122,7 @@ for (const host of document.querySelectorAll('[data-shop-nav]')) {
     place();
   }
   const trigger = host.querySelector('.profile-nav > button'), menu = host.querySelector('.profile-menu');
+  wireSchemePicker(menu);
   const close = () => { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); };
   trigger.addEventListener('click', () => {
     const session = getSession();

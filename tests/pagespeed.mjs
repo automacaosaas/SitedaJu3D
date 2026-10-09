@@ -6,10 +6,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
+import lightCssModule from './lib/light-css.cjs';
+const {lightCss} = lightCssModule;
 
 const require = createRequire(import.meta.url);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+// o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.css') ? lightCss(text) : text; };
 const pages = fs.readdirSync(path.join(root, 'dist')).filter(f => f.endsWith('.html'));
 const home = read('dist/index.html');
 

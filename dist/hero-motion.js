@@ -98,8 +98,13 @@ export function sceneryScroll(progress, {depth = 'mid', side = 0} = {}, height =
 }
 // As cores do desenho de uma peça, como variáveis CSS da camada, todas opacas: --scn-tN (a cor N clareada), --scn-hN (o lado da
 // luz, mais branco) e --scn-sN (o lado da sombra e os detalhes). Com menos de quatro cores, a última se repete; sem cores, o tom do meio.
+// O tema escuro (09/10/2026): o mesmo degradê no escuro da peça — aceso no tom dela no meio, onde a peça fica, até o quase preto quente
+// nas bordas (--stops-dark, as mesmas paradas do claro); e a faixa do cabeçalho no tom da borda (--band-dark).
+export const NIGHT = '#0f0c0e';
+export const darkStops = theme => `${mixColor(theme.accentColor, NIGHT, .56)} 0%,${mixColor(theme.accentColor, NIGHT, .76)} 52%,${mixColor(theme.accentColor, NIGHT, .88)} 100%`;
+export const darkBand = theme => mixColor(theme.accentColor, NIGHT, .86);
 export function sceneryVars(theme, {tints = []} = {}) {
-  const [, mid] = theme.bannerStops.match(/#[0-9a-f]{6}/gi), list = tints.length ? tints : [mid], vars = {};
+  const [, mid] = theme.bannerStops.match(/#[0-9a-f]{6}/gi), list = tints.length ? tints : [mid], vars = {'--stops-dark': darkStops(theme)};
   for (let i = 0; i < 4; i++) {
     const tint = lightTint(list[Math.min(i, list.length - 1)], mid);
     vars[`--scn-t${i + 1}`] = tint;

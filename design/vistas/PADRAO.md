@@ -11,7 +11,10 @@ ordem:
 | 4 | Detalhe de perto | A parte de cima da peça bem de perto: o rosto, a cabine. Enche o quadro, como o zoom das lojas. |
 
 No site, as quatro saem no mesmo formato (4:5, retrato, 1200 x 1500), recortadas do fundo, com a peça do mesmo tamanho e no mesmo lugar
-em todas e uma sombra leve no chão. Peça que ainda não tem fotos reais (hoje, o macaco) mostra só a foto da vitrine, no mesmo quadro.
+em todas e uma sombra leve no chão. Desde 09/10/2026 o fundo é **transparente** (WebP com canal alfa): quem pinta o quadro é a página —
+branco no tema claro, o tom escuro da peça no escuro (`--gallery-bg`, `--thumb-bg`) —, e a foto em si nunca é filtrada nem invertida.
+Peça que ainda não tem fotos reais mostra só a foto da vitrine, no mesmo quadro (hoje, nenhuma: o macaco ganhou as quatro em 09/10/2026,
+das fotos do estúdio com o detalhe do rosto ampliado 4x pelo Real-ESRGAN, `tools/galeria-vistas/AMPLIAR.md`).
 
 ## O que pedir de foto para uma peça nova
 

@@ -61,11 +61,11 @@
 .demo-callouts, .demo-callout { position: absolute; inset: 0; }
 .demo-callout[data-layout="compact"] { display: none; }
 .demo-callout-line { position: absolute; left: calc(50% - var(--size) / 2); top: calc(var(--cy) - var(--size) / 2); width: var(--size); height: var(--size); overflow: visible; }
-.demo-callout-line path { fill: none; stroke: var(--theme-muted, #356650); stroke-opacity: .7; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.demo-callout-line path { fill: none; stroke: var(--theme-muted, color-mix(in oklab, #356650, #fff var(--lift, 0%))); stroke-opacity: .7; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .demo-callout-halo { fill: rgba(255, 255, 255, .85); }
-.demo-callout-dot { fill: var(--theme-accent, #25664c); }
+.demo-callout-dot { fill: var(--theme-accent, color-mix(in oklab, #25664c, #fff var(--lift, 0%))); }
 .demo-callout-label { position: absolute; left: calc(50% + (var(--x) - .5) * var(--size)); top: calc(var(--cy) + (var(--y) - .5) * var(--size)); white-space: nowrap;
-  font: 600 clamp(12px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, #10281e); }
+  font: 600 clamp(12px, calc(var(--u) * .0085), 13px) / 1 'DM Sans', 'DM Sans Fallback', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--theme-text, color-mix(in oklab, #10281e, #fff var(--lift, 0%))); }
 .demo-callout[data-align="left"] .demo-callout-label { transform: translate(calc(-100% - 12px), -50%); }
 .demo-callout[data-align="below"] .demo-callout-label { transform: translate(-50%, 8px); }
 .demo-callout[data-align="right"] .demo-callout-label { transform: translate(12px, -50%); }
@@ -81,15 +81,15 @@
    legenda da peça, e acima do "Comprar" ela não fica (pedido da dona); longe do chifre, que gira para a direita mas fica no alto */
 .demo-hint { position: absolute; left: calc(50% + var(--size) * .5 + clamp(28px, 5cqw, 96px)); right: auto; top: calc(var(--cy) + 48px); z-index: 3; display: flex; flex-direction: row; align-items: center; gap: .6em;
   max-width: min(300px, calc(50cqw - var(--size) * .5 - clamp(28px, 5cqw, 96px) - 20px)); margin: 0; text-align: left;
-  padding: .75em 1.1em .75em .85em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgba(255, 255, 255, .78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, #10281e); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', 'DM Sans Fallback', sans-serif;
+  padding: .75em 1.1em .75em .85em; border: 1px solid rgba(255, 255, 255, .9); border-radius: 18px; background: rgb(var(--glass-rgb, 255 255 255) / 0.78); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: 0 10px 28px -12px rgba(40, 30, 60, .3); color: var(--theme-text, color-mix(in oklab, #10281e, #fff var(--lift, 0%))); font: 600 clamp(13px, calc(var(--u) * .0095), 15px) / 1.35 'DM Sans', 'DM Sans Fallback', sans-serif;
   opacity: 0; transform: translateY(6px); transition: opacity .45s cubic-bezier(.22, 1, .36, 1), transform .45s cubic-bezier(.22, 1, .36, 1); pointer-events: none; }
 .demo-hint.is-shown { opacity: 1; transform: none; }
 .demo-hint[hidden] { display: none; }
-.demo-hint svg { width: 22px; height: 22px; flex: none; color: var(--theme-accent, #25664c); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.demo-hint svg { width: 22px; height: 22px; flex: none; color: var(--theme-accent, color-mix(in oklab, #25664c, #fff var(--lift, 0%))); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Controles: "voltar" no mesmo desenho das setas; o convite à direita da peça (no celular, abaixo). */
 .demo-close { position: absolute; top: clamp(10px, calc(var(--u) * .018), 28px); right: max(16px, calc(var(--hero-inset) - 24px)); display: grid; place-items: center; width: clamp(44px, 3.6vw, 56px); height: clamp(44px, 3.6vw, 56px); padding: 0;
-  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgba(255, 255, 255, .92); color: #1f2a33; box-shadow: 0 6px 20px rgba(40, 70, 90, .12); cursor: pointer; pointer-events: auto; transition: background .2s, transform .2s; }
+  border: 1px solid rgba(255, 255, 255, .95); border-radius: 50%; background: rgb(var(--glass-rgb, 255 255 255) / 0.92); color: var(--fg, #1f2a33); box-shadow: 0 6px 20px rgba(40, 70, 90, .12); cursor: pointer; pointer-events: auto; transition: background .2s, transform .2s; }
 .demo-close svg { width: 36%; height: 36%; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; }
 .demo-close:focus-visible { outline: 2px solid var(--theme-accent, var(--rose)); outline-offset: 3px; }
 .demo-close:active { transform: scale(.95); }
@@ -98,7 +98,7 @@
 .demo-cta svg { animation: demo-nudge 1.9s ease-in-out infinite; }
 /* Novidade sem compra: o convite leva a ver a peça em 3D (#produto/<peça>/3d), no mesmo desenho do convite dos outros produtos. */
 @keyframes demo-nudge { 0%, 100% { transform: translateX(-1px); opacity: .8; } 50% { transform: translateX(2px); opacity: 1; } }
-@media (hover: hover) { .demo-close:hover { background: #fff; transform: scale(1.05); } }
+@media (hover: hover) { .demo-close:hover { background: var(--surface, #fff); transform: scale(1.05); } }
 
 @media (max-width: 900px) {
   .demo-backdrop, .hero-demo, .demo-controls { --size: calc(min(84cqw, 58cqh) * var(--demo-zoom-compact, var(--demo-zoom, 1))); --cy: calc(40% + var(--cy-shift-compact, 0%)); }
@@ -124,5 +124,5 @@
 @media (prefers-reduced-motion: reduce) and (max-width: 900px) { .demo-hint, .demo-hint.is-shown { transform: translateY(-100%); } }
 /* Até 07/10/2026 estas vinham de uma regra solta do commerce.css (.demo-controls, do caixa), que a home carregava inteira;
    agora ela vale só no caixa (:where(.commerce-page)) e a demonstração guarda o mesmo desenho aqui. */
-.demo-controls { margin-top: 16px; font-size: 12px; color: var(--muted); text-align: center; }
+.demo-controls { margin-top: 16px; font-size: 12px; color: var(--fg-2, var(--muted)); text-align: center; }
 .demo-controls button { min-height: 44px; }

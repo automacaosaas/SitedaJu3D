@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import {createRequire} from 'node:module';
+import lightCssModule from './lib/light-css.cjs';
+const {lightCss} = lightCssModule;
 
 const require = createRequire(import.meta.url);
 const social = require('../api/_lib/social');
@@ -279,7 +281,8 @@ store = createMemoryStore();
 {
   const fs = await import('node:fs'), path = await import('node:path'), {fileURLToPath, pathToFileURL} = await import('node:url');
   const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const read = file => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+  // o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
+  const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.css') ? lightCss(text) : text; };
   const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
   const account = read('dist/account.js'), page = read('dist/conta.html'), service = read('dist/auth-service.js');
   // The buttons: under the e-mail form, after the divider, only the configured providers, leaving the side panel too.

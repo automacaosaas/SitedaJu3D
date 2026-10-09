@@ -4,7 +4,7 @@
 // para dist/assets/vistas por tools/galeria-vistas, todas no mesmo formato (4:5, 1200 x 1500) e com a peça do mesmo tamanho; o 3D que gira
 // continua na aba ao lado.
 // O padrão: 4 fotos — frente, três quartos, costas e um detalhe de perto (que enche o quadro, como o zoom das lojas). Cada peça diz qual é
-// o detalhe dela. Peça sem fotos reais (hoje, o macaco): só a foto da vitrine.
+// o detalhe dela. Peça sem fotos reais: só a foto da vitrine (09/10/2026: o macaco ganhou as quatro).
 export const STANDARD=[['frente','Frente'],['tres-quartos','Três quartos'],['costas','Costas'],['detalhe','Detalhe de perto']];
 const NAMES={...Object.fromEntries(STANDARD),lado:'Lado'};
 // vistas: quando a peça não tem as 4 do padrão (a girafa, 07/10/2026: as imagens do render que o dono mandou, de frente, de lado e de
@@ -14,12 +14,13 @@ export const GALLERY={
   dinossauroscopio:{detalhe:'Rosto de perto'},
   aviaoscopia:{detalhe:'Cabine de perto'},
   girafoscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']},
-  unicornioscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']}
+  unicornioscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']},
+  macacoscopio:{detalhe:'Rosto de perto',vistas:['frente','lado','costas','detalhe']}
 };
 export const viewsOf=key=>GALLERY[key]?(GALLERY[key].vistas||STANDARD.map(([id])=>id)).map(id=>({id,name:id==='detalhe'?GALLERY[key].detalhe:NAMES[id],zoom:id==='detalhe'})):[{id:'frente',name:'Frente',zoom:false}];
 export const hasGallery=key=>!!GALLERY[key];
 // Mude junto com as imagens de assets/vistas/ para quem tem a versão antiga no cache buscar a nova.
-export const VIEWS_VERSION='21';
+export const VIEWS_VERSION='22';
 export const staticViews=key=>viewsOf(key).map(view=>({...view,src:`assets/vistas/${key}-${view.id}.webp?v=${VIEWS_VERSION}`,thumb:`assets/vistas/${key}-${view.id}-mini.webp?v=${VIEWS_VERSION}`}));
 
 export function createGallery(root,{onChange}={}){
