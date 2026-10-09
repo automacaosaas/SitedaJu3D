@@ -1,0 +1,19 @@
+{
+  "_como": "Imagens da loja recoloridas a partir das originais desta pasta (tools/recolorir/recolorir.cjs): o mesmo recolorir em OKLab da galeria (tools/galeria-vistas/cores.js) — a luz e a sombra de cada pixel ficam, só a tinta muda. Cada receita leva as regras e os arquivos; a saída vai para dist/assets/<arquivo>, no mesmo formato. \"so\" num arquivo limita as regras a retângulos [x, y, largura, altura] da imagem.",
+  "dinossauroscopio": {
+    "_porque": "O corpo em Verde-oliva (09/10/2026): as fotos da vitrine eram do Verde-musgo. #66735d é a média do corpo nelas; #849781 é ela pela mesma troca que leva o Verde-musgo da paleta (#616c52) ao Verde-oliva (#7c8f73): a claridade x1,22, a saturação x1,10 e o matiz +9°. A crista e as bolinhas creme, os olhos e os dentes ficam (outro matiz, ou sem cor).",
+    "regras": [
+      {"de": "#66735d", "faixa": 24, "para": "#849781", "croma_min": 0.012, "croma_max": 0.09}
+    ],
+    "arquivos": [
+      "dinossauroscopio.webp",
+      "dinossauroscopio-back.webp",
+      "product-dinossauroscopio-cutout.webp",
+      "product-dinossauroscopio-cutout-768.webp",
+      "card-dinossauroscopio.webp",
+      "card-preview-dinossauroscopio.webp",
+      {"arquivo": "og-dinossauroscopio.jpg", "so": [[690, 50, 350, 570]], "claridade_max": 0.74},
+      {"arquivo": "og-ju.jpg", "so": [[620, 240, 175, 320]], "claridade_max": 0.74}
+    ]
+  }
+}

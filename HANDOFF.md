@@ -176,7 +176,10 @@ retinoscópio e avião para régua de grau, impressas em 3D e personalizáveis (
   laranja, dourado e roxo, azul e verde). As cores foram medidas nas fotos que a Ju mandou; o Azul BIC e o Rosa-bebê são só nomes novos do
   Azul-royal (#183c99, o azul da vitrine do avião) e do Rosa Ju (#ee8eaa), com os mesmos tons (09/10/2026: "só troquei o nome"). Os ids das que trocaram de nome ficaram (`moss` = Verde-oliva,
   `blue` = Azul BIC, `pink` = Rosa-bebê): carrinhos, links de combinação e pedidos salvos continuam valendo. O corpo do Dinossauroscópio
-  passou a abrir em Verde-oliva no 3D (a foto dele ainda é do verde antigo); o avião abre no azul da vitrine. No 3D
+  abre em Verde-oliva no 3D e, desde 09/10/2026, as imagens dele também estão em Verde-oliva: a galeria pelas regras de "cores" de
+  `design/vistas/fotos.json` e as outras (vitrine, recorte, cartões, prévias de link, inclusive `og-ju.jpg`) por
+  `node tools/recolorir/recolorir.cjs` (receitas e originais em `design/recolorir/`; o mesmo recolorir em OKLab da galeria,
+  `tools/galeria-vistas/cores.js`). O avião abre no azul da vitrine. No 3D
   (`asset-models.js`), as partes que se escolhem viram `MeshPhysicalMaterial` (no fosco desenham igual a antes); `finish` dá o acabamento:
   seda e metal refletem um estúdio feito na hora (`viewer.js › studio`, só quando aparece uma cor com brilho), o arco-íris muda com a
   altura da parte (de baixo para cima, como a peça sai da impressora), a dual é um degradê das duas cores do pé ao topo (a mais clara

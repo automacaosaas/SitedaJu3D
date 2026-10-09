@@ -8,7 +8,9 @@ const {lightCss} = lightCssModule;
 // 05/10/2026 são renders do modelo 3D (tools/render-vistas: luz de estúdio, cores da vitrine), feitos fora do navegador de quem compra.
 // o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
 const read = async file => { const text = await readFile(new URL(`../${file}`, import.meta.url), 'utf8'); return file.endsWith('.css') ? lightCss(text) : text; };
-const [html, controller, gallery, viewer, css, generator, page, i18n, fotosJson, landingCss] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json', 'dist/product-landing.css'].map(read));
+const [html, controller, gallery, viewer, css, generator, vistasPage, i18n, fotosJson, landingCss, colorsModule] = await Promise.all(['dist/index.html', 'dist/controller.js', 'dist/gallery.js', 'dist/viewer.js', 'dist/product-page.css', 'tools/galeria-vistas/gerar.cjs', 'tools/galeria-vistas/vistas.html', 'dist/i18n-core.js', 'design/vistas/fotos.json', 'dist/product-landing.css', 'tools/galeria-vistas/cores.js'].map(read));
+// o gerador da galeria: a página (vistas.html) e o recolorir em OKLab, num módulo à parte desde 09/10/2026 (cores.js, usado também por tools/recolorir)
+const page = vistasPage + '\n' + colorsModule;
 const {STANDARD, GALLERY, VIEWS_VERSION, viewsOf, hasGallery, staticViews} = await import('../dist/gallery.js');
 const {translations} = await import('../dist/translations.js');
 const {PRODUCTS, SOON, PALETTE} = await import('../dist/products.js');
@@ -64,16 +66,21 @@ assert(!hasGallery('unicornio') && viewsOf('unicornio').map(v => v.id).join() ==
 // vitrine, mais verde que a amostra), e as regras que valem só numa parte dizem a área dela em todas as vistas.
 // a cor média de cada parte na foto da vitrine (medida em OKLab, 07/10/2026): a peça sai, em média, com a claridade, a saturação e o
 // matiz da vitrine
-const showcaseTone = {borboletoscopio: {mint: '#5bc091', yellow: '#f3da3e'}, dinossauroscopio: {moss: '#687560', cream: '#cabc77'}, aviaoscopia: {blue: '#1f41a6', red: '#dd2e42', yellow: '#eaab39'}};
+// o dino em Verde-oliva (09/10/2026): não há foto da vitrine nele; o tom é o Verde-musgo da foto levado pela troca da paleta, um para o
+// vídeo e outro para as imagens que já vinham verdes (design/vistas/fotos.json › _cores)
+const showcaseTone = {borboletoscopio: {mint: '#5bc091', yellow: '#f3da3e'}, dinossauroscopio: {moss: ['#7a8f70', '#91a587'], cream: '#cabc77'}, aviaoscopia: {blue: '#1f41a6', red: '#dd2e42', yellow: '#eaab39'}};
 for (const key of photoPieces) {
   const rules = fotos[key].cores, targets = rules.map(rule => rule.para);
   for (const rule of rules) {
     assert(/^#[0-9a-f]{6}$/i.test(rule.de) && (PALETTE.some(p => p.id === rule.para) || /^#[0-9a-f]{6}$/i.test(rule.para)), `${key}: regra de cor ${JSON.stringify(rule)}`);
-    for (const area of [rule.so, rule.exceto].filter(Boolean)) for (const id of standardIds.filter(id => fotos[key][id].fundo === 'recortar')) assert(Array.isArray(fotos[key][id].areas?.[area]), `${key}-${id}: a área "${area}"`);
+    // a área de uma regra existe em pelo menos uma vista da peça (uma regra pode valer só em algumas: no dino, "video" e "verde")
+    for (const area of [rule.so, rule.exceto].filter(Boolean)) assert(standardIds.some(id => Array.isArray(fotos[key][id].areas?.[area])), `${key}: a área "${area}"`);
   }
-  for (const part of PRODUCTS[key].parts) assert(targets.includes(showcaseTone[key]?.[part.default] || part.default), `${key}: ${part.name} na cor de fábrica (${part.default})`);
+  // e toda área de uma vista é usada por alguma regra (sem nome errado)
+  for (const id of standardIds) for (const area of Object.keys(fotos[key][id].areas || {})) assert(rules.some(rule => rule.so === area || rule.exceto === area), `${key}-${id}: a área "${area}" numa regra`);
+  for (const part of PRODUCTS[key].parts) assert([].concat(showcaseTone[key]?.[part.default] || part.default).every(tone => targets.includes(tone)), `${key}: ${part.name} na cor de fábrica (${part.default})`);
 }
-assert(page.includes("import {PRODUCTS,SOON,PALETTE} from '/dist/products.js';") && page.includes('function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
+assert(vistasPage.includes("import {recolor} from '/tools/galeria-vistas/cores.js';") && colorsModule.includes("import {PALETTE} from '/dist/products.js';") && colorsModule.includes('export function recolor(canvas,[x,y],rules,areas={})') && page.includes('if(fotos[key].cores)recolor(crop,rect,fotos[key].cores,areas);'), 'o gerador troca as cores (OKLab, mantendo a luz)');
 // A base da girafa é redonda e encosta no reflexo: o chão é uma linha por vários pontos (em ordem de x), não uma altura só.
 assert(page.includes('while(j<floor.length-1&&sx>floor[j][0])j++;'), 'chão por vários pontos');
 // O dino (07/10/2026: "a parte de dentro está cortada… o pé recortado errado… na cabeça, de costas, um recorte errado"): do vídeo do render
@@ -152,5 +159,22 @@ assert(!/Fotografo|ProductViewer|kit/.test(page + generator), 'o gerador não ti
 assert(generator.includes('VIEWS_VERSION') && generator.includes("'.mp4': 'video/mp4'"));
 // Tradução: nota, rótulos e texto alternativo das fotos.
 assert(i18n.includes('(Frente|Três quartos|Lado|Três quartos de trás|Costas|De cima|.+ de perto)'));
+
+// As outras imagens de uma peça que mudou de cor (09/10/2026: o dino em Verde-oliva): tools/recolorir as recolore a partir das
+// originais de design/recolorir, com o mesmo cores.js; cada arquivo da receita tem a original e a saída em dist/assets, e a saída
+// não é mais a original.
+{
+  const receitas = JSON.parse(await read('design/recolorir/receitas.json')), tool = await read('tools/recolorir/recolorir.cjs');
+  assert(tool.includes("path.join(ROOT, 'design', 'recolorir')") && (await read('tools/recolorir/recolorir.html')).includes("import {recolor} from '/tools/galeria-vistas/cores.js';"), 'o recolorir das imagens usa o módulo da galeria');
+  for (const [key, receita] of Object.entries(receitas).filter(([key]) => !key.startsWith('_'))) {
+    assert(receita.regras.every(rule => /^#[0-9a-f]{6}$/i.test(rule.de) && /^#[0-9a-f]{6}$/i.test(rule.para)), `${key}: regras`);
+    for (const item of receita.arquivos) {
+      const arquivo = typeof item === 'string' ? item : item.arquivo;
+      const [original, saida] = await Promise.all([readFile(new URL(`../design/recolorir/${arquivo}`, import.meta.url)), readFile(new URL(`../dist/assets/${arquivo}`, import.meta.url))]);
+      assert(original.length > 1000 && saida.length > 1000 && !original.equals(saida), `${key}: ${arquivo} recolorida`);
+    }
+  }
+  assert(receitas.dinossauroscopio.arquivos.includes('product-dinossauroscopio-cutout.webp') && receitas.dinossauroscopio.arquivos.some(item => item.arquivo === 'og-ju.jpg'), 'o dino em Verde-oliva na vitrine, nos cartões e nas prévias de link');
+}
 
 console.log(`PASS: photo gallery — 4 photos per piece (the giraffe from the owner's render images), in the showcase colours, on pure white in a white panel and frame, all 4:5 with the piece at the same size (${Object.keys(GALLERY).map(k => `${k} ${viewsOf(k).length}`).join(', ')}; ${Math.round(total / 1024)} KB), cut out of the sources, close-ups filling the frame, showcase photo alone without photos or model, Surpreenda-me out of the presets (on the piece since 08/10), cleaner phone screen with the extras in the (i) sheet.`);

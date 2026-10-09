@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Recolorir</title>
+<script type="module">
+// Página do tools/recolorir/recolorir.cjs: recebe os trabalhos (window.run), recolore cada imagem com tools/galeria-vistas/cores.js e
+// devolve a imagem pronta (data URL) no formato pedido.
+import {recolor} from '/tools/galeria-vistas/cores.js';
+const image=src=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error('sem imagem: '+src));i.src=src;});
+const encode=(canvas,type,quality)=>new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('sem imagem')),type,quality));
+const asData=blob=>new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});
+window.run=async jobs=>{
+  const out={};
+  for(const job of jobs){
+    const img=await image(job.src),c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+    c.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0);
+    recolor(c,[0,0],job.regras,job.areas||{});
+    out[job.nome]=await asData(await encode(c,job.tipo,job.qualidade));
+  }
+  return out;
+};
+window.ready=true;
+</script>

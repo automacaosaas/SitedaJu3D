@@ -61,11 +61,13 @@
   },
   "dinossauroscopio": {
     "_fontes": "O vídeo do render girando que o dono mandou em 07/10/2026 (1920 x 1920, fundo preto liso, sem chão nem reflexo; 251 quadros numa volta): de frente o quadro 0, três quartos o 48, costas o 140; o detalhe sai do quadro 0. As medidas são em pixels do vídeo; t é o tempo do quadro (n + 0,5)/30. No fundo preto puro, o recorte pega tudo o que não é preto (limiar 14: acima do chuvisco da compressão em volta da peça, abaixo das partes mais escuras dela) e entra 1,2 pixel (sem o fio escuro da borda); o vão entre as pernas visto de lado é fundo (buracos): a abertura embaixo da boca, as paredes de dentro, os pés e o olho de costas ficam como no render.",
+    "_cores": "Corpo em Verde-oliva (09/10/2026). Cada fonte vai para o Verde-oliva pela mesma troca, em OKLab, que leva o Verde-musgo da paleta (#616c52) ao Verde-oliva (#7c8f73): a claridade x1,22, a saturação x1,10 e o matiz +9°, a partir da média do corpo nela. As imagens de frente e do rosto já vinham em Verde-musgo (\"verde\": de #717d61 para #91a587); o vídeo vinha azul-marinho com a crista verde-limão (\"video\"), e o azul vai para o tom que dá a mesma média da frente. As regras valem só nas vistas que têm a área com o nome delas.",
     "cores": [
-      {"de": "#2c2e55", "faixa": 70, "para": "#687560", "croma_min": 0.004},
-      {"de": "#84b24f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05}
+      {"de": "#2c2e55", "faixa": 70, "para": "#7a8f70", "croma_min": 0.004, "so": "video"},
+      {"de": "#84b24f", "faixa": 40, "para": "#cabc77", "croma_min": 0.05, "so": "video"},
+      {"de": "#717d61", "faixa": 24, "para": "#91a587", "croma_min": 0.012, "croma_max": 0.09, "so": "verde"}
     ],
-    "frente": {"fonte": "design/vistas/dinossauroscopio-3d-frente.png", "fundo": "transparente"},
+    "frente": {"fonte": "design/vistas/dinossauroscopio-3d-frente.png", "fundo": "transparente", "areas": {"verde": [[0, 0, 4096, 4096]]}},
     "tres-quartos": {
       "fonte": "dinossauroscopio-girando.mp4",
       "t": 1.6167,
@@ -74,7 +76,8 @@
       "matte": "cobertura",
       "limiar": 14,
       "encolher": 1.2,
-      "buracos": 0.002
+      "buracos": 0.002,
+      "areas": {"video": [[0, 0, 1920, 1920]]}
     },
     "costas": {
       "fonte": "dinossauroscopio-girando.mp4",
@@ -84,9 +87,10 @@
       "matte": "cobertura",
       "limiar": 14,
       "encolher": 1.2,
-      "buracos": 0.002
+      "buracos": 0.002,
+      "areas": {"video": [[0, 0, 1920, 1920]]}
     },
-    "detalhe": {"fonte": "design/vistas/dinossauroscopio-3d-rosto.png", "recorte": [300, 200, 1400, 1750], "fundo": "transparente", "detalhe": true}
+    "detalhe": {"fonte": "design/vistas/dinossauroscopio-3d-rosto.png", "recorte": [300, 200, 1400, 1750], "fundo": "transparente", "detalhe": true, "areas": {"verde": [[0, 0, 4096, 4096]]}}
   },
   "aviaoscopia": {
     "_fontes": "O avião de frente e a cabine de perto saem da foto da vitrine (dist/assets/product-aviaoscopia-cutout.webp, ampliada 4x: design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp; 07/10/2026: \"a imagem de frente, você pode usar simplesmente a que está na vitrine e depois pintar as outras imagens na respectiva cor dessa original\"). As de três quartos e de costas são as fotos reais, pintadas como a vitrine: o painel creme fica azul, as janelas da cabine (azuis na peça da foto) ficam brancas, os motores ficam amarelo-alaranjados e as estrelas e o bico, vermelhos. Na \"transparente\", o recorte é em pixels da própria fonte.",
