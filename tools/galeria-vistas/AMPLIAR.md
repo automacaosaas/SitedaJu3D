@@ -31,6 +31,20 @@ use `-nostdin` (sem ele, o ffmpeg come a lista do laço). Assim foram feitas as 
 Confira sempre o resultado de perto: o modelo não inventa peças, mas pode alisar detalhes muito pequenos (os números da régua
 do avião continuam, em relevo discreto).
 
+## Render do 3D ao lado das fotos do dono (a frente do unicórnio)
+
+Quando uma vista sai do modelo 3D e as outras são as fotos de estúdio do dono (o unicórnio, 09/10/2026: "a primeira foto ainda destoa
+das outras"), o render ganha o visual delas, medido em OKLab contra elas (o branco, o roxo, a lavanda e o dourado, média e brilhos), e
+passa pelo mesmo Real-ESRGAN: renderizado a 2000 px, reduzido à metade (as ondinhas da malha do Rodin ficam abaixo de um pixel) com a cor
+da beirada espalhada para fora (sem ela, o modelo vê preto em volta da peça e deixa um halo escuro) e ampliado 4x.
+`RENDER_GPU=d3d11 node tools/render-aviao-macaco/lamp-assets.cjs unicornioscopio --foto` (com o `node serve.cjs` da mesma pasta no ar)
+grava `design/vistas/unicornioscopio-3d-frente.png` e `ampliadas/unicornioscopio-3d-frente-x4.webp`; a luz e as cores ficam em `FOTO`
+no começo do script. A vitrine, os cards e o giro não mudam.
+O dourado das fotos do dono é metal polido (brilhos quase brancos e faixas escuras, L 0,74 com desvio 0,085 em OKLab): como plástico
+acetinado o chifre saía laranja chapado ao lado delas, mesmo com a média certa. Por isso o chifre (e a faixa dourada do arco-íris, o
+mesmo material) usa `gloss_horn=…,<força do reflexo>,1` (metalness 1). O 4º campo do `gloss` só vale com ele: o three.js lê o
+envMapIntensity só do envMap do próprio material, e o `lamp-glb.html` dá o estúdio como envMap a quem tem esse campo.
+
 ## Cores
 
 As cores de cada peça (`cores` em `fotos.json`) foram calibradas pela **média** de cada parte: "de" é a cor média da parte na

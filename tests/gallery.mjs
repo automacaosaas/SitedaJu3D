@@ -35,8 +35,9 @@ assert.deepEqual(Object.keys(GALLERY).sort(), [...photoPieces, 'girafoscopio', '
 // O macaco (09/10/2026): as quatro fotos que o dono mandou (render em fundo preto), recortadas — frente, lado, costas e o rosto de perto.
 assert.deepEqual(viewsOf('macacoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'o macaco: frente, lado, costas e o rosto de perto');
 assert.deepEqual(viewsOf('girafoscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'a girafa: frente, lado, costas e o rosto de perto');
-// O unicórnio (07/10/2026: "te mandei as fotos do unicórnio, as restantes que estão faltando"): a frente é a foto da vitrine (o quadro 0
-// do giro em 3D); lado, costas e o rosto de perto são as fotos do dono, recortadas do fundo preto, com o roxo levado ao da peça.
+// O unicórnio (07/10/2026: "te mandei as fotos do unicórnio, as restantes que estão faltando"): lado, costas e o rosto de perto são as
+// fotos do dono, recortadas do fundo preto, com o roxo levado ao da peça; a frente (09/10/2026: "a primeira foto ainda destoa das outras")
+// é um render do modelo 3D com o visual dessas fotos, ampliado pelo Real-ESRGAN como elas (tools/render-aviao-macaco/lamp-assets.cjs --foto).
 assert.deepEqual(viewsOf('unicornioscopio').map(v => v.id), ['frente', 'lado', 'costas', 'detalhe'], 'o unicórnio: frente, lado, costas e o rosto de perto');
 for (const key of Object.keys(GALLERY)) {
   const ids = viewsOf(key).map(v => v.id), specs = ids.map(id => fotos[key][id]);
@@ -45,7 +46,7 @@ for (const key of Object.keys(GALLERY)) {
   // ampliada, já sem fundo.
   // A girafa (07/10/2026): renders do modelo 3D com a pintura corrigida (as imagens que o dono mandou tinham as manchas vazadas).
   const showcaseViews = key === 'aviaoscopia' ? ['frente', 'detalhe'] : key === 'girafoscopio' ? ids : key === 'unicornioscopio' ? ['frente'] : key === 'dinossauroscopio' ? ['frente', 'detalhe'] : [];
-  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'dist/assets/product-unicornioscopio-cutout.webp' : key === 'dinossauroscopio' ? `design/vistas/dinossauroscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
+  const source = id => key === 'girafoscopio' ? `design/vistas/girafoscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : key === 'unicornioscopio' ? 'design/vistas/ampliadas/unicornioscopio-3d-frente-x4.webp' : key === 'dinossauroscopio' ? `design/vistas/dinossauroscopio-3d-${id === 'detalhe' ? 'rosto' : id}.png` : 'design/vistas/ampliadas/aviaoscopia-vitrine-x4.webp';
   const photo = id => key === 'dinossauroscopio' ? 'dinossauroscopio-girando.mp4' : ['unicornioscopio', 'macacoscopio'].includes(key) ? `${key}-${id === 'detalhe' ? 'rosto' : id}.webp` : `${key}-3-vistas.webp`;
   assert(ids.every(id => showcaseViews.includes(id) ? fotos[key][id].fundo === 'transparente' && fotos[key][id].fonte === source(id)
     : fotos[key][id].fundo === 'recortar' && fotos[key][id].fonte === photo(id)), `${key}: as fotos, recortadas`);
