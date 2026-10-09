@@ -32,7 +32,8 @@ const brasilia = iso => new Intl.DateTimeFormat('sv-SE', {timeZone: 'America/Sao
 // Bling's body for the note (API v3, POST/PUT /nfe). A note for abroad (invoice.export, api/_lib/nfe.js) goes as an
 // operation with the exterior (operacaoComExterior, which Bling treats as an export on a "saída" note) with the place of
 // embarkation (exportacao: ufEmbarque, localEmbarque) and a foreign contact (tipoPessoa E, UF "EX", the country's name,
-// no CEP); the CFOP 7101 and the CSOSN 300 come from the export nature in Bling.
+// no CEP); the CFOP 7101 and the CSOSN 300 come from the export nature in Bling. Its items may carry a tax unit other than
+// the note's (unidadeTributavel: KG and the net weight), as the export table asks for the NCM.
 function toBling(invoice, paymentMethodId) {
   const r = invoice.recipient, a = r.address, when = brasilia(invoice.issuedAt), abroad = Boolean(invoice.export);
   return {
@@ -47,7 +48,7 @@ function toBling(invoice, paymentMethodId) {
       ...(r.stateRegistration ? {ie: r.stateRegistration} : {}), ...(r.email ? {email: r.email} : {}),
       endereco: {endereco: a.street, numero: a.number, complemento: a.complement || '', bairro: a.district, cep: cep(a.cep), municipio: a.city, uf: a.state, pais: 'Brasil'}
     },
-    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin)})),
+    itens: invoice.items.map(i => ({codigo: i.code, descricao: i.description, unidade: i.unit, quantidade: i.quantity, valor: money(i.unitCents), tipo: 'P', classificacaoFiscal: ncm(i.ncm), origem: Number(i.icms.origin), ...(i.tax ? {unidadeTributavel: {unidade: i.tax.unit, quantidade: i.tax.quantity}} : {})})),
     parcelas: [{data: when.slice(0, 10), valor: money(invoice.payment.cents), ...(paymentMethodId ? {formaPagamento: {id: Number(paymentMethodId)}} : {})}],
     transporte: {fretePorConta: Number(invoice.freight.mode), frete: money(invoice.freight.cents)},
     ...(invoice.totals?.discountCents ? {desconto: money(invoice.totals.discountCents)} : {}),   // Pix discount, on the whole note

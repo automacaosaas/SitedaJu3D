@@ -265,6 +265,12 @@ O texto das informações complementares fica assim: "DOCUMENTO EMITIDO POR ME O
 GERA DIREITO A CREDITO FISCAL DE IPI. Local de embarque: (nome), (endereço), CNPJ (CNPJ). Pedido nº: JU-…". A linha do
 DIFAL não entra.
 
+Fora da lista da contadora, mas exigido de toda nota para o exterior: a **unidade tributável** de cada item tem de ser a
+que a tabela "NCM e respectiva uTrib (Comércio Exterior)" do Portal da NF-e dá para o NCM, com a quantidade nessa unidade.
+Senão a Fazenda recusa a nota (rejeição 817). As peças são vendidas por unidade (UN). Se a tabela pedir KG para o NCM
+3926.90.90, a quantidade tributável é o peso líquido das peças, sem a caixa. O dono passou esses pesos em 08/10/2026:
+borboleta 75 g, dino 60 g, avião 166 g, macaco 24 g, girafa 18 g e unicórnio 16 g.
+
 ### Como o pedido internacional existe hoje
 
 - O **checkout do site vende só para o Brasil**. O pedido de fora é combinado por WhatsApp ou e-mail, cotado no painel em
@@ -291,6 +297,8 @@ DIFAL não entra.
    - a natureza "Exportação de mercadoria";
    - UF e local de embarque;
    - frete "por conta do remetente", com o valor cobrado;
+   - em cada item, a unidade tributável da tabela de exportação para o NCM. Se for KG, a quantidade tributável é o peso
+     das peças (acima);
    - nas informações complementares, o texto acima, com o local de embarque e o nº do pedido.
 
 ### O que ainda não se sabe (e por isso a nota de exportação está bloqueada)
@@ -301,7 +309,11 @@ não sai e o pedido mostra "Venda para o exterior: a nota de exportação só sa
 
 - `export.shipment.state`, `place`, `address` e `cnpj`: o **local de embarque**. Pela Exporta Fácil, a remessa é postada em
   qualquer agência, mas o despacho de exportação é feito numa unidade dos Correios que cuida das remessas internacionais.
-  O nome dessa unidade, o endereço, a UF e o CNPJ vêm dos Correios (gerente do contrato) e da contadora.
+  O nome dessa unidade, o endereço, a UF e o CNPJ vêm dos Correios (gerente do contrato) e da contadora. O nome vai no
+  campo do local de embarque da nota, que aceita até 60 caracteres.
+- `export.taxUnit.39269090`: a unidade tributável do NCM 3926.90.90 na tabela de exportação do Portal da NF-e (rejeição
+  817). Se for UN, as peças vão como estão. Se for KG, o site manda o peso líquido de `export.netG` (os pesos do dono). Se
+  for outra unidade, o site não converte e a nota é feita à mão.
 - `export.bling.natureId`: o código da natureza, depois de criada no Bling.
 - `export.pis.cst` e `export.cofins.cst`: só seriam usados com outro emissor. Com o Bling, PIS e COFINS vêm da natureza.
 
@@ -320,14 +332,15 @@ não sai e o pedido mostra "Venda para o exterior: a nota de exportação só sa
 
 ### Primeiro teste em homologação
 
-Com a natureza criada e o `export.shipment` preenchido, emitir uma nota de exportação em homologação e conferir no XML
-ou no DANFE:
+Com a natureza criada e o `export.shipment` e o `export.taxUnit` preenchidos, emitir uma nota de exportação em
+homologação e conferir no XML ou no DANFE:
 
 - `idDest` 3, CFOP 7101 e CSOSN 300;
 - destinatário com UF EX, município EXTERIOR (código 9999999) e o país certo (`cPais`/`xPais`). O site manda o nome do
   país em português, sem acentos (ex.: "MEXICO"), e o Bling converte para o código. Se o país sair errado, avisar para
   trocar pelo nome que o Bling usa;
 - grupo `exporta` com a UF e o local de embarque. A rejeição 355 é a falta dele;
+- `uTrib` e `qTrib` de cada item: a unidade da tabela de exportação e a quantidade nela. A rejeição 817 é a unidade errada;
 - modalidade do frete 0, com o valor do frete;
 - o texto das informações complementares.
 
@@ -341,6 +354,8 @@ O Bling aceita notas de exportação pela API (`POST /nfe`) desde a versão 345 
 - o endereço com `uf: "EX"`, `municipio: "EXTERIOR"` e `pais`, sem CEP. A cidade, a região e o código postal do
   cliente vão no bairro e no complemento;
 - `transporte.fretePorConta: 0` e o valor do frete;
+- em cada item, `unidadeTributavel: {unidade: "KG", quantidade}` com o peso líquido, quando a unidade da tabela é KG (com
+  UN, nada a mais);
 - a natureza `export.bling.natureId` (CFOP e CSOSN vêm dela).
 
 Testes: `node tests/nfe-exportacao.mjs` (com o Bling simulado, que também recusa uma nota de exportação sem o local de

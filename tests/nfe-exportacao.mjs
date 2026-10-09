@@ -55,8 +55,10 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual([exp.nature, exp.cfop, exp.icms.origin, exp.icms.csosn], ['Exportação de mercadoria', '7101', '0', '300'], 'nature, CFOP 7101 (the store makes what it sells) and CSOSN 300 with origin 0 ("X300")');
   assert.deepEqual(fiscal.missing(fiscal.FISCAL, {provider: 'bling'}), [], 'the export data still to fill never holds back the national notes');
   assert.deepEqual(fiscal.missing(), [], 'nor with another service');
-  assert.deepEqual(fiscal.missingExport(fiscal.FISCAL, {provider: 'bling'}), ['export.shipment.state', 'export.shipment.place', 'export.shipment.address', 'export.shipment.cnpj', 'export.bling.natureId'],
-    'with Bling: the place of embarkation (UF, name, address, CNPJ) and the id of the export nature; PIS/COFINS come from the nature in Bling');
+  assert.deepEqual(fiscal.missingExport(fiscal.FISCAL, {provider: 'bling'}), ['export.shipment.state', 'export.shipment.place', 'export.shipment.address', 'export.shipment.cnpj', 'export.taxUnit.39269090', 'export.bling.natureId'],
+    'with Bling: the place of embarkation (UF, name, address, CNPJ), the tax unit of the NCM in the export table and the id of the export nature; PIS/COFINS come from the nature in Bling');
+  assert.deepEqual(Object.keys(exp.taxUnit), [...new Set(Object.values(fiscal.FISCAL.products).map(p => p.ncm))], 'a tax unit for every NCM of the products');
+  assert.deepEqual(exp.netG, {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16}, "the owner's net weights (08/10/2026), one per product");
   const other = fiscal.missingExport(fiscal.FISCAL, {provider: 'fake'});
   assert(other.includes('export.pis.cst') && other.includes('export.cofins.cst') && !other.some(p => p.startsWith('export.bling.')), 'another service needs PIS/COFINS from the site, not the Bling nature');
   assert.deepEqual(fiscal.missingExport({...fiscal.FISCAL, export: undefined}, {provider: 'bling'}), ['export'], 'no export group at all');
@@ -71,7 +73,7 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.equal(abroad(nationalOrder()), false, 'the checkout writes no country: national');
   assert.equal(abroad(nationalOrder({shipTo: {...nationalOrder().shipTo, country: 'br'}})), false, 'Brazil written out is national too');
   assert.deepEqual(['MX', 'US', 'PT', 'DE', 'GB', 'FR', 'JP'].map(countryName), ['MEXICO', 'ESTADOS UNIDOS', 'PORTUGAL', 'ALEMANHA', 'REINO UNIDO', 'FRANCA', 'JAPAO'], 'the name as Bling takes it: capitals, no accents');
-  for (const code of ['BR', 'ZZ', 'EU', 'XX', 'mx', 'MEX', '']) assert.equal(countryName(code), null, `"${code}" is not a destination abroad`);
+  for (const code of ['BR', 'ZZ', 'EU', 'XX', 'mx', 'MEX', '', 'XA', 'XB', 'IC', 'DD', 'SU', 'YU', 'UK']) assert.equal(countryName(code), null, `"${code}" is not a destination abroad`);
 }
 
 // ── the export note ───────────────────────────────────────────────────
@@ -83,6 +85,7 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual([i.presence, i.finalConsumer, i.purpose, i.series], ['2', true, '1', '1'], 'internet sale to a final consumer');
   assert(i.items.every(x => x.cfop === '7101' && x.icms.origin === '0' && x.icms.csosn === '300' && x.ncm === '39269090'), 'CFOP 7101, CSOSN 300, NCM of the piece');
   assert(i.items.every(x => !('ipi' in x)), 'no IPI CST (Simples Nacional: Res. CGSN 140/2018, art. 59, § 4º)');
+  assert.deepEqual(i.items.map(x => [x.unit, x.quantity, x.tax]), [['UN', 2, {unit: 'KG', quantity: 0.15}]], 'the tax unit of the NCM in the export table (example: KG), with the net weight of the pieces (2 × 75 g)');
   assert.deepEqual(i.recipient, {name: 'María López García', foreignId: 'G12345678', ieIndicator: '9', email: 'maria@example.com', address: {
     street: 'Avenida Insurgentes Sur', number: '1602', complement: 'Piso 3 · Código postal 03940', district: 'Crédito Constructor, Ciudad de México, CDMX',
     city: 'EXTERIOR', cityCode: '9999999', state: 'EX', cep: '', country: 'MEXICO', countryIso: 'MX'}}, 'a foreign buyer: no CPF or CNPJ, the city EXTERIOR, UF EX, the country');
@@ -106,17 +109,28 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   // The national note is the same as before: CEP, CFOP 5101, CPF, no export data.
   const national = buildInvoice({order: nationalOrder(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV, ...fiscal.EXAMPLE}).invoice;
   assert.deepEqual([national.destination, national.items[0].cfop, national.items[0].icms.csosn, national.recipient.cpf, national.recipient.address.cityCode, national.bling.natureId, national.nature], ['1', '5101', '102', '52998224725', '3106200', '1', 'Venda de produção do estabelecimento']);
-  assert(!('export' in national) && !national.additionalInfo.includes('Local de embarque'));
+  assert(!('export' in national) && !national.additionalInfo.includes('Local de embarque') && national.items.every(x => !('tax' in x)));
 
   // What holds the note back, in plain words; nothing is sent.
   const problems = (o, extra) => build(o, extra).problems || [];
   const real = buildInvoice({order: exportOrder(), city: null, environment: 'homologacao', provider: 'bling', env: ENV});
   assert.equal(real.ok, false, 'the real store data: held back until the place of embarkation and the export nature are filled');
-  assert.deepEqual(real.problems, ['Venda para o exterior: a nota de exportação só sai depois de preencher em api/_lib/fiscal.js: export.shipment.state, export.shipment.place, export.shipment.address, export.shipment.cnpj, export.bling.natureId (veja "Venda para o exterior" no NFE-SETUP.md)']);
+  assert.deepEqual(real.problems, ['Venda para o exterior: a nota de exportação só sai depois de preencher em api/_lib/fiscal.js: export.shipment.state, export.shipment.place, export.shipment.address, export.shipment.cnpj, export.taxUnit.39269090, export.bling.natureId (veja "Venda para o exterior" no NFE-SETUP.md)']);
   assert(buildInvoice({order: nationalOrder(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV}).ok, 'while the national note with the same real data goes');
   const withShipment = shipment => ({fiscal: {...fiscal.EXAMPLE.fiscal, export: {...fiscal.EXAMPLE.fiscal.export, shipment: {...fiscal.EXAMPLE.fiscal.export.shipment, ...shipment}}}});
   assert(problems(exportOrder(), withShipment({cnpj: '11.222.333/0001-00'})).some(p => p.includes('CNPJ do local de embarque inválido')), 'a CNPJ that does not check');
   assert(problems(exportOrder(), withShipment({state: 'EX'})).some(p => p.includes('UF do local de embarque inválida')), 'a Brazilian UF');
+  for (const blank of [{place: ''}, {place: '  '}, {address: ''}]) assert(problems(exportOrder(), withShipment(blank)).some(p => p.includes('Local de embarque sem nome ou sem endereço')), `a blank place never goes out (${JSON.stringify(blank)})`);
+  assert(problems(exportOrder(), withShipment({place: 'Centro Internacional de Tratamento de Encomendas dos Correios em São Paulo'})).some(p => p.includes('mais de 60 caracteres')), 'xLocExporta takes 60 characters');
+  assert(problems(exportOrder({buyer: {email: 'x@example.com'}, shipTo: {...exportOrder().shipTo, recipient: ' '}})).includes('Pedido sem o nome do comprador'));
+  // The tax unit (rejeição 817): UN keeps the pieces; KG the net weight; anything else, or a gap, holds the note back.
+  const withExport = over => ({fiscal: {...fiscal.EXAMPLE.fiscal, export: {...fiscal.EXAMPLE.fiscal.export, ...over}}});
+  const lamps = exportOrder({subtotalCents: 3 * 8900 + 12900, totalCents: 3 * 8900 + 12900 + 18900, items: [{productId: 'macacoscopio', title: 'Macacoscópio', quantity: 3, unitCents: 8900, selection: {}}, {productId: 'aviaoscopia', title: 'Aviãoscopia', quantity: 1, unitCents: 12900, selection: {}}]});
+  assert.deepEqual(build(lamps).invoice.items.map(x => x.tax), [{unit: 'KG', quantity: 0.072}, {unit: 'KG', quantity: 0.166}], '3 × 24 g and 166 g');
+  assert(build(exportOrder(), withExport({taxUnit: {'39269090': 'un'}})).invoice.items.every(x => !('tax' in x)), 'the table says UN: the pieces as they are');
+  assert(problems(exportOrder(), withExport({taxUnit: {'39269090': 'PARES'}})).some(p => p.includes('Unidade tributável da exportação "PARES"')), 'a unit the site cannot convert to');
+  assert.deepEqual(problems(exportOrder(), withExport({taxUnit: {}})), ['Unidade tributável da exportação a preencher em api/_lib/fiscal.js: export.taxUnit.39269090'], 'an NCM left out of the table');
+  assert.deepEqual(problems(lamps, withExport({netG: {...fiscal.EXAMPLE.fiscal.export.netG, macacoscopio: 0}})), ['Peso da peça a preencher em api/_lib/fiscal.js: export.netG.macacoscopio'], 'a piece without its weight');
   assert(problems(exportOrder({shipTo: {...exportOrder().shipTo, country: 'ZZ'}})).some(p => p.includes('País de entrega desconhecido: "ZZ"')));
   assert(problems(exportOrder({shipTo: {...exportOrder().shipTo, city: ' '}})).some(p => p.includes('Endereço no exterior incompleto')));
   assert(problems(exportOrder({buyer: {...exportOrder().buyer, foreignId: 'AB#1'}})).some(p => p.includes('Documento do comprador estrangeiro inválido')));
@@ -133,12 +147,13 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual(body.contato, {nome: 'María López García', tipoPessoa: 'E', numeroDocumento: 'G12345678', contribuinte: 9, email: 'maria@example.com',
     endereco: {endereco: 'Avenida Insurgentes Sur', numero: '1602', complemento: 'Piso 3 · Código postal 03940', bairro: 'Crédito Constructor, Ciudad de México, CDMX', municipio: 'EXTERIOR', uf: 'EX', pais: 'MEXICO'}}, 'foreign contact, no CEP nor state registration');
   assert.deepEqual(body.transporte, {fretePorConta: 0, frete: 189}, 'freight mode and value');
-  assert.deepEqual(body.itens.map(x => [x.classificacaoFiscal, x.origem, x.valor, x.quantidade]), [['3926.90.90', 0, 129, 2]]);
+  assert.deepEqual(body.itens.map(x => [x.classificacaoFiscal, x.origem, x.valor, x.quantidade, x.unidade, x.unidadeTributavel]), [['3926.90.90', 0, 129, 2, 'UN', {unidade: 'KG', quantidade: 0.15}]], 'sold by the piece, taxed in the unit of the export table');
   assert.equal(body.parcelas[0].valor, 447); assert.deepEqual(body.parcelas[0].formaPagamento, {id: 502});
   assert.match(body.observacoes, /Local de embarque: .*CNPJ 11\.222\.333\/0001-81\. Pedido nº: JU-/);
   const national = toBling(buildInvoice({order: nationalOrder(), city: BH, environment: 'homologacao', provider: 'bling', env: ENV, ...fiscal.EXAMPLE}).invoice, '502');
   assert.deepEqual(Object.keys(national), ['tipo', 'finalidade', 'dataEmissao', 'dataOperacao', 'naturezaOperacao', 'contato', 'itens', 'parcelas', 'transporte', 'observacoes'], 'the national body is the same as before');
   assert.deepEqual([national.contato.tipoPessoa, national.contato.endereco.uf, national.contato.endereco.cep, national.contato.endereco.pais], ['F', 'MG', '30140-071', 'Brasil']);
+  assert(national.itens.every(x => !('unidadeTributavel' in x)), 'national items as before');
 }
 
 // ── through the simulated Bling ───────────────────────────────────────
@@ -153,7 +168,7 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.equal(note.status, 'autorizada', note.message || ''); assert.match(note.number, /^\d+$/); assert.equal(note.accessKey.length, 44);
   assert.equal(cepLookups.length, 0, 'an order for abroad never looks a CEP up');
   const sent = fake.notes.get(note.providerId).body;
-  assert.deepEqual([sent.operacaoComExterior, sent.exportacao.ufEmbarque, sent.contato.tipoPessoa, sent.contato.endereco.uf, sent.contato.endereco.pais, sent.naturezaOperacao.id], [true, 'SP', 'E', 'EX', 'MEXICO', 4]);
+  assert.deepEqual([sent.operacaoComExterior, sent.exportacao.ufEmbarque, sent.contato.tipoPessoa, sent.contato.endereco.uf, sent.contato.endereco.pais, sent.naturezaOperacao.id, sent.itens[0].unidadeTributavel], [true, 'SP', 'E', 'EX', 'MEXICO', 4, {unidade: 'KG', quantidade: 0.15}]);
   assert.equal((await invoicing.issue(mexico)).number, note.number, 'once per order, as the national notes');
 
   const {order: bh} = await store.orders.create(nationalOrder());
@@ -167,6 +182,8 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   const exportInvoice = build(exportOrder()).invoice;
   const noPlace = await provider.emit({...exportInvoice, export: {...exportInvoice.export, place: ''}});
   assert.equal(noPlace.status, 'erro'); assert.match(noPlace.message, /Rejeição 355/); assert.equal(noPlace.providerId, null);
+  const noWeight = await provider.emit({...exportInvoice, items: exportInvoice.items.map(i => ({...i, tax: {unit: 'KG', quantity: 0}}))});
+  assert.equal(noWeight.status, 'erro'); assert.match(noWeight.message, /quantidade tributável/);
 
   // The real store data (example data off): the export note waits for the data, Bling is never called for it.
   const realData = createInvoicing({store, env: {...ENV, NFE_EXAMPLE_DATA: ''}, fetchImpl: network});
@@ -199,4 +216,4 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual(JSON.parse(res.body).bling.natureIds, {nonTaxpayer: '15111617940', taxpayer: '15111617959'}, 'still to be filled: not listed as used');
 }
 
-console.log('PASS: NF-e de exportação — the accountant\'s rules (nature "Exportação de mercadoria", CFOP 7101, CSOSN 300, place of embarkation with address and CNPJ in the complementary information, freight mode and value, no IPI CST, no DIFAL), a foreign buyer (EXTERIOR, UF EX, the country, optional passport), held back with a clear message while the store\'s export data is to be filled (never the national notes), sent to the simulated Bling as an operation with the exterior, found again after a broken creation, the national note unchanged.');
+console.log('PASS: NF-e de exportação — the accountant\'s rules (nature "Exportação de mercadoria", CFOP 7101, CSOSN 300, place of embarkation with address and CNPJ in the complementary information, freight mode and value, no IPI CST, no DIFAL), the tax unit of the export table (KG: net weight), a foreign buyer (EXTERIOR, UF EX, the country, optional passport), held back with a clear message while the store\'s export data is to be filled (never the national notes), sent to the simulated Bling as an operation with the exterior, found again after a broken creation, the national note unchanged.');

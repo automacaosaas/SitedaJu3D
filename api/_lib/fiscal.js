@@ -68,6 +68,12 @@ const FISCAL = {
       address: PENDING('endereço do local de embarque'),
       cnpj: PENDING('CNPJ do recinto ou da unidade dos Correios do embarque')
     },
+    // On a note to the exterior the tax authority checks each item's tax unit (uTrib) against its NCM in the table "NCM e
+    // respectiva uTrib (Comércio Exterior)" of the Portal da NF-e (rejeição 817), with the quantity in that unit. One per
+    // NCM of the products above, from that table; never guessed. UN keeps the pieces; KG sends their net weight (netG).
+    taxUnit: {'39269090': PENDING('unidade tributável do NCM 3926.90.90 na exportação (tabela "NCM e respectiva uTrib" do Portal da NF-e)')},
+    // Net weight of one piece, in grams, without the box (the owner's weights of 08/10/2026).
+    netG: {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16},
     bling: {natureId: PENDING('id da natureza "Exportação de mercadoria" no Bling (o painel mostra)')}
   }
 };
@@ -85,6 +91,7 @@ const EXAMPLE = Object.freeze({
     export: {
       nature: 'Exportação de mercadoria', cfop: '7101', icms: {origin: '0', csosn: '300'}, pis: {cst: '49'}, cofins: {cst: '49'},
       shipment: {state: 'SP', place: 'LOCAL DE EMBARQUE DE EXEMPLO (dados de teste)', address: 'Rua de Exemplo, 100, São Paulo/SP', cnpj: '11.222.333/0001-81'},
+      taxUnit: {'39269090': 'KG'}, netG: FISCAL.export.netG,
       bling: {natureId: '4'}
     }
   }

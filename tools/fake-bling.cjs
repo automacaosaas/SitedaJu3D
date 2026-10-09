@@ -62,6 +62,7 @@ function createFakeBling({clientId = 'fake-bling-client', clientSecret = 'fake-b
       if (!UFS.has(body.exportacao?.ufEmbarque) || !String(body.exportacao?.localEmbarque || '').trim()) return 'Rejeição 355 (simulada): informe a UF e o local de embarque da exportação';
     } else if (foreign || body.exportacao) return 'Destinatário estrangeiro ou dados de exportação numa nota que não é de operação com o exterior';
     if (!Array.isArray(body.itens) || !body.itens.length || body.itens.some(i => !i.codigo || !i.classificacaoFiscal || !(i.valor > 0) || !(i.quantidade > 0))) return 'Itens incompletos (código, NCM, valor e quantidade)';
+    if (body.itens.some(i => i.unidadeTributavel && (!String(i.unidadeTributavel.unidade || '').trim() || !(i.unidadeTributavel.quantidade > 0)))) return 'Unidade ou quantidade tributável do item inválida';
     const total = body.itens.reduce((sum, i) => sum + i.valor * i.quantidade, 0) + (body.transporte?.frete || 0) - (body.desconto || 0);
     if (Math.abs(total - (body.parcelas || []).reduce((sum, p) => sum + p.valor, 0)) > 0.001) return 'A soma das parcelas difere do total da nota';
     if ((body.parcelas || []).some(p => p.formaPagamento && !paymentMethods.some(f => f.id === p.formaPagamento.id))) return 'Forma de pagamento não encontrada';

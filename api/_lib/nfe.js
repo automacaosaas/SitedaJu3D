@@ -16,13 +16,18 @@ const cents = value => Math.round(Number(value) || 0);
 const countryOf = order => String(order?.shipTo?.country || '').trim().toUpperCase();
 const abroad = order => !['', 'BR'].includes(countryOf(order));
 const UFS = new Set('AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' '));
-const NOT_A_COUNTRY = new Set(['BR', 'ZZ', 'EU', 'EZ', 'UN', 'QO']);
+// Codes with a name in Intl that are not countries: pseudo-regions (XA, XB) and the reserved ones for islands and parts of
+// a country (Ascension, Clipperton, Diego Garcia, Ceuta and Melilla, the Canaries, Tristan da Cunha).
+const NOT_A_COUNTRY = new Set(['BR', 'ZZ', 'EU', 'EZ', 'UN', 'QO', 'XA', 'XB', 'AC', 'CP', 'DG', 'EA', 'IC', 'TA']);
 let regionNames = null;
 // The country as Bling takes it (its name in Portuguese, in capitals and without accents, as in the tax authority's table:
-// "MEXICO", "ESTADOS UNIDOS"); null for a code that is not a country.
+// "MEXICO", "ESTADOS UNIDOS"); null for a code that is not a country, or an old one Intl replaces (DD, SU, YU, UK and others).
 function countryName(iso) {
   if (!/^[A-Z]{2}$/.test(iso) || NOT_A_COUNTRY.has(iso)) return null;
-  try { regionNames ??= new Intl.DisplayNames(['pt-BR'], {type: 'region', fallback: 'none'}); return regionNames.of(iso)?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() || null; }
+  try {
+    if (Intl.getCanonicalLocales(`und-${iso}`)[0] !== `und-${iso}`) return null;
+    regionNames ??= new Intl.DisplayNames(['pt-BR'], {type: 'region', fallback: 'none'}); return regionNames.of(iso)?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() || null;
+  }
   catch { return null; }
 }
 // idEstrangeiro: the passport or another document of a buyer abroad, 5 to 20 characters of these (optional on the note).
@@ -103,7 +108,8 @@ function buildInvoice({order, city, environment, provider, env = process.env, co
 // stated in its own field with its mode, as on every note, although the operation is immune. No IPI CST (Simples
 // Nacional: Res. CGSN 140/2018, art. 59, § 4º) and no DIFAL line. The buyer goes as foreign: no CPF or CNPJ, the passport or
 // another document when the order has one (buyer.foreignId), not an ICMS taxpayer, the city "EXTERIOR" (IBGE 9999999),
-// UF "EX" and the country's name; the foreign city, region and postal code go in the district and the complement.
+// UF "EX" and the country's name; the foreign city, region and postal code go in the district and the complement. Each
+// item takes the tax unit the export table gives for its NCM (export.taxUnit; in KG, the net weight of the pieces).
 function buildExport({order, environment, provider, company, fiscal, now}) {
   const problems = [], exp = fiscal.export || {}, shipment = exp.shipment || {};
   // The national sale rules (nature, CFOPs, CSOSN 102, PIS/COFINS, the national natures) are not used here; the rest is.
@@ -114,25 +120,41 @@ function buildExport({order, environment, provider, company, fiscal, now}) {
   else {
     if (!fields.validCnpj(shipment.cnpj)) problems.push('CNPJ do local de embarque inválido em api/_lib/fiscal.js (export.shipment.cnpj)');
     if (!UFS.has(String(shipment.state).toUpperCase())) problems.push('UF do local de embarque inválida em api/_lib/fiscal.js (export.shipment.state)');
+    // A blank place would go out empty (rejeição 355); the note takes at most 60 characters for it (xLocExporta).
+    if (!String(shipment.place || '').trim() || !String(shipment.address || '').trim()) problems.push('Local de embarque sem nome ou sem endereço em api/_lib/fiscal.js (export.shipment.place, export.shipment.address)');
+    else if (String(shipment.place).trim().length > 60) problems.push('Nome do local de embarque com mais de 60 caracteres em api/_lib/fiscal.js (export.shipment.place): a NF-e não aceita mais que isso');
   }
   for (const key of ['legalName', 'cnpj']) if (pending(company[key])) problems.push(`Dados da empresa a preencher (api/_lib/legal.js): ${key}`);
   const ship = order.shipTo || {}, iso = countryOf(order), country = countryName(iso);
+  const name = String(order.buyer?.company?.name || order.buyer?.name || ship.recipient || '').trim();
+  if (!name) problems.push('Pedido sem o nome do comprador');
   if (!country) problems.push(`País de entrega desconhecido: "${iso}" (código de duas letras, ISO 3166)`);
   if (!String(ship.street || '').trim() || !String(ship.city || '').trim()) problems.push('Endereço no exterior incompleto: faltam a rua ou a cidade');
   const foreignId = String(order.buyer?.foreignId || '').replace(/\s+/g, '');
   if (foreignId && !FOREIGN_ID.test(foreignId)) problems.push('Documento do comprador estrangeiro inválido: de 5 a 20 letras ou números (passaporte ou outro documento)');
-  const {items, productsCents, freightCents, discountCents} = linesOf(order, fiscal, problems);
-  if (problems.length) return {ok: false, problems};
+  const lines = linesOf(order, fiscal, problems), {productsCents, freightCents, discountCents} = lines;
+  // The tax unit of each item (rejeição 817): the pieces themselves (the note's unit) or their net weight in KG. One still
+  // to be filled is already in the list above.
+  const items = lines.items.map(i => {
+    const unit = String(exp.taxUnit?.[i.ncm] || '').trim().toUpperCase(), grams = Number(exp.netG?.[i.code]);
+    if (!i.ncm || pending(unit) || unit === String(fiscal.unit).toUpperCase()) return i;
+    if (!unit) problems.push(`Unidade tributável da exportação a preencher em api/_lib/fiscal.js: export.taxUnit.${i.ncm}`);
+    else if (unit !== 'KG') problems.push(`Unidade tributável da exportação "${unit}" (NCM ${i.ncm}): o site só manda ${fiscal.unit} ou KG; faça esta nota à mão no Bling`);
+    else if (!(grams > 0)) problems.push(`Peso da peça a preencher em api/_lib/fiscal.js: export.netG.${i.code}`);
+    else return {...i, tax: {unit: 'KG', quantity: Math.round(i.quantity * grams * 10) / 10000}};   // qTrib: up to 4 decimals
+    return i;
+  });
+  if (problems.length) return {ok: false, problems: [...new Set(problems)]};
 
   const join = (parts, separator) => parts.map(p => String(p || '').trim()).filter(Boolean).join(separator);
   const postalCode = String(ship.postalCode || ship.cep || '').trim(), filled = value => pending(value) ? null : value;
-  const where = {exitState: String(shipment.state).toUpperCase(), place: shipment.place, address: shipment.address, cnpj: fields.formatCnpj(fields.normalizeCnpj(shipment.cnpj))};
+  const where = {exitState: String(shipment.state).toUpperCase(), place: String(shipment.place).trim(), address: String(shipment.address).trim(), cnpj: fields.formatCnpj(fields.normalizeCnpj(shipment.cnpj))};
   return {ok: true, invoice: {
     reference: order.reference, environment, issuedAt: new Date(now).toISOString(),
     nature: exp.nature, series: fiscal.series,
     purpose: '1', presence: '2', finalConsumer: true, destination: '3', intermediary: '0',   // normal, internet, consumidor final, exterior, sem intermediador
     issuer: {cnpj: fields.normalizeCnpj(company.cnpj) || company.cnpj, name: company.legalName, stateRegistration: fiscal.stateRegistration, crt: fiscal.crt, state: fiscal.issuerState},
-    recipient: {name: order.buyer?.company?.name || order.buyer?.name || ship.recipient || '', foreignId, ieIndicator: '9', email: order.buyer?.email || '', address: {
+    recipient: {name, foreignId, ieIndicator: '9', email: order.buyer?.email || '', address: {
       street: String(ship.street).trim(), number: String(ship.number || '').trim() || 'S/N',
       complement: join([ship.complement, postalCode && `Código postal ${postalCode}`], ' · ').slice(0, 60),
       district: join([ship.district, ship.city, ship.state], ', ').slice(0, 60),

@@ -74,7 +74,7 @@ function resultView() {
     <h2 id="intl-steps-title">Passo a passo</h2>
     <ol class="intl-steps">
       <li><strong>Cobrar.</strong> No Mercado Pago (app ou site), em Cobrar → Link de pagamento, crie um link com o total escolhido e mande ao cliente. Quem está fora paga com cartão de crédito; o Pix não serve.</li>
-      <li><strong>Nota fiscal de exportação.</strong> No Bling, com a natureza "Exportação de mercadoria" (CFOP 7101, CSOSN 300); o cliente vai como estrangeiro (UF EX, sem CPF), com a UF e o local de embarque, o frete por conta do remetente e, nas informações complementares, o local de embarque (nome, endereço e CNPJ). Passo a passo no NFE-SETUP.md, "Venda para o exterior".</li>
+      <li><strong>Nota fiscal de exportação.</strong> No Bling, com a natureza "Exportação de mercadoria" (CFOP 7101, CSOSN 300); o cliente vai como estrangeiro (UF EX, sem CPF), com a UF e o local de embarque, o frete por conta do remetente, em cada item a unidade tributável que a tabela de exportação da NF-e pede para o NCM (se for KG, o peso das peças) e, nas informações complementares, o local de embarque (nome, endereço e CNPJ). Passo a passo no NFE-SETUP.md, "Venda para o exterior".</li>
       <li><strong>Pré-postagem.</strong> No <a href="https://www.correios.com.br/enviar/encomendas/internacional" target="_blank" rel="noopener">Minhas Exportações</a>, com o serviço escolhido, os dados de alfândega acima, o peso e as medidas; imprima a etiqueta e a declaração.</li>
       <li><strong>Postar e avisar.</strong> Poste na agência e mande o código de rastreio ao cliente.</li>
     </ol>
