@@ -9,7 +9,8 @@
 //   - the notice: selecting its words and letting go outside keeps it open, a whole click outside closes it;
 //   - a Pix refused when it is created: its own line, never the card's notice;
 //   - a reload with a Pix waiting: the choice (go on with it, or cancel it first), never a second payable code;
-//   - /api/payments/config slow: asked again ("Carregando o pagamento…"), never the demo.
+//   - going on with it after its time ran out on the choice screen: the expired screen, drawn once;
+//   - /api/payments/config slow: "Carregando o pagamento…" and the first answer kept, never the demo.
 // Run: node tests/checkout-browser.mjs — needs Google Chrome or Chromium (CHROME_PATH points at one). Without one (the own
 // server's deploy) the suite says so and is skipped; CHECKOUT_BROWSER=0 skips it too. About a minute.
 import assert from 'node:assert/strict';
@@ -236,11 +237,28 @@ try {
     assert.equal(await js(`sessionStorage.getItem('ju.pix.pending.v1')`), null);
   });
 
-  await scenario('/api/payments/config lento: pergunta de novo ("Carregando o pagamento…"), nunca a demonstração', async () => {
+  await scenario('"Continuar com este Pix" depois que o tempo acabou na tela da escolha: a tela de expirado fica parada e diz que expirou', async () => {
+    await buyNow(); await toPix();
+    await goto(BASE + 'comprar-agora.html');
+    await until(() => js(`!!document.querySelector('.pix-resume')`), 15000, 'the choice');
+    // the code's hour passes while the choice is on the screen (2026-10-08, review: the expired screen was drawn again every second)
+    await js(`(() => { const real = Date.now.bind(Date); Date.now = () => real() + 3600 * 1000 + 5000; window.__drawn = 0; new MutationObserver(() => window.__drawn++).observe(document.querySelector('#shop-main'), {childList: true}); })()`);
+    await focusOn('[data-action=resume-pix]'); await press('Enter');
+    await until(() => js(`!!document.querySelector('.pix-ended')`), 8000, 'the expired screen');
+    await sleep(300); const drawn = await js('window.__drawn'); await sleep(2300);
+    assert.equal(await js('window.__drawn'), drawn, 'drawn once, not again every second');
+    assert.equal(await focused(), 'button[new-pix].primary', 'the focus on "Gerar novo código Pix"');
+    assert.match(await said(), /O Pix expirou/, 'and it says so (not "Pix aberto de novo")');
+  });
+
+  await scenario('/api/payments/config lento (3,5 s): "Carregando o pagamento…", a primeira resposta vale, nunca a demonstração', async () => {
     await viewport(360, 780);
     await goto(BASE + 'conta.html'); assert.equal(await signUp(), 200);
     await js(`sessionStorage.clear(); sessionStorage.setItem('ju.direct.demo.v1', JSON.stringify([{id: 'p1', productId: 'borboletoscopio', quantity: 1, selection: {}}]))`);
-    answer = url => url.includes('/api/payments/config') ? {hold: 3000} : null;
+    // the first request answers after 3.5 s, any other one too late: the page has to keep the first (2026-10-08, review: it used to
+    // cut it at 2.5 s and ask again from scratch, so a 3.5 s server was heard only after about 7 s)
+    let configAsks = 0;
+    answer = url => url.includes('/api/payments/config') ? {hold: configAsks++ ? 9000 : 3500} : null;
     await send('Page.navigate', {url: BASE + 'comprar-agora.html'});
     await until(() => js(`document.querySelector('[data-checkout-loading]')?.textContent === 'Carregando o pagamento…'`), 6000, '"Carregando o pagamento…"');
     await until(() => js(`document.body.dataset.stage === 'identification'`), 15000, 'the identification');
@@ -248,7 +266,7 @@ try {
   });
 
   assert.deepEqual(errors, [], 'no script error on the pages');
-  console.log(`PASS: checkout no navegador (Chrome sem janela + simulador) — ${passed.length} cenários: o Pix pago fecha sem reativar botões e com o foco nas etapas; "Voltar" sem confirmação mantém o foco e diz o motivo; expirado leva o foco a "Gerar novo código Pix"; recusa em análise abre o aviso e o lembrete fica à vista; o aviso só fecha com clique inteiro fora; Pix recusado na criação tem a sua linha; recarregar com Pix aberto oferece continuar ou cancelar; config lenta não cai na demonstração.`);
+  console.log(`PASS: checkout no navegador (Chrome sem janela + simulador) — ${passed.length} cenários: o Pix pago fecha sem reativar botões e com o foco nas etapas; "Voltar" sem confirmação mantém o foco e diz o motivo; expirado leva o foco a "Gerar novo código Pix"; recusa em análise abre o aviso e o lembrete fica à vista; o aviso só fecha com clique inteiro fora; Pix recusado na criação tem a sua linha; recarregar com Pix aberto oferece continuar ou cancelar; continuar depois do prazo mostra o expirado uma vez só; config lenta não cai na demonstração.`);
 } catch (error) {
   console.error(error);
   console.error('--- servidor local (fim) ---\n' + serverLog.split('\n').slice(-25).join('\n'));

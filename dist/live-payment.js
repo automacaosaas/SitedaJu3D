@@ -68,16 +68,33 @@ export async function loadPaymentConfig({fetchImpl = globalThis.fetch, timeout =
   }
   finally { clearTimeout(timer); }
 }
-// The config with patience: a first try of 2.5 s and, without an answer, a pause and a longer one (6 s); onRetry() runs before
-// each new try (the checkout then says "Carregando o pagamento…" where it would have fallen into the demo).
-export async function loadPaymentConfigPatiently({timeouts = [2500, 6000], pause = 600, onRetry = () => {}, fetchImpl = globalThis.fetch, wait = ms => new Promise(resolve => setTimeout(resolve, ms))} = {}) {
-  let config = {mode: 'unreachable'};
-  for (const [i, timeout] of timeouts.entries()) {
-    if (i) { onRetry(i); await wait(pause * i); }
-    config = await loadPaymentConfig({fetchImpl, timeout});
-    if (config.mode !== 'unreachable') break;
-  }
-  return config;
+// The config with patience: the first request is kept for the whole time (2.5 s + 6 s), so a slow server is never asked again
+// from scratch (2026-10-08, review: the first try used to be cut at 2.5 s and asked again, and a config that took 3.5 s showed
+// only after about 7 s). Past the first 2.5 s, or right after a quick failure (offline, a 5xx) and a pause, a second request
+// goes out beside it, for a first one lost on the way, and onRetry() runs (the checkout then says "Carregando o pagamento…"
+// where it would have fallen into the demo). The first clear answer wins; none at all: 'unreachable'.
+export function loadPaymentConfigPatiently({timeouts = [2500, 6000], pause = 600, onRetry = () => {}, fetchImpl = globalThis.fetch, wait = ms => new Promise(resolve => setTimeout(resolve, ms))} = {}) {
+  const [first, second = 0] = timeouts;
+  return new Promise(resolve => {
+    let settled = false, open = 0, retried = !second, timer = null;
+    const finish = config => { if (settled) return; settled = true; clearTimeout(timer); resolve(config); };
+    const ask = timeout => { open++; loadPaymentConfig({fetchImpl, timeout}).then(answer, () => answer({mode: 'unreachable'})); };
+    function answer(config) {
+      open--;
+      if (settled) return;
+      if (config.mode !== 'unreachable') return finish(config);
+      if (!retried) return retry(true);
+      if (!open) finish(config);
+    }
+    async function retry(afterFailure) {
+      if (retried || settled) return;
+      retried = true; clearTimeout(timer); onRetry(1);
+      if (afterFailure) await wait(pause);
+      if (!settled) ask(second);
+    }
+    ask(first + second);
+    if (!retried) timer = setTimeout(() => retry(false), first);
+  });
 }
 
 let sdkPromise = null;

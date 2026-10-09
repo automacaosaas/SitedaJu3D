@@ -129,12 +129,14 @@ frase volta para a geral ("O pagamento não foi aprovado…"). **No site real es
 5. Com um Pix esperando, **recarregue a página** (ou saia e volte pela mesma aba): em vez de recomeçar, o checkout
    mostra **"Seu Pix ainda está aberto."** com **"Continuar com este Pix"** (o mesmo código, o relógio seguindo) e
    **"Cancelar este Pix e recomeçar"** (o antigo é cancelado antes de qualquer outro). Pago nesse meio-tempo, aparece a
-   confirmação. A aba guarda só o número do pedido no Mercado Pago e a referência, nada do comprador.
+   confirmação e as peças saem do carrinho, como numa compra sem recarregar. Se a hora do código passar com essa escolha na
+   tela, "Continuar com este Pix" mostra "O tempo passou." e "Gerar novo código Pix". A aba guarda só o número do pedido no
+   Mercado Pago e a referência, nada do comprador.
 6. Se o Mercado Pago recusar a criação do Pix, aparece embaixo do formulário "Não conseguimos gerar o Pix agora. Tente de
    novo ou pague com cartão." (nunca o aviso de cartão recusado).
-7. Servidor lento: se as configurações de pagamento não chegarem em 2,5 s, o checkout pergunta de novo e mostra
-   "Carregando o pagamento…"; sem resposta nenhuma, "Continuar para pagamento" pergunta mais uma vez e avisa. Nunca cai na
-   demonstração.
+7. Servidor lento: se as configurações de pagamento não chegarem em 2,5 s, o checkout mostra "Carregando o pagamento…" e
+   pergunta de novo sem desistir da primeira pergunta (vale a resposta que chegar antes; até 8,5 s no total); sem resposta
+   nenhuma, "Continuar para pagamento" pergunta mais uma vez e avisa. Nunca cai na demonstração.
 
 ### 3.4 Avisos do Mercado Pago, repetição e cobrança dupla
 

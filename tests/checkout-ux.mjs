@@ -23,7 +23,7 @@ const {refusalNotice, refusalMessage, refusedMessage, loadPaymentConfigPatiently
 const {refusalNoticeMarkup, openRefusalNotice} = await site('payment-notice.js');
 const {installmentRows, installmentsInfo, installmentsSummary, installmentsTable} = await site('installments.js');
 const {PIX_STEPS, pixStepStates, pixSteps, formatPixClock, pixClockNotice, pixHowTo, nextStep, stillClosing, cancelOutcome, isPixAttempt, lockPanel, holdButton, isHeld, focusInside, focusInSight, copyPixCode, unmarkCopied} = await site('pix-panel.js');
-const {PENDING_KEY, rememberPendingPix, recallPendingPix, forgetPendingPix, resumeStep} = await site('pending-pix.js');
+const {PENDING_KEY, rememberPendingPix, recallPendingPix, forgetPendingPix, resumeStep, matchCartItems} = await site('pending-pix.js');
 const {translate} = await site('i18n-core.js');
 const translated = (text, why) => { for (const lang of ['en', 'es']) assert.notEqual(translate(text, lang), text, `${why || 'missing'} ${lang}: ${text}`); };
 const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').replace(/\s+/g, ' ').trim();
@@ -423,6 +423,20 @@ const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').
     for (const state of ['expired', 'canceled', 'refused', 'refunded']) assert.equal(resumeStep({status: 200, data: {state}}), 'gone', state);
     assert.equal(resumeStep({status: 404, data: {error: 'not_found'}}), 'gone');
     assert.equal(resumeStep({status: 401}), 'signin');
+    // The server lists the remembered order's pieces without the cart's ids (2026-10-08, review: paid after a reload, they stayed
+    // in the cart, ready to be bought again): each takes the id of the same piece in the page's cart, so removePurchased works.
+    {
+      const {normalizeCart, signature, removePurchased} = await site('cart-store.js');
+      const key = item => signature(item.productId, item.selection);
+      const cart = normalizeCart([{id: 'p1', productId: 'borboletoscopio', quantity: 2, selection: {}}, {id: 'p2', productId: 'dinossauroscopio', quantity: 1, selection: {}}]);
+      const listed = normalizeCart([{productId: 'borboletoscopio', quantity: 1, selection: cart[0].selection}, {productId: 'girafoscopio', quantity: 1, selection: {}}]);
+      assert.equal(removePurchased(cart, listed).length, 2, 'without the match nothing leaves the cart (the old behaviour)');
+      const matched = matchCartItems(listed, cart, key);
+      assert.equal(matched[0].id, 'p1', 'the same piece takes the cart\'s id');
+      assert.equal(matched[1].id, listed[1].id, 'a piece the cart does not have keeps its own');
+      assert.deepEqual(removePurchased(cart, matched).map(i => [i.id, i.quantity]), [['p1', 1], ['p2', 1]], 'paid after the reload: the bought one leaves the cart');
+      assert.deepEqual(matchCartItems(null, cart, key), []);
+    }
     for (const unclear of [null, {status: 502}, {status: 429}, {status: 200, data: {state: 'in_review'}}]) assert.equal(resumeStep(unclear), 'unknown', JSON.stringify(unclear));
     for (const text of ['Seu Pix', 'ainda está aberto.', 'Você saiu da página com um código Pix aguardando pagamento.', 'Este código ainda pode ser pago.', 'Continuar com este Pix', 'Cancelar este Pix e recomeçar', 'Conferindo o Pix…',
       'Continue com ele, ou cancele antes de pagar de outro jeito: assim nunca ficam dois Pix abertos.', 'Esse Pix não vale mais. Escolha como prefere pagar.', 'Pix aberto de novo. Pague com o código ou o QR Code.', 'O Pix anterior foi cancelado. Você pode recomeçar.']) translated(text);
@@ -435,8 +449,22 @@ const textOf = html => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;| /g, ' ').
     const answers = list => { let n = 0; return async (url, {signal}) => { const next = list[Math.min(n++, list.length - 1)]; if (next === 'hang') return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), {name: 'AbortError'})))); if (next === 'offline') throw new TypeError('Failed to fetch'); return next; }; };
     const ok = {ok: true, status: 200, json: async () => ({mode: 'test', publicKey: 'TEST-abc', interestFree: null})};
     const patient = list => loadPaymentConfigPatiently({timeouts: [20, 40], pause: 5, fetchImpl: answers(list), onRetry: i => retries.push(i), wait: ms => { waits.push(ms); return Promise.resolve(); }});
-    assert.deepEqual(await patient(['hang', ok]), {mode: 'test', publicKey: 'TEST-abc'}, 'slow at first, then the answer: real payments');
-    assert.deepEqual([retries, waits], [[1], [5]], 'one more try, after a pause, said aloud');
+    assert.deepEqual(await patient(['hang', ok]), {mode: 'test', publicKey: 'TEST-abc'}, 'the first one lost on the way, then the answer: real payments');
+    assert.deepEqual([retries, waits], [[1], []], 'a second request beside the first, said aloud');
+    retries.length = 0;
+    assert.deepEqual(await patient(['offline', ok]), {mode: 'test', publicKey: 'TEST-abc'}, 'a quick failure: asked again');
+    assert.deepEqual([retries, waits], [[1], [5]], 'after a pause, said aloud');
+    // A slow server is not asked again from scratch (2026-10-08, review: the first try was cut at 2.5 s, and a config that took
+    // 3.5 s showed after about 7 s): the first request is kept, and its answer counts even after the second one went out.
+    {
+      let calls = 0;
+      const slow = (url, {signal}) => { calls++; return new Promise((resolve, reject) => { const timer = calls > 1 ? null : setTimeout(() => resolve(ok), 35); signal.addEventListener('abort', () => { clearTimeout(timer); reject(Object.assign(new Error('aborted'), {name: 'AbortError'})); }); }); };   // like fetch: an aborted request never answers
+      retries.length = 0;
+      const started = Date.now(), config = await loadPaymentConfigPatiently({timeouts: [20, 200], pause: 5, fetchImpl: slow, onRetry: i => retries.push(i), wait: () => Promise.resolve()});
+      assert.deepEqual(config, {mode: 'test', publicKey: 'TEST-abc'}, 'the first, slow answer is used');
+      assert(Date.now() - started < 150, 'as soon as it comes, not after a second full try');
+      assert.deepEqual([calls, retries], [2, [1]], '"Carregando o pagamento…" once the first 2.5 s pass, with a second request beside it');
+    }
     assert.deepEqual(await patient(['offline', 'offline']), {mode: 'unreachable'}, 'never heard: unknown, never the demo');
     assert.deepEqual(await patient([{ok: false, status: 503}, {ok: false, status: 503}]), {mode: 'unreachable'});
     retries.length = 0;

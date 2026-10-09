@@ -19,6 +19,16 @@ export function recallPendingPix(storage) {
   } catch { return null; }
 }
 export function forgetPendingPix(storage) { try { storage?.removeItem(PENDING_KEY); } catch {} }
+// The pieces of the remembered order as this page knows them (2026-10-08, review): the server lists them without the cart's own
+// ids, so each piece takes the id (and the picture) of the same piece in the page's cart, found by `key` (cart-store.js
+// signature: product and colors). A payment confirmed after the reload then takes those pieces out of the cart like any other
+// (removePurchased compares the ids); before, they stayed in it, paid, ready to be bought again.
+export function matchCartItems(items, local, key) {
+  return (items || []).map(item => {
+    const mine = (local || []).find(other => key(other) === key(item));
+    return mine ? {...item, id: mine.id, thumbnail: mine.thumbnail ?? item.thumbnail ?? null} : item;
+  });
+}
 
 // What the server's answer about the remembered Pix leads to ({status, data} of /api/payments/status?details=1, null without
 // one): 'resume' (still payable, with its code: offer to go on with it or cancel it), 'paid' (the confirmation), 'gone' (it can

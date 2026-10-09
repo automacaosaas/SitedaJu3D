@@ -2,12 +2,12 @@ import {returnFromCart} from './shopping-navigation.js';
 import {PRODUCTS, color, itemColors} from './products.js';
 import {COMMERCE, money, installmentLabel} from './commerce-config.js';
 import {CONTACT} from './company.js';
-import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased} from './cart-store.js';
+import {readCart, writeCart, totals, pixDiscount, EDIT_KEY, CART_KEY, DIRECT_KEY, normalizeCart, removePurchased, signature} from './cart-store.js';
 import {createDemoOrder, paymentStatus, approveDemo, renewDemo, demoPixCode} from './demo-payment.js';
 import {SDK_OPTIONS, loadPaymentConfigPatiently, loadPaymentMethods, loadSdk, loadDeviceId, currentDeviceId, newAttempt, keepAttempt, createPayment, paymentState, cancelPayment, paymentMessage, refusalNotice, brickLocale, BRICK_STYLE, safeBase64, parseExpiry} from './live-payment.js';
 import {openRefusalNotice} from './payment-notice.js';
 import {pixSteps, formatPixClock, pixClockNotice, pixHowTo, nextStep, stillClosing, cancelOutcome, isPixAttempt, lockPanel, holdButton, isHeld, focusInside, focusInSight, copyPixCode, unmarkCopied} from './pix-panel.js';
-import {rememberPendingPix, recallPendingPix, forgetPendingPix as forgetPix, resumeStep} from './pending-pix.js';
+import {rememberPendingPix, recallPendingPix, forgetPendingPix as forgetPix, resumeStep, matchCartItems} from './pending-pix.js';
 
 import {loadShippingConfig, quoteShipping, formatDays, shippingMessage, isCep, pickOption} from './shipping-client.js';
 import {lookupCep, cepMessage} from './cep-client.js';
@@ -27,7 +27,7 @@ const main = document.querySelector('#shop-main'), liveRegion = document.querySe
 // Real shipping (Correios contract) is on only when the server says so; otherwise the fixed example fee stays.
 // The session, the payment keys and the shipping settings are asked at once: the cart shows after a single round trip.
 // The payment settings are asked with patience (live-payment.js loadPaymentConfigPatiently, 2026-10-08): a slow first answer
-// is asked again instead of falling into the demo, and meanwhile the page's placeholder (the outline of the step, in the HTML,
+// is waited for (with a second request beside it after 2.5 s) instead of falling into the demo, and meanwhile the page's placeholder (the outline of the step, in the HTML,
 // cart-page.css .shop-skeleton) says "Carregando o pagamento…". Still no answer: 'unreachable', and the delivery step asks
 // once more before the payment (never the demo for a real buyer).
 const loadingLine = document.querySelector('[data-checkout-loading]');
@@ -430,7 +430,8 @@ async function loadPendingPix(kept) {
   const step = resumeStep(answer), data = answer?.data || {};
   if (step === 'gone') { forgetPendingPix(); return step; }
   if (step === 'signin') return step;
-  const items = normalizeCart(Array.isArray(data.items) ? data.items : []), shown = items.length ? items : purchaseItems();
+  // the server's pieces with this cart's ids (pending-pix.js matchCartItems): paid after the reload, they leave the cart too
+  const items = matchCartItems(normalizeCart(Array.isArray(data.items) ? data.items : []), purchaseItems(), item => signature(item.productId, item.selection)), shown = items.length ? items : purchaseItems();
   const shipping = data.shipping && typeof data.shipping.priceCents === 'number' ? data.shipping : null;
   order = {live: true, mode: live.mode, id: data.reference || kept.reference || null, mpId: kept.mpId, phase: step === 'paid' ? 'done' : 'resume', method: data.method === 'card' ? 'card' : 'pix', status: step === 'paid' ? 'approved' : 'pending',
     items: shown, amounts: totals(shown, shipping ? shipping.priceCents : shippingCents() ?? undefined), shipping, createdAt: Date.now(), pix: data.pix || null,
@@ -459,7 +460,7 @@ async function continuePendingPix(button) {
   }
   order = {...order, phase: 'pix'};
   render();
-  announce('Pix aberto de novo. Pague com o código ou o QR Code.');
+  if (order.phase === 'pix') announce('Pix aberto de novo. Pague com o código ou o QR Code.');   // its time may have run out meanwhile: expirePix said so
 }
 // The checkout from its start again (a remembered Pix was cancelled, or can no longer be paid).
 async function restartCheckout() {
@@ -494,7 +495,12 @@ function afterLiveRender() {
         if (notice) announce(notice);
         if (!left) expirePix();
       };
-      tick(); clockTimer = setInterval(tick, 1000);
+      tick();
+      // Its time had already run out (2026-10-08, review: "Continuar com este Pix" pressed after the code's hour passed on the
+      // choice screen): expirePix has drawn the expired screen, which needs no clock and no checks. Started anyway, the clock
+      // drew that screen again every second, taking the focus back and keeping the message on.
+      if (order.phase !== 'pix') return;
+      clockTimer = setInterval(tick, 1000);
     }
     pollTimer = setInterval(async () => { try { const {status, data} = await paymentState(order.mpId); if (status === 200) applyState(data.state, data.reason); } catch {} }, 5000);
   }
