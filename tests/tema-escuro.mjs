@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import lightCssModule from './lib/light-css.cjs';
+import {pathToFileURL} from 'node:url';   // Windows: import() needs a file:// URL, not C:…
 const {lightCss} = lightCssModule;
 
 const root = path.join(import.meta.dirname, '..'), dist = path.join(root, 'dist');
@@ -85,7 +86,7 @@ assert.equal(lightCss('.c { background: var(--scrim, none), radial-gradient(#fff
 // ── Aparência: em "Seu cantinho" e no menu do perfil ──────────────────
 const picker = read('scheme-picker.js'), account = read('account.js'), shell = read('site-shell.js');
 globalThis.window = {juScheme: {mode: () => 'dark'}};
-const {schemePicker} = await import(path.join(dist, 'scheme-picker.js'));
+const {schemePicker} = await import(pathToFileURL(path.join(dist, 'scheme-picker.js')).href);
 const full = schemePicker({hint: 'Automático acompanha o tema do seu aparelho.'}), compact = schemePicker({compact: true});
 assert.match(full, /^<fieldset class="scheme-picker"><legend>Aparência<\/legend>/, 'um grupo com nome (fieldset + legend)');
 assert.equal((full.match(/<input type="radio" name="ju-scheme-\d+" value="(auto|light|dark)"/g) || []).length, 3, 'três rádios nativos');
@@ -109,7 +110,7 @@ assert.match(account, /<nav class="profile-hub" aria-label="Sua conta">/, 'os at
 for (const target of ['data-screen="orders"', 'data-screen="details"', 'href="checkout"', 'href="produtos"']) assert(account.includes(`class="profile-tile" \${attrs}`) && account.includes(target), `atalho ${target}`);
 assert.match(account, /<button class="profile-signout" id="signout" type="button">/);
 assert.match(read('account.css'), /\.profile-hub \{ display:grid; grid-template-columns:repeat\(auto-fit, minmax\(min\(100%, 210px\), 1fr\)\);/, 'dois por linha onde cabe, um embaixo do outro no celular');
-const {translate} = await import(path.join(dist, 'i18n-core.js'));
+const {translate} = await import(pathToFileURL(path.join(dist, 'i18n-core.js')).href);
 for (const text of ['Aparência', 'Automático', 'Claro', 'Escuro', 'Preferências', 'Sua conta', 'Coleções', 'Vazio por enquanto', 'Produção, envio e entrega', 'Nota fiscal e entrega', 'Peças em 3D para a consulta', 'Automático acompanha o tema do seu aparelho.']) {
   assert.notEqual(translate(text, 'en'), text, `EN: ${text}`);
   if (!['Automático', 'Claro'].includes(text)) assert.notEqual(translate(text, 'es'), text, `ES: ${text}`);
