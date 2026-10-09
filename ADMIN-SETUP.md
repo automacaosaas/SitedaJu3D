@@ -57,6 +57,15 @@ o valor riscado: não entra no saldo, nos números do mês, no gráfico nem nos 
 caixa). A diferença entra como **Ajuste de saldo**, que mexe só no saldo e não conta como entrada nem saída do mês. Use o mesmo
 botão (**Ajustar saldo**) quando o valor do painel não bater com o banco.
 
+**Começar do zero (no lançamento):** o dono roda no servidor `sudo bash /srv/juimprime/current/deploy/limpar-caixa.sh`
+(`SERVIDOR-SETUP.md`, "Zerar o fluxo de caixa"). Ele faz uma cópia do banco antes de tudo, mostra o que existe e pergunta:
+**1** = só o caixa (lançamentos à mão, ajustes de saldo e contas a pagar, também as trancadas) ou **2** = o caixa e também os
+pedidos de teste do Mercado Pago, com as peças, o histórico, as notas fiscais de homologação e os registros do Bling deles (o
+recomendado no lançamento: a lista de pedidos também começa limpa). Os **pedidos reais nunca saem**: as vendas de verdade
+continuam no caixa. Só apaga depois de digitar **LIMPAR**, tudo numa transação, e deixa no registro de auditoria a linha
+"caixa zerado pelo servidor". Em seguida, a Júlia toca em **Informar o saldo de hoje** e digita quanto a loja tem (conta e
+caixa): o caixa passa a contar desse valor.
+
 O que o painel ainda não desconta sozinho: a tarifa do Mercado Pago e o custo das etiquetas dos Correios (lance como despesa,
 por exemplo a fatura mensal dos Correios em **Frete**). Os dados ficam no banco (tabelas `cash_entries` e `bills`, migração
 `009_caixa.sql`, criadas sozinhas ao iniciar o site) e cada mudança vai para o registro de auditoria do painel.

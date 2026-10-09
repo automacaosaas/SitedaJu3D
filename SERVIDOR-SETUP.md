@@ -13,6 +13,7 @@ refazer tudo num servidor novo.
 | Configuração secreta | `/srv/juimprime/shared/.env` (só root e o usuário do site leem) |
 | Branch publicada | `/srv/juimprime/shared/deploy.conf` (a `main`) |
 | Cópias do banco | `/srv/juimprime/shared/backups` (uma antes de cada versão com migração nova; ficam as 10 mais novas) |
+| Cópias guardadas à mão | `/var/backups/juimprime` (só root: o `.env` de antes dos scripts de configuração e a cópia de antes da limpeza do caixa) |
 | Usuário que roda o site | `juimprime` (sem login) |
 | Serviço do site | `juimprime.service` (Node 24 em `127.0.0.1:3000`; reinicia sozinho se cair) |
 | Publicação automática | `juimprime-deploy.timer` (a cada minuto) → `juimprime-deploy.service` → `deploy/deploy.sh` |
@@ -187,6 +188,38 @@ No fim ele mostra o que o `/api/health` enxerga:
   `/var/backups/juimprime/`, o site reinicia e o fim mostra `"payments"`, `"mp"`, `"interestFree"`, `"mail"` e
   `"sender"`. O roteiro completo da produção está em `MERCADOPAGO-VALIDACAO.md` (etapa 5).
 
+## Zerar o fluxo de caixa (no lançamento)
+
+`sudo bash /srv/juimprime/current/deploy/limpar-caixa.sh`: o Fluxo de caixa do Painel da Júlia começa limpo, para ela
+partir do valor real da conta (`ADMIN-SETUP.md`, "Fluxo de caixa").
+
+1. **Cópia do banco antes de tudo** (`deploy.sh --backup limpeza`, como o usuário do site), conferida (o gzip inteiro e o
+   "Dump completed" no fim) e guardada também em `/var/backups/juimprime/limpeza-<data>.sql.gz` (só root), porque as cópias
+   diárias empurram as antigas de `shared/backups` (ficam as 10 mais novas). Se a cópia falhar, nada é apagado.
+2. **Mostra o que existe:** lançamentos à mão (e quantos são "Ajuste de saldo"), contas a pagar (e quantas trancadas),
+   pedidos de teste do Mercado Pago por status e pedidos reais.
+3. **Pergunta o alcance:**
+   - **1** = só o caixa: os lançamentos à mão, os ajustes de saldo e as contas a pagar, também as trancadas;
+   - **2** = o caixa e os pedidos de teste (todos os que não são `source = 'live'`), com as peças (`order_items`), o
+     histórico (`order_events`), as notas fiscais (`invoices`: de homologação, ou recusadas por serem de teste; a fila do
+     Bling sai junto) e os registros do Bling (`integration_log`) deles. É o recomendado no lançamento: a lista de pedidos
+     do painel também começa limpa.
+
+   Os pedidos **reais** ficam intactos nas duas. Um pedido de teste com nota fiscal no ambiente de **produção** que passou
+   pelo Bling também fica (a tela mostra `FICA:`): essa nota pode ser de verdade; confira no Bling, cancele se foi
+   autorizada e fale com a contadora. As notas de homologação continuam na conta do Bling: o script só limpa o banco do site.
+4. **Mostra o que vai apagar** (cada lançamento, cada conta, cada pedido de teste e quantas peças, linhas de histórico,
+   notas e registros vão junto) e só segue com **LIMPAR** (em maiúsculas; qualquer outra resposta cancela). Apaga numa
+   transação só (um erro no meio desfaz tudo) e por id: só o que foi mostrado; um lançamento que a Júlia fizer enquanto
+   isso fica.
+5. No fim, conta de novo, mostra **Caixa zerado** e deixa no registro de auditoria do painel (`admin_audit`, ação
+   `cash_reset`) a linha "caixa zerado pelo servidor".
+
+Depois: a Júlia abre o painel → **Fluxo de caixa** → **Informar o saldo de hoje** e digita quanto a loja tem (conta e
+caixa). Desfazer, só em caso de engano: `gunzip -c /var/backups/juimprime/limpeza-<data>.sql.gz | sudo mariadb juimprime`
+(volta o banco **inteiro** para antes da limpeza, e o que chegou depois some). Apague essa cópia quando não precisar mais
+(`sudo rm /var/backups/juimprime/limpeza-*`): ela tem os dados dos clientes.
+
 ## Se a saída pela porta 22 estiver bloqueada
 
 O servidor fala com o GitHub por SSH na porta 22. Se o provedor bloquear essa saída (o journal mostra `Não consegui
@@ -343,6 +376,8 @@ Junto com o domínio:
 - **Bling:** o link de redirecionamento do aplicativo trocado para `https://juimprimepramim.com.br/admin.html`, e a
   conta conectada de novo pelo painel.
 - **Resend:** o domínio verificado, porque sem isso os e-mails só chegam ao e-mail de teste.
+- **Caixa:** com o resto pronto, `sudo bash /srv/juimprime/current/deploy/limpar-caixa.sh` (opção 2) e a Júlia toca em
+  **Informar o saldo de hoje** no painel (acima, "Zerar o fluxo de caixa").
 - **Branch:** publicar a `main` (protegida, acima), depois de levar para ela a versão aprovada.
 
 ## Ainda falta (servidor)
