@@ -23,12 +23,14 @@ as_app() { if [ -n "$TESTING" ]; then "$@"; else runuser -u "$APP_USER" -- "$@";
 load() { ENV_TEXT=$(as_app cat -- "$ENV_FILE") || { echo "Não consegui ler $ENV_FILE como $APP_USER."; exit 1; }; }
 load
 
-# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, e, com o nome
-# repetido, fica com a ÚLTIMA linha.
+# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, tira as aspas em volta
+# do valor (NFE_ENVIRONMENT="producao" é producao) e, com o nome repetido, fica com a ÚLTIMA linha.
 current() {
-  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"
+  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$" quoted="^\"([^\"\\\\]*)\"$|^'([^']*)'$"
   while IFS= read -r line; do if [[ "$line" =~ $re ]]; then value=${BASH_REMATCH[1]}; fi; done <<<"$ENV_TEXT"
-  printf '%s' "${value%"${value##*[![:space:]]}"}"
+  value=${value%"${value##*[![:space:]]}"}
+  if [[ "$value" =~ $quoted ]]; then value=${BASH_REMATCH[1]}${BASH_REMATCH[2]}; fi
+  printf '%s' "$value"
 }
 # Números escritos com pontos, traços, barras ou espaços (01310-100, 99.1234.5678): o site lê só os dígitos (digits() em
 # api/_lib/correios.js), então só os dígitos vão para o .env. No usuário, só um CPF (11) ou CNPJ (14) assim vira números.
@@ -149,6 +151,12 @@ bling_steps() {
   echo "     empresa e permitir. O painel volta mostrando \"Bling conectado\" e as naturezas de operação."
   echo "  3. Confira: curl -s $HEALTH | grep -o '\"bling\":\"[a-z_]*\"'  → \"bling\":\"connected\"."
 }
+# No 4 (o Enter, que antes era só painel e frete), um Bling ainda sem aplicativo não prende ninguém: sem o Client ID e o
+# Client Secret à mão, a nota fiscal fica para a opção 3 e o que foi respondido acima é gravado.
+if [ -n "$nfe" ] && [ "${choice:-4}" = 4 ] && { [ -z "$(current BLING_CLIENT_ID)" ] || [ -z "$(current BLING_CLIENT_SECRET)" ]; }; then
+  read -r -p "Nota fiscal (Bling): já tem o Client ID e o Client Secret do aplicativo do site no Bling? (s/N): " sure
+  [[ "${sure,,}" == s* ]] || { nfe=''; echo "A nota fiscal fica para depois: rode de novo, opção 3 (NFE-SETUP.md)."; }
+fi
 if [ -n "$nfe" ]; then
   echo "== Nota fiscal (Bling): o aplicativo do site no Bling (o passo a passo está em NFE-SETUP.md)"
   [ "$(current NFE_PROVIDER)" = bling ] || NEW[NFE_PROVIDER]=bling
@@ -243,7 +251,7 @@ if [ -n "$nfe" ]; then
   case "$(state nfe)" in
     live) echo "Notas fiscais de verdade (produção)." ;;
     test) echo "Notas fiscais em homologação (sem valor fiscal)."
-      [ "$target" != producao ] || echo "ATENÇÃO: NFE_ENVIRONMENT=producao só vale com APP_ENV=production: rode config-pagamentos.sh (ele grava APP_ENV)." ;;
+      [ "$target" != producao ] || echo "ATENÇÃO: NFE_ENVIRONMENT=producao só vale com APP_ENV=production: rode config-pagamentos.sh, opção 1 (ela grava APP_ENV)." ;;
     *) echo "A nota fiscal ficou desligada: confira NFE_PROVIDER=bling no .env e me chame." ;;
   esac
   [ "$(state fiscal)" != pending ] || echo "Faltam dados fiscais em api/_lib/fiscal.js (o pedido mostra quais): nenhuma nota sai até completar. Me chame."

@@ -183,7 +183,8 @@ sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh
 2. **Modo:** `2` (produção). Enter mantém o modo de agora: para trocar, digite o 2.
 3. Ele mostra o que o site enxerga agora (frete, e-mail, nota fiscal, painel e quantas parcelas sem juros a conta dá) e
    avisa o que não está pronto. Com algum **ATENÇÃO**, responda `n`, resolva e rode de novo. Tudo certo: `s` para
-   "vendas de verdade".
+   "vendas de verdade". As parcelas sem juros mostradas aí ainda são as das credenciais de teste (normalmente `0`) e não
+   travam nada: as da conta de produção aparecem no fim, e ele avisa se forem menos de 3.
 4. Cole a **Public Key**, o **Access Token** e a **assinatura secreta do webhook** de produção (as duas últimas não
    aparecem na tela). Como o modo mudou, Enter não mantém as de teste, e colar de novo a de teste é recusado ("essa é a
    credencial do outro modo"). A assinatura do webhook pode ser a mesma do teste: se for, ele pergunta se é essa mesma
@@ -193,7 +194,7 @@ sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh
 Ele grava `MP_MODE=live`, `APP_ENV=production` e `SITE_URL=https://juimprimepramim.com.br`, guarda o `.env` de antes em
 `/var/backups/juimprime/`, reinicia o site e mostra o `/api/health`: tem que aparecer `"payments":"live"`, os três do
 `"mp"` como `true` e `"interestFree":3` (etapa 2). Para trocar só a chave do Resend depois, é a opção `2` (não mexe no
-Mercado Pago).
+Mercado Pago nem no `APP_ENV`).
 
 Sem o script, à mão: no `.env` do servidor (`/srv/juimprime/shared/.env`), `APP_ENV=production`,
 `SITE_URL=https://juimprimepramim.com.br`, `MP_PUBLIC_KEY`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` de produção e

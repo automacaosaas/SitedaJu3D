@@ -138,7 +138,9 @@ O primeiro acesso do painel, o frete dos Correios e o aplicativo do Bling entram
 `sudo bash /srv/juimprime/current/deploy/config-loja.sh`.
 
 - Ele pergunta o que configurar (**1** = Painel da Júlia, **2** = Frete dos Correios, **3** = Nota fiscal (Bling),
-  **4** = tudo; Enter escolhe o 4) e depois cada valor. Enter mantém o que já está certo.
+  **4** = tudo; Enter escolhe o 4) e depois cada valor. Enter mantém o que já está certo. No 4, com o Bling ainda sem
+  aplicativo, ele pergunta se o Client ID e o Client Secret já estão à mão: sem eles (`n`), a nota fiscal fica para a
+  opção 3 e o resto é gravado.
 - **Painel:** o e-mail de entrada e a senha (12 a 128 caracteres, digitada duas vezes, sem espaços, aspas, barra
   invertida, acentos nem ç). Se o painel já tem alguém, ele avisa antes: essas duas variáveis só criam a primeira pessoa (`ADMIN-SETUP.md`).
 - **Frete:** usuário e código de acesso da API, contrato, cartão de postagem, DR e o CEP de onde a Júlia despacha (onde achar
@@ -168,16 +170,19 @@ No fim ele mostra o que o `/api/health` enxerga:
 `sudo bash /srv/juimprime/current/deploy/config-pagamentos.sh`
 
 - Primeiro ele pergunta o que configurar: **1** = Mercado Pago (teste ou produção) e o e-mail, **2** = só o e-mail da
-  loja (Resend), sem tocar no Mercado Pago. Para trocar só a chave do Resend, é a opção 2.
+  loja (Resend), sem tocar no Mercado Pago (nem no `APP_ENV`, que é o que faz o site seguir o `MP_MODE`). Para trocar só
+  a chave do Resend, é a opção 2.
 - **Modo:** 1 = teste, 2 = produção. Enter mantém o modo de agora (o `MP_MODE` do `.env`).
 - **Quando o modo muda**, as três credenciais (Public Key, Access Token e assinatura do webhook) precisam ser coladas de
   novo: Enter não mantém a de antes, e uma Public Key ou um Access Token igual ao que já estava gravado é recusado ("essa é
   a credencial do outro modo"). A assinatura do webhook pode ser a mesma nos dois modos (o Mercado Pago pode dar uma só
   por aplicação): igual à de antes, ele pergunta se é essa mesma que o painel mostra. Credencial que começa com `TEST-`
-  nunca vai para a produção.
+  nunca vai para a produção, nem fica nela pelo Enter quando já estava gravada.
 - **Indo para a produção**, antes de pedir as credenciais ele mostra o que o `/api/health` enxerga (frete, e-mail e
   remetente, nota fiscal, painel e quantas parcelas sem juros a conta dá), avisa o que não está pronto (por exemplo, frete
-  que não é `"correios"`) e só segue com um **s** para "vendas de verdade".
+  que não é `"correios"`) e só segue com um **s** para "vendas de verdade". Vindo do teste, as parcelas sem juros mostradas
+  ali são as da conta de teste (normalmente `0`, não trava nada); as da produção aparecem no fim, com um aviso se forem
+  menos de 3.
 - O resto é como no `config-loja.sh`: as chaves não aparecem na tela, o `.env` de antes vai para
   `/var/backups/juimprime/`, o site reinicia e o fim mostra `"payments"`, `"mp"`, `"interestFree"`, `"mail"` e
   `"sender"`. O roteiro completo da produção está em `MERCADOPAGO-VALIDACAO.md` (etapa 5).

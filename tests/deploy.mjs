@@ -131,6 +131,9 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
 // untouched), the current MP_MODE as the default, and, when the mode changes, the three credentials pasted again (the same
 // Public Key or Access Token as before is the other mode's and refused; the webhook signature may be one per application,
 // so the same one only after a yes). Before production, what the local /api/health shows and a "vendas de verdade" yes.
+// (09/10/2026, review) Also when the mode does not change: a TEST- key already saved in live mode (what the old Enter left)
+// is not kept by Enter; the other mode's Public Key or Access Token is refused in either field; APP_ENV, which is what makes
+// the site follow MP_MODE (outside production payments are always "test"), only with the Mercado Pago (option 1).
 {
   const at = text => { const i = payments.indexOf(text); assert(i > 0, `config-pagamentos.sh has: ${text}`); return i; };
   assert(payments.includes('read -r -s -p "$label: " value') && payments.includes('ask MP_ACCESS_TOKEN') && payments.includes('ask RESEND_API_KEY') && /ask MP_ACCESS_TOKEN "[^"]*" 1 /.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 /.test(payments), 'secret keys are read without echo');
@@ -139,6 +142,9 @@ assert.match(setup, /sha256sum -c --quiet -/, 'Node is checked against the offic
   assert(payments.includes('was=$(current MP_MODE); case "$was" in test|live) ;; *) was=\'\' ;; esac') && payments.includes('default=1; [ "$was" != live ] || default=2') && payments.includes('case "${choice:-$default}" in') && payments.includes('[ "$mode" = "$was" ] || changed=1'), 'Enter on the mode keeps the current one');
   assert(/ask MP_PUBLIC_KEY "[^"]*" 0 "[^"]*" recusa\n/.test(payments) && /ask MP_ACCESS_TOKEN "[^"]*" 1 "[^"]*" recusa\n/.test(payments) && /ask MP_WEBHOOK_SECRET "[^"]*" 1 '[^']*' confere\n/.test(payments), 'the three credentials follow the mode');
   assert(payments.includes(`if [ -n "$cred" ] && [ -n "$changed" ]; then had='';`) && payments.includes('if [ "$cred" = recusa ] && [ -n "$was" ]; then') && payments.includes('Essa é a credencial do outro modo') && payments.includes(`[ "$mode" = live ] && [[ "$value" == TEST-* ]]`), 'a changed mode: no Enter, the other mode\'s key refused, TEST- never live');
+  assert(payments.includes(`if [ -n "$cred" ] && [ "$mode" = live ] && [[ "$had" == TEST-* ]]; then had='';`) && payments.includes(`if [ "$cred" = recusa ] && { [ "$value" = "$(current MP_PUBLIC_KEY)" ] || [ "$value" = "$(current MP_ACCESS_TOKEN)" ]; }; then old=$value; fi`), 'a saved TEST- key is not kept in live mode; the old keys count in either field');
+  assert(at('NEW[MP_MODE]=$mode') < at('NEW[APP_ENV]=production') && at('NEW[APP_ENV]=production') < at('\nfi\n\necho "== E-mail da loja (Resend)"') && payments.split('NEW[APP_ENV]=').length === 2, 'APP_ENV only in option 1: the e-mail alone never changes what MP_MODE does');
+  assert(payments.includes('[ "$(current APP_ENV)" = production ] || [ -z "$was" ] || was=test'), 'the current mode is the one the site follows: test while APP_ENV is not production');
   assert(payments.includes('HEALTH=http://127.0.0.1:3000/api/health') && payments.includes('else curl -fsS -m 10 "$HEALTH"') && !/curl[^\n]*\s-H\s/.test(payments) && payments.includes('cat -- "${JU_HEALTH_FILE:-/dev/null}"') && payments.includes('health() { if [ -n "$TESTING" ]; then'), 'the local health (no Host header); a file only in the test');
   for (const name of ['shipping', 'mail', 'sender', 'nfe', 'admin', 'interestFree']) assert(payments.includes(`$(field ${name})`), `the summary shows ${name}`);
   assert(payments.includes('[ "$shipping" = correios ] || echo "  ATENÇÃO: o frete não está nos Correios'), 'a warning when the shipping is not the Correios');
@@ -186,6 +192,7 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
   // the shop's domain, since the link the site hands to Bling is SITE_URL/admin.html. At the end: nfe, bling and queue
   // from the health and the steps to connect.
   assert(shop.includes('3 = Nota fiscal (Bling), 4 = tudo [4]: " choice') && shop.includes('case "${choice:-4}" in') && shop.includes('4) panel=1; ship=1; nfe=1 ;;') && shop.includes('*) echo "Responda 1, 2, 3 ou 4."; exit 1 ;;'), 'the menu: 3 = Bling, 4 (Enter) = everything');
+  assert(shop.includes('if [ -n "$nfe" ] && [ "${choice:-4}" = 4 ] && { [ -z "$(current BLING_CLIENT_ID)" ] || [ -z "$(current BLING_CLIENT_SECRET)" ]; }; then') && shop.includes(`[[ "\${sure,,}" == s* ]] || { nfe='';`), 'in 4, a Bling app not set up yet can be left for option 3 (the Client ID prompt has no Enter to skip it)');
   assert(/ask BLING_CLIENT_ID "[^"]*" 0 '\^\[A-Za-z0-9\._-\]\{16,128\}\$' texto/.test(shop) && /ask BLING_CLIENT_SECRET "[^"]*" 1 '\^\[A-Za-z0-9\._-\]\{16,200\}\$' texto/.test(shop), 'the Client ID visible, the Client Secret without echo (bash allows no bound above 255 in a regex)');
   assert(shop.includes('[ "$(current NFE_PROVIDER)" = bling ] || NEW[NFE_PROVIDER]=bling') && shop.includes('target=producao') && shop.includes("target=''") && shop.includes('[ "$target" = "$was_env" ] || NEW[NFE_ENVIRONMENT]=$target') && shop.includes('A contadora está de acordo e o Bling já está em produção? (s/N)'), 'homologação (empty) or producao, production only after a yes');
   assert(shop.includes('if [ "${site%/}" != "$DOMAIN" ]; then NEW[SITE_URL]=$DOMAIN;') && shop.includes('exatamente $DOMAIN/admin.html') && shop.includes('\\"Nota fiscal · Bling\\" → Conectar ao Bling') && shop.includes("DOMAIN=https://juimprimepramim.com.br\n"), 'the redirect link the owner types in Bling, and the path in the panel');
@@ -222,11 +229,12 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       const blingId = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b', blingSecret = 'f0e1d2c3b4a5f6e7d8c9b0a1f2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9';
       // every part (4): a bad e-mail and one with the arrow keys in it, then a short password, quotes, a backslash, a space and
       // a different confirmation before the right one; a CPF with dots missing a digit, a short access code, a CNPJ as the
-      // card, a DR in letters, a 7-digit CEP and 00000-000 before the right ones; a short Client ID and a Client Secret with a
-      // space before the right ones, and Enter on the environment (homologação, as it was)
+      // card, a DR in letters, a 7-digit CEP and 00000-000 before the right ones; "yes, I have the Bling app" (asked only in 4
+      // while it is not set up), a short Client ID and a Client Secret with a space before the right ones, and Enter on the
+      // environment (homologação, as it was)
       const first = run(['4', 'ju sem arroba', 'julia@gmial\x1b[D\x1b[Dail.com', 'julia@example.com', 'curta123', "abc'defghijklmn", 'abc"defghijklmn', 'abcdefghijkl\\mn', 'tem espaco no meio', password, 'Outra-Senha-2026', password, password,
         '123.456.789-0', '123.456.789-01', 'curto', code, '99.1234.5678', '67.771.044/0001-96', '0074512345', 'SE/SPM', '72', '1310-100', '00000-000', '01310-100',
-        'a1b2c3d4', blingId, `${blingSecret.slice(0, 20)} ${blingSecret.slice(20)}`, blingSecret, '']);
+        's', 'a1b2c3d4', blingId, `${blingSecret.slice(0, 20)} ${blingSecret.slice(20)}`, blingSecret, '']);
       const out = first.stdout + first.stderr;
       assert.equal(first.status, 0, out);
       for (const message of ['E-mail com formato inesperado', 'A senha precisa ter de 12 a 128 caracteres.', "Sem aspas (' ou \") e sem barra invertida (\\)", 'A senha não pode ter espaços.', 'As duas senhas não são iguais', 'CPF tem 11 números e CNPJ 14', 'Código com formato inesperado', 'O cartão de postagem tem 10 números', 'A DR é só o número', 'O CEP tem 8 números', 'O Client ID tem letras e números', 'O Client Secret tem letras e números']) assert(out.includes(message), `says: ${message}`);
@@ -252,6 +260,12 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       const cep = run(['2', '', '', '', '', '', '04538-133']);
       assert.equal(cep.status, 0, cep.stdout + cep.stderr);
       assert.deepEqual(values(), {...after, SHIP_FROM_CEP: '04538133'});
+      // Enter (4) with the Bling app not set up yet and no Client ID at hand: "no" leaves the invoice part for option 3, and
+      // what was answered above (the CEP) is still written; nothing of Bling is asked or touched
+      fs.writeFileSync(envFile, text().replace(`BLING_CLIENT_SECRET=${blingSecret}`, 'BLING_CLIENT_SECRET='));
+      const later = run(['', '', '', '', '', '', '', '', '01310-100', 'n']);
+      assert.equal(later.status, 0, later.stdout + later.stderr); assert(later.stdout.includes('A nota fiscal fica para depois') && !later.stdout.includes('== Nota fiscal (Bling)'), later.stdout);
+      assert.deepEqual(values(), {...after, BLING_CLIENT_SECRET: ''});
       // a current password the rules refuse is not kept by Enter (the answers end: nothing is written)
       fs.writeFileSync(envFile, text().replace(`ADMIN_PASSWORD=${password}`, "ADMIN_PASSWORD=abc'defghijklm"));
       const saved = text(), refused = run(['1', '', '']);
@@ -287,6 +301,10 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       assert.equal(stay.status, 0, stay.stdout + stay.stderr); assert.match(stay.stdout, /Nada foi alterado/); assert.equal(values().NFE_ENVIRONMENT, 'producao', 'Enter keeps the current environment');
       const back = run(['3', '', '', '1']);
       assert.equal(back.status, 0, back.stdout + back.stderr); assert.match(back.stdout, /As notas voltam para homologação/); assert.equal(values().NFE_ENVIRONMENT, '');
+      // written by hand with quotes, NFE_ENVIRONMENT="producao" is producao for systemd: Enter keeps it (no silent way back)
+      fs.writeFileSync(envFile, text().replace('NFE_ENVIRONMENT=', 'NFE_ENVIRONMENT="producao"'));
+      const quotedEnv = text(), quotedStay = run(['3', '', '', '']);
+      assert.equal(quotedStay.status, 0, quotedStay.stdout + quotedStay.stderr); assert.match(quotedStay.stdout, /Nada foi alterado/); assert.equal(text(), quotedEnv);
       assert.deepEqual(leftovers(), []);
 
       // config-pagamentos.sh writes the same way: a mode left at the end by hand ("live") never outlives the one chosen
@@ -316,6 +334,9 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       assert(!saidNo.out.includes('o e-mail da loja não está pronto') && !saidNo.out.includes('Painel da Júlia ainda não tem'), 'no warning about what is ready');
       const noHealth = pay(['1', '2', 'n']);
       assert.equal(noHealth.status, 1); assert.match(noHealth.out, /Não consegui ler o \/api\/health agora/);
+      // coming from test, the installments are the test account's (normally 0): said, but no ATENÇÃO that would stop the switch
+      const testZero = pay(['1', '2', 'n'], {...health, interestFree: 0});
+      assert(testZero.out.includes('Com as credenciais de teste esse número costuma ser 0') && !testZero.out.includes('ATENÇÃO: o Mercado Pago dá'), testZero.out);
       // "yes": Enter on the menu (1), then Enter keeps no credential, the test ones (the same as saved) are refused, a TEST-
       // key is never production; the webhook signature may be the same one (one per application): only after a yes
       const toLive = pay(['', '2', 's', '', TEST.pk, 'TEST-12345678-1234-1234-1234-123456789012', LIVE.pk, TEST.token, LIVE.token, TEST.hook, 'n', TEST.hook, 's', '', '', 's'], health);
@@ -346,6 +367,32 @@ for (const [name, script] of [['config-pagamentos.sh', payments], ['config-loja.
       const unknown = pay(['1', '1', 's', '', TEST.pk, 's', TEST.token, 's', TEST.hook, 's', '', '', 'n']);
       assert.equal(unknown.status, 0, unknown.out); assert(!unknown.out.includes('Essa é a credencial do outro modo'));
       assert.equal(values().MP_MODE, 'test'); assert.equal(values().MP_ACCESS_TOKEN, TEST.token);
+      // (09/10/2026, review) already live with TEST- keys saved (what the old script's Enter left): Enter keeps neither, and the
+      // webhook signature (the mode did not change) stays
+      const OLD = {pk: 'TEST-12345678-1234-1234-1234-123456789012', token: 'TEST-1234567890123456-100000-abcdefabcdefabcdefabcdef-123456789'};
+      fs.writeFileSync(envFile, testEnv.replace('MP_MODE=test', 'MP_MODE=live').replace(TEST.pk, OLD.pk).replace(TEST.token, OLD.token));
+      const stale = pay(['1', '', 's', '', LIVE.pk, '', LIVE.token, '', '', '', 'n']);
+      assert.equal(stale.status, 0, stale.out); assert.equal(stale.out.split('Cole o valor (aqui o Enter não mantém nada).').length, 3, stale.out);
+      assert.deepEqual([values().MP_MODE, values().MP_PUBLIC_KEY, values().MP_ACCESS_TOKEN, values().MP_WEBHOOK_SECRET], ['live', LIVE.pk, LIVE.token, TEST.hook]);
+      // test → production: the test Access Token pasted as the Public Key and the test Public Key as the Access Token, refused
+      fs.writeFileSync(envFile, testEnv);
+      const crossed = pay(['1', '2', 's', TEST.token, LIVE.pk, TEST.pk, LIVE.token, TEST.hook, 's', '', '', 'n']);
+      assert.equal(crossed.status, 0, crossed.out); assert.equal(crossed.out.split('Essa é a credencial do outro modo (a de teste').length, 3, crossed.out);
+      assert.deepEqual([values().MP_MODE, values().MP_PUBLIC_KEY, values().MP_ACCESS_TOKEN], ['live', LIVE.pk, LIVE.token]);
+      // MP_MODE="live" written by hand with quotes (live for systemd): Enter on the mode keeps production and the keys
+      fs.writeFileSync(envFile, testEnv.replace('MP_MODE=test', 'MP_MODE="live"').replace(TEST.pk, LIVE.pk).replace(TEST.token, LIVE.token));
+      const quoted = pay(['1', '', 's', '', '', '', '', '', 'n']);
+      assert.equal(quoted.status, 0, quoted.out); assert(!quoted.out.includes('o modo mudou'), quoted.out);
+      assert.deepEqual([values().MP_MODE, values().MP_PUBLIC_KEY, values().MP_ACCESS_TOKEN], ['live', LIVE.pk, LIVE.token]);
+      // only the e-mail on a server still in preview: APP_ENV stays (with it, MP_MODE=live would start to count)
+      fs.writeFileSync(envFile, testEnv.replace('APP_ENV=production', 'APP_ENV=preview').replace('MP_MODE=test', 'MP_MODE=live'));
+      const previewMail = pay(['2', '', '', 'n']);
+      assert.equal(previewMail.status, 0, previewMail.out); assert.equal(values().APP_ENV, 'preview'); assert.equal(mp.settings(values()).mode, 'test', 'the payments mode did not change');
+      // …and on that same .env (MP_MODE=live, but the site in test: without APP_ENV=production it ignores MP_MODE), choosing
+      // production is a change of mode: the saved keys, which were the test ones in use, are not kept
+      const fromPreview = pay(['1', '2', 's', '', TEST.pk, LIVE.pk, LIVE.token, TEST.hook, 's', '', '', 'n']);
+      assert.equal(fromPreview.status, 0, fromPreview.out); assert(fromPreview.out.includes('Essa é a credencial do outro modo (a de teste'), fromPreview.out);
+      assert.deepEqual([values().APP_ENV, values().MP_MODE, values().MP_PUBLIC_KEY, values().MP_ACCESS_TOKEN], ['production', 'live', LIVE.pk, LIVE.token]);
       assert.deepEqual(leftovers(), []);
     }
   } finally { fs.rmSync(dir, {recursive: true, force: true}); }

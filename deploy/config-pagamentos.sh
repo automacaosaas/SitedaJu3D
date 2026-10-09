@@ -4,8 +4,8 @@
 # Pergunta primeiro o que configurar: 1 = Mercado Pago (e depois o e-mail), 2 = só o e-mail (Resend), sem tocar no
 # Mercado Pago. Depois, cada valor (as chaves secretas não aparecem na tela nem ficam no histórico; Enter mantém o que já
 # está, menos as três credenciais do Mercado Pago quando o modo muda), guarda uma cópia do .env de antes, troca só as
-# linhas pedidas, reinicia o site e mostra o que o /api/health enxerga (só se cada chave existe, nunca o valor). APP_ENV
-# vira production e SITE_URL o domínio da loja.
+# linhas pedidas, reinicia o site e mostra o que o /api/health enxerga (só se cada chave existe, nunca o valor). SITE_URL
+# vira o domínio da loja e, só na opção 1, APP_ENV vira production.
 # Testar no computador (sem root, sem reiniciar nada): JU_TEST=1 JU_ENV_FILE=<um .env de teste> bash deploy/config-pagamentos.sh
 # (no teste, JU_HEALTH_FILE=<um JSON> faz as vezes do /api/health no resumo antes da produção).
 set -euo pipefail
@@ -28,12 +28,14 @@ load
 health() { if [ -n "$TESTING" ]; then cat -- "${JU_HEALTH_FILE:-/dev/null}" 2>/dev/null || true; else curl -fsS -m 10 "$HEALTH" 2>/dev/null || true; fi; }
 field() { grep -o "\"$1\":\"\\{0,1\\}[A-Za-z0-9_]*" <<<"$body" | head -n 1 | cut -d: -f2 | tr -d '"' || true; }
 
-# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, e, com o nome
-# repetido, fica com a ÚLTIMA linha.
+# O valor que o site usa: o systemd (EnvironmentFile) aceita espaços antes do nome e em volta do =, tira as aspas em volta
+# do valor (MP_MODE="live" é live) e, com o nome repetido, fica com a ÚLTIMA linha.
 current() {
-  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$"
+  local line value='' re="^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*)$" quoted="^\"([^\"\\\\]*)\"$|^'([^']*)'$"
   while IFS= read -r line; do if [[ "$line" =~ $re ]]; then value=${BASH_REMATCH[1]}; fi; done <<<"$ENV_TEXT"
-  printf '%s' "${value%"${value##*[![:space:]]}"}"
+  value=${value%"${value##*[![:space:]]}"}
+  if [[ "$value" =~ $quoted ]]; then value=${BASH_REMATCH[1]}${BASH_REMATCH[2]}; fi
+  printf '%s' "$value"
 }
 declare -A NEW=()
 mode='' changed='' was=''
@@ -44,6 +46,8 @@ ask() {  # ask <VAR> <pergunta> <secreto 0|1> <regex> [credencial do Mercado Pag
   # de um modo nunca fica gravada no outro.
   [[ -n "$had" && "$had" =~ $re ]] || had=''
   if [ -n "$cred" ] && [ -n "$changed" ]; then had=''; label="$label [o modo mudou: cole a $mode_label]"; fi
+  # Já em produção, uma TEST- gravada (o que o Enter do script antigo deixava) também não fica.
+  if [ -n "$cred" ] && [ "$mode" = live ] && [[ "$had" == TEST-* ]]; then had=''; label="$label [a gravada começa com TEST-: cole a $mode_label]"; fi
   [ -n "$had" ] && label="$label [Enter mantém o atual]"
   while :; do
     if [ "$secret" = 1 ]; then read -r -s -p "$label: " value; echo; else read -r -e -p "$label: " value; fi
@@ -56,7 +60,9 @@ ask() {  # ask <VAR> <pergunta> <secreto 0|1> <regex> [credencial do Mercado Pag
     if ! [[ "$value" =~ $re ]]; then echo "  Valor com formato inesperado; confira e cole de novo."; continue; fi
     # O modo mudou e veio o mesmo valor que já estava gravado: a Public Key e o Access Token de teste e de produção são
     # sempre diferentes, então é a credencial do outro modo. A assinatura do webhook pode ser uma só por aplicação no
-    # Mercado Pago (e, sem modo definido antes, não se sabe de qual modo era a gravada): aí só com a confirmação.
+    # Mercado Pago (e, sem modo definido antes, não se sabe de qual modo era a gravada): aí só com a confirmação. A Public
+    # Key e o Access Token de antes contam nos dois campos (colada no campo trocado, continua sendo do outro modo).
+    if [ "$cred" = recusa ] && { [ "$value" = "$(current MP_PUBLIC_KEY)" ] || [ "$value" = "$(current MP_ACCESS_TOKEN)" ]; }; then old=$value; fi
     if [ -n "$cred" ] && [ -n "$changed" ] && [ -n "$old" ] && [ "$value" = "$old" ]; then
       if [ "$cred" = recusa ] && [ -n "$was" ]; then
         echo "  Essa é a credencial do outro modo (a $was_label, que já estava gravada). Copie a $mode_label: Suas integrações → a aplicação → Credenciais de $mode_name."
@@ -81,6 +87,8 @@ if [ "${part:-1}" = 1 ]; then
   echo "== Mercado Pago"
   # O padrão é o modo de agora: rodar de novo e apertar Enter nunca troca o modo.
   was=$(current MP_MODE); case "$was" in test|live) ;; *) was='' ;; esac
+  # Sem APP_ENV=production o site ignora o MP_MODE e fica em teste (api/_lib/mercadopago.js): esse é o modo de agora.
+  [ "$(current APP_ENV)" = production ] || [ -z "$was" ] || was=test
   default=1; [ "$was" != live ] || default=2
   read -r -p "Modo: 1 = teste, 2 = produção (vendas de verdade) [$default${was:+ = o atual}]: " choice
   choice=${choice//[[:space:]]/}
@@ -105,7 +113,10 @@ if [ "${part:-1}" = 1 ]; then
       [ "$free" != null ] || free='ainda sem resposta do Mercado Pago'
       echo "  Frete: ${shipping:-?} · E-mail: ${mail:-?} (remetente ${sender:-?}) · Nota fiscal: ${nfe:-?} · Painel: ${admin:-?}"
       echo "  Parcelas sem juros que o Mercado Pago dá hoje (com as credenciais de agora): ${free:-?} (o anúncio de 3x sem juros pede 3)"
-      if [[ "$free" =~ ^[0-9]+$ ]] && [ "$free" -lt 3 ]; then
+      # Vindo do teste, o número é o da conta de teste (normalmente 0, MERCADOPAGO-VALIDACAO.md): o da produção sai no fim.
+      if [ "$was" != live ]; then
+        echo "  (Com as credenciais de teste esse número costuma ser 0 e não trava nada: o que vale é o da produção, conferido no fim.)"
+      elif [[ "$free" =~ ^[0-9]+$ ]] && [ "$free" -lt 3 ]; then
         echo "  ATENÇÃO: o Mercado Pago dá $free parcela(s) sem juros: o checkout só mostra o que a conta dá. Para o \"3x sem juros\": MERCADOPAGO-VALIDACAO.md, etapa 4."
       fi
       [ "$shipping" = correios ] || echo "  ATENÇÃO: o frete não está nos Correios (\"shipping\":\"${shipping:-?}\"): sem a cotação do contrato, o checkout não fecha pedidos de verdade. Antes de vender: sudo bash /srv/juimprime/current/deploy/config-loja.sh, opção 2."
@@ -125,6 +136,9 @@ if [ "${part:-1}" = 1 ]; then
   [[ "${sure,,}" == s* ]] || { echo "Nada foi alterado."; exit 1; }
   prefix='(TEST-|APP_USR-)'; starts='APP_USR-… ou TEST-…'; [ "$mode" = test ] || starts='APP_USR-…'
   NEW[MP_MODE]=$mode
+  # APP_ENV=production é o que faz o site seguir o MP_MODE (fora dele, os pagamentos são sempre "test", api/_lib/mercadopago.js):
+  # por isso só aqui, nunca na opção 2.
+  NEW[APP_ENV]=production
   ask MP_PUBLIC_KEY "Public Key ($mode_name, $starts)" 0 "^${prefix}[A-Za-z0-9-]{20,120}$" recusa
   ask MP_ACCESS_TOKEN "Access Token ($mode_name, não aparece na tela)" 1 "^${prefix}[A-Za-z0-9-]{30,200}$" recusa
   ask MP_WEBHOOK_SECRET "Assinatura secreta do webhook ($mode_name, não aparece na tela)" 1 '^[A-Za-z0-9]{16,128}$' confere
@@ -135,7 +149,6 @@ ask ORDER_NOTIFY_EMAIL "E-mail da Júlia (recebe 'pedido pago' e os alertas)" 0 
 ask RESEND_API_KEY "Chave do Resend (re_…, não aparece na tela)" 1 '^re_[A-Za-z0-9_]{10,80}$'
 read -r -p "O domínio juimprimepramim.com.br já aparece como Verified no Resend? (s/N): " verified
 if [[ "${verified,,}" == s* ]]; then NEW[MAIL_FROM]="Ju imprime pra mim <pedidos@juimprimepramim.com.br>"; fi
-NEW[APP_ENV]=production
 NEW[SITE_URL]=$DOMAIN
 
 # Troca só as linhas pedidas, com comandos internos do bash (os valores nunca passam pela linha de comando de outro
@@ -175,6 +188,13 @@ if [ -n "$mode" ] && grep -q '"ok":true' <<<"$body" && [ "$got" != "$mode" ]; th
 fi
 case "$mode" in
   live) echo "Esperado:\"payments\":\"live\" e os três do mp true. No Mercado Pago, Webhooks → Modo de produção → URL $DOMAIN/api/payments/webhook (sem www), só \"Order\"."
+        free=$(field interestFree)
+        if [ "$got" != live ]; then :
+        elif [[ "$free" =~ ^[0-9]+$ ]] && [ "$free" -lt 3 ]; then
+          echo "ATENÇÃO: com as credenciais de produção, o Mercado Pago dá $free parcela(s) sem juros: o checkout só mostra o que a conta dá. Para o \"3x sem juros\": MERCADOPAGO-VALIDACAO.md, etapa 4 (depois, reinicie o site)."
+        elif ! [[ "$free" =~ ^[0-9]+$ ]]; then
+          echo "Parcelas sem juros ainda sem resposta do Mercado Pago (\"interestFree\":${free:-?}): confira daqui a uns minutos com curl -s $HEALTH (o anúncio de 3x sem juros pede 3)."
+        fi
         echo "Depois: a compra real de valor baixo com estorno (MERCADOPAGO-VALIDACAO.md, etapa 6)." ;;
   test) echo "Esperado: \"payments\":\"test\" e os três do mp true." ;;
   *) echo "O Mercado Pago ficou como estava; esperado no e-mail: \"mail\":\"resend\" e, com o domínio Verified, \"sender\":\"custom\"." ;;
