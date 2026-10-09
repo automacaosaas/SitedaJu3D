@@ -7,6 +7,7 @@
 // products.js are printed) — and the showcase photo is then frame 0 itself, so the turn starts without any jump.
 // Needs `node serve.cjs` running (port 8851, or RENDER_PORT for both: a worktree serves its own dist/). RENDER_GPU=d3d11 renders on the graphics card (about 7× faster than the software WebGL,
 // the same picture).   node lamp-assets.cjs girafoscopio,unicornioscopio [--vistas] [--giro]
+// With "--foto" (alone), only the unicorn's front for the gallery (FOTO below; needs ffmpeg and Real-ESRGAN).
 const fs = require('fs'), path = require('path'), {execFileSync} = require('child_process');
 const {withBrowser} = require('./cdp.cjs');
 const ROOT = path.join(__dirname, '..', '..'), ASSETS = path.join(ROOT, 'dist', 'assets'), VISTAS = path.join(ROOT, 'design', 'vistas'), TMP = fs.mkdtempSync(path.join(require('os').tmpdir(), 'lamp-'));
@@ -23,6 +24,55 @@ const b64 = f => fs.readFileSync(f).toString('base64');
 // lamp-glb.html used to compute (tools/modelo-novidades/pintura, normals: geometry) — recomputing them here from the faces brought
 // back the streaks of the long triangles
 const LOOK = {girafoscopio: '&exposure=1.12&key=3&dome=0.75&smooth=0&tint=coat:%23e8b616,spots:%23572e1a', unicornioscopio: '&exposure=1.1&key=3&dome=0.8&smooth=0' + HEAD};
+// "--foto": only the gallery's front of the unicorn (09/10/2026: "a primeira foto ainda destoa das outras"). Its other three pictures are
+// the owner's glossy studio renders, so this one gets their look, measured in OKLab against them: a brighter, more frontal and broader
+// softbox (the white reaches pure white in the highlights, with the same soft grey on the sides), glossier plastic, the horn a richer gold
+// with its shine, and the purple and the lavender a touch darker under the brighter light (the same means as in those photos, the approved
+// colours unchanged on screen). Rendered at 2000 px and halved (the faint ripples of the Rodin surface go below a pixel), the colours of the
+// border spread outward (the upscaler then sees no black around the piece: no dark halo), and upscaled 4x by Real-ESRGAN like the owner's
+// photos (tools/galeria-vistas/AMPLIAR.md): design/vistas/unicornioscopio-3d-frente.png and ampliadas/unicornioscopio-3d-frente-x4.webp.
+// The showcase, the cards and the head turn are not touched (the showcase photo stays frame 0 of the turn).
+const FOTO = {unicornioscopio: '&exposure=1.3&key=2.6&dome=0.95&keydir=-.25,.55,.8&spread=.38&smooth=0&gloss=.3,.6,.18,1.1&gloss_purple=.26,.8,.1,1.2&gloss_blue=.26,.8,.1,1.2&gloss_horn=.12,1,.02,3.2&tint=horn:%23ffb612,purple:%238e4ea2,blue:%236d7ac0'};
+const REALESRGAN = process.env.REALESRGAN || 'C:/Users/LUIZ/tools/realesrgan/realesrgan-ncnn-vulkan.exe';
+// halved by area with the transparency premultiplied, then the colours of the solid border spread outward into the transparent pixels
+// (RGB only; ffmpeg reads and writes the raw pixels)
+function halveAndBleed(input, output) {
+  const [W, H] = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', input]).toString().trim().split(',').map(Number);
+  const src = execFileSync('ffmpeg', ['-v', 'error', '-i', input, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-'], {maxBuffer: 1 << 30});
+  const w = W >> 1, h = H >> 1, N = w * h, px = new Float32Array(N * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let r = 0, g = 0, b = 0, a = 0;
+    for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) { const i = ((y * 2 + dy) * W + x * 2 + dx) * 4, al = src[i + 3] / 255; r += src[i] * al; g += src[i + 1] * al; b += src[i + 2] * al; a += al; }
+    const o = (y * w + x) * 4; px[o + 3] = a / 4; if (a > 0) { px[o] = r / a; px[o + 1] = g / a; px[o + 2] = b / a; }
+  }
+  const known = new Uint8Array(N), col = new Float32Array(N * 3);
+  for (let n = 0; n < N; n++) if (px[n * 4 + 3] >= .98) { known[n] = 1; col.set([px[n * 4], px[n * 4 + 1], px[n * 4 + 2]], n * 3); }
+  for (let pass = 0; pass < 24; pass++) {
+    const add = [];
+    for (let n = 0; n < N; n++) {
+      if (known[n]) continue; const c = n % w, r = (n - c) / w; let s0 = 0, s1 = 0, s2 = 0, k = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = r + dr, cc = c + dc; if ((dr || dc) && rr >= 0 && rr < h && cc >= 0 && cc < w && known[rr * w + cc]) { const m = (rr * w + cc) * 3; s0 += col[m]; s1 += col[m + 1]; s2 += col[m + 2]; k++; } }
+      if (k) add.push(n, s0 / k, s1 / k, s2 / k);
+    }
+    if (!add.length) break;
+    for (let q = 0; q < add.length; q += 4) { known[add[q]] = 1; col.set([add[q + 1], add[q + 2], add[q + 3]], add[q] * 3); }
+  }
+  const out = Buffer.alloc(N * 4);
+  for (let n = 0; n < N; n++) { for (let j = 0; j < 3; j++) out[n * 4 + j] = Math.round(known[n] ? col[n * 3 + j] : 0); out[n * 4 + 3] = Math.round(px[n * 4 + 3] * 255); }
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${w}x${h}`, '-i', '-', '-pix_fmt', 'rgba', output], {input: out});
+}
+if (process.argv.includes('--foto')) {
+  for (const id of pieces.filter(p => FOTO[p])) {
+    execFileSync('node', [path.join(__dirname, 'runpage.cjs'), `glb=/assets/models/${id}.glb&views=frente:0:6&size=2000&passes=44${FOTO[id]}`, path.join(TMP, `${id}-foto.png`), 'lamp-glb.html'], {stdio: 'inherit', cwd: __dirname});
+    const half = path.join(VISTAS, `${id}-3d-frente.png`), x4 = path.join(TMP, `${id}-x4.png`), webp = path.join(VISTAS, 'ampliadas', `${id}-3d-frente-x4.webp`);
+    halveAndBleed(path.join(TMP, `${id}-foto-frente.png`), half);
+    execFileSync(REALESRGAN, ['-i', half, '-o', x4, '-n', 'realesrgan-x4plus', '-s', '4', '-t', '128', '-f', 'png'], {stdio: 'ignore'});
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', x4, '-c:v', 'libwebp', '-quality', '92', '-pix_fmt', 'yuva420p', webp]);
+    console.log(path.relative(ROOT, half), '→', path.relative(ROOT, webp), Math.round(fs.statSync(webp).size / 1024), 'KB');
+  }
+  fs.rmSync(TMP, {recursive: true, force: true});
+  process.exit(0);
+}
 
 for (const id of pieces) {
   // one view per page (a long page with several big views could stall the software WebGL)

@@ -137,12 +137,12 @@
     }
   },
   "unicornioscopio": {
-    "_fontes": "Fotos do unicórnio que o dono mandou em 07/10/2026 (render em fundo preto, 1024x1536): lado, costas e o rosto de perto, ampliadas 4x pelo Real-ESRGAN (tools/galeria-vistas/AMPLIAR.md). A frente é a foto da vitrine (o quadro 0 do giro em 3D). O roxo das fotos vinha mais saturado que o da peça (croma 0,20 contra 0,16, medido em OKLab): ajustado pela média; a lavanda quase igual, o dourado já batia.",
+    "_fontes": "Fotos do unicórnio que o dono mandou em 07/10/2026 (render em fundo preto, 1024x1536): lado, costas e o rosto de perto, ampliadas 4x pelo Real-ESRGAN (tools/galeria-vistas/AMPLIAR.md). A frente (09/10/2026: \"a primeira foto ainda destoa das outras\"; antes era a foto da vitrine, fosca e acinzentada ao lado das fotos brilhantes do dono) é um render do modelo 3D com o visual dessas fotos, medido em OKLab contra elas — luz de estúdio mais de frente e mais larga, o branco chegando ao branco puro nos brilhos, plástico brilhante, o chifre dourado com brilho, o roxo e a lavanda com a mesma média das fotos —, renderizado a 2000 px, reduzido à metade e ampliado 4x pelo Real-ESRGAN como as outras (tools/render-aviao-macaco/lamp-assets.cjs unicornioscopio --foto). O roxo das fotos vinha mais saturado que o da peça (croma 0,20 contra 0,16, medido em OKLab): ajustado pela média; a lavanda quase igual, o dourado já batia.",
     "cores": [
       {"de": "#ab5bd8", "faixa": 40, "para": "#af63c7"},
       {"de": "#8d9ded", "faixa": 28, "para": "#8794e3"}
     ],
-    "frente": {"fonte": "dist/assets/product-unicornioscopio-cutout.webp", "fundo": "transparente"},
+    "frente": {"fonte": "design/vistas/ampliadas/unicornioscopio-3d-frente-x4.webp", "fundo": "transparente"},
     "lado": {"fonte": "unicornioscopio-lado.webp", "recorte": [212, 100, 612, 1260], "fundo": "recortar", "chao": 1321, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
     "costas": {"fonte": "unicornioscopio-costas.webp", "recorte": [150, 60, 724, 1374], "fundo": "recortar", "chao": 1393, "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4},
     "detalhe": {"fonte": "unicornioscopio-rosto.webp", "recorte": [0, 0, 1024, 1280], "fundo": "recortar", "limiar": 55, "cor_fundo": "#000000", "encolher": 1.4, "detalhe": true}

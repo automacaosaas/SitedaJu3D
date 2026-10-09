@@ -27,7 +27,10 @@ subject.traverse(o => {
   // the 3D under this light), the model unchanged
   const tint = Object.fromEntries((P.tint || '').split(',').filter(Boolean).map(t => t.split(':')));
   const src = o.material, dark = src.name === 'features' || src.name === 'eyes'; o.userData.matName = src.name;
-  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: dark ? .28 : .46, clearcoat: dark ? .8 : .28, clearcoatRoughness: dark ? .12 : .4, envMapIntensity: .9, side: THREE.DoubleSide});
+  // gloss=roughness,clearcoat,clearcoatRoughness[,envMapIntensity[,metalness]] (the coloured parts) and gloss_<material>=… for one of them: a glossier
+  // plastic for a picture that sits next to glossy studio photos (09/10/2026, the unicorn's front in the gallery); without it, the satin above
+  const [rough, coat, coatRough, envI = .9, metal = 0] = (P['gloss_' + src.name] || (dark ? '' : P.gloss) || (dark ? '.28,.8,.12' : '.46,.28,.4')).split(',').map(Number);
+  o.material = new THREE.MeshPhysicalMaterial({color: tint[src.name] ? new THREE.Color(tint[src.name]) : src.color.clone(), roughness: rough, metalness: metal, clearcoat: coat, clearcoatRoughness: coatRough, envMapIntensity: envI, side: THREE.DoubleSide});
   // flat=1 (checking the paint): the bare colours, no light — a border that leaks shows as it is, not as a shadow
   if (P.flat) o.material = new THREE.MeshBasicMaterial({color: src.color.clone(), side: THREE.DoubleSide});
   // the thin, dense Rodin shells get shadow acne from their own inner wall (as on the site, asset-models.js): they cast, not receive
@@ -112,9 +115,10 @@ for (const spec of (P.views || 'frente:0:6').split(',')) {
   const face = mode === 'face' || /^y/.test(mode || '') || !!near, target = near ? new THREE.Vector3(near[0], near[1], 0) : face ? new THREE.Vector3(0, mode === 'face' ? 1.35 : Number(mode.slice(1)), 0) : new THREE.Vector3(0, .15, 0), dist = near ? near[2] : face ? 6.2 : 15.5;
   camera.position.set(target.x + dist * Math.sin(a) * Math.cos(e), target.y + dist * Math.sin(e), target.z + dist * Math.cos(a) * Math.cos(e));
   camera.lookAt(target); camera.updateProjectionMatrix();
-  // the key light stays at the camera's upper left, whatever the azimuth
-  const kd = new THREE.Vector3(-.55, .75, .6).applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
-  const canvas = renderStudio(renderer, scene, camera, {width: SIZE, height: SIZE, passes: PASSES, subject: holder, key: {dir: kd.toArray(), spread: .22, intensity: Number(P.key || 2.1)}, dome: {intensity: Number(P.dome || 1.05), minElevation: -.1}});
+  // the key light stays at the camera's upper left, whatever the azimuth (keydir=x,y,z and spread=radians move and widen it: a more frontal,
+  // broader softbox for a picture next to the unicorn's studio photos)
+  const kd = new THREE.Vector3(...(P.keydir || '-.55,.75,.6').split(',').map(Number)).applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+  const canvas = renderStudio(renderer, scene, camera, {width: SIZE, height: SIZE, passes: PASSES, subject: holder, key: {dir: kd.toArray(), spread: Number(P.spread || .22), intensity: Number(P.key || 2.1)}, dome: {intensity: Number(P.dome || 1.05), minElevation: -.1}});
   // full=1: the whole square, uncropped (frames rendered one per page keep the same framing)
   out[name] = face || P.union || P.full ? canvas : cropToContent(canvas, {pad: 2, symmetric: false}).canvas;
   info[name] = [out[name].width, out[name].height];
