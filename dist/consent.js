@@ -75,9 +75,11 @@ function noticeHtml(list, current) {
   </div>`;
 }
 
+// consent.css at its versioned address: tools/sync-versions.cjs keeps the ?v= (the contents' fingerprint, a year in the cache)
+const STYLES = 'consent.css?v=cf248319';
 function ensureStyles() {
-  if (document.querySelector('link[href="consent.css"]')) return;
-  const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = 'consent.css'; document.head.append(link);
+  if (document.querySelector(`link[href="${STYLES}"]`)) return;
+  const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = STYLES; document.head.append(link);
 }
 
 export function openNotice({customize = false} = {}) {

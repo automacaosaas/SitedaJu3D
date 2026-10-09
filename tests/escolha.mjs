@@ -6,12 +6,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import lightCssModule from './lib/light-css.cjs';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 const {lightCss} = lightCssModule;
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = file => import(pathToFileURL(path.join(root, 'dist', file)).href);
 // o CSS como o tema claro o lê (os tokens do escuro caem na reserva; tests/lib/light-css.cjs)
-const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.css') ? lightCss(text) : text; };
+const read = file => { const text = fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n'); return file.endsWith('.css') ? lightCss(text) : file.endsWith('.html') ? withoutVersions(text) : text; };
 const {PRODUCTS, SOON, FAMILIES, showcase} = await site('products.js');
 const {FIT, families, familyItems, fitFigure, chooseBanners} = await site('escolha.js');
 const {productGrid} = await site('product-grid.js');

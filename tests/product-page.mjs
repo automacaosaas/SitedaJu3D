@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import versionsModule from '../tools/sync-versions.cjs';
+const {withoutVersions} = versionsModule;   // pages read without the ?v= of their stylesheets and scripts (tests/versioned-assets.mjs checks them)
 
 // Página de produto compacta (dist/controller.js): uma tela só, com preço, cores e compra à vista; detalhes num painel.
-const read = file => readFile(new URL(`../dist/${file}`, import.meta.url), 'utf8');
+const read = async file => { const text = await readFile(new URL(`../dist/${file}`, import.meta.url), 'utf8'); return file.endsWith('.html') ? withoutVersions(text) : text; };
 const [html, js, css, bridge] = await Promise.all(['index.html', 'controller.js', 'product-page.css', 'cart-bridge.js'].map(read));
 const dialog = html.match(/<dialog id="product-dialog"[\s\S]*?<\/dialog>/)[0];
 
