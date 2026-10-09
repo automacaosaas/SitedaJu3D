@@ -60,8 +60,8 @@ const build = (o, extra = {}) => buildInvoice({order: o, city: null, environment
   assert.deepEqual(Object.keys(exp.taxUnit), [...new Set(Object.values(fiscal.FISCAL.products).map(p => p.ncm))], 'a tax unit for every NCM of the products');
   assert.deepEqual(exp.netG, {borboletoscopio: 75, dinossauroscopio: 60, aviaoscopia: 166, macacoscopio: 24, girafoscopio: 18, unicornioscopio: 16}, "the owner's net weights (08/10/2026), one per product");
   const other = fiscal.missingExport(fiscal.FISCAL, {provider: 'fake'});
-  assert(!other.includes('export.pis.cst') && !other.includes('export.cofins.cst') && !other.some(p => p.startsWith('export.bling.')), 'PIS/COFINS 49 and IPI 55 set by the accountant (09/10/2026): another service would send them from the site; with Bling they come from the nature');
-  assert.deepEqual([exp.pis.cst, exp.cofins.cst, exp.ipi.cst], ['49', '49', '55'], "the accountant's CSTs for the export");
+  assert(!other.includes('export.pis.cst') && !other.includes('export.cofins.cst') && !other.some(p => p.startsWith('export.bling.')), 'PIS/COFINS 49 and IPI 54 set by the accountant (09/10/2026): another service would send them from the site; with Bling they come from the nature');
+  assert.deepEqual([exp.pis.cst, exp.cofins.cst, exp.ipi.cst], ['49', '49', '54'], "the accountant's CSTs for the export");
   assert.deepEqual(fiscal.missingExport({...fiscal.FISCAL, export: undefined}, {provider: 'bling'}), ['export'], 'no export group at all');
   assert.deepEqual(fiscal.missingExport(fiscal.EXAMPLE.fiscal, {provider: 'bling'}), [], 'the example set is complete (tests and local demo only)');
   assert.deepEqual(fiscal.missingExport(fiscal.EXAMPLE.fiscal), []);

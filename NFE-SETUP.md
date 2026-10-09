@@ -302,7 +302,7 @@ borboleta 75 g, dino 60 g, avião 166 g, macaco 24 g, girafa 18 g e unicórnio 1
    - tipo saída, série 1, Simples Nacional, indicador de presença 2 (internet) e consumidor final ligado, como as de venda;
    - uma regra para **"Exterior" (EX)** com CFOP **7101**, CSOSN **300** e origem 0, sem alíquotas;
    - PIS e COFINS **CST 49** (a contadora aceita 49 ou 99);
-   - aba IPI **CST 55** (saída com imunidade);
+   - aba IPI **CST 54** (saída imune; o 55 do Bling é suspensão);
    - Lei da Transparência (IBPT): **desligada/zerada** nesta natureza (a contadora, 09/10/2026);
    - "Informações complementares" **vazio**, porque o site escreve o texto.
 2. Depois de salvar, o painel mostra o código da natureza no cartão "Nota fiscal · Bling". Esse código vai em
@@ -340,7 +340,7 @@ não sai e o pedido mostra "Venda para o exterior: a nota de exportação só sa
 2. **Item e (local de entrega):** numa remessa postal, a mercadoria é entregue na agência dos Correios. Precisa do grupo
    de local de entrega? A API do Bling não tem campo para ele. Se precisar, ele é preenchido na nota, no Bling, antes de
    enviar.
-3. ~~CST de PIS e COFINS~~ **Respondido (09/10/2026): 49 ou 99; IPI CST 55; IBPT desligado nesta natureza.**
+3. ~~CST de PIS e COFINS~~ **Respondido (09/10/2026): 49 ou 99; IPI CST 54; IBPT desligado nesta natureza.**
 4. ~~Documento do estrangeiro~~ **Respondido: opcional** (passaporte, Tax ID, SSN ou NIF); CPF/CNPJ em branco, país pelo
    código do BACEN, UF EX e município EXTERIOR, como o site já faz.
 5. Se o texto do Simples Nacional também vai na nota de exportação, antes do local de embarque, como o site faz.
